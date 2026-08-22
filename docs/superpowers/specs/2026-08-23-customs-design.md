@@ -6,11 +6,17 @@
 
 ## 1. What it is
 
-Customs is a clearance room for advertising. You hand it a commercial and a list of
-target markets. A crew of agents watches the film, records what is actually in it,
-judges those facts against each market's law, broadcaster code and cultural norms,
-publishes the result as a live Grafana workspace, and then, when an alert fires,
-re-renders the parts of the film that fail so the spot can ship in that market.
+Customs is a launch command center for global advertising. You load a commercial and a
+target market list, and you watch it clear customs in real time. A crew of agents watches
+the film, records what is actually in it, judges those facts against each market's law,
+broadcaster code and cultural norms, builds its own Grafana instrument panel from the
+result, and then, when an alert fires, re-renders the parts of the film that fail so the
+spot can ship in that market.
+
+The interface is **Customs Launch Control**: fifteen market tiles going from pending to
+cleared, at risk or blocked as adjudicators return, a live feed of every agent decision
+and every MCP tool call, and a go or no-go on the campaign. The Grafana panels the agent
+built are embedded inside it.
 
 The output is two things: a decision (can this air here, and on what evidence) and a
 localized master (here is the version that can).
@@ -238,6 +244,69 @@ account token. The agents talk to it over stdio or HTTP inside the Cloud Run ser
 The agents read as well as write through MCP. Before remediating, the Remediator queries
 campaign history for prior findings on the same rule and what was done about them.
 
+## 9b. Customs Launch Control
+
+The console is the centrepiece and the front door. Four screens, server-rendered, no
+build step, one container.
+
+**Launch Board.** The asset, fifteen market tiles in pending, cleared, at risk or
+blocked, flipping live as adjudicators return. Headline reads "cleared for launch in 9 of
+15 markets". The embedded Grafana overview and market-by-timecode heatmap sit underneath.
+A campaign is either go or no-go and the board says which.
+
+**Mission Feed.** The real agent and tool-call stream over server-sent events. Not a
+spinner: `analyst.observe -> shot 7`, `adjudicator[FR] -> grounding("Loi Evin L3323-2")`,
+`publisher -> mcp:create_dashboard`, `remediator -> mcp:query_loki(rule_id=SA-MOD-02)`.
+Stage errors appear here too, because a clearance tool that silently skips a shot is worse
+than one that admits it.
+
+**Market Room.** One market: regulator, pre-clearance regime, every finding with its
+statute and citation link, embedded Grafana market panels, remediation actions, and the
+guard's blocked items presented as a human decision with the reason stated.
+
+**Cutting Room.** Before and after player with the change record for every edit.
+
+### Grafana is a participant, not a picture
+
+Traffic runs in three directions, and this is what makes the integration structural
+rather than decorative:
+
+1. **The agent writes into Grafana.** The Publisher creates dashboards and alert rules
+   through MCP. Every finding is also written as a Grafana **annotation** on the run's
+   timeline, and every remediation writes the resolving annotation. Annotations are
+   Grafana's native primitive for "something happened at this moment", which is exactly
+   what a finding is.
+2. **Grafana triggers the agent.** An alert rule fires a webhook that wakes the
+   Remediator. Grafana is upstream of the work, not a report produced afterwards.
+3. **The agent reads Grafana back.** Before remediating it queries campaign history
+   through MCP for prior findings on the same rule and their outcome.
+
+The console then embeds the panels the agent built, discovered through the same MCP
+server. The agent builds its own instrument panel and Launch Control is the window onto
+it.
+
+### The embed auth problem, pinned
+
+An iframe cannot carry a bearer token and Grafana Cloud has no anonymous access, so
+embedding is an auth problem and it is the most likely thing to break late.
+
+- **Primary path:** Grafana **public dashboards**, which issue tokenised `d-solo` URLs
+  that embed cleanly and stay interactive.
+- **Fallback:** server-side panel rendering through the image renderer API using a
+  service account token, which loses interactivity but cannot fail on panel type support.
+
+Both sit behind one `PanelEmbed` interface so switching is a config change, not a
+rewrite. The fallback is built at the same time as the primary, not after it breaks.
+
+### Why not a Grafana app plugin
+
+Putting Customs inside Grafana would mean shipping a Grafana app plugin, and Grafana
+Cloud will not load an unsigned private plugin without going through their publishing
+process. The escape hatch is self-hosting Grafana OSS with `allow_loading_unsigned_plugins`,
+which adds an instance to operate and contradicts the track's own getting-started steps.
+Rejected: days of plugin toolchain for a flex the track does not ask for, with no surface
+at all if it fails late.
+
 ## 10. Remediation and hyper-localization
 
 Ordered by cost and by risk of looking fake:
@@ -278,7 +347,7 @@ censorship case so the guard is visible in the demo.
 - **Media mechanics:** ffmpeg
 - **Observability platform:** Grafana Cloud free tier (Mimir, Loki, Alerting, Dashboards)
 - **MCP:** self-hosted `grafana/mcp-grafana` with a service account token
-- **App and webhook:** FastAPI on Cloud Run
+- **Console, API and webhook:** FastAPI with server-sent events, server-rendered HTML, no build step, one Cloud Run service
 - **Run store:** SQLite, one file per run, no server to operate
 
 No Anthropic, OpenAI, AWS or Microsoft model, framework or AI API appears at runtime or
@@ -289,7 +358,7 @@ in CI.
 
 ```
 customs/
-  app/            FastAPI front door, upload, progress stream, before/after player
+  app/            Launch Control console, SSE feed, panel embeds, alert webhook
   agents/         ingest, analyst, adjudicator, guard, publisher, remediator, verifier
   markets/        one YAML per market, plus the dimension taxonomy
   media/          ffmpeg helpers, frame and audio extraction, reassembly
@@ -334,9 +403,14 @@ missed entirely.
 **Spine, must ship:**
 
 Veo test asset. Fifteen market packs. Ingest, Analyst, Adjudicator, Guard, Publisher.
-Six Grafana pages built through MCP. Alerting into remediation. Text, one prop and one
-audio line remediated. Verifier closing the loop. Web front door with before and after.
-Deployed on Cloud Run. Public repo, Apache-2.0.
+Six Grafana pages built through MCP, plus findings as annotations. Alerting into
+remediation. Text, one prop and one audio line remediated. Verifier closing the loop. All
+four Launch Control screens with Grafana panels embedded. Deployed on Cloud Run. Public
+repo, Apache-2.0.
+
+Build order is not negotiable: the agents produce real cited findings before a single
+console screen is styled. A beautiful console over hollow findings is the exact failure
+mode this spec exists to avoid.
 
 **Stretch, only when the spine is green:**
 
@@ -357,3 +431,5 @@ Automatic remediation of anything the guard blocks.
 | Inpainting looks fake and undermines the demo | Prop chosen for a static, well-lit, unoccluded shot; reframe is the fallback edit |
 | Scope creep into hyper-localization before the spine works | Stretch items are gated on a green spine, stated in the plan |
 | The tool reads as a censorship aid | The guard is a headline feature, not a footnote, and appears in the demo video |
+| Grafana panels will not embed under Cloud auth | Public dashboards as primary and image-renderer PNGs as fallback, both built behind one interface in the same milestone |
+| Console eats the days the agents needed | Console is gated on cited findings existing, and is server-rendered with no toolchain |
