@@ -1,0 +1,94 @@
+market: SA
+name: Saudi Arabia
+regulators: [GAM, SFDA]
+pre_clearance: advisory        # none | advisory | mandatory
+rules:
+  - id: SA-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 95
+    trigger: "Depiction, promotion or consumption of alcoholic beverages in advertising content"
+    basis: "General Authority for Media Regulation (GAM, formerly the General Commission for Audiovisual Media, GCAM) Media Content Standards: advertising content may not depict or promote alcohol"
+    source_hint: "gmedia.gov.sa media content standards, advertising content"
+    remediable: true
+    protected_basis: false
+
+  - id: SA-TOB-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 90
+    trigger: "Depiction or promotion of tobacco products or smoking"
+    basis: "GAM Media Content Standards: advertising content may not depict or promote tobacco products"
+    source_hint: "gmedia.gov.sa media content standards, advertising content"
+    remediable: true
+    protected_basis: false
+
+  - id: SA-MOD-01
+    dimension: modesty_dress_body
+    class: legal
+    severity: 85
+    trigger: "Immodest dress, nudity or indecent exposure inconsistent with public decency standards"
+    basis: "GAM Media Content Standards: media and advertising content must respect Islamic values and public decency, including standards on dress and exposure"
+    source_hint: "gmedia.gov.sa media content standards, decency provisions"
+    remediable: true
+    protected_basis: false
+
+  - id: SA-REL-01
+    dimension: religious_symbols_practices
+    class: legal
+    severity: 90
+    trigger: "Content that contradicts, mocks or is disrespectful toward Islamic teachings, symbols or practices"
+    basis: "GAM Media Content Standards: media and advertising content may not contradict Islamic teachings or Sharia-based public values"
+    source_hint: "gmedia.gov.sa media content standards"
+    remediable: true
+    protected_basis: false
+
+  - id: SA-LGBT-01
+    dimension: sexual_orientation_gender_id
+    class: legal
+    severity: 90
+    trigger: "Positive or neutral depiction of a same-sex couple or relationship, or content perceived to promote or normalize LGBTQ identity"
+    basis: "GAM Media Content Standards: media and advertising content contradicting Islamic values and public morals is prohibited; applied by the regulator to content perceived as condoning or promoting same-sex relationships or LGBTQ identity"
+    source_hint: "gmedia.gov.sa media content standards"
+    remediable: true
+    protected_basis: true
+
+  - id: SA-GAM-01
+    dimension: gambling_and_finance
+    class: legal
+    severity: 88
+    trigger: "Depiction or promotion of gambling, betting or games of chance"
+    basis: "GAM Media Content Standards: advertising content may not depict or promote gambling services"
+    source_hint: "gmedia.gov.sa media content standards, advertising content"
+    remediable: true
+    protected_basis: false
+
+  - id: SA-PHARMA-01
+    dimension: health_claims_pharma
+    class: legal
+    severity: 70
+    trigger: "Prescription-only medicine advertised directly to the general public, or a health or therapeutic claim made without SFDA pre-approval"
+    basis: "SFDA advertising rules: health-product advertising requires SFDA pre-approval, and prescription-only medicines may be advertised only to healthcare professionals, not the general public"
+    source_hint: "sfda.gov.sa advertising pre-approval requirements"
+    remediable: true
+    protected_basis: false
+
+  - id: SA-FOOD-01
+    dimension: food_and_animals
+    class: legal
+    severity: 45
+    trigger: "Depiction of pork, pork-derived products or alcohol-containing food as an ordinary consumption item, or an unsubstantiated halal claim"
+    basis: "SFDA and SASO mandatory halal certification and labeling regime for food products; GAM Media Content Standards requirement that content respect Islamic dietary norms"
+    source_hint: "sfda.gov.sa halal certification"
+    remediable: true
+    protected_basis: false
+
+  - id: SA-GEND-01
+    dimension: gender_portrayal
+    class: offence
+    severity: 30
+    trigger: "Portrayal of gender roles that conflicts with prevailing Saudi social and cultural norms"
+    basis: "No specific numbered GAM rule targets gender-role portrayal; it falls under the general Media Content Standards expectation that content not challenge Saudi social norms, which GAM applies at its discretion rather than through a named, citable provision"
+    source_hint: ""
+    remediable: true
+    protected_basis: false

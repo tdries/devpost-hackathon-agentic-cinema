@@ -1,0 +1,104 @@
+market: US
+name: United States
+regulators: [FTC, FCC, FDA]
+pre_clearance: none        # none | advisory | mandatory
+rules:
+  - id: US-CMP-01
+    dimension: comparative_claims
+    class: legal
+    severity: 60
+    trigger: "Comparative superiority claim against a named or clearly identifiable competitor made without competent and reliable substantiation"
+    basis: "FTC Act Sec. 5, 15 U.S.C. 45 (unfair or deceptive acts or practices); FTC Policy Statement on Advertising Substantiation (1984); 16 CFR Part 255 (Guides Concerning the Use of Endorsements and Testimonials in Advertising)"
+    source_hint: "ftc.gov 16 CFR Part 255 endorsement guides"
+    remediable: true
+    protected_basis: false
+
+  - id: US-PHARMA-01
+    dimension: health_claims_pharma
+    class: legal
+    severity: 80
+    trigger: "Prescription drug advertisement makes a benefit or efficacy claim without a fair-balance presentation of major risks and side effects"
+    basis: "Federal Food, Drug, and Cosmetic Act 21 U.S.C. 352(n); 21 CFR 202.1 (fair-balance and brief-summary requirements for prescription drug advertising); FTC Act Sec. 5 substantiation doctrine applies to non-prescription health-efficacy claims"
+    source_hint: "ecfr.gov 21 CFR 202.1"
+    remediable: true
+    protected_basis: false
+
+  - id: US-LANG-01
+    dimension: language_profanity_idiom
+    class: legal
+    severity: 60
+    trigger: "Obscene, indecent or profane language broadcast outside the 10pm-6am safe-harbor window"
+    basis: "18 U.S.C. 1464 (broadcasting obscene, indecent or profane language); 47 CFR 73.3999 (FCC enforcement of broadcast indecency and profanity restrictions)"
+    source_hint: "fcc.gov broadcast obscenity indecency profanity"
+    remediable: true
+    protected_basis: false
+
+  - id: US-CHILD-01
+    dimension: children_and_minors
+    class: policy
+    severity: 45
+    trigger: "Advertising directed at children under 13 uses deceptive presentation, undue purchase pressure, or fails to clearly separate program content from commercial content"
+    basis: "CARU (Children's Advertising Review Unit, BBB National Programs) Self-Regulatory Guidelines for Children's Advertising"
+    source_hint: "bbbprograms.org caru guidelines"
+    remediable: true
+    protected_basis: false
+
+  - id: US-GAM-01
+    dimension: gambling_and_finance
+    class: policy
+    severity: 40
+    trigger: "Sports-wagering or gambling advertisement omits a responsible-gambling message, or is not restricted to an audience that is reasonably expected to be of legal gambling age"
+    basis: "American Gaming Association Responsible Marketing Code for Sports Wagering (self-regulatory industry code)"
+    source_hint: "americangaming.org marketing code"
+    remediable: true
+    protected_basis: false
+
+  - id: US-VIOL-01
+    dimension: violence_and_weapons
+    class: policy
+    severity: 35
+    trigger: "Realistic depiction of weapon use or violence in a commercial spot placed during a family-viewing or children's programming block"
+    basis: "Network Standards and Practices: individual broadcaster advertising-standards departments (e.g. ABC, NBC, CBS, Fox) restrict weapon and violence depiction in commercial time"
+    source_hint: "network advertising standards and practices (broadcaster-specific, not centrally published)"
+    remediable: true
+    protected_basis: false
+
+  - id: US-MOD-01
+    dimension: modesty_dress_body
+    class: policy
+    severity: 35
+    trigger: "Nudity or overtly sexualized content in a commercial spot placed outside adult-content dayparts"
+    basis: "Network Standards and Practices broadcast advertising content guidelines on nudity and sexual content"
+    source_hint: "network advertising standards and practices (broadcaster-specific, not centrally published)"
+    remediable: true
+    protected_basis: false
+
+  - id: US-GEND-01
+    dimension: gender_portrayal
+    class: offence
+    severity: 25
+    trigger: "Advertisement relies on a demeaning or harmful gender stereotype"
+    basis: "No binding US federal rule restricts gender-stereotyped advertising content; documented reputational and consumer-backlash risk from widely reported ad-campaign controversies is the basis for flagging, not a statute or code"
+    source_hint: ""
+    remediable: true
+    protected_basis: false
+
+  - id: US-FLASH-01
+    dimension: photosensitivity_sensory
+    class: offence
+    severity: 45
+    trigger: "Rapid flashing or high-contrast strobing imagery sustained across a significant portion of the frame"
+    basis: "No binding US federal rule restricts flashing imagery in television advertising; photosensitive-seizure risk from rapid high-contrast flashing is documented in epilepsy medical literature and is voluntarily addressed in US broadcast production practice"
+    source_hint: ""
+    remediable: true
+    protected_basis: false
+
+  - id: US-HUM-01
+    dimension: humour_irony_satire
+    class: offence
+    severity: 20
+    trigger: "Humor or satire relies on a stereotype or premise likely to be read as mocking a national, ethnic, religious or cultural group"
+    basis: "No binding US federal rule restricts humorous or satirical advertising content; documented brand-reputation risk from culturally insensitive humor (repeated real-world ad-campaign controversies and withdrawals) is the basis for flagging, not a statute or code"
+    source_hint: ""
+    remediable: true
+    protected_basis: false

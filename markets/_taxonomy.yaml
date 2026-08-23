@@ -1,0 +1,28 @@
+# Fixed observation-dimension taxonomy (design spec section 5).
+#
+# Analysts emit observations tagged with exactly one of these dimensions.
+# Market pack rules reference these same strings, so this file is the one
+# vocabulary both sides join on. A dimension used in a pack rule that is
+# not listed here fails pack loading with PackError - see src/customs/packs.py.
+#
+# Leading underscore in the filename means packs.load() skips this file
+# when it globs markets/*.yaml for pack files.
+dimensions:
+  - alcohol_tobacco_drugs
+  - religious_symbols_practices
+  - modesty_dress_body
+  - gesture_body_language
+  - food_and_animals
+  - gender_portrayal
+  - sexual_orientation_gender_id
+  - children_and_minors
+  - national_symbols_politics
+  - health_claims_pharma
+  - gambling_and_finance
+  - violence_and_weapons
+  - language_profanity_idiom
+  - humour_irony_satire
+  - superstition_number_colour
+  - photosensitivity_sensory
+  - text_legibility
+  - comparative_claims

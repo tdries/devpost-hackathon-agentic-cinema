@@ -1,0 +1,104 @@
+market: FR
+name: France
+regulators: [ARPP, Arcom]
+pre_clearance: advisory        # none | advisory | mandatory
+rules:
+  - id: FR-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 95
+    trigger: "Depiction of alcoholic drink in an advertisement"
+    basis: "Loi Evin, Code de la sante publique art. L3323-2"
+    source_hint: "legifrance.gouv.fr L3323-2"
+    remediable: true
+    protected_basis: false
+
+  - id: FR-TOB-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 92
+    trigger: "Depiction or promotion of tobacco products, or any direct or indirect tobacco brand propaganda, in an advertisement"
+    basis: "Loi Evin, Code de la sante publique art. L3511-3 (ban on propaganda or advertising, direct or indirect, for tobacco and tobacco products)"
+    source_hint: "legifrance.gouv.fr L3511-3"
+    remediable: true
+    protected_basis: false
+
+  - id: FR-LANG-01
+    dimension: text_legibility
+    class: legal
+    severity: 60
+    trigger: "On-screen commercial text not in French and not accompanied by translation"
+    basis: "Loi Toubon, loi n. 94-665 du 4 aout 1994, art. 2 (mandatory use of French in the designation, presentation and advertising of a good, product or service)"
+    source_hint: "legifrance.gouv.fr loi 94-665 art. 2"
+    remediable: true
+    protected_basis: false
+
+  - id: FR-GAM-01
+    dimension: gambling_and_finance
+    class: legal
+    severity: 55
+    trigger: "Gambling or betting advertisement that targets or is likely to reach minors, or that omits the mandatory excessive-gambling warning message"
+    basis: "Loi n. 2010-476 du 12 mai 2010 relative a l'ouverture a la concurrence et a la regulation du secteur des jeux d'argent et de hasard en ligne, art. 29 and art. 34 (as amended by ordonnance n. 2019-1015), enforced by the ANJ"
+    source_hint: "legifrance.gouv.fr loi 2010-476"
+    remediable: true
+    protected_basis: false
+
+  - id: FR-HLTH-01
+    dimension: health_claims_pharma
+    class: legal
+    severity: 75
+    trigger: "Prescription-only or state-reimbursable medicine advertised directly to the general public"
+    basis: "Code de la sante publique art. L5122-6 (advertising a medicine to the general public is conditional on it not being subject to medical prescription and not being reimbursable by compulsory health insurance)"
+    source_hint: "legifrance.gouv.fr L5122-6"
+    remediable: true
+    protected_basis: false
+
+  - id: FR-CMP-01
+    dimension: comparative_claims
+    class: legal
+    severity: 50
+    trigger: "Comparative advertising that is misleading, compares products meeting different needs, or is not based on an objective, verifiable and representative characteristic"
+    basis: "Code de la consommation art. L122-1 (conditions for lawful comparative advertising)"
+    source_hint: "legifrance.gouv.fr L122-1 code de la consommation"
+    remediable: true
+    protected_basis: false
+
+  - id: FR-POL-01
+    dimension: national_symbols_politics
+    class: legal
+    severity: 55
+    trigger: "Advertisement of a political character, promoting a party, candidate or political cause, broadcast on television or radio"
+    basis: "Loi n. 86-1067 du 30 septembre 1986 sur la liberte de communication, art. 14 (televised or radio-broadcast advertising of a political character is prohibited)"
+    source_hint: "legifrance.gouv.fr loi 86-1067 art. 14"
+    remediable: true
+    protected_basis: false
+
+  - id: FR-REL-01
+    dimension: religious_symbols_practices
+    class: legal
+    severity: 70
+    trigger: "Content that provokes hatred, violence or discrimination against a person or group because of their religion"
+    basis: "Loi du 29 juillet 1881 sur la liberte de la presse, art. 24 (provocation to discrimination, hatred or violence against a person or group on grounds of religion)"
+    source_hint: "legifrance.gouv.fr loi du 29 juillet 1881 art. 24"
+    remediable: true
+    protected_basis: false
+
+  - id: FR-GEND-01
+    dimension: gender_portrayal
+    class: policy
+    severity: 35
+    trigger: "Advertisement relies on a demeaning or degrading gender stereotype"
+    basis: "ARPP Recommandation Image de la personne humaine (self-regulatory code)"
+    source_hint: "arpp.org recommandation image de la personne humaine"
+    remediable: true
+    protected_basis: false
+
+  - id: FR-VIOL-01
+    dimension: violence_and_weapons
+    class: policy
+    severity: 40
+    trigger: "Gratuitous or realistic depiction of violence in an advertisement likely to be seen by a young audience during its broadcast slot"
+    basis: "Arcom (successor to the CSA) recommendation on the protection of children and teenagers in television programming and advertising"
+    source_hint: "arcom.fr protection des mineurs recommandation"
+    remediable: true
+    protected_basis: false
