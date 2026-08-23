@@ -124,6 +124,16 @@ def test_build_fans_the_adjudicators_out_one_agent_per_market(tmp_path):
         "adjudicator_FR", "adjudicator_SA", "adjudicator_US"
     ]
 
+def test_build_sanitizes_hyphenated_market_codes_into_valid_agent_names(tmp_path):
+    # CA-QC's hyphen is not a valid Python identifier; ADK requires agent
+    # names to be one. build() must not raise, the node name must be
+    # sanitized, and the business-logic market field must stay "CA-QC".
+    store = Store(tmp_path / "t.db")
+    root = crew.build(store, tmp_path / "work", ["FR", "CA-QC"])
+    adjudicators = root.find_sub_agent("adjudicators")
+    assert [a.name for a in adjudicators.sub_agents] == ["adjudicator_FR", "adjudicator_CA_QC"]
+    assert [a.market for a in adjudicators.sub_agents] == ["FR", "CA-QC"]
+
 def test_build_publisher_wraps_an_llm_agent_carrying_all_five_tools(tmp_path):
     store = Store(tmp_path / "t.db")
     root = crew.build(store, tmp_path / "work", ["FR"])
