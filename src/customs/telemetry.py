@@ -32,8 +32,9 @@ query-back, including push_time-10m, the most backdated sample tested.
 Decision rule (task-11-brief.md): past acceptance already covers 10 minutes
 (600s), comfortably over "2 minutes plus duration" for any duration up to
 the spec's 120s input cap (need >= 240s; have >= 600s confirmed). That
-satisfies the FIRST branch of the rule, so per "implement whichever branch
-the probe selects; do not implement the others" this file implements ONLY:
+satisfies the FIRST branch of the rule, so per controller dispatch (task 11)'s
+"implement whichever branch the probe selects; do not implement the others"
+this file implements ONLY:
 
     t0 = push_time - duration
 
@@ -135,11 +136,12 @@ def _mapped_unix_seconds(run: RunRecord, video_t: float) -> float:
     return run.t0 + video_t
 
 # --- one HTTP seam, so tests need to monkeypatch exactly one function ---
-# (task-11-brief.md: "httpx mocked via monkeypatching a module-level _post
-# function"). _otlp_push, _loki_push and _annotation_post all funnel through
-# this, so a test double only ever has to fake one call shape (a POST that
-# returns something with .status_code and .text) to intercept metrics, logs
-# and annotations alike.
+# (controller dispatch (task 11): "httpx mocked via monkeypatching a
+# module-level _post function" -- this exact phrase is not in task-11-brief.md
+# itself, which only says "httpx transport mocked"). _otlp_push, _loki_push
+# and _annotation_post all funnel through this, so a test double only ever
+# has to fake one call shape (a POST that returns something with
+# .status_code and .text) to intercept metrics, logs and annotations alike.
 
 def _post(url: str, *, json_body: dict, headers: dict, auth: tuple[str, str] | None = None):
     return httpx.post(url, json=json_body, headers=headers, auth=auth, timeout=30.0)
@@ -217,13 +219,18 @@ def push_timeline(
     run: RunRecord, findings: list[Finding], duration: float, store: Store | None = None
 ) -> None:
     """Write the mapped-clock risk timeline: one customs_risk sample per
-    whole video second per market present in `findings`.
+    whole video second per market in `run.markets`.
 
-    A market with zero findings gets no customs_risk series at all (this is
-    the literal task-11-brief.md contract -- "per market present in
-    findings" -- not an oversight: a fully clean market has nothing to draw
-    on the heatmap; its clearance status still reaches Grafana via
-    push_status's current-clock customs_market_status, independently).
+    Iterates run.markets, not the set of markets appearing in `findings`.
+    Fixed post-review (2026-08-23): the original version iterated only
+    `sorted({f.market for f in findings})`, so a market that cleared with
+    zero findings got no customs_risk series at all -- on the Task 12
+    heatmap that renders as a missing row, indistinguishable from a market
+    that was never evaluated, and an all-clean run pushed nothing at all.
+    A clean market now gets a full run of all-zero, dimension="none"
+    samples, one per second, same as any other market; its clearance
+    status also reaches Grafana separately via push_status's current-clock
+    customs_market_status.
 
     For each (market, second n) pair the value is the max severity among
     findings whose [t_start, t_end) span overlaps the one-second bucket
@@ -243,7 +250,17 @@ def push_timeline(
     agree").
 
     Every sample for every market goes out as ONE OTLP HTTP request
-    (task-11-brief.md: "batched in ONE OTLP payload").
+    (controller dispatch (task 11): "batched in ONE OTLP payload" -- this
+    exact phrase is not in task-11-brief.md, which does not specify
+    batching for push_timeline at all).
+
+    Assumes one push_timeline call per run: t0 is recomputed from
+    time.time() on every call and overwrites the run's previously stored
+    t0, so a second call for the same run would move future push_log/
+    annotate lookups onto a new mapped clock without also re-mapping any
+    customs_risk samples the first call already wrote -- those would be
+    stranded on the old, now-orphaned t0. Nothing in this task calls it
+    more than once per run.
     """
     store = store or _store()
     push_time = time.time()
@@ -252,7 +269,7 @@ def push_timeline(
 
     asset = _asset_label(run)
     n_seconds = math.ceil(duration)
-    markets = sorted({f.market for f in findings})
+    markets = sorted(run.markets)
 
     data_points = []
     for market in markets:
@@ -283,9 +300,11 @@ def push_status(
     (`blocking_count`, a bare int): customs_blocking needs each blocking
     finding's own rule_id and severity, which a scalar count cannot supply,
     so this takes the findings list instead -- exactly the "accept a
-    findings list param if cleaner; document" allowance the brief gives.
-    A caller that wants blocking_count for a UI tile can take len() of the
-    filtered set itself; nothing here needs to hand it back.
+    findings list param if cleaner; document" allowance controller
+    dispatch (task 11) gives (that specific allowance is not written in
+    task-11-brief.md itself, which only states the literal blocking_count
+    signature). A caller that wants blocking_count for a UI tile can take
+    len() of the filtered set itself; nothing here needs to hand it back.
 
     customs_market_status{asset,market} = _CLEARANCE_CODE[clearance]
     (0 cleared, 1 at_risk, 2 blocked -- design spec section 8's clearance()
@@ -356,9 +375,12 @@ def push_log(run: RunRecord, finding: Finding) -> None:
     }
     _loki_push([stream])
 
-# Module-level stage-error counters, keyed by (run.id, stage). task-11-brief.md
-# offers a choice ("keep a module-level or store-derived count; document"):
-# store-derived was not chosen because push_stage_error's given signature
+# Module-level stage-error counters, keyed by (run.id, stage). controller
+# dispatch (task 11) offers a choice ("keep a module-level or store-derived
+# count; document") -- that phrase is not in task-11-brief.md itself, which
+# only says push_stage_error increments "current-clock counter
+# customs_stage_error{asset, stage}" with no mention of how the count is
+# kept. store-derived was not chosen because push_stage_error's given signature
 # (run, stage) carries no store param to query with, and adding one silently
 # would mean two different call sites for the same "increment" idea (this
 # one and push_timeline/annotate_resolution's explicit optional `store`)

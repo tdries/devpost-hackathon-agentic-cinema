@@ -1,3 +1,4 @@
+import dataclasses
 import json
 
 import pytest
@@ -106,17 +107,48 @@ def test_push_timeline_maps_seconds_onto_t0_minus_duration_clock(monkeypatch, po
     # t0 is persisted on the run record so later push_log/annotate calls agree
     assert store.get_run(run.id).t0 == expected_t0
 
-def test_push_timeline_only_covers_markets_present_in_findings(monkeypatch, posts, tmp_path):
+def test_push_timeline_covers_every_run_market_even_with_no_findings(monkeypatch, posts, tmp_path):
+    # Reviewer-caught bug (fixed post-review): the original implementation
+    # derived markets from `findings` alone, so a cleanly-cleared market
+    # (in run.markets, zero findings) got no customs_risk series at all --
+    # a missing row on the Task 12 heatmap, indistinguishable from a market
+    # that was never evaluated. push_timeline must iterate run.markets.
     monkeypatch.setattr(telemetry.time, "time", lambda: 1_700_000_100.0)
     store = Store(tmp_path / "t.db")
     run = store.create_run(asset_path="a.mp4", markets=["FR", "SA", "US"])
-    findings = [_finding(run_id=run.id, market="FR")]
+    findings = [_finding(run_id=run.id, market="FR")]  # SA, US: clean, no findings
 
     telemetry.push_timeline(run, findings, duration=3.0, store=store)
 
     points = _data_points(_otlp_bodies(posts)[0], "customs_risk")
     markets_seen = {_attrs(p)["market"] for p in points}
-    assert markets_seen == {"FR"}  # SA/US have no findings, no series at all
+    assert markets_seen == {"FR", "SA", "US"}  # every run market gets a series
+
+    n_seconds = 3
+    for market in ("SA", "US"):
+        market_points = [p for p in points if _attrs(p)["market"] == market]
+        assert len(market_points) == n_seconds  # full one-per-second coverage
+        for p in market_points:
+            assert p["asDouble"] == 0.0
+            assert _attrs(p)["dimension"] == "none"
+
+def test_push_timeline_all_clean_run_still_pushes(monkeypatch, posts, tmp_path):
+    # An all-clean run (zero findings anywhere) must still push -- not
+    # silently no-op -- so every market's clean status is visible on the
+    # heatmap too, not just via push_status's separate customs_market_status.
+    monkeypatch.setattr(telemetry.time, "time", lambda: 1_700_000_100.0)
+    store = Store(tmp_path / "t.db")
+    run = store.create_run(asset_path="a.mp4", markets=["FR", "SA"])
+
+    telemetry.push_timeline(run, [], duration=2.0, store=store)
+
+    bodies = _otlp_bodies(posts)
+    assert len(bodies) == 1
+    points = _data_points(bodies[0], "customs_risk")
+    assert len(points) == 4  # 2 markets x 2 seconds
+    assert all(p["asDouble"] == 0.0 for p in points)
+    assert all(_attrs(p)["dimension"] == "none" for p in points)
+    assert {_attrs(p)["market"] for p in points} == {"FR", "SA"}
 
 def test_push_timeline_tie_broken_by_input_order(monkeypatch, posts, tmp_path):
     monkeypatch.setattr(telemetry.time, "time", lambda: 1_700_000_100.0)
@@ -181,7 +213,13 @@ def test_push_status_is_current_clock_not_mapped(monkeypatch, posts):
 
 # --- push_log: exact Loki labels ---
 
-def test_push_log_labels_and_body(posts):
+def test_push_log_labels_and_body(posts, monkeypatch):
+    # Dummy tokens, not the real ones from .env: if this assertion ever
+    # fails, pytest's failure diff must never be able to print a real
+    # credential.
+    monkeypatch.setattr(telemetry, "settings", dataclasses.replace(
+        telemetry.settings, loki_user="dummy-loki-user", grafana_cloud_token="dummy-cloud-token",
+    ))
     run = _run(t0=1_700_000_000.0)
     finding = _finding()
 
@@ -198,7 +236,7 @@ def test_push_log_labels_and_body(posts):
     [[ts_ns, line]] = stream["values"]
     assert ts_ns == str(int((1_700_000_000.0 + finding.t_start) * 1_000_000_000))
     assert json.loads(line) == finding.to_json()
-    assert auth == (telemetry.settings.loki_user, telemetry.settings.grafana_cloud_token)
+    assert auth == ("dummy-loki-user", "dummy-cloud-token")
 
 def test_push_log_requires_t0(posts):
     run = _run(t0=None)
@@ -240,7 +278,13 @@ def test_push_stage_error_counts_independently_per_stage(monkeypatch, posts):
 
 # --- annotate / annotate_resolution: payload shape ---
 
-def test_annotate_payload_shape(posts):
+def test_annotate_payload_shape(posts, monkeypatch):
+    # Dummy token, not the real one from .env: same reasoning as
+    # test_push_log_labels_and_body above -- a failure diff must never be
+    # able to print a real credential.
+    monkeypatch.setattr(telemetry, "settings", dataclasses.replace(
+        telemetry.settings, grafana_sa_token="dummy-sa-token",
+    ))
     run = _run(t0=1_700_000_000.0)
     finding = _finding()  # t_start=12.4, t_end=14.1
 
@@ -253,7 +297,7 @@ def test_annotate_payload_shape(posts):
     assert body["timeEnd"] == int((1_700_000_000.0 + 14.1) * 1000)
     assert body["tags"] == ["customs", "test_ad", "FR", "FR-ALC-01"]
     assert "text" in body and isinstance(body["text"], str)
-    assert headers["Authorization"] == f"Bearer {telemetry.settings.grafana_sa_token}"
+    assert headers["Authorization"] == "Bearer dummy-sa-token"
 
 def test_annotate_resolution_payload_shape_tags_resolved(posts, tmp_path):
     store = Store(tmp_path / "t.db")
