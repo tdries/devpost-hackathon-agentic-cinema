@@ -81,6 +81,29 @@ def apply_guard(findings: list[Finding]) -> list[Finding]:
     """
     return findings
 
+def errored_markets(store: Store, run_id: str) -> set[str]:
+    """Every market that was never actually evaluated in this run.
+
+    A market lands here when its pack failed to load, or its judge() call
+    exhausted every retry (the two market-level failure branches in run()
+    below) -- never for a per-shot transcription/analyst failure, which
+    thins the evidence every market sees but does not mean any one market
+    went unjudged.
+
+    Derived from the run's own event log (agent="adjudicator" events whose
+    message starts with "stage_error: market={code}:") rather than a new
+    Store method or a new RunRecord field, so any caller -- this task's own
+    CLI, or a future Task 11/15 consumer -- can ask "was this market really
+    evaluated" from the one existing source of truth instead of trusting
+    clearance([]) == "cleared" for a market that was never judged at all.
+    """
+    errored: set[str] = set()
+    prefix = "stage_error: market="
+    for _id, _ts, agent, message in store.events_since(run_id, 0):
+        if agent == "adjudicator" and message.startswith(prefix):
+            errored.add(message[len(prefix):].split(":", 1)[0])
+    return errored
+
 def run(asset_path, markets: list[str], store: Store, workdir) -> RunRecord:
     """Run the full clearance pipeline for one asset across the given markets.
 
@@ -93,9 +116,21 @@ def run(asset_path, markets: list[str], store: Store, workdir) -> RunRecord:
     _call_with_retries. On final failure the unit is skipped: a
     "stage_error: ..." event is recorded via store.emit and the run
     continues (design spec section 14, "a clearance tool that silently
-    skips a shot is worse than one that admits it"). The run always ends in
-    status "done"; failures are visible as stage_error events, never as a
-    different terminal status or a raised exception out of this function.
+    skips a shot is worse than one that admits it"). For those three
+    retry-wrapped stages specifically, failure never raises out of this
+    function and never changes the terminal status: it surfaces only as a
+    stage_error event, and the run still reaches status "done". That
+    guarantee does NOT extend to shot detection itself (media.detect_shots,
+    called once below before any per-shot work): an unreadable or corrupt
+    asset raises there, uncaught, leaving the run in status "running"
+    rather than "done" -- there is no reasonable per-unit failure to skip
+    when there are no shots at all to iterate.
+
+    A market whose pack failed to load or whose judge() call exhausted
+    every retry is recorded, not silently reported as clean: see
+    errored_markets() above, which callers use to distinguish "evaluated,
+    found nothing" from "never evaluated" rather than trusting
+    clearance([]) == "cleared" for both.
 
     Shots are iterated directly here (media.detect_shots + merge_micro_shots)
     rather than via analyst.observe_all, precisely so each shot's model call
@@ -153,12 +188,12 @@ def run(asset_path, markets: list[str], store: Store, workdir) -> RunRecord:
     for market in markets:
         pack = packs.get(market)
         if pack is None:
-            emit("adjudicator", f"stage_error: {market}: no market pack loaded")
+            emit("adjudicator", f"stage_error: market={market}: no market pack loaded")
             continue
 
         ok, result = _call_with_retries(lambda pack=pack: judge(run_id, observations, pack, on_event=emit))
         if not ok:
-            emit("adjudicator", f"stage_error: {market}: {result!r}")
+            emit("adjudicator", f"stage_error: market={market}: {result!r}")
             continue
 
         findings = apply_guard(result)

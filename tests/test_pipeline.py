@@ -3,6 +3,7 @@ import subprocess
 import pytest
 
 from customs import pipeline
+from customs.media import Shot
 from customs.schema import Finding, Observation
 from customs.store import Store
 
@@ -98,6 +99,30 @@ def test_call_with_retries_gives_up_after_max_attempts():
 def test_apply_guard_is_identity():
     findings = [_canned_finding("FR"), _canned_finding("SA")]
     assert pipeline.apply_guard(findings) == findings
+
+# --- _transcribe_shot: malformed-shape hygiene (review fix round 1) ---
+
+def test_transcribe_shot_returns_the_transcript_when_well_formed(monkeypatch, clip, tmp_path):
+    # known-good baseline the two malformed-shape tests below are read against.
+    monkeypatch.setattr(pipeline, "generate_json", lambda model, parts, schema: {"transcript": "hello"})
+    shot = Shot(shot_id="shot_0", t_start=0.0, t_end=2.0)
+    assert pipeline._transcribe_shot(str(clip), shot, tmp_path) == "hello"
+
+def test_transcribe_shot_returns_empty_string_when_raw_is_not_a_dict(monkeypatch, clip, tmp_path):
+    # mirrors the same shape-hygiene precedent as analyst.observe_shot /
+    # adjudicate.judge: a non-dict response never crashes, it degrades to
+    # "no speech" rather than raising out of the retry wrapper.
+    monkeypatch.setattr(pipeline, "generate_json", lambda model, parts, schema: ["not", "a", "dict"])
+    shot = Shot(shot_id="shot_0", t_start=0.0, t_end=2.0)
+    assert pipeline._transcribe_shot(str(clip), shot, tmp_path) == ""
+
+def test_transcribe_shot_returns_empty_string_when_transcript_field_is_not_a_string(monkeypatch, clip, tmp_path):
+    # explicit JSON null survives the response_schema's declared "string"
+    # type (same precedent as analyst.py's statement/confidence fields), so
+    # it must be coalesced by hand rather than returned as the literal "None".
+    monkeypatch.setattr(pipeline, "generate_json", lambda model, parts, schema: {"transcript": None})
+    shot = Shot(shot_id="shot_0", t_start=0.0, t_end=2.0)
+    assert pipeline._transcribe_shot(str(clip), shot, tmp_path) == ""
 
 # --- Step 1/2: pipeline.run, canned analyst + adjudicate + transcription ---
 
@@ -228,3 +253,65 @@ def test_run_stage_error_shot_transcription_failure_still_analyzes_shot(monkeypa
     events = store.events_since(run.id, 0)
     stage_errors = [msg for (_id, _ts, agent, msg) in events if "stage_error" in msg]
     assert len(stage_errors) == 2, f"expected one stage_error per shot's failed transcription, got: {stage_errors}"
+
+# --- errored_markets: "never evaluated" must never look like "cleared" (review fix round 1) ---
+
+def test_errored_markets_includes_market_with_missing_pack(monkeypatch, clip, tmp_path):
+    monkeypatch.setattr(pipeline, "generate_json", _fake_generate_json_transcribe)
+    monkeypatch.setattr(pipeline, "observe_shot", _fake_observe_shot)
+    monkeypatch.setattr(pipeline, "judge", lambda *a, **k: (_ for _ in ()).throw(
+        AssertionError("must not call judge for a market with no loaded pack")))
+
+    store = Store(tmp_path / "t.db")
+    run = pipeline.run(str(clip), ["ZZ"], store, tmp_path / "work")
+
+    assert pipeline.errored_markets(store, run.id) == {"ZZ"}
+
+def test_errored_markets_includes_market_whose_judge_exhausts_retries(monkeypatch, clip, tmp_path):
+    monkeypatch.setattr(pipeline, "generate_json", _fake_generate_json_transcribe)
+    monkeypatch.setattr(pipeline, "observe_shot", _fake_observe_shot)
+
+    def flaky_judge(run_id, observations, pack, on_event=None):
+        if pack.market == "SA":
+            raise RuntimeError("simulated 5xx")
+        return [_canned_finding(pack.market, run_id=run_id)]
+    monkeypatch.setattr(pipeline, "judge", flaky_judge)
+
+    store = Store(tmp_path / "t.db")
+    run = pipeline.run(str(clip), ["FR", "SA"], store, tmp_path / "work")
+
+    assert pipeline.errored_markets(store, run.id) == {"SA"}
+    assert "FR" not in pipeline.errored_markets(store, run.id), "a healthy market must never be reported as errored"
+
+def test_errored_markets_excludes_a_market_evaluated_clean(monkeypatch, clip, tmp_path):
+    # the exact distinction the review flagged: a market that was genuinely
+    # judged and came back with zero findings must be provably different
+    # from one that was never judged at all, not just "0 findings" in both
+    # cases with no way to tell them apart.
+    monkeypatch.setattr(pipeline, "generate_json", _fake_generate_json_transcribe)
+    monkeypatch.setattr(pipeline, "observe_shot", _fake_observe_shot)
+    monkeypatch.setattr(pipeline, "judge", lambda run_id, observations, pack, on_event=None: [])
+
+    store = Store(tmp_path / "t.db")
+    run = pipeline.run(str(clip), ["US"], store, tmp_path / "work")
+
+    assert store.findings(run.id, market="US") == [], "sanity check: this market genuinely has zero findings"
+    assert pipeline.errored_markets(store, run.id) == set(), (
+        "a market that was actually evaluated and found clean must not appear in errored_markets"
+    )
+
+def test_errored_markets_ignores_shot_level_stage_errors(monkeypatch, clip, tmp_path):
+    # a shot's transcription/analyst call failing thins the evidence every
+    # market sees; it does not mean any market itself went unevaluated, so
+    # it must never be mistaken for a market-level error.
+    monkeypatch.setattr(pipeline, "generate_json", lambda model, parts, schema: (_ for _ in ()).throw(
+        RuntimeError("simulated transcription failure")))
+    monkeypatch.setattr(pipeline, "observe_shot", _fake_observe_shot)
+    monkeypatch.setattr(pipeline, "judge", lambda run_id, observations, pack, on_event=None: [])
+
+    store = Store(tmp_path / "t.db")
+    run = pipeline.run(str(clip), ["FR"], store, tmp_path / "work")
+
+    events = store.events_since(run.id, 0)
+    assert any("stage_error" in msg for (_id, _ts, agent, msg) in events), "sanity check: shots did stage_error"
+    assert pipeline.errored_markets(store, run.id) == set()

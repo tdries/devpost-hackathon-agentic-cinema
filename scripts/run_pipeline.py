@@ -6,11 +6,18 @@ Usage:
 
 Ingests the asset (shot detection, per-shot audio transcription), runs the
 analyst over every shot, adjudicates each given market in turn (guard is
-still the Task-9 identity placeholder), and prints a findings table plus a
-per-market clearance line. See pipeline.run's docstring for the stage-error
-handling that keeps one bad shot or market from taking down the whole run:
-nothing here needs to catch anything, pipeline.run always returns a RunRecord
-with status "done".
+still the Task-9 identity placeholder), and prints any stage errors, a
+findings table, and a per-market clearance line. See pipeline.run's
+docstring for the stage-error handling that keeps one bad shot or market
+from taking down the whole run: nothing here needs to catch anything for
+that -- the three retry-wrapped stages never raise out of pipeline.run,
+only an unreadable/corrupt asset failing shot detection itself would (not
+caught here either, deliberately: there is nothing useful to print without
+any shots). A market whose pack failed to load or whose judge() exhausted
+its retries is never printed as clearance "cleared": pipeline.errored_markets
+identifies it and this script prints "ERROR (stage failure, not evaluated)"
+in its place, since for this product "we found nothing" and "we never
+checked" must never look the same.
 """
 import argparse
 import sys
@@ -45,6 +52,22 @@ def _print_findings_table(findings) -> None:
         print(f"    citation_url: {_truncate(f.citation_url, CITATION_URL_MAX)}")
         print(f"    rationale:    {f.rationale}")
 
+def _print_stage_errors(store: Store, run_id: str) -> None:
+    # Visible on its own, ahead of the findings table: a clearance tool that
+    # buries "we never checked this" in the same events table as everything
+    # else is not meaningfully different from one that hides it entirely.
+    stage_errors = [
+        (agent, message)
+        for (_id, _ts, agent, message) in store.events_since(run_id, 0)
+        if "stage_error" in message
+    ]
+    if not stage_errors:
+        return
+    print(f"STAGE ERRORS ({len(stage_errors)}):")
+    for agent, message in stage_errors:
+        print(f"  [{agent}] {message}")
+    print()
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Run the Customs clearance pipeline end to end.")
     parser.add_argument("asset", help="path to the video asset, e.g. docs/samples/test_ad.mp4")
@@ -63,11 +86,17 @@ def main(argv=None) -> int:
 
     print(f"\nrun {run.id}: status={run.status} asset={run.asset_path} markets={run.markets}\n")
 
+    _print_stage_errors(store, run.id)
+
     all_findings = store.findings(run.id)
     _print_findings_table(all_findings)
 
+    errored = pipeline.errored_markets(store, run.id)
     print()
     for market in run.markets:
+        if market in errored:
+            print(f"{market}: ERROR (stage failure, not evaluated)")
+            continue
         market_findings = [f for f in all_findings if f.market == market]
         status = clearance(market_findings)
         print(f"{market}: {status} ({len(market_findings)} finding(s))")
