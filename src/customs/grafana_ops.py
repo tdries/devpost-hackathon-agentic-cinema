@@ -257,17 +257,24 @@ class _McpStdio:
             del self._stderr[:-200]
 
     def close(self):
-        if self._proc is None:
+        """Stop the server process. Safe to call twice, and safe on a client
+        that never started."""
+        proc, self._proc = self._proc, None
+        if proc is None:
             return
         try:
-            if self._proc.stdin and not self._proc.stdin.closed:
-                self._proc.stdin.close()
-            self._proc.terminate()
-            self._proc.wait(timeout=5)
+            if proc.stdin and not proc.stdin.closed:
+                proc.stdin.close()
+            proc.terminate()
+            proc.wait(timeout=5)
         except Exception:
-            self._proc.kill()
-        finally:
-            self._proc = None
+            # terminate did not take (or the pipe was already broken): kill,
+            # then reap, or the process stays a zombie until this process ends.
+            try:
+                proc.kill()
+                proc.wait(timeout=5)
+            except Exception:
+                pass
 
     def __enter__(self):
         return self.start()
@@ -360,6 +367,21 @@ def _mcp_failed(result) -> bool:
     return bool((result or {}).get("isError"))
 
 
+# mcp-grafana flattens a Grafana API error into prose and keeps no structured
+# status field, so "the uid is already taken" has to be read back out of the
+# text. Both shapes seen live on 1.1.0, hence two patterns for the same idea:
+#     exists   create folder 'Customs': [POST /folders] createFolder (status 412): {}
+#     bad uid  create folder 'Bad': [POST /folders][400] createFolderBadRequest {...}
+_MCP_STATUS = re.compile(r"(?:status\s+|\[)(\d{3})\b")
+
+
+def _mcp_conflict(text: str) -> bool:
+    """True only when an MCP tool error carries a 409 or 412, Grafana's answer
+    for "that already exists". Anything else, including an unparseable error,
+    is not treated as success."""
+    return any(code in ("409", "412") for code in _MCP_STATUS.findall(text or ""))
+
+
 class GrafanaOps:
     """Create and read back the Customs Grafana surface.
 
@@ -413,6 +435,16 @@ class GrafanaOps:
         try:
             return set(mcp.list_tools())
         except Exception as exc:  # binary missing, handshake failed, timeout
+            # start() spawns the process and only then handshakes, so anything
+            # that fails after the spawn (a hung initialize, a server that
+            # exits mid-handshake, a timeout) leaves a live subprocess behind.
+            # Close it here: after this the client is dropped and nothing else
+            # holds a handle to reap it.
+            try:
+                if hasattr(mcp, "close"):
+                    mcp.close()
+            except Exception:
+                pass
             self.mcp = None
             self.mcp_error = f"{type(exc).__name__}: {exc}"
             warnings.warn(
@@ -494,30 +526,43 @@ class GrafanaOps:
     # -- folder --
 
     def ensure_folder(self) -> str:
-        """Create the Customs folder if it is not there. Idempotent: an
-        already-existing folder comes back as a 409/412 from REST and as an
-        isError result from MCP, and both are treated as success because the
-        only thing that matters is that the uid exists afterwards."""
+        """Create the Customs folder if it is not there.
+
+        Idempotent, but only for the one error that means "the uid is already
+        taken": REST answers 409 or 412 for that (verified live: an existing
+        folder answers 412), and MCP answers with an isError result whose text
+        carries the same status. Every other failure is a real one. An MCP
+        failure that is not recognisably a conflict is not assumed to be
+        either way: the create is repeated over REST, which reports an exact
+        status and message, and the raise carries both explanations.
+        """
         if self._folder_ready:
             return self.folder_uid
         if self.transport_for("ensure_folder") == "mcp":
-            self._mcp_call("create_folder", {
+            answer = self._mcp_call("create_folder", {
                 "title": self.folder_title, "uid": self.folder_uid,
             })
+            if _mcp_failed(answer):
+                text = _mcp_text(answer)
+                if not _mcp_conflict(text):
+                    self._create_folder_http(mcp_error=text)
         else:
-            resp = self._api("POST", "/api/folders", json_body={
-                "uid": self.folder_uid, "title": self.folder_title,
-            })
-            # 409 or 412 is Grafana saying the uid is taken, which is the
-            # success case here (verified live: an existing folder answers 412
-            # "the folder has been changed by someone else").
-            if resp.status_code not in (200, 201, 409, 412):
-                raise RuntimeError(
-                    f"could not create folder {self.folder_uid}: "
-                    f"HTTP {resp.status_code}: {resp.text[:300]}"
-                )
+            self._create_folder_http()
         self._folder_ready = True
         return self.folder_uid
+
+    def _create_folder_http(self, mcp_error: str | None = None) -> None:
+        resp = self._api("POST", "/api/folders", json_body={
+            "uid": self.folder_uid, "title": self.folder_title,
+        })
+        # 409 or 412 is Grafana saying the uid is taken, which is the success
+        # case here.
+        if resp.status_code in (200, 201, 409, 412):
+            return
+        detail = f"HTTP {resp.status_code}: {resp.text[:300]}"
+        if mcp_error:
+            detail = f"MCP create_folder said: {mcp_error[:300]} | REST said: {detail}"
+        raise RuntimeError(f"could not create folder {self.folder_uid}: {detail}")
 
     # -- dashboards --
 
@@ -745,7 +790,7 @@ class GrafanaOps:
 
     # -- public dashboards --
 
-    def enable_public(self, uid: str) -> str:
+    def enable_public(self, uid: str, *, annotations_enabled: bool = False) -> str:
         """Turn on public sharing for one dashboard and return its public URL
         (`{grafana_url}/public-dashboards/{accessToken}`). The access token is
         also cached in `self.public_tokens[uid]` for `embed_url`.
@@ -753,12 +798,25 @@ class GrafanaOps:
         REST only: mcp-grafana 1.1.0 has no public-dashboard tool. Idempotent:
         a dashboard that is already public answers the POST with a 400/409, and
         the existing config is then read back and PATCHed instead.
+
+        **A public dashboard has no login.** Anyone with the link reads the
+        panels, and that is deliberate here: these pages are the demo's
+        judge-facing surface and the findings on them are demo data about a
+        synthetic test asset. Say it plainly rather than leave it implied.
+
+        `annotations_enabled` is a separate decision from sharing, because
+        annotations are served by their own public endpoint
+        (`/api/public/dashboards/{token}/annotations`) whether or not any panel
+        on the page draws them: leaving it on for a page that does not render
+        annotations publishes finding text nothing asked for. It defaults to
+        off. Pass `annotations_enabled=True` for the timeline, where the
+        finding and remediation markers are half the point of the page.
         """
         body = {
             "isEnabled": True,
             "share": "public",
             "timeSelectionEnabled": True,
-            "annotationsEnabled": True,
+            "annotationsEnabled": bool(annotations_enabled),
         }
         path = f"/api/dashboards/uid/{uid}/public-dashboards"
         resp = self._api("POST", path, json_body=body)

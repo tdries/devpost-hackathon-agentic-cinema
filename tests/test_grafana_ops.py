@@ -12,6 +12,7 @@ module-level `_post`:
 live Grafana happens to expose.
 """
 import base64
+import io
 import json
 import pathlib
 
@@ -777,6 +778,205 @@ def test_timeline_and_market_show_customs_annotations():
 def test_module_source_has_no_em_dash():
     source = pathlib.Path(grafana_ops.__file__).read_text()
     assert "—" not in source
+
+
+# --- subprocess lifecycle ----------------------------------------------------
+
+class _FakeProc:
+    """Enough of subprocess.Popen for _McpStdio: a stdin to write to, a stdout
+    that ends immediately (so the handshake fails the way a server that dies
+    mid-initialize does), and terminate/kill/wait that record being called."""
+
+    def __init__(self, stdout_lines=(), terminate_raises=False):
+        self.stdin = io.StringIO()
+        self.stdout = iter(stdout_lines)
+        self.stderr = iter(["mcp-grafana: boom\n"])
+        self.terminate_raises = terminate_raises
+        self.terminated = 0
+        self.killed = 0
+        self.waited = 0
+
+    def terminate(self):
+        self.terminated += 1
+        if self.terminate_raises:
+            raise OSError("terminate did not take")
+
+    def kill(self):
+        self.killed += 1
+
+    def wait(self, timeout=None):
+        self.waited += 1
+        return 0
+
+
+class _Spawned(list):
+    """The fake processes Popen handed out, plus a knob for how the next one
+    behaves."""
+
+    kwargs: dict
+
+
+@pytest.fixture
+def spawned(monkeypatch):
+    """Replace subprocess.Popen so no real mcp-grafana is started."""
+    procs = _Spawned()
+    procs.kwargs = {}
+
+    def fake_popen(argv, **kwargs):
+        proc = _FakeProc(**procs.kwargs)
+        procs.append(proc)
+        return proc
+
+    monkeypatch.setattr(grafana_ops.subprocess, "Popen", fake_popen)
+    procs.configure = procs.kwargs.update  # type: ignore[attr-defined]
+    return procs
+
+
+def test_handshake_failure_does_not_orphan_the_subprocess(spawned):
+    # /bin/echo only has to satisfy the "is this runnable" check; Popen is faked
+    ops = GrafanaOps(_Settings(), mcp_binary="/bin/echo")
+    assert ops.mcp_tools == set()
+    assert ops.mcp_error and "exited" in ops.mcp_error
+    assert ops.mcp is None
+    assert len(spawned) == 1, "the binary was runnable, so it should have spawned"
+    assert spawned[0].terminated == 1, "spawned process left running after a failed handshake"
+    assert spawned[0].waited >= 1, "terminated but never reaped"
+
+
+def test_close_kills_and_reaps_when_terminate_does_not_take(spawned):
+    spawned.configure(terminate_raises=True)
+    GrafanaOps(_Settings(), mcp_binary="/bin/echo")
+    proc = spawned[0]
+    assert proc.terminated == 1
+    assert proc.killed == 1
+    assert proc.waited >= 1, "killed but never reaped, which leaves a zombie"
+
+
+def test_mcp_close_is_safe_to_call_twice(spawned):
+    client = grafana_ops._McpStdio("/bin/echo")
+    try:
+        client.start()
+    except Exception:
+        pass  # the handshake fails; the process is what matters
+    proc = spawned[0]
+    client.close()
+    client.close()
+    assert proc.terminated == 1, "the second close should be a no-op"
+
+
+def test_close_on_a_client_that_never_started_is_a_no_op():
+    grafana_ops._McpStdio("/nonexistent/mcp-grafana").close()
+
+
+def test_grafana_ops_is_a_context_manager(spawned):
+    with GrafanaOps(_Settings(), mcp_binary="/bin/echo") as ops:
+        assert ops.mcp_tools == set()
+
+
+# --- ensure_folder -----------------------------------------------------------
+
+def _folder_calls(http):
+    return [c for c in http if c["url"].endswith("/api/folders")]
+
+
+def test_ensure_folder_http_treats_a_taken_uid_as_success(http):
+    http.queue.append(_FakeResp(412, {"message": "the folder has been changed by someone else"}))
+    ops = _ops(mcp_tools=())
+    assert ops.ensure_folder() == "customs"
+    assert len(_folder_calls(http)) == 1
+
+
+def test_ensure_folder_http_raises_on_a_real_failure(http):
+    http.queue.append(_FakeResp(400, {"message": "uid too long, max 40 characters"}))
+    with pytest.raises(RuntimeError, match="uid too long"):
+        _ops(mcp_tools=()).ensure_folder()
+
+
+def test_ensure_folder_is_only_done_once(http):
+    ops = _ops(mcp_tools=())
+    ops.ensure_folder()
+    ops.ensure_folder()
+    assert len(_folder_calls(http)) == 1
+
+
+def test_ensure_folder_mcp_conflict_is_success_and_never_touches_rest(http):
+    # the real 1.1.0 error text for a uid that is already taken
+    mcp = _FakeMcp(tools={"create_folder"}, results={"create_folder": {
+        "isError": True,
+        "content": [{"type": "text", "text":
+                     "create folder 'Customs': [POST /folders] createFolder (status 412): {}"}],
+    }})
+    ops = _ops(mcp_tools={"create_folder"}, mcp=mcp)
+    assert ops.ensure_folder() == "customs"
+    assert _folder_calls(http) == []
+
+
+def test_ensure_folder_mcp_other_error_falls_through_to_rest_and_raises(http):
+    # the real 1.1.0 error text for a genuinely bad request
+    mcp = _FakeMcp(tools={"create_folder"}, results={"create_folder": {
+        "isError": True,
+        "content": [{"type": "text", "text":
+                     "create folder 'Bad': [POST /folders][400] createFolderBadRequest "
+                     '{"message":"uid too long, max 40 characters"}'}],
+    }})
+    http.queue.append(_FakeResp(400, {"message": "uid too long, max 40 characters"}))
+    ops = _ops(mcp_tools={"create_folder"}, mcp=mcp)
+    with pytest.raises(RuntimeError) as excinfo:
+        ops.ensure_folder()
+    # both explanations survive into the raise
+    assert "MCP create_folder said" in str(excinfo.value)
+    assert "REST said" in str(excinfo.value)
+    assert len(_folder_calls(http)) == 1, "a non-conflict MCP error must be re-checked over REST"
+
+
+def test_ensure_folder_mcp_error_that_rest_says_is_fine_is_not_fatal(http):
+    mcp = _FakeMcp(tools={"create_folder"}, results={"create_folder": {
+        "isError": True,
+        "content": [{"type": "text", "text": "connection reset"}],
+    }})
+    http.queue.append(_FakeResp(412, {"message": "already exists"}))
+    ops = _ops(mcp_tools={"create_folder"}, mcp=mcp)
+    assert ops.ensure_folder() == "customs"
+
+
+def test_mcp_conflict_only_matches_a_conflict_status():
+    assert grafana_ops._mcp_conflict("createFolder (status 412): {}")
+    assert grafana_ops._mcp_conflict("[POST /folders][409] conflict")
+    assert not grafana_ops._mcp_conflict("[POST /folders][400] createFolderBadRequest")
+    assert not grafana_ops._mcp_conflict("rule not found")
+    assert not grafana_ops._mcp_conflict("")
+    # a bare number in prose is not a status
+    assert not grafana_ops._mcp_conflict("deleted 412 stale annotations")
+
+
+# --- public dashboard annotations exposure -----------------------------------
+
+def test_enable_public_leaves_annotations_off_by_default(http):
+    http.queue.append(_FakeResp(200, {"uid": "pd1", "accessToken": "tok"}))
+    _ops(mcp_tools=()).enable_public("customs-overview")
+    assert http[0]["json"]["annotationsEnabled"] is False
+
+
+def test_enable_public_serves_annotations_only_when_asked(http):
+    http.queue.append(_FakeResp(200, {"uid": "pd1", "accessToken": "tok"}))
+    _ops(mcp_tools=()).enable_public("customs-timeline", annotations_enabled=True)
+    assert http[0]["json"]["annotationsEnabled"] is True
+
+
+def test_provision_shares_annotations_for_the_timeline_only():
+    # the mapping the provisioning script applies, pinned here because the
+    # difference between the two pages is a deliberate exposure decision
+    import importlib.util
+
+    root = pathlib.Path(grafana_ops.__file__).resolve().parents[2]
+    spec = importlib.util.spec_from_file_location(
+        "provision_grafana", root / "scripts" / "provision_grafana.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert module.PUBLIC_DASHBOARDS == {
+        "customs-overview": False,
+        "customs-timeline": True,
+    }
 
 
 # --- live, deselected by default (pytest addopts: -m 'not live') -------------

@@ -33,7 +33,16 @@ PLACEHOLDER_WEBHOOK = "https://customs.invalid/alerts/remediator"
 # The two pages Launch Control embeds: the market tiles and the timecode
 # heatmap. Public sharing is the primary embed path (design spec section 9);
 # render_png is the fallback and needs no sharing.
-PUBLIC_DASHBOARDS = ["customs-overview", "customs-timeline"]
+#
+# The flag is annotations_enabled, and it is per dashboard on purpose. A public
+# dashboard serves its annotations from a public endpoint whether or not a
+# panel on the page draws them, so the overview (which draws none) would
+# otherwise publish every finding's text for nothing. The timeline draws the
+# finding and remediation markers, so it keeps them.
+PUBLIC_DASHBOARDS = {
+    "customs-overview": False,
+    "customs-timeline": True,
+}
 
 
 def main() -> int:
@@ -45,8 +54,14 @@ def main() -> int:
     args = parser.parse_args()
 
     print(f"stack: {settings.grafana_url}")
-    ops = GrafanaOps(settings)
+    # with-statement, not a trailing ops.close(): anything that raises in the
+    # middle of provisioning would otherwise leave the mcp-grafana subprocess
+    # running after this script exits.
+    with GrafanaOps(settings) as ops:
+        return _provision(ops, args)
 
+
+def _provision(ops, args) -> int:
     print(f"\nmcp-grafana tools discovered: {len(ops.mcp_tools)}")
     if ops.mcp_error:
         print("  !! MCP UNAVAILABLE, running HTTP only. The Publisher agent path "
@@ -75,14 +90,15 @@ def main() -> int:
     print("  notification policy: team=customs routes to customs-webhook")
 
     if not args.no_public:
-        print("\npublic dashboards:")
-        for uid in PUBLIC_DASHBOARDS:
+        print("\npublic dashboards (no login: these pages are the judge facing "
+              "surface and carry demo findings on purpose):")
+        for uid, annotations in PUBLIC_DASHBOARDS.items():
             try:
-                print(f"  {uid:20} {ops.enable_public(uid)}")
+                url = ops.enable_public(uid, annotations_enabled=annotations)
+                print(f"  {uid:20} annotations={str(annotations):5} {url}")
             except Exception as exc:
                 print(f"  {uid:20} FAILED: {exc}")
 
-    ops.close()
     return 0
 
 
