@@ -3,12 +3,13 @@ from pathlib import Path
 
 from google.genai import types
 
+from customs import guard
 from customs.adjudicate import clearance, judge
 from customs.analyst import merge_micro_shots, observe_shot
 from customs.config import settings
 from customs.genai_client import generate_json
 from customs.media import Shot, detect_shots, extract_audio_span
-from customs.packs import load as load_packs
+from customs.packs import MarketPack, load as load_packs
 from customs.schema import Finding, Observation, RunRecord
 from customs.store import Store
 
@@ -70,16 +71,17 @@ def _transcribe_shot(video_path, shot: Shot, workdir) -> str:
     text = raw.get("transcript")
     return text if isinstance(text, str) else ""
 
-def apply_guard(findings: list[Finding]) -> list[Finding]:
-    """Identity placeholder for the guard stage (design spec section 7).
+def apply_guard(findings: list[Finding], pack: MarketPack) -> list[Finding]:
+    """Guard stage: delegate to guard.apply (design spec section 7).
 
-    Task 10 replaces this body with the real protected-characteristic
-    blocking rule layer (guard.apply); kept under this exact name, called
-    from exactly one place below (with `pack` already in scope there), so
-    that swap is a body change plus a one-line call-site change, not a
-    redesign.
+    Kept under this exact name, at the one call site below, per the Task 9
+    placeholder's own contract -- the Task 10 swap is this body plus the
+    added `pack` parameter (already in scope at the call site), not a
+    redesign. All the actual rule logic (protected_basis blocking,
+    offence-never-remediable) lives in guard.py, not here; see its
+    docstring for why it is written as a pure function with no model call.
     """
-    return findings
+    return guard.apply(findings, pack)
 
 def errored_markets(store: Store, run_id: str) -> set[str]:
     """Every market that was never actually evaluated in this run.
@@ -109,7 +111,7 @@ def run(asset_path, markets: list[str], store: Store, workdir) -> RunRecord:
 
     Sequential stages: create the run, ingest (shot detection + merge, then
     per-shot transcription), analyst (per-shot observation), adjudicate
-    (per-market judging + guard placeholder), persist, done.
+    (per-market judging + guard), persist, done.
 
     Every stage that makes a model call -- one shot's transcription, one
     shot's analyst observation, one market's adjudication -- is wrapped in
@@ -181,7 +183,7 @@ def run(asset_path, markets: list[str], store: Store, workdir) -> RunRecord:
     store.add_observations(run_id, observations)
     emit("pipeline", f"analyst -> {len(observations)} observation(s) persisted")
 
-    # --- adjudicate: per-market judging, sequential, plus guard placeholder
+    # --- adjudicate: per-market judging, sequential, plus guard
     # (stage-wrapped, one unit per market) ---
     packs = load_packs()
     all_findings: list[Finding] = []
@@ -196,7 +198,7 @@ def run(asset_path, markets: list[str], store: Store, workdir) -> RunRecord:
             emit("adjudicator", f"stage_error: market={market}: {result!r}")
             continue
 
-        findings = apply_guard(result)
+        findings = apply_guard(result, pack)
         all_findings.extend(findings)
         status = clearance(findings)
         emit("adjudicator", f"{market} clearance -> {status} ({len(findings)} finding(s))")

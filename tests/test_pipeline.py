@@ -94,11 +94,29 @@ def test_call_with_retries_gives_up_after_max_attempts():
     assert isinstance(result, RuntimeError)
     assert len(calls) == pipeline._MAX_ATTEMPTS == 3
 
-# --- apply_guard: identity placeholder (Task 10 swaps the body) ---
+# --- apply_guard: delegates to guard.apply (Task 9 placeholder swapped by Task 10) ---
+# The rule logic itself (protected_basis blocking, offence-never-remediable,
+# passthrough) is guard.py's own responsibility and is covered exhaustively
+# in tests/test_guard.py; this only proves the pipeline wires findings and
+# pack through to guard.apply and returns exactly what it returns.
 
-def test_apply_guard_is_identity():
+def test_apply_guard_delegates_to_guard_apply(monkeypatch):
     findings = [_canned_finding("FR"), _canned_finding("SA")]
-    assert pipeline.apply_guard(findings) == findings
+    pack = object()  # opaque sentinel: apply_guard must forward it untouched, not inspect it
+    sentinel_result = [_canned_finding("US")]
+
+    captured = {}
+    def fake_apply(passed_findings, passed_pack):
+        captured["findings"] = passed_findings
+        captured["pack"] = passed_pack
+        return sentinel_result
+    monkeypatch.setattr(pipeline.guard, "apply", fake_apply)
+
+    result = pipeline.apply_guard(findings, pack)
+
+    assert captured["findings"] == findings
+    assert captured["pack"] is pack
+    assert result == sentinel_result
 
 # --- _transcribe_shot: malformed-shape hygiene (review fix round 1) ---
 
@@ -154,6 +172,34 @@ def test_run_persists_observations_and_findings_and_ends_done(monkeypatch, clip,
 
     fr_findings = store.findings(run.id, market="FR")
     assert [f.rule_id for f in fr_findings] == ["ZZ-01"]
+
+def test_run_applies_guard_protected_rule_blocks_remediation(monkeypatch, clip, tmp_path):
+    # Pipeline-level proof that Task 10's wiring is real, not just unit-tested
+    # in isolation: the real SA pack loaded from markets/SA.yaml (load_packs()
+    # is never mocked here) carries SA-LGBT-01 with protected_basis: true, the
+    # same rule the milestone-1 live gate run actually fired. A canned judge()
+    # finding against that real rule_id must come out of the persisted store
+    # with remediation_blocked=True, proving pipeline.run's apply_guard(result,
+    # pack) call reaches the real guard.apply with the real pack, not a stub.
+    monkeypatch.setattr(pipeline, "generate_json", _fake_generate_json_transcribe)
+    monkeypatch.setattr(pipeline, "observe_shot", _fake_observe_shot)
+    monkeypatch.setattr(
+        pipeline, "judge",
+        lambda run_id, observations, pack, on_event=None: [
+            _canned_finding(pack.market, rule_id="SA-LGBT-01", run_id=run_id)
+        ],
+    )
+
+    store = Store(tmp_path / "t.db")
+    run = pipeline.run(str(clip), ["SA"], store, tmp_path / "work")
+
+    assert run.status == "done"
+    findings = store.findings(run.id, market="SA")
+    assert len(findings) == 1
+    f = findings[0]
+    assert f.remediation_blocked is True
+    assert f.blocked_reason == "rule basis targets a protected characteristic; human decision required"
+    assert f.status == "open", "guard blocking remediation must never change status"
 
 def test_run_threads_transcripts_from_generate_json_into_observe_shot(monkeypatch, clip, tmp_path):
     monkeypatch.setattr(pipeline, "generate_json", _fake_generate_json_transcribe)

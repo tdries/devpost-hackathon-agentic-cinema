@@ -5,9 +5,10 @@ Usage:
     python scripts/run_pipeline.py docs/samples/test_ad.mp4 FR SA US
 
 Ingests the asset (shot detection, per-shot audio transcription), runs the
-analyst over every shot, adjudicates each given market in turn (guard is
-still the Task-9 identity placeholder), and prints any stage errors, a
-findings table, and a per-market clearance line. See pipeline.run's
+analyst over every shot, adjudicates each given market in turn (including
+the guard rule layer that blocks auto-remediation on protected-basis
+findings), and prints any stage errors, a findings table, and a per-market
+clearance line. See pipeline.run's
 docstring for the stage-error handling that keeps one bad shot or market
 from taking down the whole run: nothing here needs to catch anything for
 that -- the three retry-wrapped stages never raise out of pipeline.run,
