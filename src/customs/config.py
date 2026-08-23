@@ -47,10 +47,10 @@ class Settings:
             gcp_project=g("GOOGLE_CLOUD_PROJECT"),
             gcp_location=g("GOOGLE_CLOUD_LOCATION", "europe-west1"),
             model_vision=g("GEMINI_MODEL_VISION", "gemini-3.7-flash"),
-            model_text=g("GEMINI_MODEL_TEXT", "gemini-3.5-flash-lite"),
-            model_image=g("IMAGEN_MODEL", "imagen-3.0-capability-001"),
+            model_text=g("GEMINI_MODEL_TEXT", "gemini-3.7-flash"),
+            model_image=g("IMAGEN_MODEL", "gemini-3.1-flash-image"),
             model_video=g("VEO_MODEL", "veo-3.0-generate-001"),
-            model_tts=g("TTS_MODEL", "gemini-3.1-flash-tts"),
+            model_tts=g("TTS_MODEL", "gemini-2.5-flash-tts"),
             db_path=g("CUSTOMS_DB", "runs/customs.db"),
         )
 
