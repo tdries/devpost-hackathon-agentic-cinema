@@ -1,0 +1,263 @@
+{
+  "uid": "customs-remediation",
+  "title": "Customs: Remediation",
+  "description": "What was changed and what it closed. Findings and their remediations as Grafana annotations, plus the blocking metric falling away as fixes land.",
+  "tags": [
+    "customs"
+  ],
+  "schemaVersion": 39,
+  "version": 0,
+  "editable": true,
+  "graphTooltip": 1,
+  "liveNow": false,
+  "refresh": "1m",
+  "timezone": "browser",
+  "fiscalYearStartMonth": 0,
+  "weekStart": "",
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "annotations": {
+    "list": [
+      {
+        "name": "Customs findings",
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "red",
+        "type": "dashboard",
+        "target": {
+          "type": "tags",
+          "matchAny": false,
+          "tags": [
+            "customs"
+          ],
+          "limit": 100
+        }
+      },
+      {
+        "name": "Resolved by remediation",
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": true,
+        "hide": false,
+        "iconColor": "green",
+        "type": "dashboard",
+        "target": {
+          "type": "tags",
+          "matchAny": false,
+          "tags": [
+            "customs",
+            "resolved"
+          ],
+          "limit": 100
+        }
+      }
+    ]
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "asset",
+        "label": "Asset",
+        "description": "Which asset (the video file stem) this page is about",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "grafanacloud-prom"
+        },
+        "query": {
+          "qryType": 1,
+          "query": "label_values(customs_market_status, asset)",
+          "refId": "VariableQuery-asset"
+        },
+        "definition": "label_values(customs_market_status, asset)",
+        "refresh": 2,
+        "regex": "",
+        "sort": 1,
+        "hide": 0,
+        "skipUrlSync": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": false,
+        "options": [],
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "annolist",
+      "title": "Findings and remediations",
+      "description": "Every annotation tagged customs, newest first. Click one to jump to the moment in the ad it marks.",
+      "datasource": {
+        "type": "datasource",
+        "uid": "grafana"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 14,
+        "x": 0,
+        "y": 0
+      },
+      "options": {
+        "onlyFromThisDashboard": false,
+        "onlyInTimeRange": false,
+        "tags": [
+          "customs"
+        ],
+        "limit": 50,
+        "showTags": true,
+        "showTime": true,
+        "showUser": false,
+        "navigateToPanel": true,
+        "navigateBefore": "10m",
+        "navigateAfter": "10m"
+      }
+    },
+    {
+      "id": 2,
+      "type": "text",
+      "title": "How a remediation closes the loop",
+      "description": "",
+      "datasource": {
+        "type": "datasource",
+        "uid": "grafana"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 10,
+        "x": 14,
+        "y": 0
+      },
+      "options": {
+        "mode": "markdown",
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "### Change records\n\nEvery edit the Remediator makes is written as a change record: what was changed, by which method, and the before and after frame. The annotation list to the left is the Grafana half of that record. A red marker is the finding; a green marker tagged resolved is the remediation that closed it.\n\n### Why the metric falling is the proof\n\nNothing here deletes a Prometheus sample, because you cannot. When a fix lands, the finding stops being pushed, customs_blocking goes stale, the alert rule stops matching and Grafana resolves the alert on its own. The panel below is that moment: the bars drop and stay down.\n\n### What the guard refused\n\nA remediation the guard blocks is not retried quietly. It is surfaced with the reason attached, as a decision for a human to take."
+      }
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Blocking severity as fixes land",
+      "description": "customs_blocking by market and rule. A line ending is a finding that stopped being reported, which is what resolves the alert.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "grafanacloud-prom"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 12
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "grafanacloud-prom"
+          },
+          "expr": "max by (market, rule_id) (customs_blocking{asset=~\"$asset\"})",
+          "legendFormat": "{{market}} {{rule_id}}",
+          "editorMode": "code",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc",
+          "hideZeros": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.9,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "opacity",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "yellow",
+                "value": 40
+              },
+              {
+                "color": "orange",
+                "value": 60
+              },
+              {
+                "color": "red",
+                "value": 70
+              }
+            ]
+          },
+          "unit": "none",
+          "min": 0
+        },
+        "overrides": []
+      }
+    }
+  ]
+}

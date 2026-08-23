@@ -20,3 +20,5 @@ scripts/.cache/
 !docs/samples/*.mp4
 service-account*.json
 grafana-token*
+# mcp-grafana release binary (v1.1.0, darwin arm64), 50MB, redownloadable
+bin/
