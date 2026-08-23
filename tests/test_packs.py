@@ -132,6 +132,18 @@ def test_duplicate_rule_id_across_two_packs_raises(tmp_path):
         load(tmp_path)
 
 
+def test_duplicate_market_across_two_packs_raises(tmp_path):
+    # Same market code declared by two different files must not silently
+    # overwrite one pack with the other; the error must name both files.
+    _write_pack(tmp_path / "AA.yaml", [_rule(id="AA-01")], market="ZZ")
+    _write_pack(tmp_path / "BB.yaml", [_rule(id="BB-01")], market="ZZ")
+    with pytest.raises(PackError) as exc_info:
+        load(tmp_path)
+    message = str(exc_info.value)
+    assert "AA.yaml" in message
+    assert "BB.yaml" in message
+
+
 def test_severity_out_of_range_raises(tmp_path):
     _write_pack(tmp_path / "ZZ.yaml", [_rule(id="ZZ-SEV-01", severity=150)])
     with pytest.raises(PackError, match="ZZ-SEV-01"):
@@ -163,3 +175,38 @@ def test_underscore_files_are_not_loaded_as_packs(tmp_path):
     _write_pack(tmp_path / "AA.yaml", [_rule(id="AA-01")], market="AA")
     packs = load(tmp_path)
     assert set(packs.keys()) == {"AA"}
+
+
+def test_malformed_yaml_syntax_raises(tmp_path):
+    path = tmp_path / "ZZ.yaml"
+    path.write_text("market: FR\nrules: [\n")  # unclosed flow sequence
+    with pytest.raises(PackError, match="ZZ.yaml"):
+        load(tmp_path)
+
+
+def test_non_mapping_yaml_raises(tmp_path):
+    path = tmp_path / "ZZ.yaml"
+    path.write_text("- market: ZZ\n- rules: []\n")  # valid YAML, top-level list not a mapping
+    with pytest.raises(PackError, match="ZZ.yaml"):
+        load(tmp_path)
+
+
+def test_missing_id_raises(tmp_path):
+    rule = _rule()
+    del rule["id"]
+    _write_pack(tmp_path / "ZZ.yaml", [rule])
+    with pytest.raises(PackError, match="missing the required 'id' field"):
+        load(tmp_path)
+
+
+def test_missing_market_raises(tmp_path):
+    path = tmp_path / "ZZ.yaml"
+    data = {
+        "name": "Test market",
+        "regulators": ["TEST"],
+        "pre_clearance": "none",
+        "rules": [],
+    }
+    path.write_text(yaml.safe_dump(data))
+    with pytest.raises(PackError, match="missing required 'market' field"):
+        load(tmp_path)

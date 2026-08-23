@@ -40,9 +40,15 @@ def _read_yaml(path: Path) -> dict:
         raise PackError(f"{path.name}: expected a YAML mapping at the top level")
     return data
 
-def taxonomy(markets_dir: Path = _DEFAULT_MARKETS_DIR) -> set[str]:
-    """The fixed observation-dimension taxonomy (design spec section 5)."""
-    path = Path(markets_dir) / _TAXONOMY_FILENAME
+def taxonomy() -> set[str]:
+    """The fixed observation-dimension taxonomy (design spec section 5).
+
+    Always reads the canonical markets/_taxonomy.yaml. There is exactly one
+    dimension vocabulary for the whole system, so this intentionally takes no
+    markets_dir override, unlike load() below (which loads pack files from a
+    given directory but still validates dimensions against this fixed file).
+    """
+    path = _DEFAULT_MARKETS_DIR / _TAXONOMY_FILENAME
     data = _read_yaml(path)
     dims = data.get("dimensions") or []
     return set(dims)
@@ -120,10 +126,17 @@ def load(markets_dir: Path = _DEFAULT_MARKETS_DIR) -> dict[str, MarketPack]:
     markets_dir = Path(markets_dir)
     dims = taxonomy()
     seen_rule_ids: dict[str, str] = {}
+    seen_markets: dict[str, str] = {}
     packs: dict[str, MarketPack] = {}
     for path in sorted(markets_dir.glob("*.yaml")):
         if path.name.startswith("_"):
             continue
         pack = _load_pack(path, dims, seen_rule_ids)
+        if pack.market in seen_markets:
+            raise PackError(
+                f"{path.name}: duplicate market {pack.market!r} "
+                f"(already defined in {seen_markets[pack.market]})"
+            )
+        seen_markets[pack.market] = path.name
         packs[pack.market] = pack
     return packs
