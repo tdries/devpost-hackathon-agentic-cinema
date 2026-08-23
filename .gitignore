@@ -14,6 +14,8 @@ build/
 logs/
 runs/
 media/cache/
+# Veo/TTS shot cache for scripts/make_test_ad.py: regenerable, never committed
+scripts/.cache/
 *.mp4
 !docs/samples/*.mp4
 service-account*.json

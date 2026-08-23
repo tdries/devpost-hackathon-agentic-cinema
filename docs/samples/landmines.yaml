@@ -1,0 +1,99 @@
+# Planted compliance triggers in docs/samples/test_ad.mp4.
+#
+# The test ad is a 56 s fictional commercial for a made-up drink brand
+# "Solstice", generated with Veo (scripts/make_test_ad.py) and deliberately
+# loaded with one clearance trigger per shot. This file is the ground truth:
+# Task 9's milestone gate and Task 14's golden test read it and compare the
+# pipeline's findings against `expects`.
+#
+# Schema, one entry per shot:
+#   shot      integer, 1-8, matches the shot order in the assembled mp4
+#   t_approx  seconds into test_ad.mp4 where the trigger is most visible
+#   dimension one value from markets/_taxonomy.yaml
+#   expects   rule ids that SHOULD fire, from the packs that exist today
+#             (markets/FR.yaml, markets/SA.yaml, markets/US.yaml)
+#
+# `expects` is deliberately conservative: only rules whose trigger text
+# plainly covers what is on screen. An empty list means no rule in today's
+# three packs covers that dimension, not that the shot is trigger-free.
+#
+# Incidental triggers, not planted and not listed in `expects`: Veo dressed the
+# bar in shot 5 and the cafe table in shot 7 with green capped bottles that read
+# as beer, and shot 5's set has a full spirits back-bar. Alcohol findings on
+# shots 5 and 7 are therefore true positives, not false alarms, and only shot 8
+# is the clean control. Anything flagged on shot 8 in FR, SA or US is a genuine
+# false positive.
+#
+# UK, JP and TR expectations arrive with Task 16, which adds those packs:
+#   shot 1 alcohol      -> TR (and ID) alcohol-depiction rules
+#   shot 2 English text -> QC French-language rule (FR-LANG-01 is the analogue today)
+#   shot 3 thumbs-up    -> gesture offence rules for ME / West Africa markets
+#   shot 4 swimwear     -> ID and IN modesty rules
+#   shot 5 strobe       -> UK Ofcom (Harding test) and JP broadcast flash limits
+#   shot 6 comparative  -> UK CAP and DE comparative/health-claim rules
+# Until then those shots carry only the subset of expectations the FR/SA/US
+# packs can express.
+
+# Shot 1, terrace cafe: two actors clink glasses of red wine in a toast, a
+# Solstice bottle stands on the table.
+- shot: 1
+  t_approx: 3.5
+  dimension: alcohol_tobacco_drugs
+  expects: [FR-ALC-01, SA-ALC-01]
+
+# Shot 2, macro close-up of a handwritten note. The English line
+# "Happiness is one sip away" is burned in, so it is a guaranteed OCR target:
+# on-screen commercial text with no French translation.
+- shot: 2
+  t_approx: 10.5
+  dimension: text_legibility
+  expects: [FR-LANG-01]
+
+# Shot 3, actor gives a thumbs-up straight down the lens. Offensive gesture in
+# parts of the Middle East and West Africa. No rule in the FR/SA/US packs
+# covers gesture_body_language, so this shot has no expectation today and is
+# excluded from the Task 9 gate's hit-rate denominator.
+- shot: 3
+  t_approx: 17.5
+  dimension: gesture_body_language
+  expects: []
+
+# Shot 4, beach scene, cast in swimwear.
+# US-MOD-01 is deliberately NOT expected: ordinary beachwear is not "nudity or
+# overtly sexualized content" under it, so expecting it would bake a false
+# positive into the gate.
+- shot: 4
+  t_approx: 24.5
+  dimension: modesty_dress_body
+  expects: [SA-MOD-01]
+
+# Shot 5, transition carrying a deterministic full-frame white strobe,
+# 6 flashes per second for 1.5 s, deliberately over the 3 flashes/s threshold.
+- shot: 5
+  t_approx: 31.5
+  dimension: photosensitivity_sensory
+  expects: [US-FLASH-01]
+
+# Shot 6, voice-over: "Twice the energy of any other drink". Unsubstantiated
+# comparative superiority claim against every competitor at once.
+- shot: 6
+  t_approx: 38.5
+  dimension: comparative_claims
+  expects: [US-CMP-01, FR-CMP-01]
+
+# Shot 7, two men holding hands at the cafe table. The protected-characteristic
+# case: SA-LGBT-01 carries protected_basis true, so the pipeline must flag it
+# for SA and the guard must BLOCK remediation rather than propose an edit.
+- shot: 7
+  t_approx: 45.5
+  dimension: sexual_orientation_gender_id
+  expects: [SA-LGBT-01]
+
+# Shot 8, control shot: studio product beauty pass with a four-leaf clover
+# emblem on the label and a price tag on the bottle neck. Superstition and
+# number-colour sensitivities exist in other markets, but nothing here should
+# fire in FR, SA or US. A finding on this shot is a false positive.
+- shot: 8
+  t_approx: 52.5
+  dimension: superstition_number_colour
+  expects: []
