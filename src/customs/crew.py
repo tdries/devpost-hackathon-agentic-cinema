@@ -765,7 +765,12 @@ def build(store: Store, workdir, markets: list[str], state: _RunState | None = N
                 name="adjudicators",
                 description="Judges every market at once, one agent per market.",
                 sub_agents=[
-                    AdjudicatorAgent(name=f"adjudicator_{m}", market=m, **common)
+                    # ADK requires an agent's name to be a valid Python identifier;
+                    # market codes are not always one (e.g. "CA-QC"). The sanitized
+                    # form is only ever used as this node's display/graph identity -
+                    # every business-logic use (pack lookup, event tags, findings)
+                    # goes through the unmodified market=m field below instead.
+                    AdjudicatorAgent(name=f"adjudicator_{m.replace('-', '_')}", market=m, **common)
                     for m in markets
                 ],
             ),
