@@ -10,8 +10,15 @@ from customs.config import settings
 from customs.genai_client import generate_json
 from customs.media import Shot, detect_shots, extract_audio_span
 from customs.packs import MarketPack, load as load_packs
-from customs.schema import Finding, Observation, RunRecord
+from customs.schema import Finding, RunRecord
 from customs.store import Store
+
+# These names are also the crew's seam. Since Task 13 the stages live in
+# crew.py, and every one of them reaches its work through this module
+# (pipeline.judge, pipeline.observe_shot, pipeline.detect_shots, ...) rather
+# than importing analyst/adjudicate/media directly. That keeps one definition
+# of "which function is a stage", and keeps this module the single place a
+# caller or a test patches to steer a run.
 
 # Model-call retries live here, at the pipeline level, never inside
 # analyst.py or adjudicate.py (design spec section 14): "Model call failure:
@@ -87,8 +94,8 @@ def errored_markets(store: Store, run_id: str) -> set[str]:
     """Every market that was never actually evaluated in this run.
 
     A market lands here when its pack failed to load, or its judge() call
-    exhausted every retry (the two market-level failure branches in run()
-    below) -- never for a per-shot transcription/analyst failure, which
+    exhausted every retry (the two market-level failure branches in
+    crew.AdjudicatorAgent) -- never for a per-shot transcription/analyst failure, which
     thins the evidence every market sees but does not mean any one market
     went unjudged.
 
@@ -109,9 +116,22 @@ def errored_markets(store: Store, run_id: str) -> set[str]:
 def run(asset_path, markets: list[str], store: Store, workdir) -> RunRecord:
     """Run the full clearance pipeline for one asset across the given markets.
 
-    Sequential stages: create the run, ingest (shot detection + merge, then
-    per-shot transcription), analyst (per-shot observation), adjudicate
-    (per-market judging + guard), persist, done.
+    Stages: create the run, ingest (shot detection + merge, then per-shot
+    transcription), analyst (per-shot observation), adjudicate (per-market
+    judging, now in parallel), guard, persist, publish, done.
+
+    Since Task 13 the stages are an ADK agent graph and this function is a
+    thin, stable front door onto it: it delegates to crew.run_clearance and
+    keeps its own signature, its stage-error semantics and its CLI contract
+    unchanged. Everything below still describes what a run does, because the
+    crew's agents call these same functions -- _transcribe_shot,
+    observe_shot, judge, apply_guard -- through this module, which is also
+    why monkeypatching pipeline.judge still steers a run.
+
+    The one stage the crew adds is the Publisher (crew.PublisherAgent), which
+    pushes this run's telemetry and updates the Grafana dashboards over MCP.
+    It cannot fail a run: a dead Grafana records `stage_error: publisher` and
+    the run still completes with its findings persisted.
 
     Every stage that makes a model call -- one shot's transcription, one
     shot's analyst observation, one market's adjudication -- is wrapped in
@@ -123,7 +143,7 @@ def run(asset_path, markets: list[str], store: Store, workdir) -> RunRecord:
     function and never changes the terminal status: it surfaces only as a
     stage_error event, and the run still reaches status "done". That
     guarantee does NOT extend to shot detection itself (media.detect_shots,
-    called once below before any per-shot work): an unreadable or corrupt
+    called once by the ingest stage before any per-shot work): an unreadable or corrupt
     asset raises there, uncaught, leaving the run in status "running"
     rather than "done" -- there is no reasonable per-unit failure to skip
     when there are no shots at all to iterate.
@@ -134,78 +154,15 @@ def run(asset_path, markets: list[str], store: Store, workdir) -> RunRecord:
     found nothing" from "never evaluated" rather than trusting
     clearance([]) == "cleared" for both.
 
-    Shots are iterated directly here (media.detect_shots + merge_micro_shots)
-    rather than via analyst.observe_all, precisely so each shot's model call
+    Shots are iterated one at a time (media.detect_shots + merge_micro_shots
+    in ingest, then observe_shot per shot in the analyst stage) rather than
+    via analyst.observe_all, precisely so each shot's model call
     can be retried and, on final failure, skipped independently -- observe_all
     calls observe_shot in a plain loop with no per-shot fault isolation, and
     per-task-9-brief ruling retries must live at the pipeline level, not
     inside analyst.py. merge_micro_shots is therefore called exactly once,
-    here; observe_all's own internal merge is simply never invoked.
+    in ingest; observe_all's own internal merge is simply never invoked.
     """
-    workdir = Path(workdir)
-    asset_path = str(asset_path)
-    run_record = store.create_run(asset_path=asset_path, markets=list(markets))
-    run_id = run_record.id
+    from customs import crew  # local import: crew.py imports this module
 
-    def emit(agent: str, message: str) -> None:
-        store.emit(run_id, agent, message)
-
-    store.set_run_t0(run_id, time.time())
-    store.set_run_status(run_id, "running")
-    emit("pipeline", f"run {run_id} started: asset={asset_path} markets={list(markets)}")
-
-    # --- ingest: shot detection + micro-shot merge (once, not per-unit) ---
-    emit("pipeline", "ingest -> detecting shots")
-    raw_shots = detect_shots(asset_path)
-    shots = merge_micro_shots(raw_shots)
-    emit("pipeline", f"ingest -> {len(raw_shots)} raw shot(s) merged to {len(shots)}")
-
-    # --- ingest: per-shot transcription (stage-wrapped, one unit per shot) ---
-    transcripts: dict[str, str] = {}
-    for shot in shots:
-        ok, result = _call_with_retries(lambda shot=shot: _transcribe_shot(asset_path, shot, workdir))
-        if ok:
-            transcripts[shot.shot_id] = result
-            emit("transcription", f"{shot.shot_id} -> {len(result)} char(s)")
-        else:
-            emit("transcription", f"stage_error: {shot.shot_id}: {result!r}")
-
-    # --- analyst: per-shot observation (stage-wrapped, one unit per shot) ---
-    observations: list[Observation] = []
-    for shot in shots:
-        ok, result = _call_with_retries(
-            lambda shot=shot: observe_shot(asset_path, shot, workdir, on_event=emit, transcripts=transcripts)
-        )
-        if ok:
-            observations.extend(result)
-        else:
-            emit("analyst", f"stage_error: {shot.shot_id}: {result!r}")
-    store.add_observations(run_id, observations)
-    emit("pipeline", f"analyst -> {len(observations)} observation(s) persisted")
-
-    # --- adjudicate: per-market judging, sequential, plus guard
-    # (stage-wrapped, one unit per market) ---
-    packs = load_packs()
-    all_findings: list[Finding] = []
-    for market in markets:
-        pack = packs.get(market)
-        if pack is None:
-            emit("adjudicator", f"stage_error: market={market}: no market pack loaded")
-            continue
-
-        ok, result = _call_with_retries(lambda pack=pack: judge(run_id, observations, pack, on_event=emit))
-        if not ok:
-            emit("adjudicator", f"stage_error: market={market}: {result!r}")
-            continue
-
-        findings = apply_guard(result, pack)
-        all_findings.extend(findings)
-        status = clearance(findings)
-        emit("adjudicator", f"{market} clearance -> {status} ({len(findings)} finding(s))")
-
-    store.add_findings(all_findings)
-    emit("pipeline", f"adjudicate -> {len(all_findings)} finding(s) persisted across {len(markets)} market(s)")
-
-    store.set_run_status(run_id, "done")
-    emit("pipeline", f"run {run_id} done")
-    return store.get_run(run_id)
+    return crew.run_clearance(asset_path, markets, store, workdir)

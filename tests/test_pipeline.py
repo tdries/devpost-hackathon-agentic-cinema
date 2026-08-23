@@ -1,8 +1,9 @@
+import functools
 import subprocess
 
 import pytest
 
-from customs import pipeline
+from customs import crew, pipeline
 from customs.media import Shot
 from customs.schema import Finding, Observation
 from customs.store import Store
@@ -23,6 +24,20 @@ def clip(tmp_path_factory):
         "-map", "[v]", "-map", "2:a", "-t", "4", "-pix_fmt", "yuv420p", str(p)],
         check=True, capture_output=True, timeout=60)
     return p
+
+@pytest.fixture(autouse=True)
+def no_publisher(monkeypatch):
+    """Every test in this file is offline and about the clearance stages.
+
+    Task 13 moved pipeline.run onto the ADK crew, whose Publisher stage makes
+    a real Gemini call and real Grafana Cloud pushes, so it is switched off at
+    the crew's own seam here rather than left to be accidentally exercised by
+    a unit test. tests/test_crew.py owns the Publisher's tests, including the
+    one proving a dead Grafana never fails a run.
+    """
+    monkeypatch.setattr(
+        crew, "run_clearance", functools.partial(crew.run_clearance, publish=False)
+    )
 
 @pytest.fixture(autouse=True)
 def no_real_sleep(monkeypatch):
