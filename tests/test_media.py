@@ -1,4 +1,4 @@
-import subprocess, pytest
+import subprocess, time, pytest
 from customs import media
 
 @pytest.fixture(scope="session")
@@ -118,3 +118,55 @@ def test_replace_segment_video_preserves_duration(clip, frames_dir, tmp_path):
 def test_media_error_on_bad_input(tmp_path):
     with pytest.raises(media.MediaError):
         media.probe_duration(tmp_path / "does_not_exist.mp4")
+
+# --- fix-round coverage: review findings on the loop-based edit functions ---
+
+def _sample_rgb(path, t):
+    # single averaged pixel at time t, via ffmpeg's own frame-accurate -ss seek
+    r = subprocess.run([
+        "ffmpeg", "-y", "-ss", f"{t}", "-i", str(path), "-frames:v", "1",
+        "-f", "rawvideo", "-pix_fmt", "rgb24", "-vf", "scale=1:1", "-",
+    ], capture_output=True, timeout=60)
+    px = r.stdout[:3]
+    return tuple(px) if len(px) == 3 else None
+
+def test_overlay_image_audio_less_source_completes_fast(solid_clip, png, tmp_path):
+    # regression for review finding: -shortest alone only bounds the encode via a
+    # mapped audio stream reaching EOF; an audio-less source has no such stream,
+    # so the infinite -loop input previously ran the encode to the 60s timeout.
+    out = tmp_path / "overlay_solid.mp4"
+    started = time.monotonic()
+    result = media.overlay_image(solid_clip, png, 0.2, 0.8, out)
+    elapsed = time.monotonic() - started
+    assert elapsed < 10.0, f"took {elapsed:.1f}s, expected well under the 60s timeout"
+    assert result == out
+    assert out.exists() and out.stat().st_size > 0
+    orig = media.probe_duration(solid_clip)
+    new = media.probe_duration(out)
+    assert abs(new - orig) < 0.3
+
+def test_replace_segment_video_audio_less_source_completes_fast(solid_clip, frames_dir, tmp_path):
+    # same regression as above, for the other loop-based edit function.
+    out = tmp_path / "segment_solid.mp4"
+    started = time.monotonic()
+    result = media.replace_segment_video(solid_clip, 0.2, 0.8, frames_dir, out)
+    elapsed = time.monotonic() - started
+    assert elapsed < 10.0, f"took {elapsed:.1f}s, expected well under the 60s timeout"
+    assert result == out
+    assert out.exists() and out.stat().st_size > 0
+    orig = media.probe_duration(solid_clip)
+    new = media.probe_duration(out)
+    assert abs(new - orig) < 0.3
+
+def test_replace_segment_video_frame_order_at_window_start(clip, frames_dir, tmp_path):
+    # regression for review finding: the replacement frame shown right at t_start
+    # must be the first frame in file order (f0.png, magenta), not whichever frame
+    # the loop's own free-running clock happens to land on at that global time.
+    out = tmp_path / "segment_order.mp4"
+    media.replace_segment_video(clip, 0.5, 1.5, frames_dir, out)
+    rgb = _sample_rgb(out, 0.55)
+    assert rgb is not None
+    r, g, _ = rgb
+    # f0.png is magenta (high red, low green, high blue); f1.png is cyan (low
+    # red, high green, high blue) -- red is the discriminator between them.
+    assert r > 128 and g < 128, f"expected the first frame (magenta) at t_start, sampled {rgb}"

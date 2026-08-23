@@ -100,24 +100,34 @@ def replace_segment_video(path, t_start: float, t_end: float, new_frames_dir, ou
     frames = sorted(new_frames_dir.glob("*.png"))
     if not frames:
         raise MediaError(f"no PNG frames found in {new_frames_dir}")
+    duration = probe_duration(path)
     span = max(t_end - t_start, 1e-3)
     fps = max(len(frames) / span, 1.0)
     filt = f"[0:v][1:v]overlay=enable='between(t,{t_start:.3f},{t_end:.3f})'[v]"
     args = [
         "ffmpeg", "-y",
         "-i", str(path),
+        # itsoffset shifts this input's own timestamps forward by t_start, so its
+        # frame 0 (file order) lands exactly at global t=t_start instead of at
+        # whatever phase the loop's free-running clock happens to be at by then.
+        "-itsoffset", f"{t_start:.3f}",
         "-loop", "1", "-framerate", f"{fps:.3f}", "-pattern_type", "glob",
         "-i", str(new_frames_dir / "*.png"),
         "-filter_complex", filt,
         "-map", "[v]", "-map", "0:a?",
         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "copy",
-        "-shortest", "-movflags", "+faststart",
+        # -shortest alone only bounds the encode via a *mapped* stream reaching a
+        # real EOF (e.g. audio, when present); with no audio track the only output
+        # stream is [v], fed by an infinite -loop input, so it never ends on its
+        # own. -t is an unconditional cap regardless of which streams are mapped.
+        "-t", f"{duration:.3f}", "-shortest", "-movflags", "+faststart",
         str(out_path),
     ]
     _run(args, timeout=_TIMEOUT)
     return Path(out_path)
 
 def overlay_image(path, png, t_start: float, t_end: float, out_path) -> Path:
+    duration = probe_duration(path)
     filt = f"[0:v][1:v]overlay=enable='between(t,{t_start:.3f},{t_end:.3f})'[v]"
     args = [
         "ffmpeg", "-y",
@@ -126,7 +136,9 @@ def overlay_image(path, png, t_start: float, t_end: float, out_path) -> Path:
         "-filter_complex", filt,
         "-map", "[v]", "-map", "0:a?",
         "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "copy",
-        "-shortest", "-movflags", "+faststart",
+        # see replace_segment_video: -t is the unconditional bound, -shortest is
+        # belt-and-suspenders for whenever a real audio stream is also mapped.
+        "-t", f"{duration:.3f}", "-shortest", "-movflags", "+faststart",
         str(out_path),
     ]
     _run(args, timeout=_TIMEOUT)
