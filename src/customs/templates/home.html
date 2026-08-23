@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Customs Launch Control{% endblock %}
+{% block main %}
+
+<section class="hero">
+  <div class="rule-row"><span class="label">New clearance run</span></div>
+  <h1 class="headline">One asset. Every market. Before it ships.</h1>
+  <p class="subline">Customs watches the commercial the way a regulator would, market by market, and comes back with the statute behind every finding. Pick the markets, hand it the master, and the crew starts on the next screen.</p>
+</section>
+
+<section>
+  <form class="panel launcher" method="post" action="/runs" enctype="multipart/form-data">
+    <div>
+      <div class="rule-row"><span class="label">The master</span></div>
+      <label class="drop" id="drop">
+        <input type="file" name="asset" id="asset" accept="video/mp4,video/quicktime,video/*" required>
+        <span class="pick">Choose a file</span>
+        <span class="picked" id="picked">or drop the master here</span>
+      </label>
+      <p class="limits">MP4 or MOV &middot; up to 120 seconds &middot; up to 200 MB</p>
+      <p class="subline" style="font-size:13.5px">A run takes about four minutes: shot detection, a transcription and an observation pass per shot, then every market judged in parallel with a grounded citation for each finding.</p>
+    </div>
+    <div>
+      <div class="rule-row"><span class="label">Markets</span></div>
+      <div class="markets">
+        {% for pack in packs %}
+        <label class="market-pick">
+          <input type="checkbox" name="markets" value="{{ pack.market }}" checked>
+          <span class="code">{{ pack.market }}</span>
+          <span class="name">{{ pack.name }}</span>
+          <span class="regime chip">{{ pack.pre_clearance }}</span>
+        </label>
+        {% else %}
+        <p class="subline">No market packs loaded. Check the markets/ directory.</p>
+        {% endfor %}
+      </div>
+      <div style="margin-top:22px"><button class="btn go" type="submit">Begin clearance</button></div>
+    </div>
+  </form>
+</section>
+
+<section>
+  <div class="rule-row"><span class="label">Recent runs</span></div>
+  {% if recent %}
+  <div class="runlist">
+    {% for item in recent %}
+    <a class="runrow" href="/runs/{{ item.run.id }}">
+      <span class="id">{{ item.run.id }}</span>
+      <span class="asset">{{ item.run.asset_path.split('/')[-1] }}</span>
+      <span class="when">{{ item.run.t0 | stamp }}</span>
+      <span class="flags">
+        {% for code, state in item.states.items() %}
+        <span class="pill s-{{ 'error' if state.errored else state.clearance }}"><span class="dot"></span>{{ code }}</span>
+        {% endfor %}
+      </span>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <span class="big">No runs yet</span>
+    <p>Nothing has been cleared on this machine. Send the first master through the form above and this list becomes the campaign history.</p>
+  </div>
+  {% endif %}
+</section>
+
+{% endblock %}

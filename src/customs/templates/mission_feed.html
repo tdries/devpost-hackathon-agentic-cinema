@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Mission feed {{ run.id }}{% endblock %}
+{% block topbar_right %}<a href="/runs/{{ run.id }}">Launch board</a>{% endblock %}
+{% block nav %}{% include "_runnav.html" %}{% endblock %}
+{% block main %}
+
+<section class="hero" style="padding-bottom:26px">
+  <div class="rule-row"><span class="label">Mission feed</span></div>
+  <h1 class="headline" style="font-size:clamp(26px,3.4vw,38px)">Every move the crew made, in the order it made it.</h1>
+  <p class="subline">Not a spinner. This is the crew's own event log, streamed over server-sent events straight out of the run store. Stage errors are in here too, because a clearance tool that silently skips a shot is worse than one that admits it.</p>
+</section>
+
+<section style="padding-top:0;border-top:none">
+  <div class="feedbar">
+    <span class="label">Stream</span>
+    <span class="pill s-cleared" id="live"><span class="dot"></span><span id="live-text">connecting</span></span>
+    <span class="label" id="count">{{ events | length }} events</span>
+    <label class="label" style="margin-left:auto;display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input type="checkbox" id="follow" checked style="accent-color:var(--signal)"> Follow tail
+    </label>
+  </div>
+  <div class="feed" id="feed" data-run="{{ run.id }}" data-last="{{ last_id }}">
+    {% for event in events %}
+    <div class="line{% if 'stage_error' in event.message %} err{% endif %}">
+      <span class="t">{{ event.ts | clock }}</span>
+      <span class="a a-{{ event.agent }}">{{ event.agent }}</span>
+      <span class="m">{{ event.message }}</span>
+    </div>
+    {% else %}
+    <div class="empty" style="margin:26px">
+      <span class="big">Waiting for the first event</span>
+      <p>Nothing has been recorded for this run yet. The first line lands the moment the ingest agent opens the file.</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+{% endblock %}

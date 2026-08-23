@@ -13,6 +13,26 @@ def _read_env_file(path: Path) -> dict[str, str]:
             out[k.strip()] = v.strip()
     return out
 
+# The two Grafana pages Launch Control embeds, as public-dashboard share
+# URLs. They are pinned here rather than discovered at request time on
+# purpose: building a GrafanaOps to ask the stack for its access tokens
+# spawns the mcp-grafana subprocess and makes a network call, and the console
+# builds these URLs inside a request handler that must never do either
+# (grafana_ops.embed_url has the same rule: "pure string building, never a
+# network call"). The tokens are stable for the life of the share -- they
+# change only if someone revokes public sharing and enables it again -- and
+# scripts/provision_grafana.py prints the current pair on every run, so a
+# reprovisioned stack is a one line edit here or a GRAFANA_PUBLIC_* env var.
+#
+# These pages have no login by design (see grafana_ops.enable_public): they
+# are the judge facing surface and carry demo findings about a synthetic test
+# asset. A share token is not a credential and grants read of those two pages
+# only, which is why it can sit in the repo when nothing else here can.
+_PUBLIC_DASHBOARDS = {
+    "customs-overview": "https://dreamystairs2355.grafana.net/public-dashboards/572d542e26ea4384b206deab8589e63e",
+    "customs-timeline": "https://dreamystairs2355.grafana.net/public-dashboards/35f3ef6746614fd0948172de3e64c11d",
+}
+
 @dataclass(frozen=True)
 class Settings:
     grafana_url: str
@@ -30,6 +50,8 @@ class Settings:
     model_video: str
     model_tts: str
     db_path: str
+    grafana_public_overview: str
+    grafana_public_timeline: str
 
     @classmethod
     def load(cls, env_file: Path | str | None = ".env") -> "Settings":
@@ -52,6 +74,13 @@ class Settings:
             model_video=g("VEO_MODEL", "veo-3.1-generate-001"),
             model_tts=g("TTS_MODEL", "gemini-2.5-flash-tts"),
             db_path=g("CUSTOMS_DB", "runs/customs.db"),
+            # `or` rather than a default argument: .env.example ships both
+            # keys empty, and an empty override must fall back to the pin
+            # rather than blank the console's embeds.
+            grafana_public_overview=(g("GRAFANA_PUBLIC_OVERVIEW")
+                                     or _PUBLIC_DASHBOARDS["customs-overview"]),
+            grafana_public_timeline=(g("GRAFANA_PUBLIC_TIMELINE")
+                                     or _PUBLIC_DASHBOARDS["customs-timeline"]),
         )
 
 settings = Settings.load()

@@ -236,3 +236,533 @@ def test_two_alerts_for_one_market_serialize_end_to_end(tmp_path, monkeypatch):
     assert trace[1] == "verify:FR" and trace[3] == "verify:FR", trace
     assert trace[0].startswith("apply:") and trace[2].startswith("apply:"), trace
     assert trace[0] != trace[2], "both jobs ran"
+
+
+# --- Launch Control console (Task 15) -------------------------------------
+#
+# Every test below is offline and hermetic: the crew is replaced by a fake
+# that writes the same rows a real run would (events, findings, a stage error
+# for one market), so the console is exercised against real store shapes
+# without a four minute Vertex run.
+
+import asyncio
+import json
+import os
+import re
+import threading
+import time
+
+from customs.schema import ChangeRecord
+
+MARKETS = ["FR", "SA", "US"]
+
+
+def _console_findings(run_id):
+    """One blocked market, one guard-blocked finding, one clean market."""
+    return [
+        _finding(run_id),  # FR legal 95 sourced -> blocked
+        _finding(run_id, id="fnd_FR_FR-LANG-01_obs_shot_1_000",
+                 rule_id="FR-LANG-01", klass="policy", severity=55,
+                 rationale="English tagline with no French translation",
+                 citation_ref="Loi Toubon art. 2", t_start=7.0, t_end=12.0),
+        _finding(run_id, id="fnd_SA_SA-LGBT-01_obs_shot_6_000", market="SA",
+                 rule_id="SA-LGBT-01", klass="offence", severity=90,
+                 rationale="two men holding hands",
+                 citation_ref="GCAM content standards",
+                 remediable=False, remediation_blocked=True,
+                 blocked_reason="protected basis: a human decides this one"),
+    ]
+
+
+@pytest.fixture
+def console(tmp_path, monkeypatch):
+    """A console client whose crew is a fast fake.
+
+    Returns (client, store, launched, jobs): `launched` records every call the
+    POST /runs handler made into the crew, `jobs` every remediation enqueued.
+    """
+    store = Store(tmp_path / "customs.db")
+    monkeypatch.setattr(app_module, "_store_singleton", store)
+    monkeypatch.setattr(app_module, "probe_duration", lambda path: 42.0)
+
+    launched = []
+
+    def fake_launch(run_id, asset_path, markets, workdir=None):
+        launched.append((run_id, str(asset_path), list(markets)))
+        store.set_run_t0(run_id, time.time())
+        store.set_run_status(run_id, "running")
+        store.emit(run_id, "pipeline", f"run {run_id} started")
+        store.add_findings(_console_findings(run_id))
+        store.emit(run_id, "adjudicator", "FR clearance -> blocked (2 finding(s))")
+        store.emit(run_id, "adjudicator", "stage_error: market=SA: simulated 5xx")
+        store.emit(run_id, "adjudicator", "US clearance -> cleared (0 finding(s))")
+        store.set_run_status(run_id, "done")
+
+    monkeypatch.setattr(app_module, "launch_clearance", fake_launch)
+
+    jobs = []
+    monkeypatch.setattr(
+        app_module, "remediate_and_verify",
+        lambda run_id, finding_id, market, workdir=None: jobs.append(
+            (run_id, finding_id, market)),
+    )
+    with TestClient(app_module.app) as test_client:
+        yield test_client, store, launched, jobs
+
+
+def _judged_run(store):
+    """A finished run holding the fixture's findings and stage error."""
+    run = store.create_run(asset_path=ASSET, markets=list(MARKETS))
+    store.set_run_t0(run.id, time.time())
+    store.add_findings(_console_findings(run.id))
+    store.emit(run.id, "adjudicator", "FR clearance -> blocked (2 finding(s))")
+    store.emit(run.id, "adjudicator", "stage_error: market=SA: simulated 5xx")
+    # the Publisher is the last stage of a real run, and the board's Grafana
+    # panels are gated on it having run
+    store.emit(run.id, "publisher", "push_run_telemetry -> {'risk_samples': '3 market(s)'}")
+    store.set_run_status(run.id, "done")
+    return store.get_run(run.id)
+
+
+def _upload(client, payload=b"\x00\x01fake mp4 bytes", markets=MARKETS, name="ad.mp4"):
+    return client.post(
+        "/runs",
+        files={"asset": (name, payload, "video/mp4")},
+        data={"markets": list(markets)},
+        follow_redirects=False,
+    )
+
+
+# -- the front door --
+
+def test_home_offers_every_market_pack_and_says_when_there_are_no_runs(console):
+    client, _store, _launched, _jobs = console
+
+    body = client.get("/").text
+
+    assert client.get("/").status_code == 200
+    for market in MARKETS:
+        assert f'value="{market}"' in body, market
+    assert "no runs yet" in body.lower()
+
+
+def test_upload_creates_a_run_starts_the_crew_and_redirects_to_the_board(console):
+    client, store, launched, _jobs = console
+
+    response = _upload(client)
+
+    assert response.status_code == 303
+    run_id = response.headers["location"].rsplit("/", 1)[-1]
+    assert store.get_run(run_id) is not None
+    for _ in range(100):  # the crew runs on its own thread
+        if launched:
+            break
+        time.sleep(0.05)
+    assert launched and launched[0][0] == run_id
+    assert launched[0][2] == MARKETS
+
+
+def test_an_upload_longer_than_two_minutes_is_rejected_with_a_plain_message(
+        console, monkeypatch):
+    client, _store, launched, _jobs = console
+    monkeypatch.setattr(app_module, "probe_duration", lambda path: 181.0)
+
+    response = _upload(client)
+
+    assert response.status_code == 400
+    assert "120" in response.text and "second" in response.text.lower()
+    assert launched == []
+
+
+def test_an_oversize_upload_is_rejected_with_a_plain_message(console, monkeypatch):
+    client, _store, launched, _jobs = console
+    monkeypatch.setattr(app_module, "MAX_UPLOAD_BYTES", 1024)
+
+    response = _upload(client, payload=b"x" * 4096)
+
+    assert response.status_code == 400
+    assert "too large" in response.text.lower()
+    assert launched == []
+
+
+def test_a_rejected_upload_leaves_nothing_behind(console, monkeypatch):
+    client, store, _launched, _jobs = console
+    monkeypatch.setattr(app_module, "probe_duration", lambda path: 900.0)
+
+    _upload(client)
+
+    assert store.recent_runs() == []
+    assert list(app_module.uploads_dir().glob("*/*")) == []
+
+
+def test_an_upload_naming_no_market_is_rejected(console):
+    client, _store, launched, _jobs = console
+
+    response = _upload(client, markets=[])
+
+    assert response.status_code == 400
+    assert "market" in response.text.lower()
+    assert launched == []
+
+
+def test_an_upload_naming_an_unknown_market_is_rejected(console):
+    client, _store, launched, _jobs = console
+
+    response = _upload(client, markets=["FR", "ZZ"])
+
+    assert response.status_code == 400
+    assert launched == []
+
+
+# -- the board --
+
+def test_every_console_screen_404s_for_an_unknown_run(console):
+    client, _store, _launched, _jobs = console
+
+    for path in ("/runs/run_nope", "/runs/run_nope/status", "/runs/run_nope/mission",
+                 "/runs/run_nope/feed", "/runs/run_nope/markets/FR",
+                 "/runs/run_nope/cutting", "/runs/run_nope/media/original"):
+        assert client.get(path).status_code == 404, path
+
+
+def test_status_reports_a_clearance_a_count_and_the_errored_market(console):
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    body = client.get(f"/runs/{run.id}/status").json()
+
+    assert body["done"] is True
+    assert set(body["markets"]) == set(MARKETS)
+    assert body["markets"]["FR"] == {
+        "clearance": "blocked", "findings": 2, "blocked": 0, "errored": False}
+    assert body["markets"]["SA"]["errored"] is True
+    assert body["markets"]["SA"]["blocked"] == 1
+    assert body["markets"]["US"]["clearance"] == "cleared"
+    assert body["overall"]["cleared"] == 1
+    assert body["overall"]["total"] == 3
+    assert body["overall"]["failing"] == ["FR", "SA"]
+
+
+def test_a_market_with_no_verdict_yet_reads_as_pending(console):
+    client, store, _launched, _jobs = console
+    run = store.create_run(asset_path=ASSET, markets=list(MARKETS))
+    store.set_run_status(run.id, "running")
+
+    body = client.get(f"/runs/{run.id}/status").json()
+
+    assert body["done"] is False
+    assert [m["clearance"] for m in body["markets"].values()] == ["pending"] * 3
+
+
+def test_the_board_headline_counts_the_cleared_markets_and_names_the_others(console):
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    body = client.get(f"/runs/{run.id}").text
+
+    assert "CLEARED FOR LAUNCH IN 1 OF 3 MARKETS" in body
+    assert re.search(r"FR", body) and re.search(r"SA", body)
+    assert "public-dashboards" in body, "the Grafana surface is the board's floor"
+    assert f"/runs/{run.id}/panels/timeline.png" in body
+
+
+def test_the_board_admits_that_the_panels_are_not_there_until_the_publisher_runs(console):
+    """A Grafana panel reading "No data" on a board that is still working
+    says something false about the run."""
+    client, store, _launched, _jobs = console
+    run = store.create_run(asset_path=ASSET, markets=list(MARKETS))
+    store.set_run_t0(run.id, time.time())
+
+    body = client.get(f"/runs/{run.id}").text
+
+    assert "panels land when the publisher runs" in body.lower()
+    assert "/panels/timeline.png" not in body
+
+
+# -- the mission feed --
+#
+# The stream is driven as a raw ASGI call rather than through TestClient:
+# TestClient runs the whole app to completion before it builds a response
+# object (starlette.testclient buffers every http.response.body message into
+# one BytesIO), so `client.stream()` on an endpoint that stays open by design
+# would simply never return. Driving the app directly is also closer to what
+# the browser does: it reads chunks as they are sent and hangs up when it has
+# had enough, which is exactly what `stop` does below.
+
+
+def _drive_sse(path, *, headers=None, on_open=None, want=1, timeout=8.0):
+    """Open the SSE route, run `on_open` once the response has started, and
+    collect body chunks until `want` data lines have arrived. Returns
+    (status, headers, chunks)."""
+    async def drive():
+        stop = asyncio.Event()
+        seen = {"status": None, "headers": {}, "chunks": []}
+
+        async def receive():
+            await stop.wait()
+            return {"type": "http.disconnect"}
+
+        async def send(message):
+            if message["type"] == "http.response.start":
+                seen["status"] = message["status"]
+                seen["headers"] = {k.decode(): v.decode() for k, v in message["headers"]}
+                if on_open is not None:
+                    on_open()
+            elif message["type"] == "http.response.body":
+                body = message.get("body", b"")
+                if body:
+                    seen["chunks"].append(body.decode())
+                if sum(c.count("data:") for c in seen["chunks"]) >= want:
+                    stop.set()
+
+        scope = {
+            "type": "http", "asgi": {"version": "3.0", "spec_version": "2.3"},
+            "http_version": "1.1", "method": "GET", "scheme": "http",
+            "path": path, "raw_path": path.encode(), "query_string": b"",
+            "root_path": "", "client": ("testclient", 50000),
+            "server": ("testserver", 80),
+            "headers": [(k.lower().encode(), v.encode())
+                        for k, v in (headers or {}).items()],
+        }
+        await asyncio.wait_for(app_module.app(scope, receive, send), timeout)
+        return seen["status"], seen["headers"], seen["chunks"]
+
+    return asyncio.run(drive())
+
+
+def _sse_events(chunks):
+    """Every data: payload in the order it was sent."""
+    out = []
+    for line in "".join(chunks).splitlines():
+        if line.startswith("data:"):
+            out.append(json.loads(line[len("data:"):]))
+    return out
+
+
+def test_the_feed_streams_an_event_emitted_after_the_client_connected(console):
+    _client, store, _launched, _jobs = console
+    run = store.create_run(asset_path=ASSET, markets=list(MARKETS))
+
+    status, headers, chunks = _drive_sse(
+        f"/runs/{run.id}/feed",
+        on_open=lambda: store.emit(run.id, "analyst", "observe -> shot 7"))
+
+    assert status == 200
+    assert headers["content-type"].startswith("text/event-stream")
+    assert "retry:" in chunks[0], "an SSE stream must name its reconnect delay"
+    events = _sse_events(chunks)
+    assert events[-1]["agent"] == "analyst"
+    assert events[-1]["message"] == "observe -> shot 7"
+    assert events[-1]["id"] > 0, "every event needs an id or resuming is impossible"
+
+
+def test_the_feed_resumes_from_the_last_event_id_header(console):
+    _client, store, _launched, _jobs = console
+    run = store.create_run(asset_path=ASSET, markets=list(MARKETS))
+    first = store.emit(run.id, "ingest", "detecting shots")
+    store.emit(run.id, "analyst", "observe -> shot 0")
+
+    _status, _headers, chunks = _drive_sse(
+        f"/runs/{run.id}/feed", headers={"Last-Event-ID": str(first)})
+
+    messages = [event["message"] for event in _sse_events(chunks)]
+    assert messages == ["observe -> shot 0"], "an old event was replayed"
+
+
+def test_the_mission_page_renders_the_backlog_and_the_agent_badges(console):
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    store.emit(run.id, "remediator", "reframe instruction: crop the glass out")
+
+    body = client.get(f"/runs/{run.id}/mission").text
+
+    assert "reframe instruction" in body
+    assert "remediator" in body
+
+
+# -- the market room --
+
+def test_the_market_room_shows_the_guard_block_as_a_human_decision(console):
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    body = client.get(f"/runs/{run.id}/markets/SA").text
+
+    assert "human decision required" in body.lower()
+    assert "protected basis: a human decides this one" in body
+    assert "SA-LGBT-01" in body
+
+
+def test_a_market_the_run_never_asked_for_is_404(console):
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    assert client.get(f"/runs/{run.id}/markets/DE").status_code == 404
+
+
+def test_the_market_room_shows_the_citation_link_and_the_severity(console):
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    body = client.get(f"/runs/{run.id}/markets/FR").text
+
+    assert "FR-ALC-01" in body and "Loi Evin" in body
+    assert "https://example.org/evin" in body
+
+
+# -- manual remediation (the demo affordance; Grafana is the real trigger) --
+
+def test_remediating_an_open_unblocked_finding_enqueues_the_job(console):
+    client, store, _launched, jobs = console
+    run = _judged_run(store)
+
+    response = client.post(
+        f"/runs/{run.id}/findings/fnd_FR_FR-ALC-01_obs_shot_0_000/remediate",
+        follow_redirects=False)
+
+    assert response.status_code == 303
+    assert jobs == [(run.id, "fnd_FR_FR-ALC-01_obs_shot_0_000", "FR")]
+
+
+def test_remediating_a_guard_blocked_finding_is_refused(console):
+    client, store, _launched, jobs = console
+    run = _judged_run(store)
+
+    response = client.post(
+        f"/runs/{run.id}/findings/fnd_SA_SA-LGBT-01_obs_shot_6_000/remediate",
+        follow_redirects=False)
+
+    assert response.status_code in (404, 409)
+    assert jobs == []
+
+
+def test_remediating_an_unknown_or_already_resolved_finding_is_404(console):
+    client, store, _launched, jobs = console
+    run = _judged_run(store)
+    store.update_finding_status("fnd_FR_FR-LANG-01_obs_shot_1_000", "resolved",
+                                run_id=run.id)
+
+    for finding_id in ("fnd_nope", "fnd_FR_FR-LANG-01_obs_shot_1_000"):
+        response = client.post(f"/runs/{run.id}/findings/{finding_id}/remediate",
+                               follow_redirects=False)
+        assert response.status_code == 404, finding_id
+    assert jobs == []
+
+
+# -- artifacts --
+
+def test_a_still_filename_cannot_escape_the_run_directory(console, tmp_path):
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    secret = tmp_path / ".env"
+    secret.write_text("GRAFANA_SA_TOKEN=nope")
+
+    for attempt in ("..%2f..%2f.env", "%2e%2e%2f%2e%2e%2f.env", "..%2f.env"):
+        response = client.get(f"/runs/{run.id}/stills/{attempt}")
+        assert response.status_code == 404, attempt
+        assert "nope" not in response.text
+
+
+def test_media_routes_404_when_the_artifact_is_not_there_yet(console):
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    assert client.get(f"/runs/{run.id}/media/localized/FR").status_code == 404
+    assert client.get(f"/runs/{run.id}/media/localized/DE").status_code == 404
+
+
+def test_the_original_master_is_served_from_the_stores_own_record(console, tmp_path):
+    client, store, _launched, _jobs = console
+    asset = tmp_path / "ad.mp4"
+    asset.write_bytes(b"\x00\x01video")
+    run = store.create_run(asset_path=str(asset), markets=list(MARKETS))
+
+    response = client.get(f"/runs/{run.id}/media/original")
+
+    assert response.status_code == 200
+    assert response.content == b"\x00\x01video"
+
+
+# -- the instrument panel --
+
+def test_a_panel_render_is_cached_and_served_without_calling_grafana(console, monkeypatch):
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    cached = app_module.run_dir(run) / "panels" / "clearance.png"
+    cached.parent.mkdir(parents=True, exist_ok=True)
+    cached.write_bytes(b"\x89PNG cached")
+    monkeypatch.setattr(app_module, "_render_panel", _never_call)
+
+    response = client.get(f"/runs/{run.id}/panels/clearance.png")
+
+    assert response.status_code == 200
+    assert response.content == b"\x89PNG cached"
+
+
+def test_a_stale_panel_is_served_when_grafana_will_not_render(console, monkeypatch):
+    """An expired panel is worth more than a broken image on the board."""
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    cached = app_module.run_dir(run) / "panels" / "timeline.png"
+    cached.parent.mkdir(parents=True, exist_ok=True)
+    cached.write_bytes(b"\x89PNG stale")
+    old = time.time() - app_module.PANEL_CACHE_S - 60
+    os.utime(cached, (old, old))
+    monkeypatch.setattr(app_module, "_render_panel", _always_fail)
+
+    response = client.get(f"/runs/{run.id}/panels/timeline.png")
+
+    assert response.status_code == 200
+    assert response.content == b"\x89PNG stale"
+
+
+def test_an_unknown_panel_and_a_run_with_no_clock_are_404(console, monkeypatch):
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    monkeypatch.setattr(app_module, "_render_panel", _never_call)
+
+    assert client.get(f"/runs/{run.id}/panels/nope.png").status_code == 404
+    # no t0 means no mapped window, so there is no panel to render yet
+    unstarted = store.create_run(asset_path=ASSET, markets=list(MARKETS))
+    assert client.get(f"/runs/{unstarted.id}/panels/timeline.png").status_code == 404
+
+
+def _never_call(run, spec):
+    raise AssertionError("Grafana must not be touched for a fresh cached panel")
+
+
+def _always_fail(run, spec):
+    raise RuntimeError("grafana is down")
+
+
+# -- the cutting room --
+
+def test_the_cutting_room_says_when_no_master_has_been_localized_yet(console):
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    body = client.get(f"/runs/{run.id}/cutting").text
+
+    assert "no localized master" in body.lower()
+
+
+def test_the_cutting_room_lists_the_change_records_with_both_stills(console, tmp_path):
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    run_dir = app_module.run_dir(run)
+    (run_dir / "changes").mkdir(parents=True, exist_ok=True)
+    (run_dir / "changes" / "chg_1_before_kf0.png").write_bytes(b"png")
+    (run_dir / "changes" / "chg_1_after_kf0.png").write_bytes(b"png")
+    (run_dir / "localized_FR.mp4").write_bytes(b"mp4")
+    store.add_change(ChangeRecord(
+        id="chg_1", run_id=run.id, finding_id="fnd_FR_FR-ALC-01_obs_shot_0_000",
+        method="reframe", description="reframe: crop the wine glass out of frame",
+        before_frame=str(run_dir / "changes" / "chg_1_before_kf0.png"),
+        after_frame=str(run_dir / "changes" / "chg_1_after_kf0.png")))
+
+    body = client.get(f"/runs/{run.id}/cutting").text
+
+    assert "reframe" in body
+    assert "chg_1_before_kf0.png" in body and "chg_1_after_kf0.png" in body
+    assert f"/runs/{run.id}/media/localized/FR" in body
+    assert client.get(f"/runs/{run.id}/stills/chg_1_before_kf0.png").status_code == 200

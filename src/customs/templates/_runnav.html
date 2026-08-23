@@ -1,0 +1,15 @@
+{% set run_state = {"done": "cleared", "error": "blocked", "running": "pending", "created": "pending"}.get(run.status, "pending") %}
+<nav class="runnav">
+  <div class="wrap">
+    <a class="tab {% if screen == 'board' %}on{% endif %}" href="/runs/{{ run.id }}">Launch board</a>
+    <a class="tab {% if screen == 'mission' %}on{% endif %}" href="/runs/{{ run.id }}/mission">Mission feed</a>
+    <a class="tab {% if screen == 'cutting' %}on{% endif %}" href="/runs/{{ run.id }}/cutting">Cutting room</a>
+    {% for code in run.markets %}
+    <a class="tab {% if screen == 'market' and market == code %}on{% endif %}" href="/runs/{{ run.id }}/markets/{{ code }}">{{ code }}</a>
+    {% endfor %}
+    <span class="runnav-right">
+      <span class="runid">{{ run.id }}</span>
+      <span class="pill s-{{ run_state }}"><span class="dot"></span>{{ run.status }}</span>
+    </span>
+  </div>
+</nav>

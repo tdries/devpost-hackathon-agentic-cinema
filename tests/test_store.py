@@ -228,3 +228,20 @@ def test_store_survives_concurrent_threads(tmp_path):
 
     assert errors == []
     assert len(store.events_since(run.id, 0)) == 80
+
+
+def test_recent_runs_lists_the_newest_first_and_includes_a_run_never_started(tmp_path):
+    """The console's front door reads this. A run created a second ago and
+    never started has no t0, and it is exactly the one someone is looking
+    for, so ordering cannot depend on t0 being set."""
+    store = Store(tmp_path / "t.db")
+    first = store.create_run(asset_path="a.mp4", markets=["FR"])
+    store.set_run_t0(first.id, 1000.0)
+    second = store.create_run(asset_path="b.mp4", markets=["SA", "US"])
+
+    listed = store.recent_runs()
+
+    assert [r.id for r in listed] == [second.id, first.id]
+    assert listed[0].t0 is None
+    assert listed[0].markets == ["SA", "US"]
+    assert len(store.recent_runs(limit=1)) == 1

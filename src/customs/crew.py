@@ -775,12 +775,21 @@ def build(store: Store, workdir, markets: list[str], state: _RunState | None = N
     )
 
 def run_clearance(asset_path, markets: list[str], store: Store, workdir,
-                  *, publish: bool = True, model=None) -> RunRecord:
+                  *, publish: bool = True, model=None,
+                  run_id: str | None = None) -> RunRecord:
     """Run one asset through the crew, via an ADK Runner, and return its run record.
 
     The run record, its events, its observations and its findings all land in
     the same Store, in the same shape, as they did when pipeline.run drove
     the stages itself; pipeline.run now delegates here.
+
+    `run_id` adopts a run record that already exists instead of creating one.
+    That is what Launch Control needs and nothing else uses: the console
+    creates the run inside the upload request so it can redirect the browser
+    straight to /runs/{id}, then hands the id to this function on a
+    background thread. Without it the id would only exist once the crew had
+    started, and the upload would have nowhere to send the browser. Passing
+    an unknown id raises rather than quietly minting a second run.
 
     Stage errors never raise out of this function -- they are recorded as
     events and the run still reaches status "done" -- with the one documented
@@ -790,8 +799,11 @@ def run_clearance(asset_path, markets: list[str], store: Store, workdir,
     """
     workdir = Path(workdir)
     asset_path = str(asset_path)
-    run_record = store.create_run(asset_path=asset_path, markets=list(markets))
-    run_id = run_record.id
+    if run_id is None:
+        run_record = store.create_run(asset_path=asset_path, markets=list(markets))
+        run_id = run_record.id
+    elif store.get_run(run_id) is None:
+        raise ValueError(f"unknown run: {run_id}")
 
     store.set_run_t0(run_id, time.time())
     store.set_run_status(run_id, "running")

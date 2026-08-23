@@ -129,6 +129,19 @@ class Store:
         return RunRecord.from_json(json.loads(row[0])) if row else None
 
     @_locked
+    def recent_runs(self, limit: int = 20) -> list[RunRecord]:
+        """The newest runs first, for the console's front door.
+
+        Ordered by rowid rather than by t0: a run that was created but never
+        started has no t0 at all, and it is exactly the run someone is most
+        likely to be looking for.
+        """
+        rows = self._conn.execute(
+            "SELECT data FROM runs ORDER BY rowid DESC LIMIT ?", (int(limit),)
+        ).fetchall()
+        return [RunRecord.from_json(json.loads(r[0])) for r in rows]
+
+    @_locked
     def _write_run(self, run: RunRecord) -> None:
         self._conn.execute(
             "UPDATE runs SET data = ? WHERE id = ?",

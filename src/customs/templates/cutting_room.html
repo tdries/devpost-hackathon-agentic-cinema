@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Cutting room {{ run.id }}{% endblock %}
+{% block topbar_right %}<a href="/runs/{{ run.id }}">Launch board</a>{% endblock %}
+{% block nav %}{% include "_runnav.html" %}{% endblock %}
+{% block main %}
+
+<section class="hero" style="padding-bottom:20px">
+  <div class="rule-row"><span class="label">Cutting room</span></div>
+  <h1 class="headline" style="font-size:clamp(23px,2.7vw,31px)">The original, the localized master, and what moved between them.</h1>
+  <p class="subline" style="max-width:92ch;font-size:14.5px">One edited master per market, written by the Remediator and confirmed by the Verifier. Both players open on the second that changed.</p>
+</section>
+
+{% if localized %}
+{% for market in localized %}
+{% set start = starts.get(market) %}
+<section style="padding-top:4px">
+  <div class="rule-row">
+    <span class="label">{{ market }} master</span>
+    <a class="chip" href="/runs/{{ run.id }}/markets/{{ market }}">Market room</a>
+    <label class="label right" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input type="checkbox" class="sync" checked style="accent-color:var(--signal)"> Play both together
+    </label>
+  </div>
+  <div class="pair" data-pair="{{ market }}">
+    <div class="pane">
+      <div class="cap"><span class="label">Original</span><span class="chip">as delivered</span></div>
+      <video src="/runs/{{ run.id }}/media/original{% if start %}#t={{ '%.1f' % start }}{% endif %}" controls preload="metadata" playsinline muted></video>
+    </div>
+    <div class="pane">
+      <div class="cap"><span class="label">Localized {{ market }}</span><span class="chip method">edited</span></div>
+      <video src="/runs/{{ run.id }}/media/localized/{{ market }}{% if start %}#t={{ '%.1f' % start }}{% endif %}" controls preload="metadata" playsinline muted></video>
+    </div>
+  </div>
+</section>
+{% endfor %}
+{% else %}
+<section style="padding-top:8px">
+  <div class="empty">
+    <span class="big">No localized master yet</span>
+    <p>Nothing has been edited for this run. A master appears here as soon as a remediation lands, either from a Grafana alert firing into the webhook or from the remediate button in a market room.</p>
+  </div>
+</section>
+{% endif %}
+
+<section>
+  <div class="rule-row"><span class="label">Change records</span></div>
+  {% if changes %}
+  <div class="changes">
+    {% for item in changes %}
+    <div class="change">
+      <div class="change-head">
+        <span class="chip method">{{ item.change.method }}</span>
+        {% if item.market %}<span class="chip on">{{ item.market }}</span>{% endif %}
+        {% if item.finding %}<span class="rule-id">{{ item.finding.rule_id }}</span>{% endif %}
+        {% if item.finding %}<span class="mono" style="font-size:12px;color:var(--ink-3)">{{ item.finding.t_start | timecode }} to {{ item.finding.t_end | timecode }}</span>{% endif %}
+        <span class="runid" style="margin-left:auto">{{ item.change.id }}</span>
+      </div>
+      {% if item.before or item.after %}
+      <div class="change-body">
+        <div class="frame">
+          <span class="label">Before</span>
+          {% if item.before %}<img src="/runs/{{ run.id }}/stills/{{ item.before }}" alt="frame before the edit" loading="lazy">{% else %}<p class="subline">still not on disk</p>{% endif %}
+        </div>
+        <div class="frame">
+          <span class="label">After</span>
+          {% if item.after %}<img src="/runs/{{ run.id }}/stills/{{ item.after }}" alt="frame after the edit" loading="lazy">{% else %}<p class="subline">still not on disk</p>{% endif %}
+        </div>
+      </div>
+      {% endif %}
+      <div class="change-why">
+        {% if item.finding %}{{ item.finding.rationale }}{% endif %}
+        <div class="instruction">{{ item.change.description }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <span class="big">No edits recorded</span>
+    <p>Every remediation writes a change record naming the finding it answered, the method it used and the frame it touched. There are none for this run yet.</p>
+  </div>
+  {% endif %}
+</section>
+
+{% endblock %}

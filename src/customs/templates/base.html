@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Customs Launch Control{% endblock %}</title>
+<link rel="stylesheet" href="/static/customs.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0d10'/%3E%3Crect x='10' y='10' width='12' height='12' fill='%23ff9d2e' transform='rotate(45 16 16)'/%3E%3C/svg%3E">
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span class="brand-name">CUSTOMS</span>
+      <span class="brand-sub">LAUNCH CONTROL</span>
+    </a>
+    <div class="topbar-right">
+      {% block topbar_right %}<span>AGENTIC AD CLEARANCE</span>{% endblock %}
+    </div>
+  </div>
+</header>
+{% block nav %}{% endblock %}
+<main class="wrap">
+{% block main %}{% endblock %}
+</main>
+<footer>
+  <div class="wrap">
+    <span class="label">Customs // one asset, every market, before it ships</span>
+    <span class="label">Grafana is upstream of the work, not a report produced afterwards</span>
+  </div>
+</footer>
+<script src="/static/customs.js" defer></script>
+</body>
+</html>

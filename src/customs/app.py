@@ -1,14 +1,25 @@
-"""The Customs HTTP service. Right now: the Grafana alert webhook, and
-nothing else.
+"""The Customs HTTP service: Launch Control, and the Grafana alert webhook.
 
-This is the seam where Grafana stops being a report and becomes the thing
-that wakes the agent (design spec section 9b: "Grafana is upstream of the
-work, not a report produced afterwards"). An alert rule fires, its contact
-point POSTs here, and this service remediates the finding the alert is
-about and verifies the fix, which drops the metric and lets Grafana resolve
-its own alert.
+Two surfaces, one process, no build step.
 
-Two rules govern this file:
+**Launch Control** (Task 15) is the console and the demo: upload an asset,
+watch fifteen -- or three -- market tiles flip from pending to cleared, at
+risk or blocked as the adjudicators return, read the agents' own log as it
+happens, open one market and see the statute behind every finding, and watch
+the original and the localized master play side by side in the Cutting Room.
+Server-rendered Jinja2, one stylesheet, one small script. Nothing is built,
+bundled or fetched from a CDN, because the thing a judge opens must not
+depend on a toolchain being alive.
+
+**The alert webhook** is the seam where Grafana stops being a report and
+becomes the thing that wakes the agent (design spec section 9b: "Grafana is
+upstream of the work, not a report produced afterwards"). It predates the
+console and is deliberately untouched by it.
+
+An alert rule fires, its contact point POSTs here, and this service
+remediates the finding the alert is about and verifies the fix, which drops
+the metric and lets Grafana resolve its own alert. Two rules govern that
+route, and the console changed neither of them:
 
 1. **Nothing in the payload body is trusted except the labels.** An alert is
    an unauthenticated external input. `{asset, market, rule_id}` are used as
@@ -24,21 +35,66 @@ Two rules govern this file:
    failed. The work runs as a FastAPI BackgroundTask after the response, and
    the response says only how many alerts were accepted.
 
-Task 15 builds the Launch Control console around this file. The route below
-is the part that must survive that: keep POST /webhook/alert.
+--- Where the work runs ---
+
+Three kinds of slow work hang off this file, and each gets the mechanism it
+actually needs rather than the same one three times:
+
+* **A clearance run is a thread.** `POST /runs` starts `crew.run_clearance`
+  on a plain `threading.Thread`, not a FastAPI BackgroundTask. A run is
+  minutes of ffmpeg and Vertex calls; a BackgroundTask runs *after* the
+  response is finished but still inside the request's task, so the browser
+  would sit on the POST for the whole run and `TestClient` would block on it
+  until the run ended. A thread lets the POST answer immediately with the
+  redirect the browser needs, which is the entire point of creating the run
+  record in the request instead of in the crew.
+* **A remediation is a BackgroundTask**, exactly as the webhook has always
+  done it: seconds to a minute, and the caller (Grafana, or the Market Room's
+  button) only needs to know it was accepted.
+* **The mission feed is an async generator** polling the store off the event
+  loop with `asyncio.to_thread`, because SSE holds the connection open for
+  the length of the run and must never occupy a worker thread doing nothing.
+
+--- Reading the run store ---
+
+Every screen is derived from the store and nothing else. There is no console
+state, no cache of "what the run is doing", no second source of truth: the
+board asks `adjudicate.clearance` and `pipeline.errored_markets` the same
+questions the CLI asks, and a market that was never judged is drawn as ERROR
+rather than as a market with no findings. That is the one honesty rule this
+console has to keep, because "cleared" and "never evaluated" look identical
+to anything that only counts findings.
 """
+import asyncio
+import json
 import logging
+import re
+import threading
+import time
+import uuid
+from functools import lru_cache
 from pathlib import Path
 
-from fastapi import BackgroundTasks, FastAPI, Request
+from fastapi import (BackgroundTasks, FastAPI, File, Form, HTTPException,
+                     Request, UploadFile)
+from fastapi.responses import (FileResponse, HTMLResponse, PlainTextResponse,
+                               RedirectResponse, StreamingResponse)
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
-from customs import remediate, verify
+from customs import adjudicate, packs, pipeline, remediate, verify
 from customs.config import settings
+from customs.media import MediaError, probe_duration
 from customs.store import Store
 
 log = logging.getLogger("customs.app")
 
-app = FastAPI(title="Customs", description="Ad clearance crew: alert webhook")
+app = FastAPI(title="Customs Launch Control",
+              description="Ad clearance crew: console, mission feed, alert webhook")
+
+_HERE = Path(__file__).resolve().parent
+templates = Jinja2Templates(directory=str(_HERE / "templates"))
+app.mount("/static", StaticFiles(directory=str(_HERE / "static")), name="static")
 
 # Scratch space for the frames and audio remediation extracts. Same default
 # the CLI uses (scripts/run_pipeline.py --workdir).
@@ -96,7 +152,7 @@ def remediate_and_verify(run_id: str, finding_id: str, market: str,
         with remediate.market_lock(run_id, market):
             method = remediate.plan(finding, observation)
             db.emit(run_id, "remediator",
-                    f"alert on {finding.rule_id} ({market}) -> planned {method}")
+                    f"{finding.rule_id} ({market}) -> planned {method}")
             change = remediate.apply(run, finding, method, workdir, db)
             return verify.confirm(run, market, [change], db, workdir)
     except Exception as exc:  # noqa: BLE001 -- a background task has nobody to raise to
@@ -168,3 +224,707 @@ async def alert_webhook(request: Request, background: BackgroundTasks) -> dict:
 async def healthz() -> dict:
     """Liveness for Cloud Run. Deliberately touches nothing."""
     return {"status": "ok"}
+
+
+# =========================================================================
+# Customs Launch Control
+# =========================================================================
+
+# The two hard limits on an upload, from the design spec's own scope: a
+# television commercial, not a feature. Both are enforced before a run record
+# exists, so a rejected upload leaves nothing behind at all.
+MAX_UPLOAD_BYTES = 200 * 1024 * 1024
+MAX_DURATION_S = 120.0
+_UPLOAD_CHUNK = 1024 * 1024
+
+# The mission feed polls the store this often and sends a comment line this
+# often when nothing is happening. The heartbeat is what keeps a proxy from
+# closing an idle SSE connection during the long quiet stretch while the
+# analyst is inside a model call.
+SSE_POLL_S = 0.25
+SSE_HEARTBEAT_S = 15.0
+
+# Which markets a tile can be in. "error" is not a clearance value, it is the
+# absence of one: pipeline.errored_markets says the market was never judged,
+# and drawing it as "cleared" would be the exact lie that function exists to
+# prevent.
+TILE_ORDER = {"blocked": 0, "at_risk": 1, "error": 2, "pending": 3, "cleared": 4}
+
+_SAFE_NAME = re.compile(r"[^A-Za-z0-9._-]+")
+
+class _TooLarge(Exception):
+    """The upload passed MAX_UPLOAD_BYTES mid-stream. Never leaves this module."""
+
+def runs_root() -> Path:
+    """runs/ -- where the store, the uploads and every run directory live.
+
+    Derived from the store's own file, exactly as remediate.run_dir is, so a
+    console pointed at a tmp database keeps its artifacts next to it.
+    """
+    return Path(store().db_path).parent
+
+def run_dir(run) -> Path:
+    """runs/{run_id}/ -- this run's artifacts, via the one definition of it."""
+    return remediate.run_dir(run, store())
+
+def uploads_dir() -> Path:
+    return runs_root() / "uploads"
+
+# -- reading a run --
+
+def _run_or_404(run_id: str):
+    run = store().get_run(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail=f"unknown run: {run_id}")
+    return run
+
+@lru_cache(maxsize=1)
+def _packs_cached(_stamp: float):
+    try:
+        return packs.load()
+    except packs.PackError as exc:
+        log.error("market packs failed to load: %s", exc)
+        return {}
+
+def market_packs() -> dict:
+    """The market packs, reloaded when the markets/ directory changes.
+
+    Cached on the newest mtime under markets/ rather than forever: editing a
+    pack during a demo and reloading the page should show the new rule, and
+    re-reading three small YAML files per request would otherwise happen on
+    every poll.
+    """
+    try:
+        stamp = max(p.stat().st_mtime for p in Path("markets").glob("*.yaml"))
+    except (OSError, ValueError):
+        stamp = 0.0
+    return _packs_cached(stamp)
+
+def _judged_markets(db, run_id: str) -> set[str]:
+    """Markets the guard has already published a clearance for.
+
+    Read from the run's own event log ("{market} clearance -> {status}"),
+    which is the same source pipeline.errored_markets reads, so "pending"
+    means "no verdict yet" rather than "no findings yet". Without this a
+    market that is still inside adjudicate.judge would draw as cleared the
+    moment the page loaded, which is the single most dishonest thing this
+    board could do.
+    """
+    seen = set()
+    for _id, _ts, agent, message in db.events_since(run_id, 0):
+        if agent == "adjudicator" and " clearance -> " in message:
+            seen.add(message.split(" ", 1)[0])
+    return seen
+
+def market_states(run) -> dict[str, dict]:
+    """Per market: {clearance, findings, blocked, errored} for one run.
+
+    `clearance` is adjudicate.clearance's verdict over that market's stored
+    findings -- the same status-aware function the CLI and the metrics use --
+    or "pending" while the market has no verdict and the run is still going.
+    `errored` is pipeline.errored_markets: it does not change the clearance
+    value, it says the value cannot be trusted, and every screen draws ERROR
+    instead of the verdict when it is set.
+    """
+    db = store()
+    errored = pipeline.errored_markets(db, run.id)
+    judged = _judged_markets(db, run.id)
+    finished = run.status in ("done", "error")
+    states = {}
+    for market in run.markets:
+        findings = db.findings(run.id, market)
+        decided = finished or market in judged or market in errored
+        states[market] = {
+            "clearance": adjudicate.clearance(findings) if decided else "pending",
+            "findings": len(findings),
+            "blocked": sum(1 for f in findings if f.remediation_blocked),
+            "errored": market in errored,
+        }
+    return states
+
+def tile_state(state: dict) -> str:
+    """The one word a tile is drawn with. Errored beats every verdict."""
+    return "error" if state["errored"] else state["clearance"]
+
+def overall(states: dict[str, dict]) -> dict:
+    """The headline: how many markets are cleared, and which are not.
+
+    A market is cleared only if its verdict says so AND it was really
+    evaluated. Everything else -- blocked, at risk, errored, still pending --
+    is named in `failing`, in the run's own market order, because a headline
+    that says "2 of 3" without saying which one is missing is a scoreboard,
+    not a verdict.
+    """
+    cleared = [m for m, s in states.items()
+               if s["clearance"] == "cleared" and not s["errored"]]
+    failing = [m for m in states if m not in cleared]
+    pending = any(s["clearance"] == "pending" and not s["errored"]
+                  for s in states.values())
+    if pending:
+        state = "pending"
+    elif failing:
+        state = "no_go"
+    else:
+        state = "go"
+    return {"cleared": len(cleared), "total": len(states),
+            "failing": failing, "state": state}
+
+def published(run) -> bool:
+    """Has the Publisher pushed this run's telemetry into Grafana yet?
+
+    The panels are empty until it has (it is the last stage of the run), and
+    a Grafana panel reading "No data" on a board that is still working says
+    something false about the run. The board shows what is actually happening
+    instead: the Publisher has not run yet.
+
+    Read from run.t0 rather than from the run's status, because t0 is what
+    telemetry.push_timeline rewrites when it maps the clock, and it is
+    exactly the value the panel window is built from.
+    """
+    if run.t0 is None:
+        return False
+    return any(agent == "publisher" and "push_run_telemetry" in message
+               for _id, _ts, agent, message in store().events_since(run.id, 0))
+
+@lru_cache(maxsize=64)
+def _duration_of(path: str, _mtime: float) -> float:
+    try:
+        return probe_duration(path)
+    except (MediaError, OSError, ValueError):
+        return MAX_DURATION_S
+
+def asset_duration(run) -> float:
+    """The asset's duration, probed once per file per process.
+
+    Used for the timeline embed window and for the asset strip. ffprobe in a
+    request handler would be rude on every poll, hence the cache keyed on the
+    file's mtime; a missing or unreadable file falls back to the 120s cap
+    rather than raising a page.
+    """
+    try:
+        mtime = Path(run.asset_path).stat().st_mtime
+    except OSError:
+        mtime = 0.0
+    return _duration_of(str(run.asset_path), mtime)
+
+def embeds(run) -> dict[str, str]:
+    """The two Grafana pages the board links out to, windowed for this run.
+
+    Pure string building, no network call and no GrafanaOps: see
+    config._PUBLIC_DASHBOARDS for why the share URLs are pinned instead of
+    discovered, and grafana_ops.embed_url for the same rule applied to the
+    per-panel form of these URLs.
+
+    The two windows are deliberately different, because the two pages sit on
+    different clocks (telemetry.py's module docstring is the reference):
+
+      overview   now-6h..now      status metrics are stamped at the real
+                                  clock, and they move again every time a
+                                  remediation resolves a finding, so the
+                                  page has to follow the present.
+      timeline   t0..t0+duration  the risk series is written on the run's
+                                  mapped clock, where wall time t0+n IS video
+                                  second n, so this window is the ad's own
+                                  timecode and nothing else.
+    """
+    overview = f"{settings.grafana_public_overview}?from=now-6h&to=now"
+    if run.t0 is None:
+        return {"overview": overview,
+                "timeline": f"{settings.grafana_public_timeline}?from=now-3h&to=now"}
+    duration = asset_duration(run)
+    start_ms = int((run.t0 - 5) * 1000)
+    end_ms = int((run.t0 + duration + 5) * 1000)
+    return {
+        "overview": overview,
+        "timeline": f"{settings.grafana_public_timeline}?from={start_ms}&to={end_ms}",
+    }
+
+# --- the instrument panel ------------------------------------------------
+#
+# The design spec pinned this as the most likely thing to break late, and it
+# broke exactly there: "An iframe cannot carry a bearer token and Grafana
+# Cloud has no anonymous access, so embedding is an auth problem." Public
+# dashboards solved the auth half -- those URLs open with no login, and the
+# board links to them -- but this stack answers every request, public
+# dashboards included, with `Content-Security-Policy: frame-ancestors 'none'`
+# (verified live, 2026-08-23). A browser refuses to frame that, and the page
+# gets an empty box.
+#
+# So the console runs the spec's own fallback, which was built at the same
+# time as the primary for this reason: "server-side panel rendering through
+# the image renderer API using a service account token, which loses
+# interactivity but cannot fail on panel type support". GrafanaOps.render_png
+# does the render with the same service account the Publisher agent used, the
+# console caches the PNG next to the run's other artifacts, and every panel
+# links to the live public dashboard for the interactive version. What is on
+# the board is a real panel with this run's real data, not a picture of one
+# taken earlier.
+
+PANELS = {
+    "clearance": {"uid": "customs-overview", "panel": 1, "clock": "current",
+                  "width": 1200, "height": 260},
+    "timeline": {"uid": "customs-timeline", "panel": 1, "clock": "mapped",
+                 "width": 1200, "height": 420},
+}
+# How long a rendered panel is served before it is rendered again. A render is
+# six seconds of Grafana, and the board is polled every two: without a cache
+# the page would queue renders faster than they complete.
+PANEL_CACHE_S = 45.0
+
+def _render_panel(run, spec) -> bytes:
+    """One panel as PNG, over the window its clock calls for.
+
+    mcp_tools=set() is deliberate: it skips the mcp-grafana subprocess
+    entirely (GrafanaOps documents the injected-inventory path) and takes the
+    HTTP renderer, because spawning a subprocess per page view to render an
+    image would be absurd.
+    """
+    from customs.grafana_ops import GrafanaOps  # local: pulls the MCP client
+
+    if spec["clock"] == "current":
+        duration = max(time.time() - run.t0, 60.0)
+    else:
+        duration = asset_duration(run) + 5
+    ops = GrafanaOps(settings, mcp_tools=set())
+    return ops.render_png(spec["uid"], spec["panel"], run, duration=duration,
+                          width=spec["width"], height=spec["height"])
+
+@app.get("/runs/{run_id}/panels/{name}.png")
+def panel_png(run_id: str, name: str):
+    """A Grafana panel for this run, rendered server-side and cached on disk.
+
+    Falls back down a ladder rather than failing the page: a fresh cache file
+    is served as is, a stale one is re-rendered, and a render that fails with
+    a stale file on disk serves the stale file (an expired panel is worth more
+    than a broken image). Only a render that fails with nothing cached 404s,
+    which the board turns into a link to the live dashboard.
+    """
+    run = _run_or_404(run_id)
+    spec = PANELS.get(name)
+    if spec is None or run.t0 is None:
+        raise HTTPException(status_code=404, detail="no such panel for this run")
+
+    cached = run_dir(run) / "panels" / f"{name}.png"
+    fresh = cached.is_file() and (time.time() - cached.stat().st_mtime) < PANEL_CACHE_S
+    if not fresh:
+        try:
+            png = _render_panel(run, spec)
+            cached.parent.mkdir(parents=True, exist_ok=True)
+            cached.write_bytes(png)
+        except Exception as exc:  # noqa: BLE001 -- Grafana being down is not a 500 here
+            log.warning("panel render failed for %s/%s: %s", run.id, name, exc)
+            if not cached.is_file():
+                raise HTTPException(status_code=404,
+                                    detail="panel could not be rendered") from None
+    return FileResponse(cached, media_type="image/png",
+                        headers={"Cache-Control": f"max-age={int(PANEL_CACHE_S)}"})
+
+# -- template helpers --
+
+def _timecode(seconds) -> str:
+    """Video seconds as mm:ss.d, the way a timeline reads them."""
+    try:
+        seconds = float(seconds)
+    except (TypeError, ValueError):
+        return "--:--"
+    minutes, rest = divmod(max(seconds, 0.0), 60)
+    return f"{int(minutes):02d}:{rest:04.1f}"
+
+def _clock(ts) -> str:
+    """A unix timestamp as a local wall clock with tenths, for log lines."""
+    try:
+        ts = float(ts)
+    except (TypeError, ValueError):
+        return "--:--:--"
+    return time.strftime("%H:%M:%S", time.localtime(ts)) + f".{int(ts % 1 * 10)}"
+
+def _stamp(ts) -> str:
+    if not ts:
+        return "not started"
+    return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(float(ts)))
+
+templates.env.filters["timecode"] = _timecode
+templates.env.filters["clock"] = _clock
+templates.env.filters["stamp"] = _stamp
+
+def _page(request: Request, name: str, **context):
+    return templates.TemplateResponse(request, name, context)
+
+# -- the front door --
+
+@app.get("/", response_class=HTMLResponse)
+def home(request: Request):
+    """Upload form plus the runs already in the store, newest first."""
+    db = store()
+    recent = []
+    for run in db.recent_runs(12):
+        states = market_states(run)
+        recent.append({"run": run, "overall": overall(states), "states": states})
+    return _page(request, "home.html",
+                 packs=sorted(market_packs().values(), key=lambda p: p.market),
+                 recent=recent)
+
+@app.post("/runs")
+async def create_run(asset: UploadFile = File(...),
+                     markets: list[str] = Form(default=[])):
+    """Accept an asset, create the run, start the crew, redirect to the board.
+
+    Order matters here. The upload is streamed to disk with a running byte
+    count (Starlette has already spooled the request body to a temp file, so
+    nothing is held in memory either way), then probed, and only an asset
+    that passes both limits gets a run record. A rejected upload leaves no
+    run, no directory and no file: the reply is a plain text 400 saying which
+    limit it hit, because this is the one place in the console where the user
+    is told they did something wrong and a styled error page would be slower
+    to read than the sentence.
+
+    The crew then runs on a thread. See this module's docstring for why that
+    is a thread and not a BackgroundTask.
+    """
+    known = set(market_packs())
+    chosen = [m for m in markets if m]
+    if not chosen:
+        return PlainTextResponse("Select at least one market to clear for.",
+                                 status_code=400)
+    unknown = [m for m in chosen if m not in known]
+    if unknown:
+        return PlainTextResponse(
+            f"No market pack for: {', '.join(unknown)}. "
+            f"Known markets: {', '.join(sorted(known))}.", status_code=400)
+
+    # One directory per upload, keeping the file's own name inside it. The
+    # name matters beyond tidiness: telemetry labels every metric and every
+    # alert with the asset path's *stem*, so a uniquifying prefix on the
+    # filename would follow this asset onto the dashboards and into the alert
+    # labels as "a1b2c3_spring_launch". The directory carries the uniqueness
+    # instead, and two uploads of the same filename still cannot collide.
+    safe = _SAFE_NAME.sub("_", Path(asset.filename or "asset.mp4").name)[-60:]
+    folder = uploads_dir() / uuid.uuid4().hex[:12]
+    folder.mkdir(parents=True, exist_ok=True)
+    target = folder / safe
+
+    size = 0
+    try:
+        with target.open("wb") as out:
+            while chunk := await asset.read(_UPLOAD_CHUNK):
+                size += len(chunk)
+                if size > MAX_UPLOAD_BYTES:
+                    raise _TooLarge
+                out.write(chunk)
+    except _TooLarge:
+        _discard(target)
+        return PlainTextResponse(
+            f"That file is too large. The limit is "
+            f"{MAX_UPLOAD_BYTES // (1024 * 1024)} MB and this upload is over it.",
+            status_code=400)
+
+    try:
+        duration = probe_duration(str(target))
+    except Exception as exc:  # noqa: BLE001 -- an unreadable upload is a 400, not a 500
+        _discard(target)
+        return PlainTextResponse(
+            f"That file could not be read as video: {exc}", status_code=400)
+    if duration > MAX_DURATION_S:
+        _discard(target)
+        return PlainTextResponse(
+            f"That asset is {duration:.0f} seconds long. Customs clears "
+            f"commercials up to {int(MAX_DURATION_S)} seconds.", status_code=400)
+
+    run = store().create_run(asset_path=str(target), markets=chosen)
+    store().emit(run.id, "pipeline",
+                 f"console accepted {safe} ({duration:.1f}s) for "
+                 f"{', '.join(chosen)}")
+    threading.Thread(target=_clearance_job, args=(run.id, str(target), chosen),
+                     name=f"clearance-{run.id}", daemon=True).start()
+    return RedirectResponse(f"/runs/{run.id}", status_code=303)
+
+def _discard(target: Path) -> None:
+    """Undo a rejected upload: the file, then the directory it was alone in."""
+    target.unlink(missing_ok=True)
+    try:
+        target.parent.rmdir()
+    except OSError:  # not empty, or already gone
+        pass
+
+def launch_clearance(run_id: str, asset_path: str, markets: list[str],
+                     workdir=None) -> None:
+    """Run the crew for a run record that already exists.
+
+    The one seam between the console and the agent graph, and the only place
+    the console imports ADK. The import is local because it costs seconds and
+    pulls the whole ADK dependency tree: the webhook, the tests and every
+    read-only screen must not pay for it.
+    """
+    from customs import crew  # local: importing ADK costs seconds
+
+    crew.run_clearance(asset_path, markets, store(), workdir or WORKDIR,
+                       run_id=run_id)
+
+def _clearance_job(run_id: str, asset_path: str, markets: list[str]) -> None:
+    """Thread body: run the crew, and never let it die silently.
+
+    crew.run_clearance swallows every stage error itself, with one documented
+    exception (an asset with no detectable shots raises out of ingest). That
+    exception is exactly the one a stranger's upload is most likely to hit,
+    so it is caught here and written to the run as a stage error: the board
+    then shows a run that stopped and says why, instead of tiles that pulse
+    pending forever.
+    """
+    db = store()
+    try:
+        launch_clearance(run_id, asset_path, markets)
+    except Exception as exc:  # noqa: BLE001 -- a thread has nobody to raise to
+        log.exception("clearance run %s failed", run_id)
+        db.emit(run_id, "pipeline", f"stage_error: run: {exc!r}")
+        try:
+            db.set_run_status(run_id, "error")
+        except ValueError:
+            pass
+
+# -- the launch board --
+
+@app.get("/runs/{run_id}", response_class=HTMLResponse)
+def launch_board(request: Request, run_id: str):
+    run = _run_or_404(run_id)
+    states = market_states(run)
+    tiles = [{"market": m, "state": tile_state(s), **s,
+              "pack": market_packs().get(m)} for m, s in states.items()]
+    tiles.sort(key=lambda t: (TILE_ORDER.get(t["state"], 9), t["market"]))
+    return _page(request, "launch_board.html", run=run, tiles=tiles,
+                 overall=overall(states), embeds=embeds(run),
+                 duration=asset_duration(run), published=published(run),
+                 changes=len(store().changes(run.id)), screen="board")
+
+@app.get("/runs/{run_id}/status")
+def run_status(run_id: str):
+    """The 2 second poll behind the tiles. Shape is the contract, keep it."""
+    run = _run_or_404(run_id)
+    states = market_states(run)
+    return {
+        "run": run.id,
+        "done": run.status in ("done", "error"),
+        "status": run.status,
+        "overall": overall(states),
+        "markets": states,
+    }
+
+# -- the mission feed --
+
+@app.get("/runs/{run_id}/mission", response_class=HTMLResponse)
+def mission_page(request: Request, run_id: str):
+    """The feed as a page: the backlog server-rendered, the rest over SSE.
+
+    The backlog is rendered rather than replayed through the stream so the
+    page is complete with JavaScript off and so a long run does not open with
+    an empty terminal while a thousand events replay. The live tail then
+    resumes from the last id on the page, which is exactly what the
+    Last-Event-ID header does after a dropped connection.
+    """
+    run = _run_or_404(run_id)
+    rows = store().events_since(run.id, 0)
+    events = [{"id": i, "ts": ts, "agent": agent, "message": message}
+              for (i, ts, agent, message) in rows]
+    return _page(request, "mission_feed.html", run=run, events=events,
+                 last_id=events[-1]["id"] if events else 0, screen="mission")
+
+@app.get("/runs/{run_id}/feed")
+async def mission_stream(request: Request, run_id: str):
+    """Server-sent events: every store event for this run, as it lands.
+
+    Resumes from `Last-Event-ID` (the browser sends it automatically on
+    reconnect) or `?after=`, so a dropped connection costs nothing. The
+    generator polls the store off the event loop; it ends when the client
+    goes away, never on its own, because a finished run still emits events
+    when a Grafana alert wakes the Remediator an hour later.
+    """
+    db = store()
+    if db.get_run(run_id) is None:
+        raise HTTPException(status_code=404, detail=f"unknown run: {run_id}")
+
+    raw = request.headers.get("last-event-id") or request.query_params.get("after") or "0"
+    try:
+        cursor = int(raw)
+    except ValueError:
+        cursor = 0
+
+    async def stream():
+        nonlocal cursor
+        yield "retry: 3000\n\n"  # reconnect delay, and an immediate first byte
+        quiet_since = time.monotonic()
+        while True:
+            if await request.is_disconnected():
+                return
+            rows = await asyncio.to_thread(db.events_since, run_id, cursor)
+            for (event_id, ts, agent, message) in rows:
+                cursor = event_id
+                data = json.dumps({"id": event_id, "ts": ts, "agent": agent,
+                                   "message": message, "clock": _clock(ts)})
+                yield f"id: {event_id}\nevent: mission\ndata: {data}\n\n"
+            if rows:
+                quiet_since = time.monotonic()
+            elif time.monotonic() - quiet_since >= SSE_HEARTBEAT_S:
+                yield ": heartbeat\n\n"
+                quiet_since = time.monotonic()
+            await asyncio.sleep(SSE_POLL_S)
+
+    return StreamingResponse(stream(), media_type="text/event-stream", headers={
+        "Cache-Control": "no-cache, no-transform",
+        "X-Accel-Buffering": "no",  # nginx and Cloud Run buffer SSE without it
+    })
+
+# -- one market --
+
+@app.get("/runs/{run_id}/markets/{market}", response_class=HTMLResponse)
+def market_room(request: Request, run_id: str, market: str):
+    """One market: the regulator, the statutes, and the guard's refusals.
+
+    `market` is checked against this run's own market list, which is also
+    what makes every path built from it below safe: it can only ever be a
+    string the run itself recorded.
+    """
+    run = _run_or_404(run_id)
+    if market not in run.markets:
+        raise HTTPException(status_code=404,
+                            detail=f"run {run_id} does not cover {market}")
+    findings = sorted(store().findings(run.id, market),
+                      key=lambda f: (-f.severity, f.t_start))
+    states = market_states(run)
+    return _page(request, "market_room.html", run=run, market=market,
+                 pack=market_packs().get(market),
+                 findings=[f for f in findings if not f.remediation_blocked],
+                 blocked=[f for f in findings if f.remediation_blocked],
+                 state=states.get(market, {}), tile=tile_state(states[market]),
+                 localized=(run_dir(run) / f"localized_{market}.mp4").exists(),
+                 screen="market")
+
+@app.post("/runs/{run_id}/findings/{finding_id}/remediate")
+def remediate_now(run_id: str, finding_id: str, background: BackgroundTasks):
+    """Remediate one finding by hand. The demo's affordance, not the trigger.
+
+    The real trigger is a Grafana alert rule firing into POST /webhook/alert;
+    this exists so the Cutting Room can be filled on demand while a judge is
+    watching, and it enforces the same rules the webhook does.
+
+    Answers, and nothing else:
+      404  no such finding in this run, or it is not open (already
+           remediating, already resolved). Same answer a forged id gets:
+           this route never reveals whether an id it refuses exists.
+      409  the guard blocked it, or its class makes it non-remediable. The
+           Market Room already shows that finding and that reason in full, so
+           saying "this one needs a human" leaks nothing and is the honest
+           answer to a button the page deliberately draws as disabled.
+    """
+    run = _run_or_404(run_id)
+    finding = next((f for f in store().findings(run.id) if f.id == finding_id), None)
+    if finding is None or finding.status != "open":
+        raise HTTPException(status_code=404, detail="no open finding with that id")
+    if finding.remediation_blocked or not finding.remediable:
+        raise HTTPException(
+            status_code=409,
+            detail=finding.blocked_reason or "this finding is not auto-remediable")
+    store().emit(run.id, "remediator",
+                 f"console requested remediation: {finding.rule_id} "
+                 f"({finding.market}) -> {finding.id}")
+    background.add_task(remediate_and_verify, run.id, finding.id, finding.market)
+    return RedirectResponse(f"/runs/{run.id}/markets/{finding.market}",
+                            status_code=303)
+
+# -- the cutting room --
+
+@app.get("/runs/{run_id}/cutting", response_class=HTMLResponse)
+def cutting_room(request: Request, run_id: str):
+    """Original against localized, and the change record behind every edit."""
+    run = _run_or_404(run_id)
+    directory = run_dir(run)
+    by_id = {f.id: f for f in store().findings(run.id)}
+    changes = []
+    for change in store().changes(run.id):
+        finding = by_id.get(change.finding_id)
+        changes.append({
+            "change": change,
+            "finding": finding,
+            "market": finding.market if finding else "",
+            "before": _still_name(directory, change.before_frame),
+            "after": _still_name(directory, change.after_frame),
+        })
+    localized = [m for m in run.markets
+                 if (directory / f"localized_{m}.mp4").exists()]
+    # Both players in a pair open on the first second this market's master was
+    # edited, rather than at 0:00 where an edited master and its original are
+    # identical by definition. A media fragment does it without a line of
+    # JavaScript, and the poster frame the browser paints is then the frame
+    # the argument is about.
+    starts = {}
+    for item in changes:
+        finding = item["finding"]
+        if finding is not None and finding.market not in starts:
+            starts[finding.market] = max(finding.t_start - 0.5, 0.0)
+    return _page(request, "cutting_room.html", run=run, localized=localized,
+                 changes=changes, starts=starts, screen="cutting")
+
+def _still_name(directory: Path, frame_path: str) -> str:
+    """The filename a still is served under, or "" if it is not there.
+
+    A ChangeRecord stores an absolute-ish path from the process that wrote
+    it. Only the name is ever put in a URL, and the route below resolves that
+    name inside this run's changes/ directory, so a record naming a file
+    somewhere else on disk simply does not render.
+    """
+    if not frame_path:
+        return ""
+    name = Path(frame_path).name
+    return name if (directory / "changes" / name).is_file() else ""
+
+# -- run artifacts --
+
+def _within(root: Path, name: str) -> Path | None:
+    """Resolve `name` inside `root`, or None if it escapes.
+
+    The whole of this console's path safety. `name` is the only place a URL
+    segment ever reaches the filesystem, so it is resolved and then checked
+    against the resolved root: "../../.env", an absolute "/etc/passwd", a
+    symlink pointing out of the run directory and a percent-encoded mixture
+    of all three all land outside and all get None, which the callers turn
+    into 404. Nothing here trusts that the router already normalised the
+    path, because it does not: FastAPI hands `{name:path}` over with its
+    percent-escapes decoded and its dot segments intact.
+    """
+    try:
+        resolved = (root / name).resolve()
+        root_resolved = root.resolve()
+    except (OSError, ValueError, RuntimeError):
+        return None
+    if resolved == root_resolved or root_resolved not in resolved.parents:
+        return None
+    return resolved
+
+@app.get("/runs/{run_id}/media/original")
+def media_original(run_id: str):
+    """The asset as uploaded. Path comes from the store, never from the URL."""
+    run = _run_or_404(run_id)
+    path = Path(run.asset_path)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="the original is not on this disk")
+    return FileResponse(path, media_type="video/mp4",
+                        filename=f"{run.id}_original{path.suffix}")
+
+@app.get("/runs/{run_id}/media/localized/{market}")
+def media_localized(run_id: str, market: str):
+    """One market's localized master, once the Remediator has written one."""
+    run = _run_or_404(run_id)
+    if market not in run.markets:
+        raise HTTPException(status_code=404, detail=f"run does not cover {market}")
+    path = run_dir(run) / f"localized_{market}.mp4"
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="no localized master yet")
+    return FileResponse(path, media_type="video/mp4",
+                        filename=f"{run.id}_localized_{market}.mp4")
+
+@app.get("/runs/{run_id}/stills/{filename:path}")
+def still(run_id: str, filename: str):
+    """A before/after still from runs/{run_id}/changes/, and nothing else."""
+    run = _run_or_404(run_id)
+    path = _within(run_dir(run) / "changes", filename)
+    if path is None or path.suffix.lower() != ".png" or not path.is_file():
+        raise HTTPException(status_code=404, detail="no such still")
+    return FileResponse(path, media_type="image/png")

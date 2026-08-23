@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}{{ market }} market room {{ run.id }}{% endblock %}
+{% block topbar_right %}<a href="/runs/{{ run.id }}">Launch board</a>{% endblock %}
+{% block nav %}{% include "_runnav.html" %}{% endblock %}
+{% block main %}
+
+{% macro severity(value) %}
+<span class="sev">
+  <span class="sev-track"><span class="sev-fill {{ 'hot' if value >= 70 else ('cool' if value < 40 else '') }}" style="width:{{ value }}%"></span></span>
+  <span class="sev-num">{{ value }}</span>
+</span>
+{% endmacro %}
+
+{% macro window(finding) %}<span class="mono" style="font-size:12px;color:var(--ink-3)">{{ finding.t_start | timecode }} to {{ finding.t_end | timecode }}</span>{% endmacro %}
+
+<section class="hero" style="padding-bottom:30px">
+  <div class="mkt-head">
+    <span class="mkt-code">{{ market }}</span>
+    <span class="mkt-meta">
+      <span class="label">Market room</span>
+      <h1>{{ pack.name if pack else market }}</h1>
+      <span class="mkt-facts">
+        <span class="pill s-{{ tile }}"><span class="dot"></span>{{ tile.replace('_', ' ') if tile != 'error' else 'not evaluated' }}</span>
+        <span class="chip">{{ state.findings }} findings</span>
+        {% if pack %}<span class="chip {{ 'on' if pack.pre_clearance == 'mandatory' else '' }}">pre-clearance: {{ pack.pre_clearance }}</span>{% endif %}
+        {% if pack and pack.regulators %}<span class="chip">{{ pack.regulators | join(' / ') }}</span>{% endif %}
+        {% if localized %}<a class="chip on" href="/runs/{{ run.id }}/cutting">localized master ready</a>{% endif %}
+      </span>
+    </span>
+  </div>
+  {% if state.errored %}
+  <p class="subline"><strong>This market was never evaluated.</strong> Its adjudicator exhausted every retry, so what is below is not a verdict and the tile stays out of the cleared count. The mission feed has the stage error.</p>
+  {% endif %}
+</section>
+
+{% if blocked %}
+<section style="border-top:none;padding-top:0">
+  <div class="guard">
+    <h2><span class="chip offence">guard</span> Human decision required</h2>
+    <p class="why">The guard took auto-remediation off the table for {{ blocked | length }} finding{{ '' if blocked | length == 1 else 's' }} in this market. A rule written on a protected basis, or an offence-class rule, is not something this system edits its way around: it names the problem, cites it, and hands it to a person.</p>
+    {% for finding in blocked %}
+    <div class="guard-item">
+      <div>
+        <div class="rule-id">{{ finding.rule_id }}</div>
+        <div style="margin-top:8px">{{ severity(finding.severity) }}</div>
+        <div style="margin-top:8px">{{ window(finding) }}</div>
+      </div>
+      <div>
+        <span class="chip {{ finding.klass }}">{{ finding.klass }}</span>
+        {% if finding.sourced %}<span class="chip sourced">sourced</span>{% else %}<span class="chip unsourced">unsourced</span>{% endif %}
+        <div class="reason" style="margin-top:10px">{{ finding.blocked_reason }}</div>
+        <div class="rationale">{{ finding.rationale }}</div>
+        <div class="decision">
+          {% if finding.citation_url %}<a class="cite" href="{{ finding.citation_url }}" target="_blank" rel="noreferrer">{{ finding.citation_ref or 'citation' }}</a>{% elif finding.citation_ref %}<span class="mono" style="font-size:12.5px;color:var(--ink-3)">{{ finding.citation_ref }}</span>{% endif %}
+        </div>
+        <div class="decision">
+          <button class="btn" disabled title="The guard blocked auto-remediation for this finding">Remediate</button>
+          <button class="btn" disabled title="Wire this to your review queue">Send to legal review</button>
+          <button class="btn" disabled title="Wire this to your review queue">Accept the risk</button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<section>
+  <div class="rule-row"><span class="label">Findings</span></div>
+  {% if findings %}
+  <div class="panel"><div class="panel-body" style="padding:18px 4px 4px">
+    <table class="grid">
+      <thead><tr>
+        <th>Rule</th><th>Class</th><th>Severity</th><th>Window</th><th>Source</th><th>Status</th><th></th>
+      </tr></thead>
+      <tbody>
+      {% for finding in findings %}
+      <tr>
+        <td>
+          <div class="rule-id">{{ finding.rule_id }}</div>
+          <div class="rationale">{{ finding.rationale }}</div>
+          {% if finding.citation_url %}
+          <div style="margin-top:8px"><a class="cite" href="{{ finding.citation_url }}" target="_blank" rel="noreferrer">{{ finding.citation_ref or 'citation' }}</a></div>
+          {% elif finding.citation_ref %}
+          <div class="mono" style="margin-top:8px;font-size:12px;color:var(--ink-3)">{{ finding.citation_ref }}</div>
+          {% endif %}
+        </td>
+        <td class="tight"><span class="chip {{ finding.klass }}">{{ finding.klass }}</span></td>
+        <td class="tight">{{ severity(finding.severity) }}</td>
+        <td class="tight">{{ window(finding) }}</td>
+        <td class="tight">{% if finding.sourced %}<span class="chip sourced">sourced</span>{% else %}<span class="chip unsourced">unsourced</span>{% endif %}</td>
+        <td class="tight"><span class="pill s-{{ {'open': 'blocked', 'remediating': 'pending', 'resolved': 'cleared'}[finding.status] }}"><span class="dot"></span>{{ finding.status }}</span></td>
+        <td class="tight">
+          {% if finding.status == 'open' and finding.remediable %}
+          <form method="post" action="/runs/{{ run.id }}/findings/{{ finding.id }}/remediate">
+            <button class="btn" type="submit">Remediate now</button>
+          </form>
+          {% elif finding.status == 'remediating' %}
+          <button class="btn" disabled>Working</button>
+          {% elif finding.status == 'resolved' %}
+          <span class="chip sourced">verified fixed</span>
+          {% else %}
+          <button class="btn" disabled title="An offence-class finding is never auto-remediated">Not remediable</button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div></div>
+  <p class="subline" style="font-size:13px;color:var(--ink-3)">The real trigger for a remediation is a Grafana alert rule firing into the webhook, which is what makes Grafana upstream of the work rather than a report about it. The button above is the same job, started by hand, for when you want to watch it happen.</p>
+  {% elif state.clearance == 'pending' %}
+  <div class="empty">
+    <span class="big">Still judging</span>
+    <p>This market's adjudicator has not returned. Findings appear here the moment it does, with the statute behind each one.</p>
+  </div>
+  {% else %}
+  <div class="empty">
+    <span class="big">Nothing triggered here</span>
+    <p>No rule in the {{ pack.name if pack else market }} pack was triggered by anything the analyst observed in this asset.</p>
+  </div>
+  {% endif %}
+</section>
+
+{% endblock %}

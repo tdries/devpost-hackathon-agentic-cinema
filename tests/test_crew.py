@@ -497,3 +497,29 @@ def test_live_clearance_publishes_to_grafana(tmp_path):
     assert run.id in description, (
         f"the publisher did not write this run into the overview description: {description!r}"
     )
+
+
+def test_run_clearance_adopts_a_run_record_that_already_exists(monkeypatch, clip, tmp_path):
+    """Launch Control creates the run inside the upload request so it can
+    redirect the browser to /runs/{id}, then hands the id here. The crew must
+    fill that record in rather than mint a second one."""
+    _stub_stages(monkeypatch)
+    store = Store(tmp_path / "t.db")
+    reserved = store.create_run(asset_path=str(clip), markets=["FR"])
+
+    run = crew.run_clearance(str(clip), ["FR"], store, tmp_path / "work",
+                             publish=False, run_id=reserved.id)
+
+    assert run.id == reserved.id
+    assert run.status == "done"
+    assert len(store.recent_runs()) == 1, "a second run record was created"
+    assert store.findings(run.id, "FR")
+
+
+def test_run_clearance_refuses_a_run_id_that_is_not_in_the_store(monkeypatch, clip, tmp_path):
+    _stub_stages(monkeypatch)
+    store = Store(tmp_path / "t.db")
+
+    with pytest.raises(ValueError, match="unknown run"):
+        crew.run_clearance(str(clip), ["FR"], store, tmp_path / "work",
+                           publish=False, run_id="run_nope")

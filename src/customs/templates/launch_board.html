@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Launch board {{ run.id }}{% endblock %}
+{% block topbar_right %}<span>{{ run.markets | length }} markets</span><a href="/">New run</a>{% endblock %}
+{% block nav %}{% include "_runnav.html" %}{% endblock %}
+{% block main %}
+
+{% set flag = {"go": "GO FOR LAUNCH", "no_go": "NO GO", "pending": "CLEARANCE IN PROGRESS"}[overall.state] %}
+{% set flag_state = {"go": "cleared", "no_go": "blocked", "pending": "pending"}[overall.state] %}
+
+<section class="hero" data-run="{{ run.id }}" id="board">
+  <div class="rule-row">
+    <span class="label">Launch verdict</span>
+    <span class="pill s-{{ flag_state }}" id="flag"><span class="dot"></span>{{ flag }}</span>
+  </div>
+  <h1 class="headline{% if overall.state == 'go' %} go{% endif %}" id="headline">CLEARED FOR LAUNCH IN {{ overall.cleared }} OF {{ overall.total }} MARKETS</h1>
+  <p class="subline" id="subline">
+    {% if overall.state == 'pending' %}
+      The adjudicators are still returning. Tiles flip as each market lands.
+    {% elif overall.failing %}
+      <strong>{{ overall.failing | join(', ') }}</strong> {{ 'is' if overall.failing | length == 1 else 'are' }} holding the campaign. Open a market room for the statute behind every finding.
+    {% else %}
+      Every market cleared. The findings, the citations and the edits are all one click down.
+    {% endif %}
+  </p>
+  <div class="verdict-strip" id="strip">
+    {% for tile in tiles %}<span class="v-{{ tile.state }}" data-market="{{ tile.market }}" title="{{ tile.market }}: {{ tile.state }}"></span>{% endfor %}
+  </div>
+  <div class="specs">
+    <div class="spec"><span class="label">Asset</span><span class="value">{{ run.asset_path.split('/')[-1] }}</span></div>
+    <div class="spec"><span class="label">Duration</span><span class="value">{{ duration | timecode }}</span></div>
+    <div class="spec"><span class="label">Markets</span><span class="value">{{ run.markets | join(' / ') }}</span></div>
+    <div class="spec"><span class="label">Started</span><span class="value">{{ run.t0 | stamp }}</span></div>
+    <div class="spec"><span class="label">Run</span><span class="value">{{ run.id }}</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="rule-row"><span class="label">Market tiles</span></div>
+  <div class="tiles" id="tiles">
+    {% for tile in tiles %}
+    <a class="tile t-{{ tile.state }}" id="tile-{{ tile.market }}" href="/runs/{{ run.id }}/markets/{{ tile.market }}">
+      <span class="tile-top">
+        <span class="tile-code">{{ tile.market }}</span>
+        <span class="pill s-{{ tile.state }}" data-role="state"><span class="dot"></span>{{ tile.state.replace('_', ' ') if tile.state != 'error' else 'not evaluated' }}</span>
+      </span>
+      <span class="tile-name">{{ tile.pack.name if tile.pack else tile.market }}</span>
+      <span class="tile-stats">
+        <span><b data-role="findings">{{ tile.findings }}</b> findings</span>
+        <span><b data-role="blocked">{{ tile.blocked }}</b> need a human</span>
+      </span>
+      <span class="tile-go"><span>Open market room</span><span>&rarr;</span></span>
+    </a>
+    {% endfor %}
+  </div>
+</section>
+
+<section>
+  <div class="rule-row"><span class="label">Instrument panel</span></div>
+  <p class="subline" style="margin-top:-4px;margin-bottom:18px;max-width:96ch;font-size:14.5px">The Publisher agent built these dashboards over MCP during this run, and the alert rules on them are what wake the Remediator. Live panels, rendered straight out of that Grafana with the service account the agent used.</p>
+  {% if published %}
+  <div class="embed-grid">
+    <div class="embed">
+      <a href="{{ embeds.overview }}" target="_blank" rel="noreferrer">
+        <img src="/runs/{{ run.id }}/panels/clearance.png" alt="Market clearance status, from Grafana">
+      </a>
+      <div class="embed-note">Market clearance status on the current clock. It moves again every time a remediation resolves a finding. <a class="cite" href="{{ embeds.overview }}" target="_blank" rel="noreferrer">Open the overview</a></div>
+    </div>
+    <div class="embed">
+      <a href="{{ embeds.timeline }}" target="_blank" rel="noreferrer">
+        <img src="/runs/{{ run.id }}/panels/timeline.png" alt="Risk by market across the timecode, from Grafana">
+      </a>
+      <div class="embed-note">Risk by market across the ad's own timecode, on this run's mapped clock, with every finding and remediation drawn on it as an annotation. <a class="cite" href="{{ embeds.timeline }}" target="_blank" rel="noreferrer">Open the timeline</a></div>
+    </div>
+  </div>
+  {% else %}
+  <div class="empty">
+    <span class="big">Panels land when the Publisher runs</span>
+    <p>The Publisher agent is the last stage of the run. It pushes this run's risk timeline and clearance status into Grafana, creates the dashboards and the alert rules over MCP, and only then is there anything for these panels to draw.</p>
+  </div>
+  {% endif %}
+</section>
+
+<section>
+  <div class="rule-row"><span class="label">Go deeper</span></div>
+  <div class="cards">
+    <a class="card" href="/runs/{{ run.id }}/mission">
+      <span class="label">Live</span>
+      <h3>Mission feed</h3>
+      <p>The agents' own log as it happens: every shot transcribed, every rule judged, every citation grounded, every stage error admitted.</p>
+    </a>
+    <a class="card" href="/runs/{{ run.id }}/cutting">
+      <span class="label">{{ changes }} change record{{ '' if changes == 1 else 's' }}</span>
+      <h3>Cutting room</h3>
+      <p>Original against localized master, with the before and after still behind every edit the Remediator made.</p>
+    </a>
+  </div>
+</section>
+
+{% endblock %}
