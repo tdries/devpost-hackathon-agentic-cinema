@@ -47,9 +47,12 @@ own thread (`asyncio.to_thread`), so N markets cost one market's latency, not
 N. The sequential fallback the brief allows was not needed. Two things make
 the shared `Store` safe under that fan-out:
 
-1. `Store` opens its connection with `check_same_thread=False`, and CPython's
-   `sqlite3` reports `threadsafety == 3` (SQLITE_THREADSAFE serialized), so
-   one connection may legally be used from several threads.
+1. `Store` opens its connection with `check_same_thread=False` and serializes
+   every method on its own RLock. `sqlite3.threadsafety == 3` alone was not
+   enough: it says the C library is serialized, not that two threads may
+   interleave statements on one Python `Connection`, and doing that raises
+   "bad parameter or other API misuse" (observed under two concurrent
+   remediations in Task 14, which is when the lock was added).
 2. The only writes the parallel branch makes are `store.emit` mission events,
    each a single INSERT plus COMMIT. Findings are collected in memory and
    persisted once, from the guard stage, on one thread.

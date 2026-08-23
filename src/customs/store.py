@@ -1,15 +1,44 @@
+import functools
 import json
 import sqlite3
+import threading
 import time
 import uuid
 from pathlib import Path
 
 from customs.schema import ChangeRecord, Finding, Observation, RunRecord
 
+def _locked(method):
+    """Serialize one Store method on this store's connection lock.
+
+    The connection is opened with check_same_thread=False and is genuinely
+    used from several threads at once: the crew's ParallelAgent judges every
+    market on its own thread, and Starlette runs each alert webhook's
+    background remediation in a threadpool worker. CPython's sqlite3 reports
+    threadsafety 3, but that is about the C library being serialized, not
+    about two threads interleaving statements on one Python Connection: doing
+    that raises "sqlite3.InterfaceError: bad parameter or other API misuse"
+    and, worse, sometimes just returns None for a row that exists. Both were
+    observed here, from two concurrent remediations of one run.
+
+    An RLock rather than a Lock because these methods compose
+    (set_run_status calls get_run and _write_run), and every one of them is a
+    short statement plus a commit, so a single lock costs nothing at this
+    scale. Ceiling: this serializes one process. Two processes on one sqlite
+    file still rely on WAL and sqlite's own locking, which is the point at
+    which this store should become a real database.
+    """
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+    return wrapper
+
 class Store:
     def __init__(self, db_path):
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._lock = threading.RLock()
         self._conn = sqlite3.connect(str(self.db_path), check_same_thread=False)
         self._conn.execute("PRAGMA journal_mode=WAL")
         self._init_schema()
@@ -76,6 +105,7 @@ class Store:
         """)
         self._conn.commit()
 
+    @_locked
     def create_run(self, asset_path: str, markets: list[str]) -> RunRecord:
         run = RunRecord(
             id=f"run_{uuid.uuid4().hex[:12]}",
@@ -91,12 +121,14 @@ class Store:
         self._conn.commit()
         return run
 
+    @_locked
     def get_run(self, run_id: str) -> RunRecord | None:
         row = self._conn.execute(
             "SELECT data FROM runs WHERE id = ?", (run_id,)
         ).fetchone()
         return RunRecord.from_json(json.loads(row[0])) if row else None
 
+    @_locked
     def _write_run(self, run: RunRecord) -> None:
         self._conn.execute(
             "UPDATE runs SET data = ? WHERE id = ?",
@@ -104,6 +136,7 @@ class Store:
         )
         self._conn.commit()
 
+    @_locked
     def set_run_status(self, run_id: str, status: str) -> None:
         run = self.get_run(run_id)
         if run is None:
@@ -111,6 +144,7 @@ class Store:
         run.status = status
         self._write_run(run)
 
+    @_locked
     def set_run_t0(self, run_id: str, t0: float) -> None:
         run = self.get_run(run_id)
         if run is None:
@@ -118,6 +152,7 @@ class Store:
         run.t0 = t0
         self._write_run(run)
 
+    @_locked
     def add_observations(self, run_id: str, observations: list[Observation]) -> None:
         rows = [(o.id, run_id, json.dumps(o.to_json())) for o in observations]
         self._conn.executemany(
@@ -125,6 +160,7 @@ class Store:
         )
         self._conn.commit()
 
+    @_locked
     def observations(self, run_id: str) -> list[Observation]:
         rows = self._conn.execute(
             "SELECT data FROM observations WHERE run_id = ? ORDER BY rowid",
@@ -132,6 +168,7 @@ class Store:
         ).fetchall()
         return [Observation.from_json(json.loads(r[0])) for r in rows]
 
+    @_locked
     def add_findings(self, findings: list[Finding]) -> None:
         rows = [
             (f.id, f.run_id, f.market, json.dumps(f.to_json())) for f in findings
@@ -142,6 +179,7 @@ class Store:
         )
         self._conn.commit()
 
+    @_locked
     def findings(self, run_id: str, market: str | None = None) -> list[Finding]:
         if market is None:
             rows = self._conn.execute(
@@ -156,6 +194,7 @@ class Store:
             ).fetchall()
         return [Finding.from_json(json.loads(r[0])) for r in rows]
 
+    @_locked
     def update_finding_status(self, finding_id: str, status: str,
                               run_id: str | None = None) -> None:
         """Set one finding's status.
@@ -197,6 +236,7 @@ class Store:
         )
         self._conn.commit()
 
+    @_locked
     def open_finding_by_labels(self, asset: str, market: str,
                                rule_id: str) -> tuple[RunRecord, Finding] | None:
         """The newest still-open finding matching one alert's labels.
@@ -229,6 +269,7 @@ class Store:
             return run, finding
         return None
 
+    @_locked
     def add_change(self, change: ChangeRecord) -> None:
         self._conn.execute(
             "INSERT INTO changes (id, run_id, data) VALUES (?, ?, ?)",
@@ -236,6 +277,7 @@ class Store:
         )
         self._conn.commit()
 
+    @_locked
     def changes(self, run_id: str) -> list[ChangeRecord]:
         rows = self._conn.execute(
             "SELECT data FROM changes WHERE run_id = ? ORDER BY rowid",
@@ -243,6 +285,7 @@ class Store:
         ).fetchall()
         return [ChangeRecord.from_json(json.loads(r[0])) for r in rows]
 
+    @_locked
     def emit(self, run_id: str, agent: str, message: str) -> int:
         cur = self._conn.execute(
             "INSERT INTO events (run_id, ts, agent, message) VALUES (?, ?, ?, ?)",
@@ -251,6 +294,7 @@ class Store:
         self._conn.commit()
         return cur.lastrowid
 
+    @_locked
     def events_since(self, run_id: str, after_id: int) -> list[tuple]:
         return self._conn.execute(
             "SELECT id, ts, agent, message FROM events "

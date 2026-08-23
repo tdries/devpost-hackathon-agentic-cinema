@@ -7,6 +7,7 @@ the store writes, the status transitions, the clearance recomputation -- is
 real.
 """
 import subprocess
+from dataclasses import replace
 
 import pytest
 
@@ -76,6 +77,11 @@ def no_telemetry(monkeypatch):
                         lambda run, market, clearance, findings: calls.append(("status", market, clearance)))
     monkeypatch.setattr(telemetry, "annotate_resolution",
                         lambda run, change, store=None: calls.append(("resolution", change.id)))
+    monkeypatch.setattr(telemetry, "push_log",
+                        lambda run, finding: calls.append(("log", finding.rule_id)))
+    monkeypatch.setattr(telemetry, "annotate",
+                        lambda run, finding, existing=None: calls.append(("annotate", finding.rule_id)))
+    monkeypatch.setattr(telemetry, "existing_annotation_keys", lambda run: set())
     return calls
 
 @pytest.fixture(autouse=True)
@@ -120,18 +126,85 @@ def test_confirm_reopens_the_finding_when_the_same_rule_still_fires(
     assert ("status", "FR", "blocked") in no_telemetry, "an unfixed market stays blocked"
     assert not any(kind == "resolution" for kind, *_rest in no_telemetry)
 
-def test_confirm_ignores_a_surviving_finding_of_a_different_rule(
+def test_confirm_persists_a_new_violation_the_edit_surfaced(
         remediated, monkeypatch, no_telemetry, tmp_path):
-    # the verifier asks "is THIS violation gone", not "is the shot spotless":
-    # a different rule firing on the edited shot is a new finding for the next
-    # clearance run, not evidence that this fix failed.
+    # the boolean answers "is THIS violation gone", and a different rule
+    # firing on the edited shot does not make that answer False. What it must
+    # not do is vanish: nothing else ever re-scans the localized master, so
+    # the verifier stores it, guards it, logs it, annotates it, and lets it
+    # hold clearance on its own.
     store, run, finding, change, _master = remediated
-    monkeypatch.setattr(pipeline, "observe_shot", lambda *a, **k: [_observation()])
-    other = _finding(id="fnd_other", run_id=run.id, rule_id="FR-ALC-01", status="open")
-    monkeypatch.setattr(pipeline, "judge", _fake_judge_returning([other]))
+    fresh_obs = _observation(id="obs_shot_0_000", dimension="alcohol_tobacco_drugs",
+                             statement="A glass of red wine is on the table.")
+    monkeypatch.setattr(pipeline, "observe_shot", lambda *a, **k: [fresh_obs])
+    other = _finding(id="fnd_other", run_id=run.id, rule_id="FR-ALC-01",
+                     observation_id="obs_shot_0_000", status="open")
+    monkeypatch.setattr(pipeline, "judge",
+                        lambda run_id, observations, pack, on_event=None: [
+                            replace(other, observation_id=observations[0].id,
+                                    id=f"fnd_FR_FR-ALC-01_{observations[0].id}")])
 
     assert verify.confirm(run, "FR", [change], store, tmp_path / "work") is True
-    assert store.findings(run.id, "FR")[0].status == "resolved"
+
+    stored = store.findings(run.id, "FR")
+    assert {f.rule_id: f.status for f in stored} == {
+        "FR-LANG-01": "resolved", "FR-ALC-01": "open"}
+    # the new finding holds clearance by itself
+    assert ("status", "FR", "blocked") in no_telemetry
+    assert any(kind == "log" for kind, *_r in no_telemetry)
+    assert any(kind == "annotate" for kind, *_r in no_telemetry)
+    messages = [m for (_i, _t, _a, m) in store.events_since(run.id, 0)]
+    assert any("verification surfaced 1 new finding(s)" in m for m in messages), messages
+    # and its backing observation is stored with it, never dangling
+    new_finding = next(f for f in stored if f.rule_id == "FR-ALC-01")
+    assert any(o.id == new_finding.observation_id for o in store.observations(run.id))
+
+def test_confirm_does_not_re_record_a_violation_the_market_already_holds_open(
+        remediated, monkeypatch, no_telemetry, tmp_path):
+    # only the touched shots are re-observed, and a touched shot can hold a
+    # second, unremediated violation the original run already recorded.
+    store, run, finding, change, _master = remediated
+    already = _finding(id="fnd_alc_original", run_id=run.id, rule_id="FR-ALC-01",
+                       observation_id="obs_shot_0_000", t_start=0.4, t_end=1.6,
+                       status="open")
+    store.add_findings([already])
+    monkeypatch.setattr(pipeline, "observe_shot", lambda *a, **k: [_observation()])
+    monkeypatch.setattr(pipeline, "judge",
+                        lambda run_id, observations, pack, on_event=None: [
+                            replace(already, id="fnd_alc_fresh",
+                                    observation_id=observations[0].id)])
+
+    assert verify.confirm(run, "FR", [change], store, tmp_path / "work") is True
+
+    alcohol = [f for f in store.findings(run.id, "FR") if f.rule_id == "FR-ALC-01"]
+    assert [f.id for f in alcohol] == ["fnd_alc_original"], "no duplicate finding"
+
+def test_confirm_guards_a_new_protected_basis_finding_it_surfaces(
+        remediated, monkeypatch, no_telemetry, tmp_path):
+    # SA-LGBT-01 carries protected_basis in the real markets/SA.yaml, so a
+    # verification that surfaces it must store it already blocked from
+    # auto-remediation, exactly as a clearance run would.
+    store, run, finding, change, master = remediated
+    sa_master = remediate.localized_master(run, "SA", store)
+    sa_master.write_bytes(master.read_bytes())
+    sa_finding = _finding(id="fnd_sa", run_id=run.id, market="SA", rule_id="SA-MOD-01",
+                          observation_id="obs_shot_0_000", status="remediating")
+    store.add_findings([sa_finding])
+    sa_change = ChangeRecord(id="chg_sa", run_id=run.id, finding_id="fnd_sa",
+                             method="reframe", description="", before_frame="",
+                             after_frame="")
+    monkeypatch.setattr(pipeline, "observe_shot", lambda *a, **k: [_observation()])
+    monkeypatch.setattr(pipeline, "judge",
+                        lambda run_id, observations, pack, on_event=None: [
+                            _finding(id="fnd_lgbt_fresh", run_id=run_id, market="SA",
+                                     rule_id="SA-LGBT-01", klass="legal",
+                                     observation_id=observations[0].id, status="open")])
+
+    verify.confirm(run, "SA", [sa_change], store, tmp_path / "work")
+
+    lgbt = next(f for f in store.findings(run.id, "SA") if f.rule_id == "SA-LGBT-01")
+    assert lgbt.remediation_blocked is True and lgbt.blocked_reason
+    assert lgbt.status == "open"
 
 def test_confirm_ignores_the_same_rule_at_a_different_timecode(
         remediated, monkeypatch, no_telemetry, tmp_path):

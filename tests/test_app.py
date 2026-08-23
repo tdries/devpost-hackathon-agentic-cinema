@@ -170,3 +170,69 @@ def test_remediate_and_verify_records_a_stage_error_when_the_edit_raises(
     assert result is False
     messages = [m for (_i, _t, _a, m) in store.events_since(run.id, 0)]
     assert any("stage_error: remediate" in m for m in messages), messages
+
+
+# --- one writer per localized master (see remediate.market_lock) ---
+
+def test_market_lock_is_per_run_and_per_market():
+    lock = app_module.remediate.market_lock("run_a", "FR")
+    assert app_module.remediate.market_lock("run_a", "FR") is lock
+    assert app_module.remediate.market_lock("run_a", "SA") is not lock, "markets write different files"
+    assert app_module.remediate.market_lock("run_b", "FR") is not lock, "runs write different files"
+
+def test_two_alerts_for_one_market_serialize_end_to_end(tmp_path, monkeypatch):
+    """Two webhook jobs for the same market must not interleave.
+
+    Starlette runs a sync BackgroundTask in a threadpool, so this is what two
+    near-simultaneous alerts really look like. Without the lock the second
+    thread enters apply() while the first is still between apply and verify,
+    reads the master the first one read, and reverts a verified edit.
+    """
+    import threading
+
+    store = Store(tmp_path / "customs.db")
+    run = store.create_run(asset_path=ASSET, markets=["FR"])
+    store.add_findings([_finding(run.id), _finding(run.id, id="fnd_two",
+                                                   rule_id="FR-LANG-01", severity=60)])
+    monkeypatch.setattr(app_module, "_store_singleton", store)
+
+    trace = []
+    trace_guard = threading.Lock()
+
+    def record(event):
+        with trace_guard:
+            trace.append(event)
+
+    class _Change:
+        finding_id = "x"
+
+    def slow_apply(run_record, finding, method, workdir, store_arg, **kwargs):
+        record(f"apply:{finding.id}")
+        threading.Event().wait(0.05)  # long enough that an unlocked second thread interleaves
+        return _Change()
+
+    def slow_verify(run_record, market, changes, store_arg, workdir):
+        record(f"verify:{market}")
+        threading.Event().wait(0.05)
+        return True
+
+    monkeypatch.setattr(app_module.remediate, "apply", slow_apply)
+    monkeypatch.setattr(app_module.remediate, "plan", lambda finding, observation=None: "reframe")
+    monkeypatch.setattr(app_module.verify, "confirm", slow_verify)
+
+    threads = [
+        threading.Thread(target=app_module.remediate_and_verify,
+                         args=(run.id, finding_id, "FR"),
+                         kwargs={"workdir": tmp_path / "work"})
+        for finding_id in ("fnd_FR_FR-ALC-01_obs_shot_0_000", "fnd_two")
+    ]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=10)
+
+    assert len(trace) == 4, trace
+    # each job's apply is immediately followed by its own verify: no interleave
+    assert trace[1] == "verify:FR" and trace[3] == "verify:FR", trace
+    assert trace[0].startswith("apply:") and trace[2].startswith("apply:"), trace
+    assert trace[0] != trace[2], "both jobs ran"

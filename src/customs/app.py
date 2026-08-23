@@ -61,6 +61,16 @@ def remediate_and_verify(run_id: str, finding_id: str, market: str,
     the request: the webhook's job is to name a finding, not to hand this
     function a state it has been holding.
 
+    Held under remediate.market_lock for the whole plan-apply-verify span,
+    not just the edit: the verifier re-observes the same localized master
+    that apply() just wrote, so a second alert for the same market editing it
+    in between would have the verifier judging a file nobody asked it about,
+    and would revert the fix it is confirming. Starlette runs this sync
+    function through run_in_threadpool, so two webhook calls really are two
+    threads and a threading lock is the primitive that excludes them (an
+    asyncio lock would not). See remediate.market_lock for the per-process
+    ceiling.
+
     Never raises. A remediation that fails leaves the finding as the
     Remediator left it and records a stage error on the run, which is what
     the Mission Feed and customs_stage_error surface; the alert simply stays
@@ -83,11 +93,12 @@ def remediate_and_verify(run_id: str, finding_id: str, market: str,
         observation = next(
             (o for o in db.observations(run_id) if o.id == finding.observation_id), None
         )
-        method = remediate.plan(finding, observation)
-        db.emit(run_id, "remediator",
-                f"alert on {finding.rule_id} ({market}) -> planned {method}")
-        change = remediate.apply(run, finding, method, workdir, db)
-        return verify.confirm(run, market, [change], db, workdir)
+        with remediate.market_lock(run_id, market):
+            method = remediate.plan(finding, observation)
+            db.emit(run_id, "remediator",
+                    f"alert on {finding.rule_id} ({market}) -> planned {method}")
+            change = remediate.apply(run, finding, method, workdir, db)
+            return verify.confirm(run, market, [change], db, workdir)
     except Exception as exc:  # noqa: BLE001 -- a background task has nobody to raise to
         log.exception("remediation of %s failed", finding_id)
         db.emit(run_id, "remediator", f"stage_error: remediate: {finding_id}: {exc!r}")

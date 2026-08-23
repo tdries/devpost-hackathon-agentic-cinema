@@ -196,3 +196,35 @@ def test_open_finding_by_labels_prefers_the_newest_run(tmp_path):
     found = store.open_finding_by_labels("test_ad", "FR", "FR-ALC-01")
 
     assert found is not None and found[0].id == new_run.id
+
+
+def test_store_survives_concurrent_threads(tmp_path):
+    """Regression: two threads sharing one connection used to raise
+    sqlite3.InterfaceError ("bad parameter or other API misuse") and, worse,
+    sometimes return None for a run that exists. Both were observed from two
+    concurrent remediations of one run; Store now serializes on its own lock.
+    """
+    import threading
+
+    store = Store(tmp_path / "s.db")
+    run = store.create_run(asset_path="docs/samples/test_ad.mp4", markets=["FR"])
+    errors = []
+
+    def hammer(tag):
+        try:
+            for i in range(40):
+                store.emit(run.id, "test", f"{tag}-{i}")
+                assert store.get_run(run.id) is not None
+                store.findings(run.id, "FR")
+                store.observations(run.id)
+        except Exception as exc:  # noqa: BLE001 -- the assertion is "none of these"
+            errors.append(exc)
+
+    threads = [threading.Thread(target=hammer, args=(tag,)) for tag in ("a", "b")]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=30)
+
+    assert errors == []
+    assert len(store.events_since(run.id, 0)) == 80

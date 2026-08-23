@@ -39,6 +39,7 @@ protected characteristic because a forged or stale alert asked it to, so
 the point of judgement.
 """
 import re
+import threading
 import uuid
 import wave
 from pathlib import Path
@@ -176,6 +177,45 @@ def plan(finding: Finding, observation: Observation | None = None) -> str:
         if any(marker in statement for marker in _ON_SCREEN_MARKERS):
             return "relettering"
     return method
+
+# --- one writer per localized master ---
+#
+# apply() is a read-modify-write of runs/{run_id}/localized_{market}.mp4: it
+# reads the current master, edits it, and replaces it. Two alerts for the same
+# market arrive as two requests, and app.remediate_and_verify is a sync
+# function, which Starlette runs through run_in_threadpool -- so two of them
+# really do run in two OS threads at once. Without this lock the second edit
+# starts from the master the first one read, finishes last, and silently
+# reverts a verified fix.
+#
+# Ceiling, stated plainly: this is a per-process lock. It is correct for one
+# Cloud Run instance and buys nothing across two. The fix at that point is a
+# queue in front of remediation or a lease column in the run store, not a
+# bigger lock -- and this is a demo-grade system where one instance is the
+# deployment. Keyed per (run_id, market) rather than globally so two markets
+# of one run, or two runs, still remediate in parallel: they write different
+# files.
+#
+# RLock, not Lock: apply() takes it for its own sake, and a caller that holds
+# it across apply + verify.confirm (app.remediate_and_verify does, because the
+# verifier reads the same master) must not deadlock against itself.
+_market_locks: dict[tuple[str, str], threading.RLock] = {}
+_market_locks_guard = threading.Lock()
+
+def market_lock(run_id: str, market: str) -> threading.RLock:
+    """The lock guarding one run's localized master for one market.
+
+    Hold it across every read-modify-write of that file. apply() takes it
+    itself; a caller that also needs the master to stay still afterwards (the
+    verifier re-observes it) should hold it around both.
+    """
+    key = (run_id, market)
+    with _market_locks_guard:
+        lock = _market_locks.get(key)
+        if lock is None:
+            lock = threading.RLock()
+            _market_locks[key] = lock
+        return lock
 
 def run_dir(run, store) -> Path:
     """runs/{run_id}/ -- this run's artifact directory.
@@ -328,6 +368,9 @@ def apply(run, finding: Finding, method: str, workdir, store, *,
 
     Returns the persisted ChangeRecord.
 
+    Serialized per (run_id, market) by market_lock: the master is read,
+    edited and replaced here, so two alerts for one market must not interleave.
+
     The finding is left at status "remediating", never "resolved": only
     verify.confirm may resolve it, after re-observing the edited master. A
     failed edit raises with the master untouched and the finding put straight
@@ -347,6 +390,12 @@ def apply(run, finding: Finding, method: str, workdir, store, *,
     changes_dir = run_dir(run, store) / "changes"
     changes_dir.mkdir(parents=True, exist_ok=True)
 
+    with market_lock(run.id, finding.market):
+        return _apply_locked(run, finding, method, workdir, store, replacement, changes_dir)
+
+def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
+                  replacement: str | None, changes_dir: Path) -> ChangeRecord:
+    """apply()'s body, with this market's master already locked."""
     master = localized_master(run, finding.market, store)
     base = master if master.exists() else Path(run.asset_path)
     change_id = f"chg_{uuid.uuid4().hex[:12]}"

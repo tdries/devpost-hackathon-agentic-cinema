@@ -16,22 +16,30 @@ Three deliberate narrowings, each for a reason:
   cost as much as the original clearance and would tell us nothing about the
   shots nobody edited. This is also why a change record is worth having:
   it names the finding, which names the observation, which names the shot.
-* The re-observation and re-judgement are NOT persisted. They describe the
-  localized master, not the asset the run is about, and their ids collide
-  with the originals by construction (obs ids come from shot ids, finding
-  ids from obs ids). The run's findings stay as the record of what was
-  found; what changes is their status.
+* The re-observation is persisted only where it produced news. A fresh
+  finding that IS the violation being verified is not stored a second time
+  (the original finding already carries it, and its status is the answer);
+  a fresh finding of some other rule is a genuinely new violation the edit
+  introduced or exposed, and design spec section 3 asks this stage to
+  confirm "the finding cleared AND nothing new broke", so those are guarded,
+  stored open, logged, annotated and counted in the clearance recompute like
+  any other finding. Ids of anything re-observed are suffixed with a
+  per-verification token first: obs ids come from shot ids and finding ids
+  from obs ids, so without that they would collide with the original run's
+  rows on the (run_id, id) primary key.
 * push_status only. Never push_timeline: it re-picks the run's t0 and would
   strand every customs_risk sample already written on an orphaned clock
   (telemetry.push_timeline's own docstring). The resolving annotations and
   the status series both map onto the t0 the publisher already fixed.
 """
+import uuid
+from dataclasses import replace
 from pathlib import Path
 
 from customs import pipeline, remediate, telemetry
 from customs.media import Shot
 from customs.packs import load as load_packs
-from customs.schema import ChangeRecord, Finding
+from customs.schema import ChangeRecord, Finding, Observation
 
 def _emit(store, run_id: str, message: str) -> None:
     store.emit(run_id, "verifier", message)
@@ -87,6 +95,13 @@ def confirm(run, market: str, changes: list[ChangeRecord], store, workdir) -> bo
     outcome: design spec section 14, "remediation failure leaves the original
     media untouched and the alert unresolved".
 
+    The return value answers exactly one question -- did the edits fix what
+    they targeted -- and never hides the other half. A violation the edit
+    itself introduced or exposed is stored as a real open finding
+    (_persist_new_findings), so it holds clearance on its own, reaches the
+    dashboards and can fire its own alert, rather than being folded into a
+    boolean about a different finding.
+
     Telemetry failures are reported as events and never change the verdict:
     whether the edit worked is a question about pixels, not about whether
     Grafana was reachable.
@@ -123,6 +138,14 @@ def confirm(run, market: str, changes: list[ChangeRecord], store, workdir) -> bo
             return _unverified(store, run, targets, f"{shot.shot_id}: {result!r}")
         observations.extend(result)
 
+    # One token per verification pass. analyst.observe_shot mints
+    # obs_{shot_id}_{n} from a per-shot index, so re-observing shot_1 produces
+    # the same ids the original run already stored; judge() then derives
+    # finding ids from those. Suffixing here is what lets anything this pass
+    # finds be persisted at all (see the module docstring).
+    token = uuid.uuid4().hex[:6]
+    observations = [replace(o, id=f"{o.id}_v{token}") for o in observations]
+
     pack = load_packs().get(market)
     if pack is None:
         return _unverified(store, run, targets, f"no market pack for {market}")
@@ -138,10 +161,12 @@ def confirm(run, market: str, changes: list[ChangeRecord], store, workdir) -> bo
 
     confirmed = []
     all_gone = True
+    matched: set[int] = set()
     for change, finding in changed:
         survivors = [
             f for f in fresh if f.rule_id == finding.rule_id and _overlaps(f, finding)
         ]
+        matched.update(id(f) for f in survivors)
         if survivors:
             all_gone = False
             store.update_finding_status(finding.id, "open", run_id=run.id)
@@ -157,6 +182,9 @@ def confirm(run, market: str, changes: list[ChangeRecord], store, workdir) -> bo
                   f"{finding.t_start:.2f}-{finding.t_end:.2f}s after {change.method}; "
                   f"{finding.id} resolved")
 
+    surfaced = _persist_new_findings(
+        store, run, market, pack, fresh, matched, observations)
+
     current = store.findings(run.id, market)
     status = pipeline.clearance(current)
     _emit(store, run.id, f"{market} clearance recomputed -> {status}")
@@ -164,7 +192,66 @@ def confirm(run, market: str, changes: list[ChangeRecord], store, workdir) -> bo
         telemetry.push_status(run, market, status, current)
         for change in confirmed:
             telemetry.annotate_resolution(run, change, store)
+        if surfaced:
+            # one annotation query for the whole batch, same as the publisher:
+            # the per-finding loop is what got rate limited in Task 12.
+            existing = telemetry.existing_annotation_keys(run)
+            for finding in surfaced:
+                telemetry.push_log(run, finding)
+                telemetry.annotate(run, finding, existing)
     except Exception as exc:  # noqa: BLE001 -- a dead Grafana is not a failed fix
         _emit(store, run.id, f"stage_error: verify: telemetry push failed: {exc!r}")
 
     return all_gone
+
+def _persist_new_findings(store, run, market: str, pack, fresh: list[Finding],
+                          matched: set[int], observations: list[Observation]
+                          ) -> list[Finding]:
+    """Store every fresh finding that is not one of the violations being verified.
+
+    "Nothing new broke" is a question this stage is the only one positioned to
+    answer: nothing else ever looks at localized_{market}.mp4 again. So a
+    fresh finding that is not a survivor of a remediated violation is treated
+    exactly like a finding from a clearance run -- guarded (pipeline.apply_guard,
+    so a protected-basis rule arrives already blocked from auto-remediation),
+    stored open, and therefore counted by the clearance recompute and visible
+    to the alert rules.
+
+    Two things are deliberately NOT stored:
+
+    * a survivor of a remediated violation (`matched`): the original finding
+      already carries that violation and its status is the verdict on it.
+    * a fresh finding duplicating an open finding this market already holds
+      over the same span. Only the touched shots are re-observed, and a
+      touched shot can easily hold a second, unremediated violation that the
+      original run already recorded; re-recording it would double it on every
+      dashboard, annotation and alert instance.
+
+    The observations backing the stored findings are stored with them (already
+    id-suffixed by the caller), so no persisted finding points at an
+    observation that is not there.
+    """
+    open_now = [f for f in store.findings(run.id, market) if f.status == "open"]
+    novel = [
+        f for f in fresh
+        if id(f) not in matched
+        and not any(e.rule_id == f.rule_id and _overlaps(e, f) for e in open_now)
+    ]
+    if not novel:
+        return []
+
+    guarded = pipeline.apply_guard(novel, pack)
+    by_id = {o.id: o for o in observations}
+    backing: list[Observation] = []
+    seen: set[str] = set()
+    for finding in guarded:
+        obs = by_id.get(finding.observation_id)
+        if obs is not None and obs.id not in seen:
+            seen.add(obs.id)
+            backing.append(obs)
+    store.add_observations(run.id, backing)
+    store.add_findings(guarded)
+    _emit(store, run.id,
+          f"verification surfaced {len(guarded)} new finding(s) in the edited "
+          f"shot(s): {', '.join(sorted(f.rule_id for f in guarded))}")
+    return guarded
