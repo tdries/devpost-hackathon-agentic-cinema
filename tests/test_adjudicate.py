@@ -200,6 +200,43 @@ def test_judge_drops_pair_with_unhashable_field_without_crashing(monkeypatch):
     warnings = [m for a, m in events if "warning" in m.lower()]
     assert warnings, f"expected a warning for the malformed pair, got: {events}"
 
+def test_judge_drops_items_with_non_coercible_severity_adjust_without_crashing(monkeypatch):
+    # a severity_adjust int() truly cannot coerce (a non-numeric string, or
+    # a list) must be dropped like any other malformed item, not crash the
+    # whole batch; a well-formed item in the same batch must still produce
+    # a finding, and the malformed items must not spend a citation call.
+    obs_bad_string = _obs(id="obs_bad_string")
+    obs_bad_list = _obs(id="obs_bad_list")
+    obs_good = _obs(id="obs_good")
+    rule = _rule()
+    pack = _pack([rule])
+
+    monkeypatch.setattr(adjudicate, "generate_json", lambda model, parts, schema: [
+        {"observation_id": "obs_bad_string", "rule_id": rule.id, "triggers": True,
+         "severity_adjust": "banana", "rationale": "non-numeric string"},
+        {"observation_id": "obs_bad_list", "rule_id": rule.id, "triggers": True,
+         "severity_adjust": [1], "rationale": "a list, not a number"},
+        {"observation_id": "obs_good", "rule_id": rule.id, "triggers": True,
+         "severity_adjust": -5, "rationale": "well formed"},
+    ])
+
+    grounded_calls = []
+    def fake_grounded(model, prompt):
+        grounded_calls.append(prompt)
+        return "ok", [{"uri": "https://example.com/x", "title": "t"}]
+    monkeypatch.setattr(adjudicate, "generate_grounded", fake_grounded)
+
+    events = []
+    findings = adjudicate.judge(
+        "run_1", [obs_bad_string, obs_bad_list, obs_good], pack,
+        on_event=lambda a, m: events.append((a, m)),
+    )
+
+    assert [f.observation_id for f in findings] == ["obs_good"]
+    assert len(grounded_calls) == 1, "must not spend a citation call on a non-coercible severity_adjust"
+    warnings = [m for a, m in events if "warning" in m.lower()]
+    assert len(warnings) == 2, f"expected one warning per malformed item, got: {events}"
+
 def test_judge_skips_non_triggering_candidates_without_grounding_call(monkeypatch):
     obs = _obs()
     rule = _rule()

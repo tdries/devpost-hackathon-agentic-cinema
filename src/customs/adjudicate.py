@@ -76,9 +76,17 @@ def candidates(observations: list[Observation], pack: MarketPack) -> list[tuple[
         if rule.dimension == obs.dimension
     ]
 
-def _clamp_severity_adjust(value) -> int:
-    if value is None:
-        value = 0
+def _clamp_severity_adjust(value: int) -> int:
+    """Clamp an already-numeric severity_adjust into [SEVERITY_ADJUST_MIN, SEVERITY_ADJUST_MAX].
+
+    Raises TypeError or ValueError if value cannot be coerced to int at all
+    (a list, dict, or non-numeric string). judge() catches that and drops
+    the item with a warning instead of letting one malformed item crash the
+    whole batch (the same invariant analyst.py and the rest of this module
+    hold for every other field). Callers must coalesce a JSON null to 0
+    themselves before calling this; 0 here means "no adjustment", never
+    "invalid".
+    """
     return max(SEVERITY_ADJUST_MIN, min(SEVERITY_ADJUST_MAX, int(value)))
 
 def judge(run_id: str, observations: list[Observation], pack: MarketPack, on_event=None) -> list[Finding]:
@@ -90,8 +98,10 @@ def judge(run_id: str, observations: list[Observation], pack: MarketPack, on_eve
     crashes the pass, it only shrinks it, mirroring analyst.observe_shot: a
     non-list response drops the whole batch with one warning event; a
     non-dict item, a pair that is not one of this market's real candidates,
-    or an empty rationale (including an explicit JSON null) drops just that
-    item with its own warning event. A candidate the model marks as not
+    an empty rationale (including an explicit JSON null), or a severity_adjust
+    that cannot be coerced to a number at all (a list, dict, or non-numeric
+    string) drops just that item with its own warning event, before any
+    citation call is spent on it. A candidate the model marks as not
     triggering is simply skipped, no warning: that is a legitimate negative
     verdict, not malformed data, and never spends a citation call.
 
@@ -181,9 +191,20 @@ def judge(run_id: str, observations: list[Observation], pack: MarketPack, on_eve
             )
             continue
 
-        severity_adjust = _clamp_severity_adjust(item.get("severity_adjust"))
+        severity_adjust_raw = item.get("severity_adjust")
         obs = obs_by_id[pair[0]]
         rule = rule_by_id[pair[1]]
+        try:
+            severity_adjust = _clamp_severity_adjust(
+                0 if severity_adjust_raw is None else severity_adjust_raw
+            )
+        except (TypeError, ValueError):
+            _emit(
+                on_event,
+                f"warning: dropped judge item {i} for {pack.market}, "
+                f"non-numeric severity_adjust {severity_adjust_raw!r} for {rule.id}",
+            )
+            continue
 
         _emit(on_event, f"citation check -> {pack.market} {rule.id} for {obs.id}")
         _, chunks = generate_grounded(
