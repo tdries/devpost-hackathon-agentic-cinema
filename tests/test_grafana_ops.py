@@ -181,6 +181,58 @@ def test_missing_binary_leaves_an_empty_inventory_and_does_not_raise():
     assert ops.transport_for("ensure_dashboards") == "http"
 
 
+# --- mcp-grafana binary resolution (_default_mcp_binary), task 17 ---
+#
+# The Cloud Run image has no repo, just /app, so bin/mcp-grafana (a
+# gitignored dev binary) is never there; the Dockerfile installs the
+# linux/amd64 release binary at /usr/local/bin/mcp-grafana instead.
+# _default_mcp_binary is what makes GrafanaOps() with no explicit
+# mcp_binary find that binary in the deployed image while still finding
+# bin/mcp-grafana on a developer's checkout.
+
+def test_default_mcp_binary_prefers_the_env_var_over_everything(monkeypatch):
+    monkeypatch.setenv("MCP_GRAFANA_BIN", "/from/env/mcp-grafana")
+    # Even a repo-relative dev binary that exists must lose to the env var.
+    monkeypatch.setattr(grafana_ops, "MCP_BINARY", pathlib.Path(__file__))
+    assert grafana_ops._default_mcp_binary() == pathlib.Path("/from/env/mcp-grafana")
+
+
+def test_default_mcp_binary_uses_the_repo_relative_dev_binary_when_present(monkeypatch, tmp_path):
+    monkeypatch.delenv("MCP_GRAFANA_BIN", raising=False)
+    dev_binary = tmp_path / "mcp-grafana"
+    dev_binary.write_text("fake binary")
+    monkeypatch.setattr(grafana_ops, "MCP_BINARY", dev_binary)
+    assert grafana_ops._default_mcp_binary() == dev_binary
+
+
+def test_default_mcp_binary_falls_back_to_the_container_path_when_dev_binary_is_absent(monkeypatch, tmp_path):
+    monkeypatch.delenv("MCP_GRAFANA_BIN", raising=False)
+    monkeypatch.setattr(grafana_ops, "MCP_BINARY", tmp_path / "nonexistent" / "mcp-grafana")
+    assert grafana_ops._default_mcp_binary() == grafana_ops._CONTAINER_MCP_BINARY
+    assert grafana_ops._CONTAINER_MCP_BINARY == pathlib.Path("/usr/local/bin/mcp-grafana")
+
+
+def test_grafana_ops_with_no_binary_kwarg_goes_through_default_resolution(monkeypatch, tmp_path):
+    """GrafanaOps() with no mcp_binary must resolve through
+    _default_mcp_binary, not silently ignore MCP_GRAFANA_BIN / the
+    container fallback the way the old `mcp_binary or MCP_BINARY` did."""
+    monkeypatch.delenv("MCP_GRAFANA_BIN", raising=False)
+    monkeypatch.setattr(grafana_ops, "MCP_BINARY", tmp_path / "no-dev-binary")
+    monkeypatch.setattr(grafana_ops, "_CONTAINER_MCP_BINARY", tmp_path / "no-container-binary")
+    ops = GrafanaOps(_Settings())
+    assert ops.mcp_tools == set()
+    assert ops.mcp_error and str(tmp_path / "no-container-binary") in ops.mcp_error
+
+
+def test_explicit_mcp_binary_kwarg_still_wins_over_the_env_var(monkeypatch):
+    """Existing callers (this test file, provision_grafana.py) pass
+    mcp_binary= explicitly; the new default-resolution chain must never
+    second-guess that."""
+    monkeypatch.setenv("MCP_GRAFANA_BIN", "/from/env/mcp-grafana")
+    ops = GrafanaOps(_Settings(), mcp_binary="/nonexistent/explicit-path")
+    assert ops.mcp_error and "/nonexistent/explicit-path" in ops.mcp_error
+
+
 # --- embed_url: exact URL shape ---
 
 def test_embed_url_public_shape_is_exact():

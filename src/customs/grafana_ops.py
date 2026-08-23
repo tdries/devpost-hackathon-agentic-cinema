@@ -63,7 +63,39 @@ LOKI_UID = "grafanacloud-logs"
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DASHBOARD_DIR = _REPO_ROOT / "grafana" / "dashboards"
+# Dev binary: hand-downloaded, gitignored (bin/ never ships in a commit or an
+# image), present on a developer's checkout. The Cloud Run image has no
+# repo -- just /app -- and installs the linux/amd64 release binary at
+# _CONTAINER_MCP_BINARY instead (see the Dockerfile). _default_mcp_binary
+# below is what actually chooses between them at runtime.
 MCP_BINARY = _REPO_ROOT / "bin" / "mcp-grafana"
+_CONTAINER_MCP_BINARY = Path("/usr/local/bin/mcp-grafana")
+
+
+def _default_mcp_binary() -> Path:
+    """Resolve the mcp-grafana binary when the caller passes no explicit
+    `mcp_binary`. Checked in order:
+
+    1. `MCP_GRAFANA_BIN` env var -- an explicit override, for a deployment
+       that installs the binary somewhere neither path below expects.
+    2. `bin/mcp-grafana` (`MCP_BINARY`) -- the repo-relative dev binary.
+       Present on a developer's checkout; absent in the deployed image.
+    3. `/usr/local/bin/mcp-grafana` (`_CONTAINER_MCP_BINARY`) -- where the
+       Dockerfile installs the linux/amd64 release binary. The fallback of
+       last resort, and in the deployed image the only one of the three that
+       is ever actually there.
+
+    Returned whether or not anything exists at the result: `_McpStdio.start`
+    raising `FileNotFoundError` for a binary that is still missing, caught by
+    `_inventory` and turned into HTTP-only mode, is what handles "checked
+    everywhere and it's still not there".
+    """
+    env = os.environ.get("MCP_GRAFANA_BIN")
+    if env:
+        return Path(env)
+    if MCP_BINARY.exists():
+        return MCP_BINARY
+    return _CONTAINER_MCP_BINARY
 
 # Alert rules and dashboards live in their own folder so the alert rule group
 # (which is folder-scoped) has somewhere to be and the six dashboards are not
@@ -424,7 +456,7 @@ class GrafanaOps:
         elif mcp is not None:
             self.mcp_tools = self._inventory(mcp)
         else:
-            binary = Path(mcp_binary or MCP_BINARY)
+            binary = Path(mcp_binary) if mcp_binary else _default_mcp_binary()
             self.mcp = _McpStdio(binary, env={
                 "GRAFANA_URL": settings.grafana_url,
                 "GRAFANA_SERVICE_ACCOUNT_TOKEN": settings.grafana_sa_token,

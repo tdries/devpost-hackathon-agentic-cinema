@@ -1,0 +1,25 @@
+# Cloud Run build context: `gcloud run deploy --source .` uploads everything
+# not listed here to Cloud Build. The Dockerfile only ever COPYs src/,
+# markets/, grafana/ and docs/samples/ by name, so nothing below can land in
+# the image even by accident -- this file is the belt to that COPY list's
+# suspenders. The one line that actually matters is .env: secrets never
+# leave this machine, full stop.
+.env
+.env.local
+.env.*.local
+
+.venv/
+.git/
+runs/
+scripts/.cache/
+.superpowers/
+docs/screenshots/
+bin/
+
+# Standard junk: never needed in the image, no reason to upload it either.
+__pycache__/
+*.pyc
+.pytest_cache/
+.vscode/
+.DS_Store
+*.log
