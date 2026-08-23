@@ -251,6 +251,7 @@ import os
 import re
 import threading
 import time
+from pathlib import Path
 
 from customs.schema import ChangeRecord
 
@@ -360,6 +361,56 @@ def test_upload_creates_a_run_starts_the_crew_and_redirects_to_the_board(console
         time.sleep(0.05)
     assert launched and launched[0][0] == run_id
     assert launched[0][2] == MARKETS
+
+
+def test_two_runs_started_together_get_distinct_workdirs(tmp_path, monkeypatch):
+    """WORKDIR is one process-global scratch root, but the ingest and analyst
+    stages name their scratch frames and audio by shot_id, and every video's
+    shots are numbered from 0 (media.detect_shots), so shot_0 exists for
+    every asset. Two runs sharing WORKDIR directly would overwrite each
+    other's frames mid-run and the Analyst could end up judging the wrong
+    video, so _clearance_job must hand each run its own runs/work/{run_id}
+    all the way down into crew.run_clearance.
+
+    This drives the real launch_clearance rather than the console fixture's
+    fake (which never calls crew.run_clearance at all): only
+    crew.run_clearance itself is replaced here, with a spy that records the
+    workdir it was called with.
+    """
+    from customs import crew
+
+    store = Store(tmp_path / "customs.db")
+    monkeypatch.setattr(app_module, "_store_singleton", store)
+    monkeypatch.setattr(app_module, "probe_duration", lambda path: 42.0)
+
+    calls = []
+
+    def fake_run_clearance(asset_path, markets, store_arg, workdir, *,
+                           publish=True, model=None, run_id=None):
+        calls.append((run_id, Path(workdir)))
+        store_arg.set_run_status(run_id, "done")
+
+    monkeypatch.setattr(crew, "run_clearance", fake_run_clearance)
+
+    with TestClient(app_module.app) as client:
+        first = _upload(client)
+        second = _upload(client)
+
+    assert first.status_code == 303 and second.status_code == 303
+    run_id_1 = first.headers["location"].rsplit("/", 1)[-1]
+    run_id_2 = second.headers["location"].rsplit("/", 1)[-1]
+    assert run_id_1 != run_id_2
+
+    for _ in range(100):  # each crew runs on its own thread
+        if len(calls) >= 2:
+            break
+        time.sleep(0.05)
+    seen = dict(calls)
+    assert set(seen) == {run_id_1, run_id_2}, calls
+
+    assert seen[run_id_1] == app_module.WORKDIR / run_id_1
+    assert seen[run_id_2] == app_module.WORKDIR / run_id_2
+    assert seen[run_id_1] != seen[run_id_2]
 
 
 def test_an_upload_longer_than_two_minutes_is_rejected_with_a_plain_message(

@@ -97,7 +97,16 @@ templates = Jinja2Templates(directory=str(_HERE / "templates"))
 app.mount("/static", StaticFiles(directory=str(_HERE / "static")), name="static")
 
 # Scratch space for the frames and audio remediation extracts. Same default
-# the CLI uses (scripts/run_pipeline.py --workdir).
+# the CLI uses (scripts/run_pipeline.py --workdir). A clearance run gets its
+# own runs/work/{run_id} under here (see _clearance_job): the ingest and
+# analyst stages name their scratch frames and audio by shot_id, and
+# media.detect_shots numbers every video's shots from 0, so shot_0 exists
+# for every asset. Two runs sharing this directory directly would overwrite
+# each other's frames mid-run and the Analyst could end up judging the wrong
+# video. Remediation's own workdir (see remediate_and_verify) stays this
+# shared root: its scratch files are named by change_id, a uuid4, which is
+# already globally unique, so there is nothing there for two runs to collide
+# on.
 WORKDIR = Path("runs/work")
 
 _store_singleton: Store | None = None
@@ -232,7 +241,20 @@ async def healthz() -> dict:
 
 # The two hard limits on an upload, from the design spec's own scope: a
 # television commercial, not a feature. Both are enforced before a run record
-# exists, so a rejected upload leaves nothing behind at all.
+# exists, so a rejected upload leaves nothing behind in runs/uploads/.
+#
+# What MAX_UPLOAD_BYTES actually bounds: create_run's chunk loop counts bytes
+# as it copies the upload from Starlette's UploadFile into runs/uploads/, and
+# by the time that loop runs, Starlette's multipart parser has already read
+# the entire request body off the socket and spooled it to its own OS temp
+# file (that spooling is what makes request.form() / UploadFile possible at
+# all). So this check bounds what this process keeps in runs/uploads/, not
+# what it is willing to receive: a client sending more than 200MB has already
+# made the process accept and hold that many bytes on disk once, in
+# Starlette's temp file, before this code gets a say. Acceptable for a
+# laptop demo with no auth in front of it (Concern 3 in the task report);
+# a public deployment would need the limit enforced on the receiving side,
+# ahead of Starlette's own parser, not here.
 MAX_UPLOAD_BYTES = 200 * 1024 * 1024
 MAX_DURATION_S = 120.0
 _UPLOAD_CHUNK = 1024 * 1024
@@ -471,6 +493,27 @@ PANELS = {
 # the page would queue renders faster than they complete.
 PANEL_CACHE_S = 45.0
 
+# Guards the check-then-render-then-write sequence in panel_png below. Two
+# requests for the same run's panel landing inside the same instant (the
+# board's own two-panel layout loading together, or a poll racing a reload)
+# must not both decide the cache file is stale and both render and write it:
+# one write would step on the other mid-write and a reader could be handed a
+# torn PNG. One lock per (run_id, name), the same shape as
+# remediate.market_lock: a dict guarded by its own lock so creating an entry
+# is itself race-free, rather than one lock wide enough to serialize panels
+# that have nothing to do with each other.
+_panel_locks: dict[tuple[str, str], threading.Lock] = {}
+_panel_locks_guard = threading.Lock()
+
+def _panel_lock(run_id: str, name: str) -> threading.Lock:
+    key = (run_id, name)
+    with _panel_locks_guard:
+        lock = _panel_locks.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _panel_locks[key] = lock
+        return lock
+
 def _render_panel(run, spec) -> bytes:
     """One panel as PNG, over the window its clock calls for.
 
@@ -498,6 +541,10 @@ def panel_png(run_id: str, name: str):
     a stale file on disk serves the stale file (an expired panel is worth more
     than a broken image). Only a render that fails with nothing cached 404s,
     which the board turns into a link to the live dashboard.
+
+    The check, the render and the write are all done under _panel_lock(name,
+    run_id): see that function for why two requests landing together must
+    not both render this same file at once.
     """
     run = _run_or_404(run_id)
     spec = PANELS.get(name)
@@ -505,17 +552,18 @@ def panel_png(run_id: str, name: str):
         raise HTTPException(status_code=404, detail="no such panel for this run")
 
     cached = run_dir(run) / "panels" / f"{name}.png"
-    fresh = cached.is_file() and (time.time() - cached.stat().st_mtime) < PANEL_CACHE_S
-    if not fresh:
-        try:
-            png = _render_panel(run, spec)
-            cached.parent.mkdir(parents=True, exist_ok=True)
-            cached.write_bytes(png)
-        except Exception as exc:  # noqa: BLE001 -- Grafana being down is not a 500 here
-            log.warning("panel render failed for %s/%s: %s", run.id, name, exc)
-            if not cached.is_file():
-                raise HTTPException(status_code=404,
-                                    detail="panel could not be rendered") from None
+    with _panel_lock(run_id, name):
+        fresh = cached.is_file() and (time.time() - cached.stat().st_mtime) < PANEL_CACHE_S
+        if not fresh:
+            try:
+                png = _render_panel(run, spec)
+                cached.parent.mkdir(parents=True, exist_ok=True)
+                cached.write_bytes(png)
+            except Exception as exc:  # noqa: BLE001 -- Grafana being down is not a 500 here
+                log.warning("panel render failed for %s/%s: %s", run.id, name, exc)
+                if not cached.is_file():
+                    raise HTTPException(status_code=404,
+                                        detail="panel could not be rendered") from None
     return FileResponse(cached, media_type="image/png",
                         headers={"Cache-Control": f"max-age={int(PANEL_CACHE_S)}"})
 
@@ -558,8 +606,7 @@ def home(request: Request):
     db = store()
     recent = []
     for run in db.recent_runs(12):
-        states = market_states(run)
-        recent.append({"run": run, "overall": overall(states), "states": states})
+        recent.append({"run": run, "states": market_states(run)})
     return _page(request, "home.html",
                  packs=sorted(market_packs().values(), key=lambda p: p.market),
                  recent=recent)
@@ -570,13 +617,20 @@ async def create_run(asset: UploadFile = File(...),
     """Accept an asset, create the run, start the crew, redirect to the board.
 
     Order matters here. The upload is streamed to disk with a running byte
-    count (Starlette has already spooled the request body to a temp file, so
-    nothing is held in memory either way), then probed, and only an asset
-    that passes both limits gets a run record. A rejected upload leaves no
-    run, no directory and no file: the reply is a plain text 400 saying which
-    limit it hit, because this is the one place in the console where the user
-    is told they did something wrong and a styled error page would be slower
-    to read than the sentence.
+    count, then probed, and only an asset that passes both limits gets a run
+    record. A rejected upload leaves no run, no directory and no file in
+    runs/uploads/: the reply is a plain text 400 saying which limit it hit,
+    because this is the one place in the console where the user is told they
+    did something wrong and a styled error page would be slower to read than
+    the sentence. (What that byte count does and does not bound is on
+    MAX_UPLOAD_BYTES above: it is a storage limit, not a receive limit.)
+
+    This handler is async and runs on the event loop, so the write loop below
+    and the probe_duration call after it are both handed to
+    asyncio.to_thread -- the same pattern mission_stream uses to poll the
+    store off the loop. A 200MB write or a multi-second ffprobe call done
+    directly here would block every other client's poll and SSE feed for as
+    long as it took.
 
     The crew then runs on a thread. See this module's docstring for why that
     is a thread and not a BackgroundTask.
@@ -610,7 +664,7 @@ async def create_run(asset: UploadFile = File(...),
                 size += len(chunk)
                 if size > MAX_UPLOAD_BYTES:
                     raise _TooLarge
-                out.write(chunk)
+                await asyncio.to_thread(out.write, chunk)
     except _TooLarge:
         _discard(target)
         return PlainTextResponse(
@@ -619,7 +673,7 @@ async def create_run(asset: UploadFile = File(...),
             status_code=400)
 
     try:
-        duration = probe_duration(str(target))
+        duration = await asyncio.to_thread(probe_duration, str(target))
     except Exception as exc:  # noqa: BLE001 -- an unreadable upload is a 400, not a 500
         _discard(target)
         return PlainTextResponse(
@@ -669,10 +723,14 @@ def _clearance_job(run_id: str, asset_path: str, markets: list[str]) -> None:
     so it is caught here and written to the run as a stage error: the board
     then shows a run that stopped and says why, instead of tiles that pulse
     pending forever.
+
+    Passes its own runs/work/{run_id} down into launch_clearance rather than
+    letting it fall back to the shared WORKDIR: see WORKDIR's own comment for
+    why two runs cannot share that scratch space.
     """
     db = store()
     try:
-        launch_clearance(run_id, asset_path, markets)
+        launch_clearance(run_id, asset_path, markets, workdir=WORKDIR / run_id)
     except Exception as exc:  # noqa: BLE001 -- a thread has nobody to raise to
         log.exception("clearance run %s failed", run_id)
         db.emit(run_id, "pipeline", f"stage_error: run: {exc!r}")
