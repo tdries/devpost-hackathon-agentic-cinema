@@ -1,0 +1,427 @@
+"""The Remediator: turn one finding into one edit of the localized master.
+
+Design spec section 10. Four methods, ordered by cost and by risk of looking
+fake, and the spine proves three of them on real pixels and real audio:
+
+    relettering  the on-screen text is re-lettered in the market's language
+    prop_swap    the offending prop becomes a market-appropriate one
+    revoice      the offending line is re-spoken, compliant, over the same span
+    reframe      the frame punches in for the span, regenerating no pixels
+
+Every method produces exactly one artifact -- runs/{run_id}/localized_{market}.mp4
+-- and every method appends to it rather than forking a new file: the first
+edit for a market starts from the original asset, every later one starts from
+the master the previous edit wrote. One asset per market, however many
+findings it took.
+
+Nothing is edited silently. Every apply() writes a before and an after still
+to runs/{run_id}/changes/, persists a ChangeRecord naming the finding, the
+method and both stills, and emits mission events as it goes.
+
+--- Image editing on this project ---
+
+The spec says "Imagen inpainting". Task 2 probed Vertex live and found no
+Imagen model reachable from this project in any region (five ids, five
+regions, all 404), so image editing here is Gemini-native: the keyframe goes
+in as an image Part alongside an edit instruction, and the edited frame comes
+back as an inline_data part of the response. Same job, different endpoint,
+one seam (_edit_image) so a future Imagen path is a one-function change.
+
+--- Why the guard is re-checked here ---
+
+guard.apply already decided, at judging time, that a protected-basis finding
+may not be auto-remediated. This module refuses those findings again, on its
+own, before it touches a frame (RemediationBlocked). Defense in depth: the
+webhook resolves a finding from alert labels, and an alert is an external
+input. The single most damaging thing this system could do is edit away a
+protected characteristic because a forged or stale alert asked it to, so
+"never remediate that" is enforced at the point of action too, not only at
+the point of judgement.
+"""
+import re
+import uuid
+import wave
+from pathlib import Path
+
+from google.genai import types
+
+from customs import media
+from customs.config import settings
+from customs.genai_client import client, generate_json
+from customs.media import Shot
+from customs.packs import load as load_packs
+from customs.schema import ChangeRecord, Finding, Observation
+
+class RemediationBlocked(Exception):
+    """Raised when a finding must never be auto-remediated (the guard's call)."""
+
+class RemediationError(Exception):
+    """Raised when an edit could not be produced (no image back, no audio back)."""
+
+METHODS = ("relettering", "prop_swap", "revoice", "reframe")
+
+# --- the mapping table (task-14 contract) ---
+#
+# dimension                      method       why
+# -----------------------------  -----------  ---------------------------------
+# text_legibility                relettering  the violation IS the on-screen text
+# alcohol_tobacco_drugs          prop_swap    a physical prop on set: bottle, glass, pack
+# food_and_animals               prop_swap    also a prop: the dish, the animal on the table
+# health_claims_pharma           revoice      a claim, which in an ad is spoken
+# comparative_claims             revoice      same, unless the observation says it is
+#                                             on-screen text, and then relettering
+# everything else                reframe      no way to translate or swap it, so
+#                                             exclude it from frame instead
+#
+# The dimension is the observation's own (the analyst assigned it, and
+# adjudicate.candidates only ever pairs an observation with a rule of the same
+# dimension, so the finding's dimension IS the observation's). Without the
+# observation in hand, it is read back off the market pack by rule_id.
+METHOD_BY_DIMENSION = {
+    "text_legibility": "relettering",
+    "alcohol_tobacco_drugs": "prop_swap",
+    "food_and_animals": "prop_swap",
+    "health_claims_pharma": "revoice",
+    "comparative_claims": "revoice",
+}
+DEFAULT_METHOD = "reframe"
+
+# Claims can be made either way round. When the observation quotes on-screen
+# text rather than speech, a claims finding is re-lettered, not re-voiced.
+_CLAIM_DIMENSIONS = ("health_claims_pharma", "comparative_claims")
+_ON_SCREEN_MARKERS = (
+    "on-screen", "on screen", "text reads", "reads ", "caption", "subtitle",
+    "superimposed", "written", "printed", "label", "sign",
+)
+
+_EDIT_INSTRUCTIONS = {
+    "relettering": (
+        "Edit this frame from a television commercial. Replace the on-screen "
+        "text with {replacement}, in the same handwriting or typeface, the "
+        "same colour, the same size and the same position. Keep the paper, "
+        "the lighting, the focus and every other pixel of the frame identical. "
+        "Change nothing except the words themselves."
+    ),
+    "prop_swap": (
+        "Edit this frame from a television commercial. {replacement} Keep the "
+        "lighting, the composition, the camera angle, the hands and the "
+        "people exactly as they are, and change nothing else in the frame."
+    ),
+}
+_DEFAULT_REPLACEMENT = {
+    "relettering": "the same sentence translated into the language of {market_name}",
+    "prop_swap": (
+        "Replace every alcoholic drink, bottle and glass with a non-alcoholic "
+        "drink that suits {market_name}, for example tea in the same style of "
+        "glass, keeping the same number of items in the same places."
+    ),
+}
+
+_LINE_PROMPT = (
+    "You are rewriting one line of advertising voice-over so it complies with "
+    "the advertising rules of {market_name}. The line currently breaks this "
+    "rule: {rule_basis}. Why it breaks it: {rationale}. Write one replacement "
+    "line for the same product (a soft drink called Solstice), no longer than "
+    "the original, that says something appealing without making the "
+    "non-compliant claim. Return only the line itself."
+)
+_LINE_SCHEMA = {
+    "type": "object",
+    "properties": {"line": {"type": "string"}},
+    "required": ["line"],
+}
+
+# The voice the test asset's own voice-over was rendered with
+# (scripts/make_test_ad.py), so a revoiced line sounds like the same speaker.
+TTS_VOICE = "Charon"
+_TTS_DEFAULT_RATE = 24000
+_PCM_RATE_RE = re.compile(r"rate=(\d+)")
+
+_packs_cache: dict | None = None
+
+def _packs() -> dict:
+    global _packs_cache
+    if _packs_cache is None:
+        _packs_cache = load_packs()
+    return _packs_cache
+
+def _rule_for(finding: Finding):
+    pack = _packs().get(finding.market)
+    if pack is None:
+        return None
+    return next((r for r in pack.rules if r.id == finding.rule_id), None)
+
+def _market_name(market: str) -> str:
+    pack = _packs().get(market)
+    return pack.name if pack else market
+
+def _dimension_of(finding: Finding, observation: Observation | None) -> str:
+    if observation is not None:
+        return observation.dimension
+    rule = _rule_for(finding)
+    return rule.dimension if rule else ""
+
+def plan(finding: Finding, observation: Observation | None = None) -> str:
+    """Choose the remediation method for one finding. See METHOD_BY_DIMENSION.
+
+    Pure: no model call, no I/O beyond the (cached) market pack read. Passing
+    the finding's own Observation is what lets a claims finding made in
+    on-screen text be re-lettered instead of re-voiced; without it the
+    dimension's default applies.
+    """
+    dimension = _dimension_of(finding, observation)
+    method = METHOD_BY_DIMENSION.get(dimension, DEFAULT_METHOD)
+    if method == "revoice" and dimension in _CLAIM_DIMENSIONS and observation is not None:
+        statement = observation.statement.lower()
+        if any(marker in statement for marker in _ON_SCREEN_MARKERS):
+            return "relettering"
+    return method
+
+def run_dir(run, store) -> Path:
+    """runs/{run_id}/ -- this run's artifact directory.
+
+    Derived from the store's own file rather than a hardcoded "runs/" so a
+    test store in a tmp directory keeps its artifacts next to it. In
+    production settings.db_path is runs/customs.db, which makes this exactly
+    the runs/{run_id}/ the design spec names.
+    """
+    return Path(store.db_path).parent / run.id
+
+def localized_master(run, market: str, store) -> Path:
+    """runs/{run_id}/localized_{market}.mp4 -- one edited master per market."""
+    return run_dir(run, store) / f"localized_{market}.mp4"
+
+def _refuse_if_blocked(finding: Finding) -> None:
+    if finding.remediation_blocked:
+        raise RemediationBlocked(
+            f"{finding.id} is blocked from auto-remediation: "
+            f"{finding.blocked_reason or 'no reason recorded'}"
+        )
+    if finding.klass == "offence":
+        raise RemediationBlocked(f"{finding.id} is an offence finding; never auto-edited")
+    if not finding.remediable:
+        raise RemediationBlocked(f"{finding.id} is not remediable")
+
+# --- model seams (faked wholesale in tests) ---
+
+def _edit_image(instruction: str, image_bytes: bytes, mime_type: str = "image/png") -> bytes:
+    """One image edit: the frame in, the edited frame out.
+
+    Gemini-native editing (see the module docstring on Imagen): the frame is
+    an input Part next to the instruction, and the response carries the
+    edited frame as an inline_data part. Any text part the model also returns
+    is ignored; only pixels matter here.
+    """
+    parts = [instruction, types.Part.from_bytes(data=image_bytes, mime_type=mime_type)]
+    response = client().models.generate_content(
+        model=settings.model_image,
+        contents=parts,
+        config=types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"]),
+    )
+    for candidate in (response.candidates or []):
+        for part in (getattr(candidate.content, "parts", None) or []):
+            inline = getattr(part, "inline_data", None)
+            if inline and inline.data and (inline.mime_type or "").startswith("image/"):
+                return inline.data
+    raise RemediationError(
+        f"{settings.model_image} returned no image part for this edit"
+    )
+
+def _compliant_line(finding: Finding, market_name: str) -> str:
+    """Write the replacement voice-over line for a revoice."""
+    rule = _rule_for(finding)
+    prompt = _LINE_PROMPT.format(
+        market_name=market_name,
+        rule_basis=rule.basis if rule else finding.citation_ref,
+        rationale=finding.rationale,
+    )
+    raw = generate_json(settings.model_text, [prompt], _LINE_SCHEMA)
+    line = raw.get("line") if isinstance(raw, dict) else None
+    if not isinstance(line, str) or not line.strip():
+        raise RemediationError("the model returned no replacement line")
+    return line.strip()
+
+def _speak(line: str) -> tuple[bytes, int]:
+    """Render one line with the TTS model. Returns (raw PCM s16le mono, rate)."""
+    config = types.GenerateContentConfig(
+        response_modalities=["AUDIO"],
+        speech_config=types.SpeechConfig(
+            voice_config=types.VoiceConfig(
+                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=TTS_VOICE))),
+    )
+    response = client().models.generate_content(
+        model=settings.model_tts,
+        contents=f"Read this advertising line in a confident, upbeat announcer voice: {line}",
+        config=config,
+    )
+    for candidate in (response.candidates or []):
+        for part in (getattr(candidate.content, "parts", None) or []):
+            inline = getattr(part, "inline_data", None)
+            if inline and inline.data:
+                match = _PCM_RATE_RE.search(inline.mime_type or "")
+                rate = int(match.group(1)) if match else _TTS_DEFAULT_RATE
+                return inline.data, rate
+    raise RemediationError(f"{settings.model_tts} returned no audio for this line")
+
+def _write_wav(pcm: bytes, rate: int, out_path: Path) -> Path:
+    """Wrap raw mono s16le PCM in a WAV header. stdlib, no ffmpeg hop needed:
+    media.replace_audio_span resamples whatever it is given anyway."""
+    with wave.open(str(out_path), "wb") as handle:
+        handle.setnchannels(1)
+        handle.setsampwidth(2)
+        handle.setframerate(rate)
+        handle.writeframes(pcm)
+    return out_path
+
+# --- the edit itself ---
+
+def _still(video_path, change_id: str, tag: str, finding: Finding, out_dir: Path) -> Path:
+    """One still from the middle of the finding's span, into runs/{run}/changes/.
+
+    Before and after are pulled at the same timestamp from the same span, so
+    the pair is directly comparable -- that is the whole point of a change
+    record a human can check.
+    """
+    span = Shot(shot_id=f"{change_id}_{tag}", t_start=finding.t_start, t_end=finding.t_end)
+    return media.extract_keyframes(video_path, span, out_dir, per_shot=1)[0]
+
+def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str | None,
+                     before: Path, workdir: Path, out_path: Path) -> tuple[Path, str]:
+    """relettering / prop_swap: edit the keyframe, fit it, composite the span."""
+    market_name = _market_name(finding.market)
+    if replacement is None:
+        subject = _DEFAULT_REPLACEMENT[method].format(market_name=market_name)
+    elif method == "relettering":
+        subject = f'the text "{replacement}"'
+    else:
+        subject = replacement
+    instruction = _EDIT_INSTRUCTIONS[method].format(replacement=subject)
+    if method == "prop_swap" and market_name not in instruction:
+        instruction = f"{instruction} The market is {market_name}."
+
+    edited_raw = workdir / f"{before.stem}_edited_raw.png"
+    edited_raw.parent.mkdir(parents=True, exist_ok=True)
+    edited_raw.write_bytes(_edit_image(instruction, before.read_bytes()))
+    # the model picks its own output resolution; the composite needs the
+    # master's exact pixel size or the still would cover only part of it.
+    edited = media.fit_image(edited_raw, base, before.with_name(f"{before.stem}_edited.png"))
+
+    media.overlay_image(base, edited, finding.t_start, finding.t_end, out_path)
+    return edited, instruction
+
+def apply(run, finding: Finding, method: str, workdir, store, *,
+          replacement: str | None = None) -> ChangeRecord:
+    """Apply one remediation to this market's localized master.
+
+    Args:
+        run: the RunRecord the finding belongs to.
+        finding: what to fix. Re-checked against the guard's decision first.
+        method: one of METHODS (plan() chooses it).
+        workdir: scratch directory for extracted frames and raw model output.
+        store: the run store. Also fixes where runs/{run_id}/ lives.
+        replacement: the exact replacement to use -- the translated line for
+            relettering, the prop to swap in for prop_swap, the spoken line
+            for revoice. Left out, the model decides it from the market and
+            the finding (which is what an unattended alert-driven remediation
+            does); passed in, it is used verbatim, which is what the demo's
+            scripted French relettering does.
+
+    Returns the persisted ChangeRecord.
+
+    The finding is left at status "remediating", never "resolved": only
+    verify.confirm may resolve it, after re-observing the edited master. A
+    failed edit raises with the master untouched and the finding put straight
+    back to "open" (design spec section 14: "remediation failure leaves the
+    original media untouched and the alert unresolved") -- which is why every
+    method writes to a temporary file and only replaces the master once
+    ffmpeg has returned, and why the status restore is not optional: a
+    finding stuck at "remediating" would be invisible to clearance() and the
+    market would look fixed when nothing was.
+    """
+    _refuse_if_blocked(finding)
+    if method not in METHODS:
+        raise ValueError(f"unknown remediation method: {method!r} (expected one of {list(METHODS)})")
+
+    workdir = Path(workdir)
+    workdir.mkdir(parents=True, exist_ok=True)
+    changes_dir = run_dir(run, store) / "changes"
+    changes_dir.mkdir(parents=True, exist_ok=True)
+
+    master = localized_master(run, finding.market, store)
+    base = master if master.exists() else Path(run.asset_path)
+    change_id = f"chg_{uuid.uuid4().hex[:12]}"
+    store.emit(run.id, "remediator",
+               f"{method} -> {finding.id} ({finding.rule_id}, {finding.market}) "
+               f"on {base.name} at {finding.t_start:.2f}-{finding.t_end:.2f}s")
+    store.update_finding_status(finding.id, "remediating", run_id=run.id)
+
+    before = _still(base, change_id, "before", finding, changes_dir)
+    staged = run_dir(run, store) / f".{change_id}_{master.name}"
+
+    try:
+        edit = _run_method(run, finding, method, replacement, base, before,
+                           workdir, staged, store)
+    except Exception:
+        # A half-done remediation must never look like a done one. The finding
+        # goes straight back to open, so clearance() counts it again and the
+        # alert stays up: design spec section 14, "remediation failure leaves
+        # the original media untouched and the alert unresolved". The master is
+        # untouched by construction -- every method writes to `staged` and only
+        # the line after this block replaces the master with it.
+        store.update_finding_status(finding.id, "open", run_id=run.id)
+        staged.unlink(missing_ok=True)
+        store.emit(run.id, "remediator",
+                   f"stage_error: remediate: {method} failed for {finding.id}; "
+                   f"{master.name} untouched, finding back to open")
+        raise
+
+    staged.replace(master)
+    after = _still(master, change_id, "after", finding, changes_dir)
+
+    change = ChangeRecord(
+        id=change_id, run_id=run.id, finding_id=finding.id, method=method,
+        description=edit, before_frame=str(before), after_frame=str(after),
+    )
+    store.add_change(change)
+    store.emit(run.id, "remediator",
+               f"{method} applied -> {master.name} ({change.id}); {edit}")
+    return change
+
+def _run_method(run, finding: Finding, method: str, replacement: str | None,
+                base: Path, before: Path, workdir: Path, staged: Path, store) -> str:
+    """Produce the edited video at `staged` and return the change description.
+
+    Split out of apply() so every failure mode of every method funnels through
+    one try/except there, rather than each method having to remember to put
+    the finding back.
+    """
+    market_name = _market_name(finding.market)
+    if method in ("relettering", "prop_swap"):
+        _edited, instruction = _edit_frame_onto(
+            base, finding, method, replacement, before, workdir, staged)
+        # The full edit instruction goes in the run's event log, not in the
+        # change description: the description is read on dashboards and in
+        # Grafana annotations, where a paragraph of prompt is noise, but
+        # "nothing is edited silently" still means the exact instruction has
+        # to be recoverable from the run.
+        store.emit(run.id, "remediator", f"{method} instruction: {instruction}")
+        if method == "relettering":
+            return (
+                f'relettered the on-screen text as "{replacement}"' if replacement
+                else f"relettered the on-screen text for {market_name}"
+            )
+        return (
+            f"swapped the prop for {replacement}" if replacement
+            else f"swapped the non-compliant prop for a {market_name}-appropriate one"
+        )
+    if method == "revoice":
+        line = replacement or _compliant_line(finding, market_name)
+        pcm, rate = _speak(line)
+        wav = _write_wav(pcm, rate, workdir / f"{staged.stem}.wav")
+        media.replace_audio_span(base, wav, finding.t_start, finding.t_end, staged)
+        return f'replaced the spoken line with "{line}"'
+    media.crop_span(base, finding.t_start, finding.t_end, staged)
+    return (
+        "centre crop for the span, excluding the outer edge of the frame "
+        "without regenerating any pixels"
+    )

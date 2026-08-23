@@ -197,6 +197,38 @@ class Store:
         )
         self._conn.commit()
 
+    def open_finding_by_labels(self, asset: str, market: str,
+                               rule_id: str) -> tuple[RunRecord, Finding] | None:
+        """The newest still-open finding matching one alert's labels.
+
+        A Grafana alert carries {asset, market, rule_id} and nothing else this
+        system is willing to trust (design spec section 9: "The webhook looks
+        that finding up in the run store rather than trusting anything in the
+        payload body"), so this is the lookup that turns those three label
+        values back into a real finding.
+
+        `asset` is the label telemetry pushes, which is the asset path's file
+        stem ("docs/samples/test_ad.mp4" -> "test_ad"), so the comparison is
+        made against the stem here rather than the whole path. Newest first:
+        the same asset can be cleared many times, and an alert firing now is
+        about the most recent run that produced it. Returns None when nothing
+        matches, which is the answer a forged or stale label must get.
+        """
+        rows = self._conn.execute(
+            "SELECT f.data, f.run_id FROM findings f WHERE f.market = ? "
+            "ORDER BY f.rowid DESC",
+            (market,),
+        ).fetchall()
+        for raw, run_id in rows:
+            finding = Finding.from_json(json.loads(raw))
+            if finding.rule_id != rule_id or finding.status != "open":
+                continue
+            run = self.get_run(run_id)
+            if run is None or Path(run.asset_path).stem != asset:
+                continue
+            return run, finding
+        return None
+
     def add_change(self, change: ChangeRecord) -> None:
         self._conn.execute(
             "INSERT INTO changes (id, run_id, data) VALUES (?, ?, ?)",

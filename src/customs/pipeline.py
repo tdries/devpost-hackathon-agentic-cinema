@@ -8,9 +8,9 @@ from customs.adjudicate import clearance, judge
 from customs.analyst import merge_micro_shots, observe_shot
 from customs.config import settings
 from customs.genai_client import generate_json
-from customs.media import Shot, detect_shots, extract_audio_span
+from customs.media import Shot, detect_flashes, detect_shots, extract_audio_span
 from customs.packs import MarketPack, load as load_packs
-from customs.schema import Finding, RunRecord
+from customs.schema import Finding, Observation, RunRecord
 from customs.store import Store
 
 # These names are also the crew's seam. Since Task 13 the stages live in
@@ -77,6 +77,53 @@ def _transcribe_shot(video_path, shot: Shot, workdir) -> str:
         return ""
     text = raw.get("transcript")
     return text if isinstance(text, str) else ""
+
+# Design spec section 5 / the photosensitivity dimension: more than three
+# full-frame flashes per second is the line every broadcaster's version of the
+# Harding test draws. media.detect_flashes measures the rate; this is where the
+# rate becomes a judgement, so the number lives here and not in the media
+# toolkit.
+FLASH_RATE_THRESHOLD = 3.0
+
+def flash_observations(asset_path, shots: list[Shot]) -> list[Observation]:
+    """Deterministic photosensitivity observations for one asset's ingest.
+
+    The analyst reads still keyframes, so it is structurally blind to
+    flashing: the Task 9 gate missed test_ad.mp4's planted 6 flashes/second
+    strobe for that reason, and no prompt change fixes it because the
+    evidence is not in any single frame. media.detect_flashes measures the
+    rate off the pixels instead, and every window over FLASH_RATE_THRESHOLD
+    becomes an Observation in the same shape the analyst emits, so the
+    adjudicator judges it against the market packs' photosensitivity rules
+    with no special case anywhere downstream.
+
+    confidence is 1.0 because this is a measurement, not an opinion. The
+    observation is attributed to the shot its window starts in (so the
+    Verifier can re-observe that shot), or to a synthetic id when no shot
+    contains it.
+    """
+    observations = []
+    for i, window in enumerate(detect_flashes(asset_path)):
+        if window.flashes_per_second <= FLASH_RATE_THRESHOLD:
+            continue
+        shot = next(
+            (s for s in shots if s.t_start <= window.t_start < s.t_end), None
+        )
+        observations.append(Observation(
+            id=f"obs_flash_{i:03d}",
+            shot_id=shot.shot_id if shot else f"flash_{i}",
+            t_start=window.t_start,
+            t_end=window.t_end,
+            dimension="photosensitivity_sensory",
+            statement=(
+                f"Full-frame luminance flashing measured at "
+                f"{window.flashes_per_second:.1f} flashes per second between "
+                f"{window.t_start:.2f}s and {window.t_end:.2f}s"
+            ),
+            evidence_frame="",
+            confidence=1.0,
+        ))
+    return observations
 
 def apply_guard(findings: list[Finding], pack: MarketPack) -> list[Finding]:
     """Guard stage: delegate to guard.apply (design spec section 7).

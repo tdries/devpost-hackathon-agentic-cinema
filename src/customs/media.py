@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 _PTS_TIME_RE = re.compile(r"pts_time:([0-9]+(?:\.[0-9]+)?)")
+_FRAME_LINE_RE = re.compile(r"frame:\d+\s+pts:\S+\s+pts_time:([0-9]+(?:\.[0-9]+)?)")
+_YAVG_LINE_RE = re.compile(r"lavfi\.signalstats\.YAVG=([0-9]+(?:\.[0-9]+)?)")
 _TIMEOUT = 60
 
 class MediaError(Exception):
@@ -14,6 +16,36 @@ class Shot:
     shot_id: str
     t_start: float
     t_end: float
+
+@dataclass
+class FlashWindow:
+    """One stretch of measured full-frame luminance flashing.
+
+    flashes_per_second is the measured rate across the window, not a
+    threshold verdict: detect_flashes reports every window it finds and the
+    caller decides what rate is too fast (the pipeline's ingest stage uses
+    the design spec's 3 flashes per second).
+    """
+    t_start: float
+    t_end: float
+    flashes_per_second: float
+
+# --- flash detection thresholds (see detect_flashes) ---
+# A "flash" is one rising edge in whole-frame average luminance (YAVG, on
+# ffmpeg signalstats' 0..255 scale). 40 is about 16% of that range: far more
+# than lighting drift or motion inside a shot, far less than the ~150 point
+# swing a full-frame white strobe produces on real footage (measured on
+# docs/samples/test_ad.mp4's planted strobe: +-133 to +-148).
+FLASH_DELTA = 40.0
+# Rising edges further apart than this start a new window. 0.5s keeps a
+# sustained strobe in one window down to 2 flashes/second, comfortably below
+# the 3/s threshold anything downstream cares about.
+_FLASH_MAX_GAP = 0.5
+# A window must carry at least this many edges over at least this long, so a
+# single cut (one edge), a two-frame camera flash, or a three-frame
+# alternation cannot be reported as sustained flashing.
+_FLASH_MIN_EDGES = 3
+_FLASH_MIN_SPAN = 0.5
 
 def _run(args: list[str], timeout: int = _TIMEOUT) -> subprocess.CompletedProcess:
     """Run an ffmpeg/ffprobe command with an explicit arg list (never shell=True)."""
@@ -44,6 +76,148 @@ def probe_duration(path) -> float:
         return float(out)
     except ValueError as e:
         raise MediaError(f"could not parse duration from ffprobe: {out!r}") from e
+
+def probe_resolution(path) -> tuple[int, int]:
+    """(width, height) of the first video stream, in pixels."""
+    proc = _run([
+        "ffprobe", "-v", "error", "-select_streams", "v:0",
+        "-show_entries", "stream=width,height",
+        "-of", "csv=p=0:s=x", str(path),
+    ], timeout=_TIMEOUT)
+    out = proc.stdout.strip().split("\n")[0]
+    try:
+        width, height = (int(v) for v in out.split("x")[:2])
+    except ValueError as e:
+        raise MediaError(f"could not parse resolution from ffprobe: {out!r}") from e
+    return width, height
+
+def _parse_yavg(text: str) -> list[tuple[float, float]]:
+    """(pts_time, YAVG) per frame, from ffmpeg's metadata=print output.
+
+    The filter prints two lines per frame -- "frame:N pts:P pts_time:T" then
+    "lavfi.signalstats.YAVG=V" -- so the timestamp is carried forward onto
+    the value line that follows it. A value line with no timestamp before it
+    is skipped rather than guessed at.
+    """
+    samples = []
+    t = None
+    for line in text.splitlines():
+        frame = _FRAME_LINE_RE.match(line)
+        if frame:
+            t = float(frame.group(1))
+            continue
+        value = _YAVG_LINE_RE.match(line.strip())
+        if value and t is not None:
+            samples.append((t, float(value.group(1))))
+            t = None
+    return samples
+
+def detect_flashes(path) -> list[FlashWindow]:
+    """Measure sustained full-frame luminance flashing, deterministically.
+
+    This exists because a vision model cannot see it. The analyst reads two
+    still keyframes per shot, and a strobe is a property of the *sequence*,
+    not of any one frame -- the Task 9 gate missed docs/samples/test_ad.mp4's
+    planted 6 flashes/second strobe for exactly that reason. The real
+    Harding test is deterministic too, so this is measured rather than
+    judged: ffmpeg's signalstats reports whole-frame average luminance
+    (YAVG) per frame, and a flash is one rising edge of at least FLASH_DELTA
+    between consecutive frames.
+
+    Rising edges only, never falling ones: a strobe alternates bright/dark,
+    so counting every transition would report double the real flash rate.
+    Adjacent edges within _FLASH_MAX_GAP form one window; a window is
+    returned only if it holds at least _FLASH_MIN_EDGES edges over at least
+    _FLASH_MIN_SPAN seconds, and its rate is (edges - 1) / span, i.e. the
+    mean interval between the flashes actually observed.
+
+    Returns every window found, at any rate. Deciding which rate is unsafe
+    belongs to the caller (the pipeline's ingest stage), not here.
+    """
+    proc = _run([
+        "ffmpeg", "-v", "error", "-i", str(path), "-an",
+        "-vf", "signalstats,metadata=print:key=lavfi.signalstats.YAVG:file=-",
+        "-f", "null", "-",
+    ], timeout=_TIMEOUT)
+    samples = _parse_yavg(proc.stdout)
+
+    edges = [
+        samples[i][0]
+        for i in range(1, len(samples))
+        if samples[i][1] - samples[i - 1][1] >= FLASH_DELTA
+    ]
+    if not edges:
+        return []
+
+    groups: list[list[float]] = [[edges[0]]]
+    for t in edges[1:]:
+        if t - groups[-1][-1] <= _FLASH_MAX_GAP:
+            groups[-1].append(t)
+        else:
+            groups.append([t])
+
+    windows = []
+    for group in groups:
+        span = group[-1] - group[0]
+        if len(group) < _FLASH_MIN_EDGES or span < _FLASH_MIN_SPAN:
+            continue
+        windows.append(FlashWindow(
+            t_start=group[0], t_end=group[-1],
+            flashes_per_second=(len(group) - 1) / span,
+        ))
+    return windows
+
+def fit_image(png, video_path, out_path) -> Path:
+    """Rescale a PNG to the exact pixel size of video_path's video stream.
+
+    overlay_image composites a still at 0,0 at its own size, so an edited
+    frame handed back by an image model at some other resolution would cover
+    only part of the picture (or overflow it). Remediation fits the model's
+    output to the master before compositing.
+    """
+    width, height = probe_resolution(video_path)
+    _run([
+        "ffmpeg", "-y", "-i", str(png), "-vf", f"scale={width}:{height}",
+        "-frames:v", "1", str(out_path),
+    ], timeout=_TIMEOUT)
+    return Path(out_path)
+
+def crop_span(path, t_start: float, t_end: float, out_path, factor: float = 0.8) -> Path:
+    """Punch in on the centre of the frame for one span only (the reframe
+    remediation method).
+
+    A true "crop out the offending region" needs a bounding box the pipeline
+    does not carry (observations are sentences, not boxes), so the spine's
+    reframe is a centre crop to `factor` of the frame, rescaled back to the
+    original resolution: it removes the outer 10% on each side for the span,
+    which is what excludes an element sitting at the edge of the frame.
+    Documented as the deliberate approximation it is.
+
+    Implemented as split + crop + overlay rather than a timeline-gated crop
+    filter so the output keeps one constant resolution end to end (a crop
+    that switched size mid-stream would not encode), reusing the same
+    enable='between(t,...)' composite the rest of this module uses.
+    """
+    duration = probe_duration(path)
+    width, height = probe_resolution(path)
+    crop_w = max(2, int(width * factor) // 2 * 2)
+    crop_h = max(2, int(height * factor) // 2 * 2)
+    filt = (
+        f"[0:v]split=2[base][pre];"
+        f"[pre]crop={crop_w}:{crop_h}:(iw-{crop_w})/2:(ih-{crop_h})/2,"
+        f"scale={width}:{height},setsar=1[zoom];"
+        f"[base][zoom]overlay=enable='between(t,{t_start:.3f},{t_end:.3f})'[v]"
+    )
+    args = [
+        "ffmpeg", "-y", "-i", str(path),
+        "-filter_complex", filt,
+        "-map", "[v]", "-map", "0:a?",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "copy",
+        "-t", f"{duration:.3f}", "-shortest", "-movflags", "+faststart",
+        str(out_path),
+    ]
+    _run(args, timeout=_TIMEOUT)
+    return Path(out_path)
 
 def detect_shots(path) -> list[Shot]:
     duration = probe_duration(path)

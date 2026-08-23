@@ -142,3 +142,57 @@ def test_update_finding_status_refuses_an_id_that_exists_in_two_runs(tmp_path):
     s.update_finding_status("f1", "resolved", run_id=run_a.id)
     assert s.findings(run_a.id)[0].status == "resolved"
     assert s.findings(run_b.id)[0].status == "open", "the other run must be untouched"
+
+
+# --- task 14: the alert webhook's label lookup ---
+
+def _labelled_finding(store, run, **overrides):
+    fields = dict(
+        id=f"fnd_{overrides.get('rule_id', 'FR-ALC-01')}", run_id=run.id,
+        observation_id="obs_shot_0_000", market="FR", rule_id="FR-ALC-01",
+        klass="legal", severity=95, t_start=0.0, t_end=7.0, rationale="r",
+        citation_ref="basis", citation_url="https://example.org/x", sourced=True,
+        remediable=True, remediation_blocked=False, blocked_reason="", status="open",
+    )
+    fields.update(overrides)
+    finding = Finding(**fields)
+    store.add_findings([finding])
+    return finding
+
+def test_open_finding_by_labels_matches_on_the_asset_stem(tmp_path):
+    store = Store(tmp_path / "s.db")
+    run = store.create_run(asset_path="docs/samples/test_ad.mp4", markets=["FR"])
+    finding = _labelled_finding(store, run)
+
+    found = store.open_finding_by_labels("test_ad", "FR", "FR-ALC-01")
+
+    assert found is not None
+    assert found[0].id == run.id and found[1].id == finding.id
+
+def test_open_finding_by_labels_skips_a_finding_that_is_not_open(tmp_path):
+    store = Store(tmp_path / "s.db")
+    run = store.create_run(asset_path="docs/samples/test_ad.mp4", markets=["FR"])
+    finding = _labelled_finding(store, run)
+    store.update_finding_status(finding.id, "resolved", run_id=run.id)
+
+    assert store.open_finding_by_labels("test_ad", "FR", "FR-ALC-01") is None
+
+def test_open_finding_by_labels_returns_none_for_labels_that_match_nothing(tmp_path):
+    store = Store(tmp_path / "s.db")
+    run = store.create_run(asset_path="docs/samples/test_ad.mp4", markets=["FR"])
+    _labelled_finding(store, run)
+
+    assert store.open_finding_by_labels("test_ad", "FR", "FR-NOPE-99") is None
+    assert store.open_finding_by_labels("test_ad", "SA", "FR-ALC-01") is None
+    assert store.open_finding_by_labels("other_ad", "FR", "FR-ALC-01") is None
+
+def test_open_finding_by_labels_prefers_the_newest_run(tmp_path):
+    store = Store(tmp_path / "s.db")
+    old_run = store.create_run(asset_path="docs/samples/test_ad.mp4", markets=["FR"])
+    _labelled_finding(store, old_run)
+    new_run = store.create_run(asset_path="docs/samples/test_ad.mp4", markets=["FR"])
+    _labelled_finding(store, new_run)
+
+    found = store.open_finding_by_labels("test_ad", "FR", "FR-ALC-01")
+
+    assert found is not None and found[0].id == new_run.id

@@ -181,3 +181,65 @@ def test_replace_segment_video_frame_order_at_window_start(clip, frames_dir, tmp
     # f0.png is magenta (high red, low green, high blue); f1.png is cyan (low
     # red, high green, high blue) -- red is the discriminator between them.
     assert r > 128 and g < 128, f"expected the first frame (magenta) at t_start, sampled {rgb}"
+
+
+# --- task 14: deterministic flash detection, image fitting, reframe crop ---
+
+@pytest.fixture(scope="session")
+def strobe_clip(tmp_path_factory):
+    """3s dark clip carrying a deterministic 6 flashes/second white strobe
+    between t=1.0 and t=2.5.
+
+    Same recipe as the strobe planted in docs/samples/test_ad.mp4 by
+    scripts/make_test_ad.py (a full-frame white source overlaid on the
+    2-frames-on/2-frames-off phase of a 24fps clock, i.e. one flash every 4
+    frames = 6 per second), built here from lavfi so the unit test never
+    depends on the sample asset.
+    """
+    p = tmp_path_factory.mktemp("strobe") / "strobe.mp4"
+    subprocess.run([
+        "ffmpeg", "-y",
+        "-f", "lavfi", "-i", "color=c=0x102030:s=320x240:r=24:d=3",
+        "-f", "lavfi", "-i", "color=c=white:s=320x240:r=24:d=3",
+        "-filter_complex",
+        "[0:v][1:v]overlay=enable='between(t,1.0,2.5)*lt(mod(floor(t*24),4),2)'"
+        ",format=yuv420p[v]",
+        "-map", "[v]", "-t", "3", str(p)],
+        check=True, capture_output=True, timeout=60)
+    return p
+
+def test_detect_flashes_measures_the_planted_rate(strobe_clip):
+    windows = media.detect_flashes(strobe_clip)
+    assert len(windows) == 1, f"expected one strobe window, got {windows}"
+    w = windows[0]
+    assert 0.95 <= w.t_start <= 1.15
+    assert 2.35 <= w.t_end <= 2.6
+    # the planted strobe is exactly 6 flashes/second; allow half a flash of
+    # slack for the first/last edge landing on a frame boundary.
+    assert abs(w.flashes_per_second - 6.0) < 0.5, w
+
+def test_detect_flashes_ignores_a_plain_cut(clip):
+    # one red-to-blue cut at t=2.0 is a single luminance step, not flashing.
+    assert media.detect_flashes(clip) == []
+
+def test_detect_flashes_ignores_a_still_clip(solid_clip):
+    assert media.detect_flashes(solid_clip) == []
+
+def test_probe_resolution(clip):
+    assert media.probe_resolution(clip) == (320, 240)
+
+def test_fit_image_matches_the_video_resolution(clip, tmp_path):
+    # a deliberately wrong-sized PNG (the shape an image model hands back)
+    src = tmp_path / "wrong_size.png"
+    subprocess.run([
+        "ffmpeg", "-y", "-f", "lavfi", "-i", "color=yellow:s=1024x1024:d=1",
+        "-frames:v", "1", str(src)], check=True, capture_output=True, timeout=60)
+    out = media.fit_image(src, clip, tmp_path / "fitted.png")
+    assert media.probe_resolution(out) == (320, 240)
+
+def test_crop_span_preserves_duration_and_resolution(clip, tmp_path):
+    out = tmp_path / "reframed.mp4"
+    result = media.crop_span(clip, 0.5, 1.5, out)
+    assert result == out and out.exists()
+    assert media.probe_resolution(out) == media.probe_resolution(clip)
+    assert abs(media.probe_duration(out) - media.probe_duration(clip)) < 0.3

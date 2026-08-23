@@ -170,11 +170,13 @@ class IngestAgent(_Stage):
         self.emit("pipeline", f"ingest -> {len(raw_shots)} raw shot(s) merged to {len(shots)}")
 
         await asyncio.to_thread(self._transcribe_all)
+        await asyncio.to_thread(self._detect_flashes)
         yield self._event(
             ctx,
             f"ingest: {len(shots)} shot(s), {len(self.state.transcripts)} transcript(s), "
-            f"{duration:.2f}s",
+            f"{len(self.state.observations)} measured observation(s), {duration:.2f}s",
             {"shots": len(shots), "transcripts": len(self.state.transcripts),
+             "measured_observations": len(self.state.observations),
              "duration": duration},
         )
 
@@ -182,6 +184,27 @@ class IngestAgent(_Stage):
         raw_shots = pipeline.detect_shots(self.state.asset_path)
         shots = pipeline.merge_micro_shots(raw_shots)
         return raw_shots, shots, probe_duration(self.state.asset_path)
+
+    def _detect_flashes(self) -> None:
+        """The one observation this crew measures rather than asks a model for.
+
+        Photosensitivity is a property of the frame sequence, so the analyst's
+        keyframes cannot carry it (pipeline.flash_observations explains why).
+        The result lands in state.observations here, in ingest, and the
+        analyst stage appends its own model observations to it rather than
+        replacing them. Its own retry-wrapped unit: a broken ffmpeg here
+        records a stage error and costs the run its photosensitivity coverage,
+        never the whole run.
+        """
+        ok, result = pipeline._call_with_retries(
+            lambda: pipeline.flash_observations(self.state.asset_path, self.state.shots)
+        )
+        if not ok:
+            self.emit("ingest", f"stage_error: flash detection: {result!r}")
+            return
+        self.state.observations.extend(result)
+        for obs in result:
+            self.emit("ingest", f"flash detector -> {obs.statement}")
 
     def _transcribe_all(self) -> None:
         for shot in self.state.shots:
@@ -207,7 +230,11 @@ class AnalystAgent(_Stage):
     whole reason pipeline.run never called observe_all either.
     """
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
-        observations = await asyncio.to_thread(self._observe_all)
+        # extend, never replace: ingest's deterministic flash observations are
+        # already in state.observations and are persisted here with the rest,
+        # in one insert, so the store keeps exactly one copy of each.
+        observations = list(self.state.observations)
+        observations.extend(await asyncio.to_thread(self._observe_all))
         self.state.observations = observations
         self.store.add_observations(self.state.run_id, observations)
         self.emit("pipeline", f"analyst -> {len(observations)} observation(s) persisted")

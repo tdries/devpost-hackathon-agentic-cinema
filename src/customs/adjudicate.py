@@ -242,6 +242,16 @@ def judge(run_id: str, observations: list[Observation], pack: MarketPack, on_eve
 def clearance(findings: list[Finding]) -> str:
     """Derive market clearance status from findings. Code, not the model.
 
+    Only findings with status "open" are considered (task-14 ruling). A
+    finding the Remediator is working on ("remediating") or the Verifier has
+    confirmed fixed ("resolved") is no longer holding the market: that is
+    exactly what makes the alert clear after remediation, and it is what
+    telemetry.push_status's customs_blocking filter has always done -- before
+    this, clearance() was status-blind while the metric next to it was not,
+    so a remediated market went on reporting "blocked" forever.
+
+    Among open findings:
+
     blocked: any sourced legal finding at severity >= CLEARANCE_SEVERITY_THRESHOLD.
     at_risk: any sourced policy finding at severity >= CLEARANCE_SEVERITY_THRESHOLD
              (checked only once blocked is ruled out).
@@ -252,9 +262,16 @@ def clearance(findings: list[Finding]) -> str:
     block or elevate either; `sourced` is checked directly here rather than
     trusted from an already-capped severity, so this holds even if a finding
     somehow reaches clearance() without the construction-time cap applied.
+
+    "cleared" therefore means "nothing open is holding this market", not
+    "this market never had a finding": the findings themselves stay in the
+    store and on the dashboards with their resolved status, and a market
+    whose stage errored is a separate question its caller answers with
+    pipeline.errored_markets, never with this function.
     """
-    if any(f.klass == "legal" and f.sourced and f.severity >= CLEARANCE_SEVERITY_THRESHOLD for f in findings):
+    open_findings = [f for f in findings if f.status == "open"]
+    if any(f.klass == "legal" and f.sourced and f.severity >= CLEARANCE_SEVERITY_THRESHOLD for f in open_findings):
         return "blocked"
-    if any(f.klass == "policy" and f.sourced and f.severity >= CLEARANCE_SEVERITY_THRESHOLD for f in findings):
+    if any(f.klass == "policy" and f.sourced and f.severity >= CLEARANCE_SEVERITY_THRESHOLD for f in open_findings):
         return "at_risk"
     return "cleared"

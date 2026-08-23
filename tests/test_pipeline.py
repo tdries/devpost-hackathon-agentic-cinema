@@ -376,3 +376,93 @@ def test_errored_markets_ignores_shot_level_stage_errors(monkeypatch, clip, tmp_
     events = store.events_since(run.id, 0)
     assert any("stage_error" in msg for (_id, _ts, agent, msg) in events), "sanity check: shots did stage_error"
     assert pipeline.errored_markets(store, run.id) == set()
+
+
+# --- task 14: the deterministic photosensitivity observation ---
+
+@pytest.fixture(scope="session")
+def strobe_clip(tmp_path_factory):
+    """One shot carrying a 6 flashes/second full-frame white strobe, plus a
+    silent audio track so the ingest stage's per-shot extraction has
+    something to slice. Built offline from lavfi (never from the sample
+    asset), same recipe as tests/test_media.py's fixture."""
+    p = tmp_path_factory.mktemp("pl_strobe") / "strobe.mp4"
+    subprocess.run([
+        "ffmpeg", "-y",
+        "-f", "lavfi", "-i", "color=c=0x102030:s=320x240:r=24:d=3",
+        "-f", "lavfi", "-i", "color=c=white:s=320x240:r=24:d=3",
+        "-f", "lavfi", "-i", "anullsrc=r=16000:cl=mono",
+        "-filter_complex",
+        "[0:v][1:v]overlay=enable='between(t,1.0,2.5)*lt(mod(floor(t*24),4),2)'"
+        ",format=yuv420p[v]",
+        "-map", "[v]", "-map", "2:a", "-t", "3", str(p)],
+        check=True, capture_output=True, timeout=60)
+    return p
+
+def test_flash_observations_emits_only_windows_over_the_threshold(monkeypatch):
+    from customs.media import FlashWindow
+    monkeypatch.setattr(pipeline, "detect_flashes", lambda path: [
+        FlashWindow(t_start=30.75, t_end=32.08, flashes_per_second=6.0),
+        FlashWindow(t_start=44.0, t_end=46.0, flashes_per_second=2.0),
+    ])
+    shots = [Shot("shot_4", 28.0, 35.0), Shot("shot_6", 42.0, 49.0)]
+
+    observations = pipeline.flash_observations("asset.mp4", shots)
+
+    assert len(observations) == 1, "2.0 flashes/second is under the 3/s threshold"
+    obs = observations[0]
+    assert obs.dimension == "photosensitivity_sensory"
+    assert obs.confidence == 1.0
+    assert obs.shot_id == "shot_4", "attributed to the shot the window starts in"
+    assert obs.statement == (
+        "Full-frame luminance flashing measured at 6.0 flashes per second "
+        "between 30.75s and 32.08s"
+    )
+
+def test_flash_observations_at_exactly_the_threshold_is_not_reported(monkeypatch):
+    from customs.media import FlashWindow
+    monkeypatch.setattr(pipeline, "detect_flashes", lambda path: [
+        FlashWindow(t_start=1.0, t_end=3.0, flashes_per_second=3.0),
+    ])
+    assert pipeline.flash_observations("asset.mp4", []) == []
+
+def test_run_persists_the_measured_flash_observation(monkeypatch, strobe_clip, tmp_path):
+    # end to end through the real crew: ffmpeg measures the strobe in ingest,
+    # the observation reaches the store alongside the analyst's own, and the
+    # adjudicator sees it as a candidate like any other observation.
+    monkeypatch.setattr(pipeline, "generate_json", _fake_generate_json_transcribe)
+    monkeypatch.setattr(pipeline, "observe_shot", _fake_observe_shot)
+    judged = []
+
+    def fake_judge(run_id, observations, pack, on_event=None):
+        judged.append([o.dimension for o in observations])
+        return []
+    monkeypatch.setattr(pipeline, "judge", fake_judge)
+
+    store = Store(tmp_path / "t.db")
+    run = pipeline.run(str(strobe_clip), ["US"], store, tmp_path / "work")
+
+    flashes = [
+        o for o in store.observations(run.id)
+        if o.dimension == "photosensitivity_sensory"
+    ]
+    assert len(flashes) == 1, store.observations(run.id)
+    assert "flashes per second" in flashes[0].statement
+    assert flashes[0].confidence == 1.0
+    assert "photosensitivity_sensory" in judged[0], "the adjudicator must see it"
+
+def test_run_flash_detection_failure_is_a_stage_error_not_a_dead_run(monkeypatch, clip, tmp_path):
+    monkeypatch.setattr(pipeline, "generate_json", _fake_generate_json_transcribe)
+    monkeypatch.setattr(pipeline, "observe_shot", _fake_observe_shot)
+    monkeypatch.setattr(pipeline, "judge", lambda run_id, obs, pack, on_event=None: [])
+
+    def boom(asset_path, shots):
+        raise RuntimeError("ffmpeg is not here")
+    monkeypatch.setattr(pipeline, "flash_observations", boom)
+
+    store = Store(tmp_path / "t.db")
+    run = pipeline.run(str(clip), ["US"], store, tmp_path / "work")
+
+    assert run.status == "done"
+    messages = [m for (_i, _t, _a, m) in store.events_since(run.id, 0)]
+    assert any("stage_error: flash detection" in m for m in messages), messages

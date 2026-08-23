@@ -101,6 +101,30 @@ def test_clearance_blocked_takes_precedence_over_at_risk():
 def test_clearance_cleared_with_no_findings():
     assert adjudicate.clearance([]) == "cleared"
 
+# --- task 14: clearance is status-aware, which is what clears the alert ---
+
+def test_clearance_ignores_a_resolved_blocking_finding():
+    findings = [_finding(klass="legal", severity=95, sourced=True, status="resolved")]
+    assert adjudicate.clearance(findings) == "cleared"
+
+def test_clearance_ignores_a_remediating_blocking_finding():
+    findings = [_finding(klass="legal", severity=95, sourced=True, status="remediating")]
+    assert adjudicate.clearance(findings) == "cleared"
+
+def test_clearance_still_blocks_while_one_open_finding_remains():
+    findings = [
+        _finding(id="f1", klass="legal", severity=95, sourced=True, status="resolved"),
+        _finding(id="f2", klass="legal", severity=95, sourced=True, status="open"),
+    ]
+    assert adjudicate.clearance(findings) == "blocked"
+
+def test_clearance_drops_from_blocked_to_at_risk_when_the_legal_one_resolves():
+    findings = [
+        _finding(id="f1", klass="legal", severity=95, sourced=True, status="resolved"),
+        _finding(id="f2", klass="policy", severity=80, sourced=True, status="open"),
+    ]
+    assert adjudicate.clearance(findings) == "at_risk"
+
 # --- Step 4: judge, mocked model boundary ---
 
 def test_judge_returns_empty_and_skips_model_calls_when_no_candidates(monkeypatch):
