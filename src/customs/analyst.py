@@ -40,7 +40,7 @@ _RESPONSE_SCHEMA = {
         "properties": {
             "dimension": {"type": "string"},
             "statement": {"type": "string"},
-            "confidence": {"type": "number"},
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
         },
         "required": ["dimension", "statement", "confidence"],
     },
@@ -85,9 +85,11 @@ def observe_shot(video_path, shot: Shot, workdir, on_event=None) -> list[Observa
 
     Extracts keyframes, calls the vision model once with the prompt (taxonomy
     interpolated), the keyframes, the transcript span placeholder and the
-    shot timecodes, and turns each returned item into an Observation. Items
-    whose dimension is not in the taxonomy are dropped with a warning event
-    rather than raising, so one bad item never loses the whole shot.
+    shot timecodes, and turns each returned item into an Observation. A
+    malformed response never crashes the pass, it only shrinks it: a
+    non-list response drops the whole shot with one warning event; a
+    non-dict item, an unknown dimension, or an empty statement (including
+    an explicit JSON null) drops just that item with its own warning event.
     """
     _emit(on_event, f"observe -> {shot.shot_id}")
 
@@ -103,9 +105,25 @@ def observe_shot(video_path, shot: Shot, workdir, on_event=None) -> list[Observa
 
     raw = generate_json(settings.model_vision, parts, _RESPONSE_SCHEMA)
 
+    if not isinstance(raw, list):
+        _emit(
+            on_event,
+            f"warning: dropped whole response for {shot.shot_id}, "
+            f"expected a list, got {type(raw).__name__}",
+        )
+        return []
+
     evidence_frame = str(keyframes[0]) if keyframes else ""
     observations = []
     for i, item in enumerate(raw):
+        if not isinstance(item, dict):
+            _emit(
+                on_event,
+                f"warning: dropped observation {i} in {shot.shot_id}, "
+                f"expected an object, got {type(item).__name__}",
+            )
+            continue
+
         dimension = item.get("dimension")
         if dimension not in dims:
             _emit(
@@ -114,15 +132,34 @@ def observe_shot(video_path, shot: Shot, workdir, on_event=None) -> list[Observa
                 f"unknown dimension {dimension!r}",
             )
             continue
+
+        # JSON null survives the response_schema's "string" type, so an
+        # explicit null must be coalesced by hand, not just defaulted via
+        # dict.get's fallback (which only applies when the key is absent).
+        statement = item.get("statement")
+        if not isinstance(statement, str):
+            statement = ""
+        if not statement:
+            _emit(
+                on_event,
+                f"warning: dropped observation in {shot.shot_id}, empty statement",
+            )
+            continue
+
+        confidence = item.get("confidence")
+        if confidence is None:
+            confidence = 0.0
+        confidence = max(0.0, min(1.0, float(confidence)))
+
         observations.append(Observation(
             id=f"obs_{shot.shot_id}_{i:03d}",
             shot_id=shot.shot_id,
             t_start=shot.t_start,
             t_end=shot.t_end,
             dimension=dimension,
-            statement=str(item.get("statement", "")),
+            statement=statement,
             evidence_frame=evidence_frame,
-            confidence=float(item.get("confidence", 0.0)),
+            confidence=confidence,
         ))
     return observations
 

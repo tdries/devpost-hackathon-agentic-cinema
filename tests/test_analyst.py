@@ -23,9 +23,12 @@ def clip(tmp_path_factory):
 
 def test_observe_shot_drops_unknown_dimension_and_warns(monkeypatch, clip, tmp_path):
     shot = Shot(shot_id="shot_0", t_start=0.0, t_end=media.probe_duration(clip))
+    # the invalid item is FIRST: the surviving observation's id must still
+    # read _001, proving ids are the raw response index, not renumbered
+    # after a drop.
     canned = [
-        {"dimension": "alcohol_tobacco_drugs", "statement": "A wine glass is visible.", "confidence": 0.9},
         {"dimension": "nonsense", "statement": "Not a real taxonomy dimension.", "confidence": 0.5},
+        {"dimension": "alcohol_tobacco_drugs", "statement": "A wine glass is visible.", "confidence": 0.9},
     ]
     monkeypatch.setattr(analyst, "generate_json", lambda model, parts, schema: canned)
 
@@ -40,13 +43,88 @@ def test_observe_shot_drops_unknown_dimension_and_warns(monkeypatch, clip, tmp_p
     assert obs.dimension == "alcohol_tobacco_drugs"
     assert obs.shot_id == "shot_0"
     assert obs.t_start == shot.t_start and obs.t_end == shot.t_end
-    assert obs.evidence_frame
+    assert obs.id == f"obs_{shot.shot_id}_001"
+    assert obs.evidence_frame == str(tmp_path / "frames" / f"{shot.shot_id}_kf0.png")
     assert obs.confidence == 0.9
 
     assert any(a == "analyst" for a, _ in events)
     warnings = [m for a, m in events if "warning" in m.lower()]
     assert warnings, f"expected a warning event for the dropped observation, got: {events}"
     assert "nonsense" in warnings[0]
+
+def test_observe_shot_drops_whole_response_when_not_a_list(monkeypatch, clip, tmp_path):
+    # the model returns a bare object instead of an array: unusable as a
+    # whole, not just one bad item -- must not crash trying to enumerate it.
+    bad_raw = {"dimension": "alcohol_tobacco_drugs", "statement": "x", "confidence": 0.5}
+    monkeypatch.setattr(analyst, "generate_json", lambda model, parts, schema: bad_raw)
+    shot = Shot(shot_id="shot_0", t_start=0.0, t_end=media.probe_duration(clip))
+
+    events = []
+    observations = analyst.observe_shot(
+        clip, shot, tmp_path, on_event=lambda agent, msg: events.append((agent, msg))
+    )
+
+    assert observations == []
+    warnings = [m for a, m in events if "warning" in m.lower()]
+    assert len(warnings) == 1, f"expected exactly one warning for the whole response, got: {events}"
+
+def test_observe_shot_drops_items_that_are_not_dicts(monkeypatch, clip, tmp_path):
+    # a list of strings instead of a list of objects: the top level is a
+    # list (fine), but nothing inside it is a dict -- each item drops on
+    # its own, with its own warning, rather than crashing on .get().
+    monkeypatch.setattr(
+        analyst, "generate_json",
+        lambda model, parts, schema: ["not a dict", "also not a dict"],
+    )
+    shot = Shot(shot_id="shot_0", t_start=0.0, t_end=media.probe_duration(clip))
+
+    events = []
+    observations = analyst.observe_shot(
+        clip, shot, tmp_path, on_event=lambda agent, msg: events.append((agent, msg))
+    )
+
+    assert observations == []
+    warnings = [m for a, m in events if "warning" in m.lower()]
+    assert len(warnings) == 2, f"expected one warning per bad item, got: {events}"
+
+def test_observe_shot_coalesces_null_confidence_and_drops_null_statement(monkeypatch, clip, tmp_path):
+    # explicit JSON null survives the response_schema's declared types.
+    # item 0's null statement must be coalesced then dropped (empty after
+    # coalescing), not stored as the literal string "None". item 1's null
+    # confidence must be coalesced to a safe default, not raise TypeError
+    # out of float(None).
+    canned = [
+        {"dimension": "alcohol_tobacco_drugs", "statement": None, "confidence": 0.9},
+        {"dimension": "alcohol_tobacco_drugs", "statement": "A wine glass is visible.", "confidence": None},
+    ]
+    monkeypatch.setattr(analyst, "generate_json", lambda model, parts, schema: canned)
+    shot = Shot(shot_id="shot_0", t_start=0.0, t_end=media.probe_duration(clip))
+
+    events = []
+    observations = analyst.observe_shot(
+        clip, shot, tmp_path, on_event=lambda agent, msg: events.append((agent, msg))
+    )
+
+    assert len(observations) == 1
+    obs = observations[0]
+    assert obs.id == f"obs_{shot.shot_id}_001"
+    assert obs.statement == "A wine glass is visible."
+    assert obs.confidence == 0.0
+
+    warnings = [m for a, m in events if "warning" in m.lower()]
+    assert any("empty statement" in w for w in warnings), f"expected an empty-statement warning, got: {events}"
+
+def test_observe_shot_clamps_confidence_into_0_1(monkeypatch, clip, tmp_path):
+    canned = [
+        {"dimension": "alcohol_tobacco_drugs", "statement": "over", "confidence": 5.0},
+        {"dimension": "alcohol_tobacco_drugs", "statement": "under", "confidence": -3.0},
+    ]
+    monkeypatch.setattr(analyst, "generate_json", lambda model, parts, schema: canned)
+    shot = Shot(shot_id="shot_0", t_start=0.0, t_end=media.probe_duration(clip))
+
+    observations = analyst.observe_shot(clip, shot, tmp_path)
+
+    assert [o.confidence for o in observations] == [1.0, 0.0]
 
 def test_observe_shot_emits_start_event(monkeypatch, clip, tmp_path):
     monkeypatch.setattr(analyst, "generate_json", lambda model, parts, schema: [])
