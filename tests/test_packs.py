@@ -7,13 +7,24 @@ from customs.packs import MarketPack, MarketRule, PackError, load, taxonomy
 
 MARKETS_DIR = Path("markets")
 
+# Exact 18 dimensions from the design spec, section 5. taxonomy() must return
+# precisely this set, not just 18 entries, so a typo that preserves the count
+# still fails this test.
+REQUIRED_DIMENSIONS = {
+    "alcohol_tobacco_drugs", "religious_symbols_practices", "modesty_dress_body",
+    "gesture_body_language", "food_and_animals", "gender_portrayal",
+    "sexual_orientation_gender_id", "children_and_minors", "national_symbols_politics",
+    "health_claims_pharma", "gambling_and_finance", "violence_and_weapons",
+    "language_profanity_idiom", "humour_irony_satire", "superstition_number_colour",
+    "photosensitivity_sensory", "text_legibility", "comparative_claims",
+}
+
 
 def test_taxonomy_has_18_dimensions():
     dims = taxonomy()
     assert isinstance(dims, set)
     assert len(dims) == 18
-    assert "alcohol_tobacco_drugs" in dims
-    assert "comparative_claims" in dims
+    assert dims == REQUIRED_DIMENSIONS
 
 
 def test_fr_pack_loads_with_alc_01():
