@@ -35,19 +35,30 @@ def _run(**overrides):
     return RunRecord(**fields)
 
 class _FakeResp:
-    def __init__(self, status_code=200, text=""):
+    def __init__(self, status_code=200, text="", headers=None, payload=None):
         self.status_code = status_code
         self.text = text
+        self.headers = headers or {}
+        self._payload = payload
+
+    def json(self):
+        return self._payload
 
 @pytest.fixture
 def posts(monkeypatch):
     """Capture every telemetry._post call instead of hitting the network.
-    Each entry: (url, json_body, headers, auth)."""
+    Each entry: (url, json_body, headers, auth).
+
+    Also answers the annotation-dedup read (telemetry._get) with an empty
+    list, i.e. "Grafana holds nothing for this run yet", so an annotate()
+    test exercises the write path without a second fixture.
+    """
     calls = []
     def fake_post(url, *, json_body, headers, auth=None):
         calls.append((url, json_body, headers, auth))
         return _FakeResp(200)
     monkeypatch.setattr(telemetry, "_post", fake_post)
+    monkeypatch.setattr(telemetry, "_get", lambda url, *, params, headers: _FakeResp(200, payload=[]))
     return calls
 
 def _otlp_bodies(posts_calls):
@@ -334,6 +345,125 @@ def test_annotate_resolution_unknown_finding_raises(posts, tmp_path):
 
     with pytest.raises(ValueError):
         telemetry.annotate_resolution(run, change, store=store)
+
+# --- annotate: the Task 12 rate limit and the duplicates it left behind ---
+
+@pytest.fixture
+def annotation_posts(monkeypatch):
+    """Script the annotation endpoint's answers and record what was sent.
+    Returns (sent, sleeps); `responses` is the list the fake pops from."""
+    sent, sleeps, responses = [], [], []
+    def fake_post(url, *, json_body, headers, auth=None):
+        sent.append(json_body)
+        return responses.pop(0) if responses else _FakeResp(200)
+    monkeypatch.setattr(telemetry, "_post", fake_post)
+    monkeypatch.setattr(telemetry, "_get", lambda url, *, params, headers: _FakeResp(200, payload=[]))
+    monkeypatch.setattr(telemetry.time, "sleep", lambda s: sleeps.append(s))
+    return sent, sleeps, responses
+
+def test_annotate_retries_a_429_honouring_retry_after(annotation_posts):
+    sent, sleeps, responses = annotation_posts
+    responses.extend([
+        _FakeResp(429, "rate limited", headers={"Retry-After": "2"}),
+        _FakeResp(200),
+    ])
+
+    assert telemetry.annotate(_run(), _finding()) is True
+    assert len(sent) == 2, "the 429'd annotation must be retried, not dropped"
+    assert sleeps == [2.0], "Retry-After must win over the exponential backoff"
+
+def test_annotate_backs_off_exponentially_without_a_retry_after(annotation_posts):
+    sent, sleeps, responses = annotation_posts
+    responses.extend([_FakeResp(429, "rate limited"), _FakeResp(429, "rate limited"), _FakeResp(200)])
+
+    telemetry.annotate(_run(), _finding())
+
+    assert len(sent) == 3
+    assert sleeps == [1.0, 2.0]
+
+def test_annotate_ignores_an_unparseable_retry_after(annotation_posts):
+    # the HTTP-date form of Retry-After is not half-parsed: it falls through
+    # to the exponential backoff rather than sleeping for 0 or crashing.
+    sent, sleeps, responses = annotation_posts
+    responses.extend([
+        _FakeResp(429, "rate limited", headers={"Retry-After": "Wed, 21 Oct 2026 07:28:00 GMT"}),
+        _FakeResp(200),
+    ])
+
+    telemetry.annotate(_run(), _finding())
+
+    assert sleeps == [1.0]
+
+def test_annotate_gives_up_after_five_attempts(annotation_posts):
+    sent, sleeps, responses = annotation_posts
+    responses.extend([_FakeResp(429, "rate limited") for _ in range(6)])
+
+    with pytest.raises(RuntimeError, match="429"):
+        telemetry.annotate(_run(), _finding())
+
+    assert len(sent) == telemetry._ANNOTATE_MAX_ATTEMPTS == 5
+    assert len(sleeps) == 4, "no sleep after the last attempt"
+
+def test_annotate_does_not_retry_a_500(annotation_posts):
+    sent, sleeps, responses = annotation_posts
+    responses.append(_FakeResp(500, "internal error"))
+
+    with pytest.raises(RuntimeError):
+        telemetry.annotate(_run(), _finding())
+
+    assert len(sent) == 1, "only a 429 is retryable here"
+    assert sleeps == []
+
+def test_annotate_skips_an_annotation_grafana_already_holds(monkeypatch):
+    run, finding = _run(), _finding()
+    already_there = [{
+        "tags": ["FR-ALC-01", "FR", "test_ad", "customs"],  # deliberately out of order
+        "time": int((1_700_000_000.0 + 12.4) * 1000),
+        "timeEnd": int((1_700_000_000.0 + 14.1) * 1000),
+    }]
+    monkeypatch.setattr(telemetry, "_get", lambda url, *, params, headers: _FakeResp(200, payload=already_there))
+    sent = []
+    monkeypatch.setattr(telemetry, "_post", lambda url, **kw: sent.append(kw) or _FakeResp(200))
+
+    assert telemetry.annotate(run, finding) is False
+    assert sent == [], "the duplicate that Task 12 left 25 of must not be written again"
+
+def test_annotate_writes_when_the_existing_annotations_are_a_different_finding(monkeypatch):
+    other = [{
+        "tags": ["customs", "test_ad", "FR", "FR-TOB-01"],
+        "time": int((1_700_000_000.0 + 12.4) * 1000),
+        "timeEnd": int((1_700_000_000.0 + 14.1) * 1000),
+    }]
+    monkeypatch.setattr(telemetry, "_get", lambda url, *, params, headers: _FakeResp(200, payload=other))
+    sent = []
+    monkeypatch.setattr(telemetry, "_post", lambda url, **kw: sent.append(kw) or _FakeResp(200))
+
+    assert telemetry.annotate(_run(), _finding()) is True
+    assert len(sent) == 1
+
+def test_annotate_dedups_within_one_batch_from_a_shared_set(posts):
+    run = _run()
+    existing = telemetry.existing_annotation_keys(run)
+
+    assert telemetry.annotate(run, _finding(), existing) is True
+    assert telemetry.annotate(run, _finding(id="a-different-row"), existing) is False
+
+    ann_calls = [c for c in posts if c[0].endswith("/api/annotations")]
+    assert len(ann_calls) == 1, "the same span and tags twice in one loop is one annotation"
+
+def test_existing_annotation_keys_queries_this_runs_window_and_tags(monkeypatch):
+    captured = {}
+    def fake_get(url, *, params, headers):
+        captured.update(url=url, params=params)
+        return _FakeResp(200, payload=[])
+    monkeypatch.setattr(telemetry, "_get", fake_get)
+
+    telemetry.existing_annotation_keys(_run(t0=1_700_000_000.0))
+
+    assert captured["url"].endswith("/api/annotations")
+    assert captured["params"]["tags"] == ["customs", "test_ad"]
+    assert captured["params"]["from"] == 1_700_000_000_000
+    assert captured["params"]["to"] == 1_700_000_000_000 + int(telemetry._ANNOTATION_WINDOW_SECONDS * 1000)
 
 # --- push failure surfaces to the caller ---
 

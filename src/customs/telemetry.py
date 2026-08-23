@@ -146,6 +146,12 @@ def _mapped_unix_seconds(run: RunRecord, video_t: float) -> float:
 def _post(url: str, *, json_body: dict, headers: dict, auth: tuple[str, str] | None = None):
     return httpx.post(url, json=json_body, headers=headers, auth=auth, timeout=30.0)
 
+def _get(url: str, *, params: dict, headers: dict):
+    """The read seam, added for annotation dedup. Kept separate from _post so
+    a test double can answer "what is already there" without also having to
+    fake every write."""
+    return httpx.get(url, params=params, headers=headers, timeout=30.0)
+
 def _check(resp) -> None:
     if resp.status_code >= 400:
         raise RuntimeError(f"telemetry push failed: HTTP {resp.status_code}: {resp.text[:500]}")
@@ -201,17 +207,93 @@ def _loki_push(streams: list[dict]) -> None:
     )
     _check(resp)
 
+# --- annotations: rate limiting and duplicates (both hit live in Task 12) ---
+#
+# Task 12 pushed 14 findings' annotations in a tight loop and Grafana answered
+# HTTP 429 Too Many Requests partway through. _check turned that into a
+# RuntimeError that aborted the caller, and the partial first batch left the
+# window holding 25 annotations for 14 findings. Two fixes, both here:
+#
+#   1. _annotation_post retries a 429, honouring Retry-After when Grafana
+#      sends one and backing off exponentially when it does not, up to
+#      _ANNOTATE_MAX_ATTEMPTS tries. Nothing else about _check changes: a 4xx
+#      that is not a 429, and a 5xx, still raise on the first answer.
+#   2. annotate() asks Grafana what is already on this run's clock and skips
+#      any annotation whose (tags, time, timeEnd) triple is already there.
+#
+# Dedup is deliberately annotate()-only. annotate_resolution writes one
+# annotation per ChangeRecord, so it cannot loop, and a second remediation of
+# the same finding is a real second event that must not be swallowed. It
+# still gets the 429 backoff, since both share _annotation_post.
+_ANNOTATE_MAX_ATTEMPTS = 5
+_ANNOTATE_BACKOFF_BASE_SECONDS = 1.0
+# How far past t0 to look for this run's existing annotations. Comfortably
+# wider than the spec's 120s cap on ad duration, and narrow enough that the
+# query stays bounded on a stack with months of runs on it.
+_ANNOTATION_WINDOW_SECONDS = 3600.0
+_ANNOTATION_QUERY_LIMIT = 500
+
+def _retry_after_seconds(resp) -> float | None:
+    """Grafana's Retry-After in seconds, or None if it did not send a usable
+    one. Only the delta-seconds form is honoured; the HTTP-date form falls
+    through to the exponential backoff rather than being half-parsed."""
+    raw = resp.headers.get("Retry-After")
+    if raw is None:
+        return None
+    try:
+        return max(0.0, float(raw))
+    except (TypeError, ValueError):
+        return None
+
 def _annotation_post(body: dict) -> None:
     url = settings.grafana_url.rstrip("/") + "/api/annotations"
-    resp = _post(
-        url,
-        json_body=body,
-        headers={
-            "Authorization": f"Bearer {settings.grafana_sa_token}",
-            "Content-Type": "application/json",
+    headers = {
+        "Authorization": f"Bearer {settings.grafana_sa_token}",
+        "Content-Type": "application/json",
+    }
+    for attempt in range(_ANNOTATE_MAX_ATTEMPTS):
+        resp = _post(url, json_body=body, headers=headers)
+        if resp.status_code != 429:
+            _check(resp)
+            return
+        if attempt == _ANNOTATE_MAX_ATTEMPTS - 1:
+            break
+        wait = _retry_after_seconds(resp)
+        if wait is None:
+            wait = _ANNOTATE_BACKOFF_BASE_SECONDS * (2 ** attempt)
+        time.sleep(wait)
+    _check(resp)  # every attempt was a 429: raise carrying the last one
+
+def _annotation_key(tags, time_ms, time_end_ms) -> tuple:
+    """The identity of one annotation, for dedup: its tag set plus its exact
+    span on the run's mapped clock. Tags are sorted because Grafana does not
+    promise to give them back in the order they were written, and the span is
+    what separates two runs of the same asset (each run picks its own t0, so
+    the same finding lands at a different millisecond every time)."""
+    return (tuple(sorted(str(t) for t in tags)), int(time_ms), int(time_end_ms))
+
+def existing_annotation_keys(run: RunRecord) -> set[tuple]:
+    """Every annotation already on this run's mapped clock, as dedup keys.
+
+    One query per run, not one per finding: the per-finding loop is exactly
+    what got rate limited. Pass the result to annotate() as `existing` and a
+    whole run's annotations cost one GET plus one POST per new finding.
+    """
+    resp = _get(
+        settings.grafana_url.rstrip("/") + "/api/annotations",
+        params={
+            "tags": ["customs", _asset_label(run)],
+            "from": int(_mapped_unix_seconds(run, 0.0) * 1000),
+            "to": int(_mapped_unix_seconds(run, _ANNOTATION_WINDOW_SECONDS) * 1000),
+            "limit": _ANNOTATION_QUERY_LIMIT,
         },
+        headers={"Authorization": f"Bearer {settings.grafana_sa_token}"},
     )
     _check(resp)
+    return {
+        _annotation_key(item.get("tags") or [], item.get("time", 0), item.get("timeEnd", 0))
+        for item in (resp.json() or [])
+    }
 
 # --- public API ---
 
@@ -409,7 +491,7 @@ def push_stage_error(run: RunRecord, stage: str) -> None:
         ],
     })
 
-def annotate(run: RunRecord, finding: Finding) -> None:
+def annotate(run: RunRecord, finding: Finding, existing: set[tuple] | None = None) -> bool:
     """Create a Grafana annotation marking `finding` on the run's mapped
     clock (design spec section 9: "Every finding is also written as a
     Grafana annotation on the run's timeline"). time/timeEnd are the
@@ -419,6 +501,13 @@ def annotate(run: RunRecord, finding: Finding) -> None:
     the same {asset, market, rule_id} triple an alert payload carries, so a
     human (or the Remediator, per design spec section 9) can go from either
     one to the other.
+
+    Skips an annotation Grafana already holds, and returns whether it wrote
+    one. `existing` is the dedup set from existing_annotation_keys(); pass
+    the same set to every call in a loop and it costs one query for the whole
+    run and also stops the loop duplicating within itself. Left out, each
+    call queries for itself, which keeps the brief-literal 2-argument form
+    working and correct.
     """
     body = {
         "time": int(_mapped_unix_seconds(run, finding.t_start) * 1000),
@@ -429,7 +518,14 @@ def annotate(run: RunRecord, finding: Finding) -> None:
             f"{finding.rationale}"
         ),
     }
+    key = _annotation_key(body["tags"], body["time"], body["timeEnd"])
+    if existing is None:
+        existing = existing_annotation_keys(run)
+    if key in existing:
+        return False
     _annotation_post(body)
+    existing.add(key)
+    return True
 
 def annotate_resolution(run: RunRecord, change: ChangeRecord, store: Store | None = None) -> None:
     """Create the resolving Grafana annotation for `change`, tagged the same
