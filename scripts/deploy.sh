@@ -5,8 +5,19 @@
 # erroring on "already exists".
 #
 # Usage:
-#   scripts/deploy.sh                       # europe-west1, reads .env
-#   REGION=europe-west4 scripts/deploy.sh   # capacity/quota fallback region
+#   scripts/deploy.sh                          # europe-west1, service "customs-app"
+#   REGION=europe-west4 scripts/deploy.sh      # capacity/quota fallback region
+#   SERVICE=customs-app2 scripts/deploy.sh     # fresh service name (see below)
+#
+# SERVICE defaults to "customs-app", not "customs": the first "customs"
+# deploys in this project (both regions) came up Ready=True with a healthy
+# container and correct IAM/ingress, but their public URLs never became
+# reachable at Google's edge (zero request logs, generic edge 404) while a
+# throwaway hello-world service in the same project and region served
+# immediately -- so whatever wedged, it was scoped to those two service
+# names, not the project or account. A fresh SERVICE name is the workaround;
+# the two old "customs" services are cleanup candidates once a new name is
+# confirmed reachable, not a config bug here.
 #
 # What this does, in order:
 #   1. Enables the GCP APIs the rest of this script and the running service
@@ -43,7 +54,7 @@ cd "$ROOT"
 
 PROJECT_ID="veoapi-469317"
 REGION="${REGION:-europe-west1}"
-SERVICE="customs"
+SERVICE="${SERVICE:-customs-app}"
 RUNTIME_SA="veo-api-user@${PROJECT_ID}.iam.gserviceaccount.com"
 ENV_FILE="${ENV_FILE:-.env}"
 PY="$ROOT/.venv/bin/python"
