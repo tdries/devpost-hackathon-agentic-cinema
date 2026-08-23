@@ -269,7 +269,13 @@ def _annotation_key(tags, time_ms, time_end_ms) -> tuple:
     span on the run's mapped clock. Tags are sorted because Grafana does not
     promise to give them back in the order they were written, and the span is
     what separates two runs of the same asset (each run picks its own t0, so
-    the same finding lands at a different millisecond every time)."""
+    the same finding lands at a different millisecond every time).
+
+    The finding id is one of those tags (see annotate), which is what stops
+    two distinct findings that share a market, a rule and a span from
+    collapsing into one key. An annotation written before the id tag existed
+    carries four tags rather than five and so never matches a new key: it
+    cannot suppress a write, which is the safe direction to fail."""
     return (tuple(sorted(str(t) for t in tags)), int(time_ms), int(time_end_ms))
 
 def existing_annotation_keys(run: RunRecord) -> set[tuple]:
@@ -497,10 +503,17 @@ def annotate(run: RunRecord, finding: Finding, existing: set[tuple] | None = Non
     Grafana annotation on the run's timeline"). time/timeEnd are the
     finding's own t_start/t_end mapped through this run's t0, so the
     annotation lines up with the same finding's customs_risk heatmap cells
-    and push_log Loki line. tags = ["customs", asset, market, rule_id] --
-    the same {asset, market, rule_id} triple an alert payload carries, so a
-    human (or the Remediator, per design spec section 9) can go from either
-    one to the other.
+    and push_log Loki line. tags = ["customs", asset, market, rule_id,
+    finding_id] -- the {asset, market, rule_id} triple is the same one an
+    alert payload carries, so a human (or the Remediator, per design spec
+    section 9) can go from either one to the other.
+
+    finding.id is a tag as well, and it is what makes the dedup key below
+    identify a *finding* rather than a rule-in-a-time-span. Two findings can
+    legitimately share market, rule_id and span -- the same shot can trigger
+    one rule from two different observations -- and both of them are real
+    markers that must both be drawn. Without the id tag their dedup keys
+    collide and the second one is silently dropped.
 
     Skips an annotation Grafana already holds, and returns whether it wrote
     one. `existing` is the dedup set from existing_annotation_keys(); pass
@@ -512,7 +525,7 @@ def annotate(run: RunRecord, finding: Finding, existing: set[tuple] | None = Non
     body = {
         "time": int(_mapped_unix_seconds(run, finding.t_start) * 1000),
         "timeEnd": int(_mapped_unix_seconds(run, finding.t_end) * 1000),
-        "tags": ["customs", _asset_label(run), finding.market, finding.rule_id],
+        "tags": ["customs", _asset_label(run), finding.market, finding.rule_id, finding.id],
         "text": (
             f"{finding.rule_id} ({finding.klass}, severity {finding.severity}): "
             f"{finding.rationale}"
@@ -529,8 +542,10 @@ def annotate(run: RunRecord, finding: Finding, existing: set[tuple] | None = Non
 
 def annotate_resolution(run: RunRecord, change: ChangeRecord, store: Store | None = None) -> None:
     """Create the resolving Grafana annotation for `change`, tagged the same
-    as annotate()'s original finding annotation plus "resolved" (design
-    spec section 9: "every remediation writes the resolving annotation").
+    as annotate()'s original finding annotation (finding.id included) plus
+    "resolved" (design spec section 9: "every remediation writes the
+    resolving annotation"). Keeping the tag sets aligned is what lets a
+    reader pair a finding marker with the marker that resolved it.
 
     ChangeRecord (schema.py) carries only finding_id, not market/rule_id/
     t_start/t_end -- the associated Finding is looked up via
@@ -552,7 +567,10 @@ def annotate_resolution(run: RunRecord, change: ChangeRecord, store: Store | Non
     body = {
         "time": int(_mapped_unix_seconds(run, finding.t_start) * 1000),
         "timeEnd": int(_mapped_unix_seconds(run, finding.t_end) * 1000),
-        "tags": ["customs", _asset_label(run), finding.market, finding.rule_id, "resolved"],
+        "tags": [
+            "customs", _asset_label(run), finding.market, finding.rule_id,
+            finding.id, "resolved",
+        ],
         "text": f"resolved {finding.rule_id} via {change.method}: {change.description}",
     }
     _annotation_post(body)

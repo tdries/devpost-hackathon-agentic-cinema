@@ -306,7 +306,10 @@ def test_annotate_payload_shape(posts, monkeypatch):
     _, body, headers, auth = ann_calls[0]
     assert body["time"] == int((1_700_000_000.0 + 12.4) * 1000)
     assert body["timeEnd"] == int((1_700_000_000.0 + 14.1) * 1000)
-    assert body["tags"] == ["customs", "test_ad", "FR", "FR-ALC-01"]
+    assert body["tags"] == ["customs", "test_ad", "FR", "FR-ALC-01", "f1"], (
+        "the finding id must be a tag: it is what makes the dedup key identify "
+        "a finding rather than a rule in a time span"
+    )
     assert "text" in body and isinstance(body["text"], str)
     assert headers["Authorization"] == "Bearer dummy-sa-token"
 
@@ -331,7 +334,10 @@ def test_annotate_resolution_payload_shape_tags_resolved(posts, tmp_path):
     _, body, _, _ = ann_calls[0]
     assert body["time"] == int((1_700_000_000.0 + 12.4) * 1000)
     assert body["timeEnd"] == int((1_700_000_000.0 + 14.1) * 1000)
-    assert body["tags"] == ["customs", "test_ad", "FR", "FR-ALC-01", "resolved"]
+    assert body["tags"] == ["customs", "test_ad", "FR", "FR-ALC-01", finding.id, "resolved"], (
+        "a resolution must carry the same tags as the finding it resolves, so "
+        "the two markers can be paired"
+    )
 
 def test_annotate_resolution_unknown_finding_raises(posts, tmp_path):
     store = Store(tmp_path / "t.db")
@@ -417,7 +423,7 @@ def test_annotate_does_not_retry_a_500(annotation_posts):
 def test_annotate_skips_an_annotation_grafana_already_holds(monkeypatch):
     run, finding = _run(), _finding()
     already_there = [{
-        "tags": ["FR-ALC-01", "FR", "test_ad", "customs"],  # deliberately out of order
+        "tags": ["FR-ALC-01", "f1", "FR", "test_ad", "customs"],  # deliberately out of order
         "time": int((1_700_000_000.0 + 12.4) * 1000),
         "timeEnd": int((1_700_000_000.0 + 14.1) * 1000),
     }]
@@ -430,7 +436,7 @@ def test_annotate_skips_an_annotation_grafana_already_holds(monkeypatch):
 
 def test_annotate_writes_when_the_existing_annotations_are_a_different_finding(monkeypatch):
     other = [{
-        "tags": ["customs", "test_ad", "FR", "FR-TOB-01"],
+        "tags": ["customs", "test_ad", "FR", "FR-TOB-01", "f-other"],
         "time": int((1_700_000_000.0 + 12.4) * 1000),
         "timeEnd": int((1_700_000_000.0 + 14.1) * 1000),
     }]
@@ -441,15 +447,30 @@ def test_annotate_writes_when_the_existing_annotations_are_a_different_finding(m
     assert telemetry.annotate(_run(), _finding()) is True
     assert len(sent) == 1
 
-def test_annotate_dedups_within_one_batch_from_a_shared_set(posts):
+def test_annotate_dedups_the_same_finding_pushed_twice_in_one_batch(posts):
     run = _run()
     existing = telemetry.existing_annotation_keys(run)
 
     assert telemetry.annotate(run, _finding(), existing) is True
-    assert telemetry.annotate(run, _finding(id="a-different-row"), existing) is False
+    assert telemetry.annotate(run, _finding(), existing) is False
 
     ann_calls = [c for c in posts if c[0].endswith("/api/annotations")]
-    assert len(ann_calls) == 1, "the same span and tags twice in one loop is one annotation"
+    assert len(ann_calls) == 1, "one finding pushed twice in one loop is one annotation"
+
+def test_annotate_writes_both_findings_that_differ_only_by_id(posts):
+    # The same shot can trigger one rule from two different observations, so
+    # two findings can legitimately share market, rule_id and span. Both are
+    # real markers and both must be drawn: the finding id in the tags is what
+    # keeps their dedup keys apart.
+    run = _run()
+    existing = telemetry.existing_annotation_keys(run)
+
+    assert telemetry.annotate(run, _finding(id="f1"), existing) is True
+    assert telemetry.annotate(run, _finding(id="f2"), existing) is True
+
+    ann_calls = [c for c in posts if c[0].endswith("/api/annotations")]
+    assert len(ann_calls) == 2, "a second finding on the same rule and span must still annotate"
+    assert [body["tags"][-1] for (_u, body, _h, _a) in ann_calls] == ["f1", "f2"]
 
 def test_existing_annotation_keys_queries_this_runs_window_and_tags(monkeypatch):
     captured = {}

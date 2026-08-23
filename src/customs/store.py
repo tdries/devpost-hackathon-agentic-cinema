@@ -15,23 +15,43 @@ class Store:
         self._init_schema()
 
     def _init_schema(self):
+        """Create the tables if they are not there.
+
+        observations and findings are keyed (run_id, id), not id alone.
+        Neither id is globally unique and neither was ever meant to be:
+        analyst.observe_shot mints obs_{shot_id}_{n} from a per-video shot
+        index, so every video's first shot is shot_0 and its first
+        observation is obs_shot_0_000, and adjudicate.judge builds
+        fnd_{market}_{rule}_{observation} on top of that. With id alone as
+        the primary key the *second* run of anything into a given database
+        died with "UNIQUE constraint failed", which is exactly what happened
+        on this project's first repeated live run.
+
+        This is a plain schema change with no migration: CREATE TABLE IF NOT
+        EXISTS leaves an older file on its old schema, silently, so a
+        database created before this change must be deleted rather than
+        reused. Demo-grade on purpose; there is nothing in a run store worth
+        migrating.
+        """
         self._conn.executescript("""
             CREATE TABLE IF NOT EXISTS runs (
                 id TEXT PRIMARY KEY,
                 data TEXT NOT NULL
             );
             CREATE TABLE IF NOT EXISTS observations (
-                id TEXT PRIMARY KEY,
+                id TEXT NOT NULL,
                 run_id TEXT NOT NULL,
-                data TEXT NOT NULL
+                data TEXT NOT NULL,
+                PRIMARY KEY (run_id, id)
             );
             CREATE INDEX IF NOT EXISTS idx_observations_run
                 ON observations (run_id);
             CREATE TABLE IF NOT EXISTS findings (
-                id TEXT PRIMARY KEY,
+                id TEXT NOT NULL,
                 run_id TEXT NOT NULL,
                 market TEXT NOT NULL,
-                data TEXT NOT NULL
+                data TEXT NOT NULL,
+                PRIMARY KEY (run_id, id)
             );
             CREATE INDEX IF NOT EXISTS idx_findings_run
                 ON findings (run_id);
@@ -136,18 +156,44 @@ class Store:
             ).fetchall()
         return [Finding.from_json(json.loads(r[0])) for r in rows]
 
-    def update_finding_status(self, finding_id: str, status: str) -> None:
-        row = self._conn.execute(
-            "SELECT data FROM findings WHERE id = ?", (finding_id,)
-        ).fetchone()
-        if row is None:
-            raise ValueError(f"unknown finding: {finding_id}")
-        data = json.loads(row[0])
+    def update_finding_status(self, finding_id: str, status: str,
+                              run_id: str | None = None) -> None:
+        """Set one finding's status.
+
+        A finding id is unique within a run, not across runs (see
+        _init_schema), so `run_id` says which run's copy to update. Left out,
+        an id that exists in exactly one run still resolves -- which keeps
+        every existing two-argument call working -- and an id that exists in
+        several raises instead of updating all of them, because a bare
+        "UPDATE ... WHERE id = ?" would write one run's finding over
+        another's.
+        """
+        if run_id is None:
+            rows = self._conn.execute(
+                "SELECT run_id, data FROM findings WHERE id = ?", (finding_id,)
+            ).fetchall()
+            if not rows:
+                raise ValueError(f"unknown finding: {finding_id}")
+            if len(rows) > 1:
+                raise ValueError(
+                    f"finding {finding_id!r} exists in {len(rows)} runs; "
+                    "pass run_id to say which one"
+                )
+            run_id, raw = rows[0]
+        else:
+            row = self._conn.execute(
+                "SELECT data FROM findings WHERE id = ? AND run_id = ?",
+                (finding_id, run_id),
+            ).fetchone()
+            if row is None:
+                raise ValueError(f"unknown finding: {finding_id} in run {run_id}")
+            raw = row[0]
+        data = json.loads(raw)
         data["status"] = status
         finding = Finding.from_json(data)
         self._conn.execute(
-            "UPDATE findings SET data = ? WHERE id = ?",
-            (json.dumps(finding.to_json()), finding_id),
+            "UPDATE findings SET data = ? WHERE id = ? AND run_id = ?",
+            (json.dumps(finding.to_json()), finding_id, run_id),
         )
         self._conn.commit()
 

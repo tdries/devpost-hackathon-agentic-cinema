@@ -1,3 +1,5 @@
+import pytest
+
 from customs.store import Store
 from customs.schema import Observation, Finding
 
@@ -83,3 +85,60 @@ def test_events_since(tmp_path):
     evs = s.events_since(run.id, after_id=0)
     assert [e[3] for e in evs] == ["shot 1 observed", "shot 2 observed"]
     assert s.events_since(run.id, after_id=evs[-1][0]) == []
+
+
+def test_two_runs_can_hold_identically_named_observations_and_findings(tmp_path):
+    """The second run of anything into one Store must not collide.
+
+    Observation ids come from a per-video shot index (obs_shot_0_000 for the
+    first observation of any video's first shot) and finding ids are built on
+    top of them, so identical ids across runs are the normal case, not an
+    edge case. Before the (run_id, id) primary key this raised
+    sqlite3.IntegrityError on the second run and took the whole clearance
+    down with it.
+    """
+    s = Store(tmp_path / "t.db")
+    run_a = s.create_run(asset_path="a.mp4", markets=["FR"])
+    run_b = s.create_run(asset_path="b.mp4", markets=["FR"])
+
+    def canned(run_id):
+        obs = Observation(
+            id="obs_shot_0_000", shot_id="shot_0", t_start=0.0, t_end=2.0,
+            dimension="alcohol_tobacco_drugs", statement="A wine glass is visible.",
+            evidence_frame="f.jpg", confidence=0.9,
+        )
+        fnd = Finding(
+            id="fnd_FR_FR-ALC-01_obs_shot_0_000", run_id=run_id,
+            observation_id="obs_shot_0_000", market="FR", rule_id="FR-ALC-01",
+            klass="legal", severity=95, t_start=0.0, t_end=2.0,
+            rationale="Loi Evin", citation_ref="ref", citation_url="https://example.org/x",
+            sourced=True, remediable=True, remediation_blocked=False, blocked_reason="",
+        )
+        return obs, fnd
+
+    for run in (run_a, run_b):
+        obs, fnd = canned(run.id)
+        s.add_observations(run.id, [obs])
+        s.add_findings([fnd])
+
+    assert [o.id for o in s.observations(run_a.id)] == ["obs_shot_0_000"]
+    assert [o.id for o in s.observations(run_b.id)] == ["obs_shot_0_000"]
+    assert len(s.findings(run_a.id)) == len(s.findings(run_b.id)) == 1
+    assert s.findings(run_a.id)[0].run_id == run_a.id
+    assert s.findings(run_b.id)[0].run_id == run_b.id
+
+def test_update_finding_status_refuses_an_id_that_exists_in_two_runs(tmp_path):
+    # Without run_id a bare UPDATE ... WHERE id = ? would rewrite both runs'
+    # rows, stamping one run's data (run_id included) over the other's.
+    s = Store(tmp_path / "t.db")
+    run_a = s.create_run(asset_path="a.mp4", markets=["FR"])
+    run_b = s.create_run(asset_path="b.mp4", markets=["FR"])
+    for run in (run_a, run_b):
+        s.add_findings([_finding(id="f1", run_id=run.id)])
+
+    with pytest.raises(ValueError, match="exists in 2 runs"):
+        s.update_finding_status("f1", "resolved")
+
+    s.update_finding_status("f1", "resolved", run_id=run_a.id)
+    assert s.findings(run_a.id)[0].status == "resolved"
+    assert s.findings(run_b.id)[0].status == "open", "the other run must be untouched"

@@ -30,9 +30,15 @@ choice, it is where the model actually decides something:
   second prompt loop, so they are custom `BaseAgent` subclasses whose
   `_run_async_impl` calls the tested function and yields ADK events.
 * the publisher is the genuinely agentic one. It is an `LlmAgent` with five
-  tools and no scripted call order: it decides when to push telemetry, how to
-  check that the six dashboards exist, and what to write into the overview
-  dashboard's description. Three of its five tools are live Grafana MCP calls.
+  tools, three of which are live Grafana MCP calls. Its instruction suggests
+  an order for those five steps, because the deterministic ones have a real
+  dependency (the timeline push fixes the clock every later write maps onto)
+  and because a wandering publisher is not an interesting demo. What the
+  model actually owns is everything the order does not settle: it issues each
+  call itself, chooses every argument, reads every result, decides what to do
+  when one fails, judges whether all six dashboards came back, and composes
+  the prose it writes into the overview dashboard's description. That last
+  step is a real MCP write, on every run, in words no template produced.
 
 --- ParallelAgent, and why SQLite survives it ---
 
@@ -338,7 +344,7 @@ def _publisher_tools(store: Store, state: _RunState, holder: _OpsHolder, emit) -
     (telemetry.py, grafana_ops.py). Three are the raw Grafana MCP tools,
     reached through the same `_McpStdio` client grafana_ops already runs, so
     every one of them is real MCP traffic over the stdio server in
-    `bin/mcp-grafana` -- chosen, argued and sequenced by the model.
+    `bin/mcp-grafana`, issued by the model with arguments it chose.
 
     Why FunctionTools rather than ADK's own `McpToolset`: see the module
     report. In short, `google.adk.tools.mcp_tool` needs the `mcp` package,

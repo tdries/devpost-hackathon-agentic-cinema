@@ -209,6 +209,25 @@ def test_run_clearance_market_stage_error_never_takes_down_the_run(monkeypatch, 
     assert pipeline.errored_markets(store, run.id) == {"SA"}
     assert [f.market for f in store.findings(run.id)] == ["FR"]
 
+def test_two_consecutive_runs_into_one_store(monkeypatch, clip, tmp_path):
+    # The failure that killed the first live attempt of this task: observation
+    # ids come from a per-video shot index, so the second run of anything into
+    # one database used to die with
+    # "UNIQUE constraint failed: observations.id" before the store's
+    # (run_id, id) primary key.
+    _stub_stages(monkeypatch)
+    store = Store(tmp_path / "t.db")
+
+    first = crew.run_clearance(str(clip), ["FR"], store, tmp_path / "work", publish=False)
+    second = crew.run_clearance(str(clip), ["FR"], store, tmp_path / "work", publish=False)
+
+    assert first.id != second.id
+    assert first.status == second.status == "done"
+    for run in (first, second):
+        assert {o.id for o in store.observations(run.id)} == {"obs_shot_0", "obs_shot_1"}
+        assert [f.market for f in store.findings(run.id)] == ["FR"]
+        assert all(f.run_id == run.id for f in store.findings(run.id))
+
 # --- Step 2: the publisher must never take the run down with it ---
 
 def test_publisher_failure_emits_a_stage_error_and_the_run_still_completes(monkeypatch, clip, tmp_path):
