@@ -200,6 +200,12 @@ class Blocked(RuntimeError):
     """A quota or allowlist refusal. Generation stops immediately, no retries."""
 
 
+class NeedsGenerate(RuntimeError):
+    """A live-API asset (Veo shot or TTS line) is missing from cache and
+    --generate was not passed. Raised before any such call is attempted, so a
+    flag-less run can never reach the network."""
+
+
 def log(msg: str) -> None:
     print(f"[make_test_ad] {msg}", flush=True)
 
@@ -222,12 +228,21 @@ def check_blocked(err: Exception) -> None:
         raise Blocked(text) from err
 
 
-def generate_shot(n: int) -> Path:
-    """Generate shot n with Veo and cache it. No-op if the cache file exists."""
+def generate_shot(n: int, allow_generate: bool) -> Path:
+    """Generate shot n with Veo and cache it. No-op if the cache file exists.
+
+    Never calls Veo unless allow_generate is True; raises NeedsGenerate
+    instead, so a flag-less run cannot reach the network.
+    """
     dest = CACHE / f"shot_{n}.mp4"
     if dest.exists():
         log(f"shot {n}: cached, skipping generation")
         return dest
+    if not allow_generate:
+        raise NeedsGenerate(
+            f"shot {n}: {dest.name} is not in scripts/.cache/ and --generate "
+            "was not passed; run with --generate to call Veo, or restore the "
+            "cache file")
     spec = SHOTS[n]
     cfg = types.GenerateVideosConfig(
         duration_seconds=VEO_SECONDS,
@@ -281,12 +296,21 @@ def generate_shot(n: int) -> Path:
 # --------------------------------------------------------------------------- tts
 
 
-def tts_wav() -> Path:
-    """Render the shot 6 voice-over line. Cached."""
+def tts_wav(allow_generate: bool) -> Path:
+    """Render the shot 6 voice-over line. Cached.
+
+    Never calls the TTS model unless allow_generate is True; raises
+    NeedsGenerate instead, so a flag-less run cannot reach the network.
+    """
     dest = CACHE / "vo_shot6.wav"
     if dest.exists():
         log("vo: cached, skipping TTS")
         return dest
+    if not allow_generate:
+        raise NeedsGenerate(
+            f"vo: {dest.name} is not in scripts/.cache/ and --generate was "
+            "not passed; run with --generate to call the TTS model, or "
+            "restore the cache file")
     log(f"vo: rendering {VO_LINE!r} with {settings.model_tts}")
     cfg = types.GenerateContentConfig(
         response_modalities=["AUDIO"],
@@ -379,7 +403,7 @@ BASE_VF = (f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=decrease,"
            f"pad={WIDTH}:{HEIGHT}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps={FPS}")
 
 
-def build_shot(n: int) -> Path:
+def build_shot(n: int, allow_generate: bool) -> Path:
     """Normalize shot n to 1280x720/24fps/yuv420p + stereo AAC, apply that
     shot's post-processing, and trim to SHOT_SECONDS."""
     src = CACHE / f"shot_{n}.mp4"
@@ -418,7 +442,7 @@ def build_shot(n: int) -> Path:
     afmt = "aformat=sample_rates=48000:channel_layouts=stereo"
 
     if n == 6:
-        inputs += ["-i", str(tts_wav())]
+        inputs += ["-i", str(tts_wav(allow_generate))]
         vo_idx = n_inputs
         n_inputs += 1
         filters.append(f"[{aidx}:a]{afmt},volume={SHOT6_DUCK}[a0]")
@@ -513,9 +537,8 @@ def main() -> int:
 
     try:
         for n in wanted:
-            if args.generate:
-                generate_shot(n)
-            build_shot(n)
+            generate_shot(n, args.generate)
+            build_shot(n, args.generate)
             if args.keyframes:
                 for f in keyframes(CACHE / f"norm_{n}.mp4",
                                    [SHOT_SECONDS * 0.3, SHOT_SECONDS * 0.75],
@@ -525,6 +548,10 @@ def main() -> int:
         log("BLOCKED by quota or allowlist, stopping without retries:")
         print(str(e), file=sys.stderr)
         return 2
+    except NeedsGenerate as e:
+        log("cache miss without --generate, stopping (no API call made):")
+        print(str(e), file=sys.stderr)
+        return 3
 
     if args.only:
         log("--only given, skipping assembly")

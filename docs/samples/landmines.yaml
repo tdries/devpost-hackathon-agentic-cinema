@@ -70,7 +70,7 @@
 # Shot 5, transition carrying a deterministic full-frame white strobe,
 # 6 flashes per second for 1.5 s, deliberately over the 3 flashes/s threshold.
 - shot: 5
-  t_approx: 31.5
+  t_approx: 30.75
   dimension: photosensitivity_sensory
   expects: [US-FLASH-01]
 
