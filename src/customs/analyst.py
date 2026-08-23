@@ -80,16 +80,25 @@ def _emit(on_event, message: str) -> None:
     if on_event is not None:
         on_event("analyst", message)
 
-def observe_shot(video_path, shot: Shot, workdir, on_event=None) -> list[Observation]:
+def observe_shot(video_path, shot: Shot, workdir, on_event=None, transcripts=None) -> list[Observation]:
     """Run the neutral observation pass on one shot, return its Observations.
 
     Extracts keyframes, calls the vision model once with the prompt (taxonomy
-    interpolated), the keyframes, the transcript span placeholder and the
-    shot timecodes, and turns each returned item into an Observation. A
-    malformed response never crashes the pass, it only shrinks it: a
-    non-list response drops the whole shot with one warning event; a
-    non-dict item, an unknown dimension, or an empty statement (including
-    an explicit JSON null) drops just that item with its own warning event.
+    interpolated), the keyframes, the transcript span text and the shot
+    timecodes, and turns each returned item into an Observation. A malformed
+    response never crashes the pass, it only shrinks it: a non-list response
+    drops the whole shot with one warning event; a non-dict item, an unknown
+    dimension, or an empty statement (including an explicit JSON null) drops
+    just that item with its own warning event.
+
+    transcripts is an optional dict of shot_id -> verbatim transcript text
+    (task-9's pipeline produces it, one Gemini audio call per shot, before
+    calling this function). Default None keeps Task 7's original behavior
+    exactly: every shot gets the TRANSCRIPT_UNAVAILABLE placeholder. When a
+    dict is given, this shot's own text is looked up by shot_id; a shot
+    missing from the dict (its own transcription stage errored and was
+    skipped upstream) falls back to the same placeholder rather than
+    KeyError-ing.
     """
     _emit(on_event, f"observe -> {shot.shot_id}")
 
@@ -100,7 +109,8 @@ def observe_shot(video_path, shot: Shot, workdir, on_event=None) -> list[Observa
     parts = [prompt_text]
     for kf in keyframes:
         parts.append(types.Part.from_bytes(data=kf.read_bytes(), mime_type="image/jpeg"))
-    parts.append(f"Transcript span: {TRANSCRIPT_UNAVAILABLE}")
+    transcript_text = TRANSCRIPT_UNAVAILABLE if transcripts is None else transcripts.get(shot.shot_id, TRANSCRIPT_UNAVAILABLE)
+    parts.append(f"Transcript span: {transcript_text}")
     parts.append(f"Shot timecodes: t_start={shot.t_start:.3f}s, t_end={shot.t_end:.3f}s")
 
     raw = generate_json(settings.model_vision, parts, _RESPONSE_SCHEMA)
@@ -163,13 +173,17 @@ def observe_shot(video_path, shot: Shot, workdir, on_event=None) -> list[Observa
         ))
     return observations
 
-def observe_all(video_path, workdir, on_event=None) -> list[Observation]:
+def observe_all(video_path, workdir, on_event=None, transcripts=None) -> list[Observation]:
     """Run observe_shot sequentially over every (merged) shot in the video.
 
     Shots shorter than MIN_SHOT_LEN are merged into the previous shot first
     (see merge_micro_shots), since our scene-cut detector fragments things
     like strobe transitions into many sub-second segments that are not worth
     a separate model call each.
+
+    transcripts (optional dict of shot_id -> text, default None) is passed
+    through unchanged to every observe_shot call; each call does its own
+    per-shot lookup by shot_id, so this function does no lookup of its own.
     """
     raw_shots = detect_shots(video_path)
     shots = merge_micro_shots(raw_shots, min_len=MIN_SHOT_LEN)
@@ -182,5 +196,5 @@ def observe_all(video_path, workdir, on_event=None) -> list[Observation]:
 
     observations = []
     for shot in shots:
-        observations.extend(observe_shot(video_path, shot, workdir, on_event=on_event))
+        observations.extend(observe_shot(video_path, shot, workdir, on_event=on_event, transcripts=transcripts))
     return observations

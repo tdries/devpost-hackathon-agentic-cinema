@@ -88,6 +88,17 @@ def test_extract_audio(clip, tmp_path):
     assert out.exists() and out.stat().st_size > 0
     assert 3.5 < media.probe_duration(out) < 4.5
 
+def test_extract_audio_span(clip, tmp_path):
+    # task-9: per-shot audio slice for transcription, named by shot_id under
+    # out_dir (mirrors extract_keyframes's directory-based signature) rather
+    # than extract_audio's single explicit-path signature.
+    shot = media.Shot(shot_id="shot_0", t_start=0.5, t_end=1.5)
+    out_dir = tmp_path / "audio"
+    result = media.extract_audio_span(clip, shot, out_dir)
+    assert result == out_dir / "shot_0.wav"
+    assert result.exists() and result.stat().st_size > 0
+    assert abs(media.probe_duration(result) - 1.0) < 0.2
+
 def test_overlay_image_preserves_duration(clip, png, tmp_path):
     out = tmp_path / "overlay.mp4"
     result = media.overlay_image(clip, png, 0.5, 1.5, out)

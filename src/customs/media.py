@@ -95,6 +95,28 @@ def extract_audio(path, out_wav) -> Path:
     _run(args, timeout=_TIMEOUT)
     return out_wav
 
+def extract_audio_span(path, shot: Shot, out_dir) -> Path:
+    """Extract one shot's audio span as a mono 16kHz WAV, named by shot_id.
+
+    Directory-based signature (one call per shot, output path derived from
+    shot_id under out_dir), mirroring extract_keyframes rather than
+    extract_audio's single explicit-out-path signature, since task-9's
+    pipeline iterates shots the same way for both. -ss before -i is an
+    input-level seek (matches extract_keyframes's own seek placement); -t
+    after -i bounds the output to the shot's own span from that seek point.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_wav = out_dir / f"{shot.shot_id}.wav"
+    args = [
+        "ffmpeg", "-y", "-ss", f"{shot.t_start:.3f}", "-i", str(path),
+        "-t", f"{max(shot.t_end - shot.t_start, 0.0):.3f}",
+        "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
+        str(out_wav),
+    ]
+    _run(args, timeout=_TIMEOUT)
+    return out_wav
+
 def replace_segment_video(path, t_start: float, t_end: float, new_frames_dir, out_path) -> Path:
     new_frames_dir = Path(new_frames_dir)
     frames = sorted(new_frames_dir.glob("*.png"))

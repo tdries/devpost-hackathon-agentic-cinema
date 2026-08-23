@@ -142,6 +142,61 @@ def test_observe_shot_works_without_on_event(monkeypatch, clip, tmp_path):
     observations = analyst.observe_shot(clip, shot, tmp_path)
     assert len(observations) == 1
 
+# --- transcript slot (task-9): transcripts dict flows into the parts sent
+# to generate_json, mocked at the genai boundary per the task-9 brief ---
+
+def test_observe_shot_passes_transcript_text_into_generate_json_parts(monkeypatch, clip, tmp_path):
+    captured_parts = []
+    def fake_generate_json(model, parts, schema):
+        captured_parts.append(parts)
+        return []
+    monkeypatch.setattr(analyst, "generate_json", fake_generate_json)
+    shot = Shot(shot_id="shot_0", t_start=0.0, t_end=media.probe_duration(clip))
+
+    analyst.observe_shot(
+        clip, shot, tmp_path,
+        transcripts={"shot_0": "Twice the energy of any other drink."},
+    )
+
+    parts = captured_parts[0]
+    assert any(
+        isinstance(p, str) and "Twice the energy of any other drink." in p for p in parts
+    ), f"expected the transcript text in the parts sent to generate_json, got: {parts}"
+    assert not any(
+        isinstance(p, str) and analyst.TRANSCRIPT_UNAVAILABLE in p for p in parts
+    )
+
+def test_observe_shot_falls_back_to_unavailable_when_shot_missing_from_transcripts(monkeypatch, clip, tmp_path):
+    # a transcripts dict is given but this shot's own key is absent (e.g. its
+    # transcription stage failed upstream and was skipped) -- must fall back
+    # to the placeholder, not KeyError.
+    captured_parts = []
+    def fake_generate_json(model, parts, schema):
+        captured_parts.append(parts)
+        return []
+    monkeypatch.setattr(analyst, "generate_json", fake_generate_json)
+    shot = Shot(shot_id="shot_0", t_start=0.0, t_end=media.probe_duration(clip))
+
+    analyst.observe_shot(clip, shot, tmp_path, transcripts={"shot_9": "unrelated"})
+
+    parts = captured_parts[0]
+    assert any(isinstance(p, str) and analyst.TRANSCRIPT_UNAVAILABLE in p for p in parts)
+
+def test_observe_shot_default_transcripts_none_keeps_placeholder(monkeypatch, clip, tmp_path):
+    # transcripts omitted entirely (Task 7 call sites, unchanged): current
+    # behavior is preserved exactly.
+    captured_parts = []
+    def fake_generate_json(model, parts, schema):
+        captured_parts.append(parts)
+        return []
+    monkeypatch.setattr(analyst, "generate_json", fake_generate_json)
+    shot = Shot(shot_id="shot_0", t_start=0.0, t_end=media.probe_duration(clip))
+
+    analyst.observe_shot(clip, shot, tmp_path)
+
+    parts = captured_parts[0]
+    assert any(isinstance(p, str) and analyst.TRANSCRIPT_UNAVAILABLE in p for p in parts)
+
 # --- merge-logic unit tests (pure function) ---
 
 def test_merge_micro_shots_merges_short_shot_into_previous():
@@ -209,7 +264,11 @@ def test_observe_all_merges_then_observes_each_shot_in_order(monkeypatch, tmp_pa
     monkeypatch.setattr(analyst, "detect_shots", lambda path: raw_shots)
 
     seen = []
-    def fake_observe_shot(video_path, shot, workdir, on_event=None):
+    # task-9: observe_all now always passes transcripts= through to
+    # observe_shot (None when the caller omits it), so this fake's signature
+    # must accept that keyword too -- the one Task 7 test signature this
+    # task's change actually requires updating.
+    def fake_observe_shot(video_path, shot, workdir, on_event=None, transcripts=None):
         seen.append(shot.shot_id)
         return [Observation(
             id=f"obs_{shot.shot_id}_000", shot_id=shot.shot_id,
@@ -240,6 +299,23 @@ def test_observe_all_reports_zero_merged_when_nothing_short(monkeypatch, tmp_pat
     merge_events = [m for a, m in events if "merged" in m.lower()]
     assert merge_events
     assert "0" in merge_events[0]
+
+def test_observe_all_threads_transcripts_dict_to_each_shot(monkeypatch, tmp_path):
+    raw_shots = [Shot("shot_0", 0.0, 2.0), Shot("shot_1", 2.0, 5.0)]
+    monkeypatch.setattr(analyst, "detect_shots", lambda path: raw_shots)
+
+    seen_transcripts = []
+    def fake_observe_shot(video_path, shot, workdir, on_event=None, transcripts=None):
+        seen_transcripts.append((shot.shot_id, transcripts))
+        return []
+    monkeypatch.setattr(analyst, "observe_shot", fake_observe_shot)
+
+    transcripts = {"shot_0": "hello", "shot_1": "world"}
+    analyst.observe_all("video.mp4", tmp_path, transcripts=transcripts)
+
+    # the same dict is handed to every shot; observe_shot does its own
+    # per-shot key lookup (see the fallback test above), observe_all does not.
+    assert seen_transcripts == [("shot_0", transcripts), ("shot_1", transcripts)]
 
 # --- PROMPT contract ---
 
