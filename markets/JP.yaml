@@ -1,0 +1,64 @@
+market: JP
+name: Japan
+regulators: [JARO, Consumer Affairs Agency, PMDA]
+pre_clearance: none        # none | advisory | mandatory
+rules:
+  - id: JP-FLASH-01
+    dimension: photosensitivity_sensory
+    class: policy
+    severity: 65
+    trigger: "Flashing images, especially red-dominant flashes, exceeding 3 flashes per second (or 5 flashes per second for non-red flashing), or sustained beyond 2 seconds in total"
+    basis: "NAB Japan (National Association of Commercial Broadcasters in Japan) and NHK Guidelines on Video Techniques in Animated Programs, issued 16 April 1998 following the December 1997 photosensitive-seizure incident during the animated program Pokemon; self-regulatory, adopted by individual broadcasters into the program standards required under Broadcast Act art. 4"
+    source_hint: "nab-web.or.jp guidelines; grokipedia.com harding test"
+    remediable: true
+    protected_basis: false
+
+  - id: JP-KEIHYOHO-01
+    dimension: comparative_claims
+    class: legal
+    severity: 65
+    trigger: "Advertisement represents a product or service as significantly superior to its actual quality, or falsely superior to a competitor's, without substantiation"
+    basis: "Act against Unjustifiable Premiums and Misleading Representations (Keihyohou), art. 5 item 1 (yuuryou gonin hyouji, misleading superiority representation)"
+    source_hint: "japaneselawtranslation.go.jp act against unjustifiable premiums article 5"
+    remediable: true
+    protected_basis: false
+
+  - id: JP-PHARMA-01
+    dimension: health_claims_pharma
+    class: legal
+    severity: 82
+    trigger: "False or exaggerated claim about a drug's name, manufacturing method, efficacy, effect or performance, or advertisement of an unapproved drug or indication"
+    basis: "Pharmaceutical and Medical Device Act (PMD Act), art. 66 (prohibition of false or exaggerated advertising) and art. 68 (prohibition of advertising unapproved pharmaceuticals or indications), enforceable against any person who advertises, not only the manufacturer"
+    source_hint: "japaneselawtranslation.go.jp pmd act article 66 68"
+    remediable: true
+    protected_basis: false
+
+  - id: JP-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: policy
+    severity: 45
+    trigger: "Alcohol advertisement that depicts a minor drinking, implies alcohol enhances social or sexual success, or omits a moderate-drinking message"
+    basis: "Liquor industry self-regulatory advertising standards adopted by brewers' and distillers' associations under the framework the National Tax Agency oversees for liquor business operators"
+    source_hint: "nta.go.jp liquor advertising guidelines"
+    remediable: true
+    protected_basis: false
+
+  - id: JP-CHILD-01
+    dimension: children_and_minors
+    class: policy
+    severity: 40
+    trigger: "Advertisement exploits children's inexperience or exerts undue purchase pressure on them"
+    basis: "JARO (Japan Advertising Review Organization) Standards, general rule requiring advertisers to pay attention to advertising's influence on children; self-regulatory, JARO established 1974"
+    source_hint: "jaro.or.jp standards"
+    remediable: true
+    protected_basis: false
+
+  - id: JP-NUM-01
+    dimension: superstition_number_colour
+    class: offence
+    severity: 30
+    trigger: "Prominent, unexplained use of the numbers four or nine in a way likely to be read as inauspicious"
+    basis: "No statute or broadcast code numbers this; the number four (shi, a homophone for death) and nine (ku, a homophone for suffering) carry documented cultural superstition in Japan that advertisers and product designers conventionally avoid"
+    source_hint: ""
+    remediable: true
+    protected_basis: false

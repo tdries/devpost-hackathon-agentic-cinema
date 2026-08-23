@@ -1,0 +1,74 @@
+market: TH
+name: Thailand
+regulators: [Thai FDA, NBTC]
+pre_clearance: advisory        # none | advisory | mandatory
+rules:
+  - id: TH-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 92
+    trigger: "Advertisement shows an alcoholic beverage product or its packaging, or claims or implies a benefit from drinking it"
+    basis: "Alcoholic Beverage Control Act B.E. 2551 (2008), Section 32 (advertising of alcoholic beverages may not show the product or its packaging or persuade consumption, directly or indirectly; permitted only to give information or social-creative-knowledge messaging without product imagery, except a symbol permitted by Ministerial Regulation); tightened by the Royal Decree amendment B.E. 2568 (2025), effective 8 November 2025, adding sections 32/1-32/5"
+    source_hint: "ilct.co.th alcoholic beverage control act section 32"
+    remediable: true
+    protected_basis: false
+
+  - id: TH-TOB-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 93
+    trigger: "Depiction or promotion of tobacco products in an advertisement"
+    basis: "Tobacco Products Control Act B.E. 2560 (2017), comprehensive ban on tobacco advertising and promotion"
+    source_hint: "who.int thailand tobacco products control act 2560"
+    remediable: true
+    protected_basis: false
+
+  - id: TH-FOOD-01
+    dimension: health_claims_pharma
+    class: legal
+    severity: 65
+    trigger: "Advertisement claims a food product's quality, usefulness or health benefit without prior Thai FDA approval of the advertisement"
+    basis: "Food Act B.E. 2522 (1979), Sections 40-41 (false or deceptive food-quality or benefit claims prohibited; advertising a food's qualities, usefulness or indications requires prior submission to, and permission from, the Food and Drug Administration), most recently implemented by the FDA Notification Re: Criteria for Food Advertising B.E. 2569 (2026), effective 28 July 2026"
+    source_hint: "fda.moph.go.th food act 2522 section 41"
+    remediable: true
+    protected_basis: false
+
+  - id: TH-ROYAL-01
+    dimension: national_symbols_politics
+    class: legal
+    severity: 95
+    trigger: "Advertisement depicts, references or uses the likeness of the Thai monarchy in a manner that could be construed as disrespectful, defamatory or insulting"
+    basis: "Criminal Code Section 112 (lese-majeste: defaming, insulting or threatening the King, Queen, Heir-apparent or Regent is punishable by three to fifteen years imprisonment)"
+    source_hint: "thailawonline.com lese-majeste section 112"
+    remediable: true
+    protected_basis: false
+
+  - id: TH-REL-01
+    dimension: religious_symbols_practices
+    class: legal
+    severity: 80
+    trigger: "Advertisement insults or is disrespectful toward a religious object, place of worship or practice, particularly Buddhist imagery or clergy"
+    basis: "Criminal Code Sections 206-208 (insulting a religion or a place or object of worship punishable by one to seven years imprisonment or a fine); the Sangha Act B.E. 2505 (1962) additionally protects Buddhism and the Buddhist clergy from defamation or insult"
+    source_hint: "library.siam-legal.com criminal code religion sections 206-208"
+    remediable: true
+    protected_basis: false
+
+  - id: TH-GAM-01
+    dimension: gambling_and_finance
+    class: legal
+    severity: 90
+    trigger: "Advertisement or promotion of gambling or betting not operated under the state lottery or authorized horse-racing framework"
+    basis: "Gambling Act B.E. 2478 (1935): gambling is illegal in Thailand outside a narrow state-authorized framework (Government Lottery, licensed horse racing); advertising unlicensed gambling is enforced as promotion of an illegal activity"
+    source_hint: "thailawonline.com gambling act 2478"
+    remediable: true
+    protected_basis: false
+
+  - id: TH-CHILD-01
+    dimension: children_and_minors
+    class: policy
+    severity: 45
+    trigger: "Advertisement broadcast during children's programming exploits a child's inexperience or exerts undue purchase pressure"
+    basis: "NBTC (National Broadcasting and Telecommunications Commission) broadcasting content standards for children's programming and advertising, self-regulatory guidance issued under NBTC's broadcasting oversight"
+    source_hint: "nbtc.go.th broadcasting standards children"
+    remediable: true
+    protected_basis: false

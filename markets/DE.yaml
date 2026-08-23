@@ -1,0 +1,84 @@
+market: DE
+name: Germany
+regulators: [Landesmedienanstalten, KJM]
+pre_clearance: none        # none | advisory | mandatory
+rules:
+  - id: DE-HWG-01
+    dimension: health_claims_pharma
+    class: legal
+    severity: 78
+    trigger: "Prescription-only medicine advertised directly to the general public, or a therapeutic effect claimed for a product that it does not have"
+    basis: "Heilmittelwerbegesetz (HWG) Section 3 (Irrefuehrungsverbot, ban on misleading advertising of remedies) and Section 10 Abs. 1 (advertising for prescription-only medicines directed at the general public is prohibited; permitted only toward professional circles)"
+    source_hint: "gesetze-im-internet.de heilmwerbg section 3 10"
+    remediable: true
+    protected_basis: false
+
+  - id: DE-CMP-01
+    dimension: comparative_claims
+    class: legal
+    severity: 55
+    trigger: "Comparative advertisement against a competitor that is not based on an objective, verifiable, material characteristic, or that denigrates the competitor"
+    basis: "Gesetz gegen den unlauteren Wettbewerb (UWG) Section 6 (vergleichende Werbung), setting the conditions under which comparative advertising is lawful"
+    source_hint: "gesetze-im-internet.de uwg_2004 section 6"
+    remediable: true
+    protected_basis: false
+
+  - id: DE-TOB-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 93
+    trigger: "Depiction or promotion of tobacco products or e-cigarettes in an advertisement"
+    basis: "Gesetz ueber Tabakerzeugnisse und verwandte Erzeugnisse (Tabakerzeugnisgesetz, TabakerzG), as amended in 2021, extending the tobacco advertising ban to print, cinema, outdoor media and e-cigarettes"
+    source_hint: "gesetze-im-internet.de tabakerzg"
+    remediable: true
+    protected_basis: false
+
+  - id: DE-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 60
+    trigger: "Alcohol advertisement directed at children or adolescents, particularly appealing to them by its manner of presentation, or depicting a minor consuming alcohol"
+    basis: "Jugendmedienschutz-Staatsvertrag (JMStV) Section 6 (Jugendschutz in der Werbung und im Teleshopping): advertising for alcoholic beverages may not be directed at children or adolescents, nor depict them consuming alcohol"
+    source_hint: "die-medienanstalten.de jmstv section 6"
+    remediable: true
+    protected_basis: false
+
+  - id: DE-GAM-01
+    dimension: gambling_and_finance
+    class: legal
+    severity: 65
+    trigger: "Advertisement for virtual slot machines, online poker or online casino games broadcast or placed on radio or internet between 6am and 9pm"
+    basis: "Gluecksspielstaatsvertrag 2021 (GlueStV 2021) Section 5 Abs. 3 (advertising curfew of 06:00 to 21:00 for virtual slot machines, online poker and online casino games)"
+    source_hint: "gluecksspiel-behoerde.de gluestv 2021 section 5"
+    remediable: true
+    protected_basis: false
+
+  - id: DE-NAT-01
+    dimension: national_symbols_politics
+    class: legal
+    severity: 95
+    trigger: "Use of a swastika or other symbol of an unconstitutional or terrorist organization in an advertisement"
+    basis: "Strafgesetzbuch (StGB) Section 86a (Verwenden von Kennzeichen verfassungswidriger und terroristischer Organisationen), punishable by up to three years imprisonment or a fine, with narrow exceptions for education, art, science or news reporting"
+    source_hint: "gesetze-im-internet.de stgb section 86a"
+    remediable: true
+    protected_basis: false
+
+  - id: DE-DISC-01
+    dimension: gender_portrayal
+    class: legal
+    severity: 55
+    trigger: "Advertisement that violates human dignity or discriminates on the basis of gender, race, ethnic origin, religion, disability, age or sexual orientation"
+    basis: "Medienstaatsvertrag (MStV) Section 8 (Werbegrundsaetze): advertising must not violate human dignity, must not discriminate on these protected grounds, and must not be misleading"
+    source_hint: "die-medienanstalten.de medienstaatsvertrag section 8"
+    remediable: true
+    protected_basis: false
+
+  - id: DE-WR-01
+    dimension: violence_and_weapons
+    class: policy
+    severity: 40
+    trigger: "Gratuitous or realistic depiction of violence in an advertisement"
+    basis: "Deutscher Werberat (German Advertising Standards Council) guidelines on violence and discrimination in advertising, self-regulatory"
+    source_hint: "werberat.de richtlinien"
+    remediable: true
+    protected_basis: false

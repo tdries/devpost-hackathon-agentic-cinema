@@ -1,0 +1,74 @@
+market: CN
+name: China
+regulators: [SAMR, NRTA]
+pre_clearance: advisory        # none | advisory | mandatory
+rules:
+  - id: CN-SUP-01
+    dimension: comparative_claims
+    class: legal
+    severity: 78
+    trigger: "Advertisement uses terms such as 'national-level', 'highest-level' or 'best' to claim unverifiable superlative superiority"
+    basis: "Advertising Law of the People's Republic of China (2015, amended 2021), art. 9(3): advertisements shall not use terms such as 'national level' (guojiaji), 'highest level' (zuigaoji) or 'optimal/best' (zuijia)"
+    source_hint: "chinalawtranslate.com advertising law 2021 article 9"
+    remediable: true
+    protected_basis: false
+
+  - id: CN-NAT-01
+    dimension: national_symbols_politics
+    class: legal
+    severity: 90
+    trigger: "Advertisement uses or covertly uses the national flag, national anthem, national emblem, or the name or image of a state organ or its personnel"
+    basis: "Advertising Law of the PRC, art. 9(1)-(2): advertisements shall not use or covertly use the national flag, anthem, emblem, military flag, military songs or insignia, or the names or images of state organs or their personnel"
+    source_hint: "chinalawtranslate.com advertising law 2021 article 9"
+    remediable: true
+    protected_basis: false
+
+  - id: CN-SUPER-01
+    dimension: superstition_number_colour
+    class: legal
+    severity: 75
+    trigger: "Advertisement contains obscene, superstitious, terrifying or violent content, or otherwise violates good social customs"
+    basis: "Advertising Law of the PRC, art. 9(8) (advertisements shall not contain pornographic, superstitious, terrifying or violent content) and art. 9(7) (shall not hinder public order or violate good social conduct)"
+    source_hint: "chinalawtranslate.com advertising law 2021 article 9"
+    remediable: true
+    protected_basis: false
+
+  - id: CN-HLTH-01
+    dimension: health_claims_pharma
+    class: legal
+    severity: 85
+    trigger: "Medical, pharmaceutical or health-food advertisement omits mandatory contraindication or adverse-effect disclosure, uses a patient endorsement or testimonial, or a prescription-drug ad fails to state it is intended only for medical professionals"
+    basis: "Advertising Law of the PRC, art. 16 (content and disclosure requirements for medical, pharmaceutical and health-food advertising, including the mandatory professional-use disclaimer for prescription drugs) and the related ban on endorsements or testimonials for healthcare food, medicine or medical devices"
+    source_hint: "chinalawtranslate.com advertising law 2021 article 16"
+    remediable: true
+    protected_basis: false
+
+  - id: CN-MINOR-01
+    dimension: children_and_minors
+    class: legal
+    severity: 70
+    trigger: "Medical, pharmaceutical, functional-food, medical-device, cosmetic, alcohol or beauty-treatment advertisement published in mass media aimed at minors, or a person under 18 used as an advertising spokesperson"
+    basis: "Advertising Law of the PRC, art. 40 (bans specified product categories, including alcohol, from mass media aimed at minors, and bans persons under 18 from serving as advertising spokespersons)"
+    source_hint: "chinalawtranslate.com advertising law 2021 article 40"
+    remediable: true
+    protected_basis: false
+
+  - id: CN-GAM-01
+    dimension: gambling_and_finance
+    class: legal
+    severity: 90
+    trigger: "Advertisement or promotion of gambling products or services"
+    basis: "Advertising Law of the PRC and Criminal Law of the PRC: gambling is illegal in mainland China outside narrow state-run exceptions, and advertising of gambling products or services is prohibited, with criminal liability for severe violations"
+    source_hint: "legal500.com china advertising marketing gambling"
+    remediable: true
+    protected_basis: false
+
+  - id: CN-DISCRIM-01
+    dimension: religious_symbols_practices
+    class: legal
+    severity: 70
+    trigger: "Advertisement contains content that discriminates on the basis of ethnicity, race, religion or sex"
+    basis: "Advertising Law of the PRC, art. 9(9): advertisements shall not contain content that constitutes ethnic, racial, religious or sex-based discrimination"
+    source_hint: "chinalawtranslate.com advertising law 2021 article 9"
+    remediable: true
+    protected_basis: false

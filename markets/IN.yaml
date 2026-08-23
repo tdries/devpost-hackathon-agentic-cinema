@@ -1,0 +1,74 @@
+market: IN
+name: India
+regulators: [ASCI, MIB]
+pre_clearance: none        # none | advisory | mandatory
+rules:
+  - id: IN-TOB-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 93
+    trigger: "Advertisement, sponsorship or promotion of cigarettes or tobacco products, direct or surrogate"
+    basis: "Cigarettes and Other Tobacco Products (Prohibition of Advertisement...) Act, 2003 (COTPA), Section 5 (prohibition of advertisement, sponsorship and promotion of tobacco products), with point-of-sale advertising also barred per Supreme Court directions"
+    source_hint: "indiankanoon.org cotpa 2003 section 5"
+    remediable: true
+    protected_basis: false
+
+  - id: IN-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 75
+    trigger: "Advertisement of wine, liquor or other intoxicants, direct or via a surrogate brand extension"
+    basis: "Cable Television Networks Rules, 1994, Rule 7 (Advertising Code): advertisements for wine, liquor or other intoxicants are not permitted in cable service; brand-extension surrogate advertising is separately addressed by the ASCI Guidelines for Qualification of Surrogate Advertisements (2021, self-regulatory)"
+    source_hint: "trai.gov.in cable television networks rules 1994 rule 7"
+    remediable: true
+    protected_basis: false
+
+  - id: IN-MOD-01
+    dimension: modesty_dress_body
+    class: legal
+    severity: 78
+    trigger: "Advertisement contains an indecent representation of a woman's figure, form or body, in a manner that denigrates or is derogatory to women"
+    basis: "Indecent Representation of Women (Prohibition) Act, 1986, Sections 3-4 (prohibition on publishing, exhibiting or arranging any advertisement containing indecent representation of women), with exceptions for bona fide artistic, scientific, educational or religious use"
+    source_hint: "indiacode.nic.in indecent representation of women act 1986"
+    remediable: true
+    protected_basis: false
+
+  - id: IN-DMR-01
+    dimension: health_claims_pharma
+    class: legal
+    severity: 80
+    trigger: "Advertisement claims a drug or remedy can diagnose, cure, mitigate, treat or prevent a disease or condition listed in the Act's Schedule, such as cancer, diabetes or sexual dysfunction"
+    basis: "Drugs and Magic Remedies (Objectionable Advertisements) Act, 1954, Section 3 and the Schedule (originally listing 54 diseases and conditions); a 2020 amendment bill proposing to expand the Schedule to 78 conditions and raise penalties has not been confirmed as brought into force"
+    source_hint: "indiankanoon.org drugs and magic remedies act 1954 section 3"
+    remediable: true
+    protected_basis: false
+
+  - id: IN-REL-01
+    dimension: religious_symbols_practices
+    class: legal
+    severity: 82
+    trigger: "Advertisement contains a reference which hurts religious sentiments"
+    basis: "Cable Television Networks Rules, 1994, Rule 7(3-A) (no advertisement shall contain references which hurt religious sentiments; inserted by notification G.S.R. 710(E), dated 8 September 2000)"
+    source_hint: "indiankanoon.org cable television networks rules 1994 rule 7"
+    remediable: true
+    protected_basis: false
+
+  - id: IN-CHILD-01
+    dimension: children_and_minors
+    class: legal
+    severity: 65
+    trigger: "Advertisement endangers the safety of children, creates in them an interest in unhealthy practices, or shows them begging or in an undignified or indecent manner"
+    basis: "Cable Television Networks Rules, 1994, Rule 7 (Advertising Code), children's-safety clause"
+    source_hint: "trai.gov.in cable television networks rules 1994"
+    remediable: true
+    protected_basis: false
+
+  - id: IN-CMP-01
+    dimension: comparative_claims
+    class: policy
+    severity: 50
+    trigger: "Advertisement unfairly denigrates, attacks or discredits a competing product, advertiser or advertisement"
+    basis: "ASCI (Advertising Standards Council of India) Code, Chapter III (Advertisements Shall Not Unfairly Denigrate, Attack or Discredit Other Products, Advertisers or Advertisements), self-regulatory"
+    source_hint: "ascionline.in code chapter 3"
+    remediable: true
+    protected_basis: false

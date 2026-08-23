@@ -1,0 +1,74 @@
+market: TR
+name: Turkey
+regulators: [RTUK, Reklam Kurulu]
+pre_clearance: none        # none | advisory | mandatory
+rules:
+  - id: TR-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 93
+    trigger: "Any commercial communication, advertising, sponsorship or promotion for an alcoholic beverage"
+    basis: "Law No. 6112 (RTUK Law, on the Establishment and Broadcasting Services of Radio and Televisions) art. 11 (alcoholic beverages and tobacco products may not be the subject of commercial communication in any way); art. 8 sets the general broadcasting principle that content must not encourage the use of alcohol, tobacco or addictive substances"
+    source_hint: "rtuk.gov.tr 6112 sayili kanun madde 11"
+    remediable: true
+    protected_basis: false
+
+  - id: TR-TOB-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 93
+    trigger: "Depiction or promotion of tobacco products in an advertisement"
+    basis: "Law No. 4207 (Tutun Urunlerinin Zararlarinin Onlenmesi ve Kontrolu Hakkinda Kanun, tobacco control law), comprehensive tobacco advertising ban; Law No. 6112 art. 11 additionally bars tobacco commercial communication in broadcast media"
+    source_hint: "mevzuat.gov.tr 4207 sayili kanun"
+    remediable: true
+    protected_basis: false
+
+  - id: TR-GAM-01
+    dimension: gambling_and_finance
+    class: legal
+    severity: 90
+    trigger: "Advertisement or promotion of betting or games of chance not operated by the state-authorized monopoly"
+    basis: "Law No. 7258 (Futbol ve Diger Spor Musabakalarinda Bahis ve Sans Oyunlari Duzenlenmesi Hakkinda Kanun) art. 5/c (advertising unlicensed betting punishable by one to three years imprisonment); Turkish Penal Code art. 228 (unauthorized gambling operation)"
+    source_hint: "mevzuat.gov.tr 7258 sayili kanun madde 5"
+    remediable: true
+    protected_basis: false
+
+  - id: TR-NAT-01
+    dimension: national_symbols_politics
+    class: legal
+    severity: 88
+    trigger: "Content that insults or disrespects Ataturk's memory, name or image"
+    basis: "Law No. 5816 (Ataturk'u Koruma Kanunu, Law to Protect the Memory of Ataturk), criminalizing insults to Ataturk's memory or the destruction of objects representing him"
+    source_hint: "mevzuat.gov.tr 5816 sayili kanun"
+    remediable: true
+    protected_basis: false
+
+  - id: TR-CHILD-01
+    dimension: children_and_minors
+    class: legal
+    severity: 55
+    trigger: "Content that may harm the physical, mental or moral development of children"
+    basis: "Law No. 6112 art. 8 (general broadcasting service principles): content must not harm children's physical, mental or moral development, and commercial communication must comply with these principles"
+    source_hint: "rtuk.gov.tr 6112 sayili kanun madde 8"
+    remediable: true
+    protected_basis: false
+
+  - id: TR-DISC-01
+    dimension: gender_portrayal
+    class: legal
+    severity: 50
+    trigger: "Commercial communication that discriminates on the basis of gender, race, colour, ethnic origin, nationality, religion, philosophical belief or political view"
+    basis: "Law No. 6112 art. 8: commercial communication must not contain or promote discrimination on these grounds"
+    source_hint: "rtuk.gov.tr 6112 sayili kanun madde 8"
+    remediable: true
+    protected_basis: false
+
+  - id: TR-CMP-01
+    dimension: comparative_claims
+    class: legal
+    severity: 50
+    trigger: "Comparative advertisement not based on objectively verifiable, material characteristics of the compared goods or services"
+    basis: "Ticari Reklam ve Haksiz Ticari Uygulamalar Yonetmeligi (Regulation on Commercial Advertising and Unfair Commercial Practices), issued under Law No. 6502 (Tuketicinin Korunmasi Hakkinda Kanun) art. 61-63, conditions for lawful comparative advertising, enforced by the Reklam Kurulu (Advertising Board)"
+    source_hint: "ticaret.gov.tr reklam kurulu yonetmelik"
+    remediable: true
+    protected_basis: false

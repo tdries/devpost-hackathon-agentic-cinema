@@ -1,0 +1,74 @@
+market: NG
+name: Nigeria
+regulators: [ARCON, NBC]
+pre_clearance: mandatory        # none | advisory | mandatory
+rules:
+  - id: NG-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 70
+    trigger: "Alcoholic beverage advertisement broadcast between 6:00am and 8:00pm on radio, or between 6:00am and 10:00pm on television"
+    basis: "Nigerian Code of Advertising Practice (administered by ARCON, the Advertising Regulatory Council of Nigeria, successor to APCON), art. 39 (alcohol beverage advertising restricted to outside these daytime windows); previously enforced by APCON, including a 2013 ban on Guinness Nigeria television advertising for violating this restriction"
+    source_hint: "mondaq.com nigeria alcohol advertising restrictions apcon"
+    remediable: true
+    protected_basis: false
+
+  - id: NG-TOB-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 93
+    trigger: "Depiction or promotion of tobacco products in an advertisement"
+    basis: "National Tobacco Control Act, 2015, comprehensive ban on tobacco advertising, promotion and sponsorship"
+    source_hint: "nigeria national tobacco control act 2015"
+    remediable: true
+    protected_basis: false
+
+  - id: NG-CHILD-01
+    dimension: children_and_minors
+    class: legal
+    severity: 55
+    trigger: "Content containing smoking, alcohol, drug use, nudity, violence or vulgar language broadcast during the 7pm-10pm family-viewing period"
+    basis: "Nigeria Broadcasting Code (NBC, 6th Edition), family-viewing-period provisions restricting such content between 7:00pm and 10:00pm"
+    source_hint: "nbc.gov.ng broadcasting code family viewing period"
+    remediable: true
+    protected_basis: false
+
+  - id: NG-REL-01
+    dimension: religious_symbols_practices
+    class: legal
+    severity: 65
+    trigger: "Content likely to incite religious tension or disrespect a religious group, given Nigeria's religious diversity"
+    basis: "Nigeria Broadcasting Code (NBC) provisions restricting religious-broadcast content likely to be divisive between Nigeria's Muslim and Christian communities; cited at the instrument level, no separately numbered advertising sub-clause independently verified"
+    source_hint: "nbc.gov.ng broadcasting code"
+    remediable: true
+    protected_basis: false
+
+  - id: NG-GAM-01
+    dimension: gambling_and_finance
+    class: legal
+    severity: 60
+    trigger: "Sports-betting advertisement lacking an age-restriction notice or a responsible-gambling message"
+    basis: "National Lottery Act, 2005 and National Lottery Regulatory Commission (NLRC) regulations requiring age-restriction and responsible-gambling messaging in gambling and betting advertising"
+    source_hint: "nlrc.gov.ng advertising regulations"
+    remediable: true
+    protected_basis: false
+
+  - id: NG-CMP-01
+    dimension: comparative_claims
+    class: legal
+    severity: 50
+    trigger: "Comparative advertisement that denigrates or unfairly discredits a competing product without substantiation"
+    basis: "Nigerian Code of Advertising Practice (administered by ARCON), comparative-advertising provisions requiring substantiation and prohibiting denigration of a competitor"
+    source_hint: "arcon.gov.ng code of advertising practice"
+    remediable: true
+    protected_basis: false
+
+  - id: NG-GEND-01
+    dimension: gender_portrayal
+    class: offence
+    severity: 30
+    trigger: "Advertisement relies on a demeaning or degrading gender stereotype"
+    basis: "No specific ARCON-numbered provision targets gender-stereotyped portrayal; it falls under the Code's general decency mandate, applied at the regulator's discretion rather than through a separately citable clause"
+    source_hint: ""
+    remediable: true
+    protected_basis: false

@@ -1,0 +1,74 @@
+market: AE
+name: United Arab Emirates
+regulators: [UAE Media Council, ESMA]
+pre_clearance: advisory        # none | advisory | mandatory
+rules:
+  - id: AE-REL-01
+    dimension: religious_symbols_practices
+    class: legal
+    severity: 88
+    trigger: "Content that disrespects, mocks or contradicts Islamic beliefs, or the beliefs and faiths of other religions"
+    basis: "Federal Decree-Law No. 55 of 2023 on the Regulation of Media, content standards requiring respect for Islamic beliefs and all other religions and faiths; this decree-law replaced Federal Decree-Law No. 15/1980 and took effect on 1 December 2023, after the National Media Council's functions passed through the Media Regulatory Office (2021) to the UAE Media Council (end of 2022)"
+    source_hint: "uaemc.gov.ae federal decree law 55 2023"
+    remediable: true
+    protected_basis: false
+
+  - id: AE-MOD-01
+    dimension: modesty_dress_body
+    class: legal
+    severity: 82
+    trigger: "Nudity, indecent exposure or dress inconsistent with public decency standards"
+    basis: "Federal Decree-Law No. 55 of 2023 on the Regulation of Media and its Executive Regulation (in force 31 October 2024): media and advertising content must respect public decency and the country's societal values"
+    source_hint: "uaemc.gov.ae media legislation content standards"
+    remediable: true
+    protected_basis: false
+
+  - id: AE-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 82
+    trigger: "Depiction or promotion of alcoholic beverages in advertising content"
+    basis: "UAE Media Council content standards under Federal Decree-Law No. 55 of 2023: alcohol depiction and promotion in advertising is restricted as contrary to public societal values; cited at the instrument level, no separately numbered alcohol-advertising article located"
+    source_hint: "tamimi.com uae media law advertising standards"
+    remediable: true
+    protected_basis: false
+
+  - id: AE-LGBT-01
+    dimension: sexual_orientation_gender_id
+    class: legal
+    severity: 90
+    trigger: "Positive or neutral depiction of a same-sex couple or relationship, or content read as promoting or normalizing LGBTQ identity"
+    basis: "Federal Decree-Law No. 31 of 2021 on Crimes and Penalties, art. 409 (criminalizes consensual same-sex sexual conduct); UAE Media Council content standards under Federal Decree-Law No. 55/2023 require content to align with the country's societal values, applied by the regulator to bar media seen as promoting or normalizing same-sex relationships or LGBTQ identity"
+    source_hint: "tamimi.com uae media law; hrw.org uae lgbt rights"
+    remediable: true
+    protected_basis: true
+
+  - id: AE-GAM-01
+    dimension: gambling_and_finance
+    class: legal
+    severity: 88
+    trigger: "Depiction or promotion of gambling, betting or games of chance"
+    basis: "UAE Penal Code (Federal Decree-Law No. 31 of 2021) prohibits unlicensed gambling; advertising of gambling or betting services is banned outside the narrow licensed framework of the General Commercial Gaming Regulatory Authority (GCGRA), established in 2023"
+    source_hint: "gcgra.gov.ae; uae federal decree law 31 2021"
+    remediable: true
+    protected_basis: false
+
+  - id: AE-FOOD-01
+    dimension: food_and_animals
+    class: legal
+    severity: 40
+    trigger: "Depiction of pork or pork-derived products as an ordinary consumption item, or an unsubstantiated halal claim"
+    basis: "ESMA (Emirates Authority for Standardization and Metrology) mandatory halal certification scheme, standard UAE.S 2055-1:2015, for meat and animal-derived-ingredient products"
+    source_hint: "esma.gov.ae halal certification uae.s 2055-1"
+    remediable: true
+    protected_basis: false
+
+  - id: AE-GEST-01
+    dimension: gesture_body_language
+    class: offence
+    severity: 35
+    trigger: "A hand gesture, such as a thumbs-up held prominently to camera, that reads as obscene or insulting in parts of the Middle East though innocuous elsewhere"
+    basis: "No specific UAE media-content article names individual gestures; the thumbs-up gesture is documented in cross-cultural literature as equivalent to an obscene gesture in parts of the Arab world, a reputational and decency risk under the general public-decency standard rather than a separately citable provision"
+    source_hint: ""
+    remediable: true
+    protected_basis: false

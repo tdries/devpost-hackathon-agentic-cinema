@@ -48,18 +48,66 @@ def test_fr_pack_has_a_toubon_text_legibility_rule():
     assert any("Toubon" in r.basis for r in toubon)
 
 
+# All fifteen market codes the product ships with (Task 5's three plus Task 16's
+# remaining twelve). CA-QC is Quebec specifically, not federal Canada, per the brief.
+ALL_MARKET_CODES = {
+    "FR", "SA", "US",
+    "UK", "DE", "CA-QC", "BR", "AE", "TR", "IN", "CN", "ID", "JP", "TH", "NG",
+}
+
+
 def test_all_real_packs_load_without_error():
     packs = load(MARKETS_DIR)
-    assert set(packs.keys()) == {"FR", "SA", "US"}
+    assert set(packs.keys()) == ALL_MARKET_CODES
     for market, pack in packs.items():
         assert pack.market == market
-        assert 6 <= len(pack.rules) <= 12
+        assert len(pack.rules) >= 5
         ids = [r.id for r in pack.rules]
         assert len(ids) == len(set(ids))
         for rule in pack.rules:
             assert rule.klass in {"legal", "policy", "offence"}
             assert rule.basis
             assert rule.trigger
+
+
+def test_fifteen_market_packs_load():
+    # Task 16: all fifteen packs load together, no market missing, none extra.
+    packs = load(MARKETS_DIR)
+    assert set(packs.keys()) == ALL_MARKET_CODES
+    assert len(packs) == 15
+
+
+def test_every_pack_has_at_least_five_rules():
+    packs = load(MARKETS_DIR)
+    for market, pack in packs.items():
+        assert len(pack.rules) >= 5, f"{market} has only {len(pack.rules)} rules"
+
+
+def test_rule_ids_globally_unique_across_all_fifteen_packs():
+    # load() itself raises PackError on any duplicate id (see test_duplicate_rule_id_*
+    # below), so this mainly documents and locks in the invariant across the real
+    # fifteen-pack set rather than a synthetic tmp_path pair.
+    packs = load(MARKETS_DIR)
+    all_ids = [rule.id for pack in packs.values() for rule in pack.rules]
+    assert len(all_ids) == len(set(all_ids))
+
+
+def test_at_least_40_percent_of_all_rules_are_legal_with_a_basis():
+    packs = load(MARKETS_DIR)
+    all_rules = [rule for pack in packs.values() for rule in pack.rules]
+    legal_with_statute = [r for r in all_rules if r.klass == "legal" and r.basis.strip()]
+    assert len(all_rules) > 0
+    assert len(legal_with_statute) / len(all_rules) >= 0.4
+
+
+def test_uk_and_jp_have_photosensitivity_rules():
+    # The deterministic flash detector (Task 14) emits photosensitivity_sensory
+    # observations; UK (Ofcom Rule 2.12) and JP (post-Pokemon NAB Japan guidelines)
+    # must each carry a rule that dimension can actually fire against.
+    packs = load(MARKETS_DIR)
+    for market in ("UK", "JP"):
+        dims = {r.dimension for r in packs[market].rules}
+        assert "photosensitivity_sensory" in dims, f"{market} pack is missing a photosensitivity_sensory rule"
 
 
 def test_sa_pack_has_a_protected_basis_rule():

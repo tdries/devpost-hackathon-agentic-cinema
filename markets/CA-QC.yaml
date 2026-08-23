@@ -1,0 +1,74 @@
+market: CA-QC
+name: Canada (Quebec)
+regulators: [OPC, RACJ, CRTC]
+pre_clearance: advisory        # none | advisory | mandatory
+rules:
+  - id: CA-QC-CHILD-01
+    dimension: children_and_minors
+    class: legal
+    severity: 92
+    trigger: "Commercial advertising directed at a person under 13 years of age"
+    basis: "Consumer Protection Act (Quebec), CQLR c. P-40.1, ss. 248-249 (prohibition on commercial advertising directed at children under 13, in effect since 1978, applying to all media including online; upheld as constitutional by the Supreme Court of Canada in Irwin Toy v Quebec)"
+    source_hint: "legisquebec.gouv.qc.ca p-40.1 sections 248 249"
+    remediable: true
+    protected_basis: false
+
+  - id: CA-QC-LANG-01
+    dimension: text_legibility
+    class: legal
+    severity: 65
+    trigger: "On-screen commercial text or advertising copy not in French, or accompanied by another language without French being markedly predominant"
+    basis: "Charter of the French Language (Charte de la langue francaise), CQLR c. C-11, art. 58 (public signs, posters and commercial advertising must be in French, or in French markedly predominant alongside another language); art. 58.1, introduced by Bill 96 and in force since 1 June 2025, further tightens non-French trademark display conditions"
+    source_hint: "legisquebec.gouv.qc.ca c-11 article 58"
+    remediable: true
+    protected_basis: false
+
+  - id: CA-QC-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 80
+    trigger: "Alcoholic beverage advertisement circulated without prior approval, or that fails the content conditions for alcohol advertising"
+    basis: "Regulation respecting promotion, advertising and educational programs relating to alcoholic beverages, CQLR c. P-9.1, r. 6 (a producer must obtain prior approval from the Regie des alcools, des courses et des jeux, RACJ, before circulating alcoholic-beverage advertising, and must submit an annual educational program; RACJ may suspend or revoke a permit or impose an administrative penalty for non-compliance)"
+    source_hint: "legisquebec.gouv.qc.ca p-9.1 r 6"
+    remediable: true
+    protected_basis: false
+
+  - id: CA-QC-TOB-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 93
+    trigger: "Depiction or promotion of tobacco or vaping products in an advertisement"
+    basis: "Tobacco and Vaping Products Act (federal), S.C. 1997, c. 13, as amended: near-total ban on tobacco and vaping product advertising and promotion"
+    source_hint: "laws-lois.justice.gc.ca t-11.5"
+    remediable: true
+    protected_basis: false
+
+  - id: CA-QC-PHARMA-01
+    dimension: health_claims_pharma
+    class: legal
+    severity: 85
+    trigger: "Prescription-only drug advertised to the general public with more than its brand name, proper or common name, price and quantity"
+    basis: "Food and Drugs Act, R.S.C. 1985, c. F-27, s. 9(1) (false or misleading drug advertising prohibited) and Food and Drug Regulations C.01.044 (a Schedule F prescription drug advertised to the general public is restricted to name, price and quantity)"
+    source_hint: "laws-lois.justice.gc.ca food-and-drugs-act section 9"
+    remediable: true
+    protected_basis: false
+
+  - id: CA-QC-CMP-01
+    dimension: comparative_claims
+    class: legal
+    severity: 55
+    trigger: "Comparative claim against a competitor made without adequate and proper substantiation"
+    basis: "Competition Act (federal), R.S.C. 1985, c. C-34, s. 74.01 (reviewable conduct: materially misleading representations to the public, including unsubstantiated comparative performance claims)"
+    source_hint: "laws-lois.justice.gc.ca competition-act section 74.01"
+    remediable: true
+    protected_basis: false
+
+  - id: CA-QC-GEND-01
+    dimension: gender_portrayal
+    class: offence
+    severity: 30
+    trigger: "Advertisement relies on a demeaning or degrading gender stereotype"
+    basis: "No Quebec or federal statute specifically restricts gender-stereotyped advertising content; the Canadian Code of Advertising Standards (Ad Standards, self-regulatory) offers guidance but is not a citable statutory provision"
+    source_hint: ""
+    remediable: true
+    protected_basis: false

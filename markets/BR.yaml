@@ -1,0 +1,74 @@
+market: BR
+name: Brazil
+regulators: [CONAR, ANVISA, SENACON]
+pre_clearance: advisory        # none | advisory | mandatory
+rules:
+  - id: BR-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 75
+    trigger: "Advertisement for a beverage with alcohol content above thirteen degrees Gay-Lussac broadcast on radio or TV outside 21:00-06:00, or associating it with sport, driving, or greater social or sexual success"
+    basis: "Lei 9.294, de 15 de julho de 1996, art. 4 and art. 4 Section 1 (advertising restricted to 21:00-06:00 and content restrictions, applying to beverages above thirteen degrees Gay-Lussac); beer and wine below that threshold fall outside this specific restriction and remain the subject of ongoing legislative and judicial dispute over expanding its scope"
+    source_hint: "planalto.gov.br l9294 artigo 4"
+    remediable: true
+    protected_basis: false
+
+  - id: BR-TOB-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 93
+    trigger: "Depiction or promotion of tobacco products in an advertisement"
+    basis: "Lei 9.294/1996, art. 3 (near-total ban on tobacco advertising in any communication medium, limited to point-of-sale display)"
+    source_hint: "planalto.gov.br l9294 artigo 3"
+    remediable: true
+    protected_basis: false
+
+  - id: BR-CHILD-01
+    dimension: children_and_minors
+    class: legal
+    severity: 75
+    trigger: "Advertising or marketing communication directed at children, exploiting their deficiency of judgment, inexperience or credulity"
+    basis: "Codigo de Defesa do Consumidor (CDC), Lei 8.078/90, art. 37 Section 2 (abusive advertising), as interpreted by Resolucao CONANDA no. 163/2014, which declares advertising or marketing communication directed at children abusive per se; the resolution's scope has faced advertiser pushback and litigation"
+    source_hint: "criancaeconsumo.org.br resolucao 163 conanda"
+    remediable: true
+    protected_basis: false
+
+  - id: BR-PHARMA-01
+    dimension: health_claims_pharma
+    class: legal
+    severity: 75
+    trigger: "Prescription-only medicine advertised directly to the general public, or a medicine advertisement that is misleading, abusive or omits mandatory warnings"
+    basis: "ANVISA RDC no. 96, de 17 de dezembro de 2008: medicines requiring prescription may only be advertised to healthcare professionals; general-public advertising is restricted to non-prescription (MIP) medicines and must not be misleading, abusive or indirect"
+    source_hint: "gov.br anvisa rdc 96 2008"
+    remediable: true
+    protected_basis: false
+
+  - id: BR-GAM-01
+    dimension: gambling_and_finance
+    class: legal
+    severity: 65
+    trigger: "Sports-betting advertisement that may appeal to minors, or that suggests betting as a solution to financial difficulty"
+    basis: "Lei 14.790, de 29 de dezembro de 2023 (Lei das Apostas Esportivas): advertising rules protecting minors and prohibiting the framing of betting as a solution to financial hardship, with sector self-regulation implemented through CONAR Anexo X"
+    source_hint: "conjur.com.br lei 14790 apostas"
+    remediable: true
+    protected_basis: false
+
+  - id: BR-CMP-01
+    dimension: comparative_claims
+    class: legal
+    severity: 50
+    trigger: "Comparative advertisement that is misleading or cannot be substantiated"
+    basis: "Codigo de Defesa do Consumidor, Lei 8.078/90, art. 37 caput and Section 1 (misleading advertising: any advertising, including comparative advertising, capable of inducing the consumer into error)"
+    source_hint: "planalto.gov.br cdc lei 8078 artigo 37"
+    remediable: true
+    protected_basis: false
+
+  - id: BR-CONAR-01
+    dimension: gender_portrayal
+    class: policy
+    severity: 40
+    trigger: "Advertisement relies on a demeaning or degrading gender stereotype"
+    basis: "Codigo Brasileiro de Autorregulamentacao Publicitaria (CONAR), self-regulatory prohibition on advertising that is discriminatory or offensive toward any social group"
+    source_hint: "conar.org.br codigo"
+    remediable: true
+    protected_basis: false

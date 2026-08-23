@@ -1,0 +1,84 @@
+market: UK
+name: United Kingdom
+regulators: [Ofcom, ASA, Clearcast]
+pre_clearance: mandatory        # none | advisory | mandatory
+rules:
+  - id: UK-FLASH-01
+    dimension: photosensitivity_sensory
+    class: legal
+    severity: 70
+    trigger: "Rapid flashing or high-contrast strobing imagery sustained across a significant portion of the frame, exceeding safe photosensitive-epilepsy thresholds"
+    basis: "Ofcom Broadcasting Code Rule 2.12 (broadcasters must take precautions to maintain a low level of risk to viewers who have photosensitive epilepsy), applied with the Ofcom/ITC Photosensitive Epilepsy Guidance technical flash and pattern thresholds"
+    source_hint: "ofcom.org.uk broadcasting code section two rule 2.12"
+    remediable: true
+    protected_basis: false
+
+  - id: UK-TOB-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 95
+    trigger: "Depiction or promotion of tobacco products, e-cigarettes or smoking in an advertisement"
+    basis: "Tobacco Advertising and Promotion Act 2002 (ban on tobacco advertising, promotion and sponsorship in print, outdoor and online media); broadcast tobacco advertising has been prohibited since the Television Act 1964, now given effect through the Communications Act 2003 licensing framework and the Ofcom Broadcasting Code"
+    source_hint: "legislation.gov.uk ukpga 2002 36"
+    remediable: true
+    protected_basis: false
+
+  - id: UK-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: policy
+    severity: 70
+    trigger: "Alcohol advertisement that appeals particularly to under-18s, links alcohol consumption to social or sexual success, or encourages immoderate drinking"
+    basis: "BCAP Code (Broadcast Committee of Advertising Practice) rules 18 and 19 on alcohol advertising, self-regulatory content standards administered by Clearcast and the ASA under a co-regulatory arrangement with Ofcom"
+    source_hint: "asa.org.uk bcap code alcohol"
+    remediable: true
+    protected_basis: false
+
+  - id: UK-GAM-01
+    dimension: gambling_and_finance
+    class: legal
+    severity: 65
+    trigger: "Gambling advertisement likely to appeal particularly to children or vulnerable persons, or that omits a safer-gambling message"
+    basis: "Gambling Act 2005 (licensing objective of protecting children and vulnerable persons) and the Gambling Commission Licence Conditions and Codes of Practice (LCCP), social responsibility provisions on marketing"
+    source_hint: "gamblingcommission.gov.uk lccp marketing"
+    remediable: true
+    protected_basis: false
+
+  - id: UK-HFSS-01
+    dimension: children_and_minors
+    class: legal
+    severity: 75
+    trigger: "Advertisement for a food or drink product classified as high in fat, salt or sugar (HFSS) broadcast on Ofcom-regulated TV between 5.30am and 9pm, or placed as paid-for online advertising"
+    basis: "Health and Care Act 2022 (Part 6) and the Advertising (Less Healthy Food and Drink) (Amendment etc.) Regulations 2025: 9pm TV watershed and a ban on paid-for online advertising of HFSS products, in force since 5 January 2026 (delayed from the original 1 October 2025 date) for advertisers with 250 or more employees"
+    source_hint: "gov.uk hfss advertising restrictions"
+    remediable: true
+    protected_basis: false
+
+  - id: UK-CMP-01
+    dimension: comparative_claims
+    class: legal
+    severity: 55
+    trigger: "Comparative advertisement that does not objectively compare material, relevant, verifiable features against a competitor, denigrates the competitor, or risks confusion between brands"
+    basis: "Business Protection from Misleading Marketing Regulations 2008, regulation 4 (conditions for lawful comparative advertising)"
+    source_hint: "legislation.gov.uk uksi 2008 1276 regulation 4"
+    remediable: true
+    protected_basis: false
+
+  - id: UK-VIOL-01
+    dimension: violence_and_weapons
+    class: legal
+    severity: 55
+    trigger: "Gratuitous or realistic depiction of violence in an advertisement without clear editorial justification for the broadcast context"
+    basis: "Ofcom Broadcasting Code Rule 2.3 (potentially offensive material, including violence, must be justified by the context)"
+    source_hint: "ofcom.org.uk broadcasting code section two"
+    remediable: true
+    protected_basis: false
+
+  - id: UK-CHILD-01
+    dimension: children_and_minors
+    class: policy
+    severity: 50
+    trigger: "Advertisement directed at children exploits their inexperience or credulity, or exerts undue pressure on them to purchase or to ask a parent to purchase"
+    basis: "CAP Code section 5 (Children): rules on advertising directed at, or likely to appeal particularly to, children, self-regulatory and administered by the ASA"
+    source_hint: "asa.org.uk cap code section 5 children"
+    remediable: true
+    protected_basis: false

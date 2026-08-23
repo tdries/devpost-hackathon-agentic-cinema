@@ -1,0 +1,74 @@
+market: ID
+name: Indonesia
+regulators: [KPI, Komdigi]
+pre_clearance: none        # none | advisory | mandatory
+rules:
+  - id: ID-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 90
+    trigger: "Advertisement promoting or normalizing consumption of alcoholic beverages"
+    basis: "Undang-Undang No. 32 Tahun 2002 tentang Penyiaran (Broadcasting Law), art. 46 (commercial advertisements may not promote the form of tobacco, alcoholic beverages, or addictive substances); KPI Pedoman Perilaku Penyiaran dan Standar Program Siaran (P3SPS) Pasal 26 ayat 1 (broadcasts may not justify or normalize consumption of alcoholic beverages, tobacco or NAPZA as ordinary)"
+    source_hint: "kpi.go.id p3sps pasal 26"
+    remediable: true
+    protected_basis: false
+
+  - id: ID-TOB-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 65
+    trigger: "Tobacco advertisement broadcast outside the 21:30-05:00 window, or depicting the physical act of smoking or the cigarette form"
+    basis: "Peraturan Pemerintah No. 109 Tahun 2012, art. 29 (tobacco product advertising on broadcast media restricted to 21:30-05:00 local time)"
+    source_hint: "peraturan.bpk.go.id pp 109 2012 pasal 29"
+    remediable: true
+    protected_basis: false
+
+  - id: ID-MOD-01
+    dimension: modesty_dress_body
+    class: legal
+    severity: 75
+    trigger: "Exploitative or sensual portrayal of the body inconsistent with decency and modesty standards"
+    basis: "KPI Pedoman Perilaku Penyiaran dan Standar Program Siaran (P3SPS), decency and modesty (kesopanan dan kesusilaan) provisions, issued under Undang-Undang No. 32 Tahun 2002 tentang Penyiaran"
+    source_hint: "kpi.go.id p3sps kesusilaan"
+    remediable: true
+    protected_basis: false
+
+  - id: ID-REL-01
+    dimension: religious_symbols_practices
+    class: legal
+    severity: 85
+    trigger: "Content that demeans or is disrespectful toward a religious value or practice recognized in Indonesia"
+    basis: "KPI P3SPS religious-respect provisions issued under Undang-Undang No. 32 Tahun 2002 tentang Penyiaran; KUHP (Criminal Code) art. 156a (penodaan agama, religious blasphemy)"
+    source_hint: "kpi.go.id p3sps; kuhp pasal 156a"
+    remediable: true
+    protected_basis: false
+
+  - id: ID-GAM-01
+    dimension: gambling_and_finance
+    class: legal
+    severity: 92
+    trigger: "Advertisement or promotion of gambling, betting or an online gambling platform"
+    basis: "KUHP (Criminal Code) art. 303 (gambling is a criminal offense in Indonesia); advertising or facilitating access to gambling is a specific enforcement priority of Komdigi (formerly Kominfo) site-blocking actions"
+    source_hint: "kuhp pasal 303 perjudian"
+    remediable: true
+    protected_basis: false
+
+  - id: ID-CHILD-01
+    dimension: children_and_minors
+    class: legal
+    severity: 60
+    trigger: "Content likely to negatively influence children, broadcast during child-viewing hours"
+    basis: "KPI P3SPS child-protection broadcast-time provisions, issued under Undang-Undang No. 32 Tahun 2002 tentang Penyiaran"
+    source_hint: "kpi.go.id p3sps perlindungan anak"
+    remediable: true
+    protected_basis: false
+
+  - id: ID-GEND-01
+    dimension: gender_portrayal
+    class: offence
+    severity: 30
+    trigger: "Advertisement portrays gender roles in a way that conflicts with prevailing Indonesian social and religious norms"
+    basis: "No specific numbered P3SPS article targets gender-role portrayal; it falls under KPI's general decency and social-norms mandate, applied at the regulator's discretion rather than through a separately citable provision"
+    source_hint: ""
+    remediable: true
+    protected_basis: false
