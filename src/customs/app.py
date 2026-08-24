@@ -96,6 +96,16 @@ _HERE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(_HERE / "templates"))
 app.mount("/static", StaticFiles(directory=str(_HERE / "static")), name="static")
 
+# Cache-buster for the two static assets, stamped into their URLs by
+# base.html. Browsers heuristically cache /static without revalidating, so a
+# deploy that changes the stylesheet would otherwise leave returning visitors
+# clicking new buttons against old CSS (which is exactly what happened when
+# the style modes shipped). The newest mtime of the two files changes on
+# every image build that touches them, and that is the only time it needs to.
+templates.env.globals["static_v"] = str(int(max(
+    (_HERE / "static" / name).stat().st_mtime
+    for name in ("customs.css", "customs.js"))))
+
 # Scratch space for the frames and audio remediation extracts. Same default
 # the CLI uses (scripts/run_pipeline.py --workdir). A clearance run gets its
 # own runs/work/{run_id} under here (see _clearance_job): the ingest and

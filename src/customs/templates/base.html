@@ -6,7 +6,7 @@
 <title>{% block title %}Customs Launch Control{% endblock %}</title>
 <script>/* apply the saved style mode before first paint so it never flashes */
 try { var _t = localStorage.getItem("customs-theme"); if (_t) { document.documentElement.setAttribute("data-theme", _t); } } catch (e) {}</script>
-<link rel="stylesheet" href="/static/customs.css">
+<link rel="stylesheet" href="/static/customs.css?v={{ static_v }}">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0d10'/%3E%3Crect x='10' y='10' width='12' height='12' fill='%23ff9d2e' transform='rotate(45 16 16)'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -37,6 +37,6 @@ try { var _t = localStorage.getItem("customs-theme"); if (_t) { document.documen
     <span class="label">Grafana is upstream of the work, not a report produced afterwards</span>
   </div>
 </footer>
-<script src="/static/customs.js" defer></script>
+<script src="/static/customs.js?v={{ static_v }}" defer></script>
 </body>
 </html>
