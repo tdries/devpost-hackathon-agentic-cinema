@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Customs Operator Manual</title>
+<style>
+@page { size: A4 portrait; margin: 0; }
+:root {
+  --signal: #E8820C;
+  --signal-deep: #B96B13;
+  --ink: #0F1418;
+  --ink-2: #45535E;
+  --ink-3: #75858F;
+  --hairline: #D9E1E6;
+  --panel: #F4F7F9;
+  --dark: #0A0D10;
+  --dark-2: #11161C;
+  --cleared: #1E9E5C;
+  --blocked: #D93848;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--sans); color: var(--ink); font-size: 10.5pt; line-height: 1.55; }
+.page {
+  width: 210mm; height: 297mm;
+  padding: 18mm 18mm 20mm 18mm;
+  page-break-after: always;
+  position: relative; overflow: hidden;
+  background: #fff;
+}
+.footer {
+  position: absolute; bottom: 10mm; left: 18mm; right: 18mm;
+  display: flex; justify-content: space-between;
+  font-family: var(--mono); font-size: 7.5pt; color: var(--ink-3);
+  border-top: 1px solid var(--hairline); padding-top: 3mm;
+}
+.eyebrow { font-family: var(--mono); font-size: 8.5pt; font-weight: 700; letter-spacing: 0.18em; color: var(--signal); text-transform: uppercase; margin-bottom: 4mm; }
+h1 { font-size: 24pt; font-weight: 800; letter-spacing: -0.01em; line-height: 1.15; margin-bottom: 5mm; }
+h2 { font-size: 12.5pt; font-weight: 700; margin: 6mm 0 2.5mm; }
+p { margin-bottom: 3mm; color: var(--ink-2); }
+p.lead { font-size: 11.5pt; color: var(--ink); }
+strong { color: var(--ink); }
+table { width: 100%; border-collapse: collapse; margin: 3mm 0 4mm; font-size: 9pt; }
+th { text-align: left; font-family: var(--mono); font-size: 7.5pt; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-3); padding: 2mm 2.5mm; border-bottom: 1.5px solid var(--ink); }
+td { padding: 2mm 2.5mm; border-bottom: 1px solid var(--hairline); vertical-align: top; color: var(--ink-2); }
+td:first-child { color: var(--ink); font-weight: 600; }
+code, .code-inline { font-family: var(--mono); font-size: 8.5pt; background: var(--panel); padding: 0.5mm 1.5mm; border-radius: 2px; color: var(--ink); }
+pre { font-family: var(--mono); font-size: 8pt; line-height: 1.6; background: var(--dark); color: #DEE7EE; padding: 4mm 5mm; border-radius: 3px; margin: 3mm 0 4mm; white-space: pre-wrap; }
+pre .c { color: #6B7F8E; }
+.screenshot { width: 100%; border: 1px solid var(--hairline); border-radius: 3px; box-shadow: 0 1px 4px rgba(15,20,24,0.10); display: block; }
+.caption { font-family: var(--mono); font-size: 7.5pt; color: var(--ink-3); margin: 2mm 0 4mm; }
+.pull { border-left: 3px solid var(--signal); padding: 2mm 0 2mm 5mm; margin: 4mm 0; font-size: 12pt; font-weight: 600; color: var(--ink); line-height: 1.4; }
+.cards { display: flex; gap: 4mm; margin: 4mm 0; }
+.card { flex: 1; background: var(--panel); border: 1px solid var(--hairline); border-radius: 3px; padding: 4mm; }
+.card .n { font-family: var(--mono); font-size: 17pt; font-weight: 800; color: var(--signal-deep); }
+.card .d { font-size: 8pt; color: var(--ink-2); margin-top: 1mm; line-height: 1.4; }
+.steps { counter-reset: st; margin: 3mm 0; }
+.step { display: flex; gap: 4mm; margin-bottom: 3mm; }
+.step .num { counter-increment: st; flex: 0 0 7mm; height: 7mm; border-radius: 50%; background: var(--dark); color: #fff; font-family: var(--mono); font-size: 9pt; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.step .num::before { content: counter(st); }
+.step .body { flex: 1; padding-top: 0.8mm; }
+.step .body strong { display: block; }
+.step .body span { font-size: 9.5pt; color: var(--ink-2); }
+ul.plain { list-style: none; }
+ul.plain li { padding-left: 6mm; position: relative; margin-bottom: 2.2mm; color: var(--ink-2); }
+ul.plain li::before { content: "◆"; position: absolute; left: 0; top: 0.2mm; color: var(--signal); font-size: 7pt; }
+.two-col { display: flex; gap: 5mm; }
+.two-col > div { flex: 1; }
+
+/* cover + closing */
+.cover, .closing {
+  width: 210mm; height: 297mm; page-break-after: always;
+  background: radial-gradient(150mm 90mm at 80% 0%, rgba(255,157,46,0.14), transparent 65%),
+              radial-gradient(120mm 80mm at 5% 15%, rgba(60,130,190,0.10), transparent 60%),
+              var(--dark);
+  color: #E8EEF4; position: relative; overflow: hidden;
+  padding: 24mm;
+}
+.closing { page-break-after: auto; }
+.cover .bar, .closing .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 4mm; background: linear-gradient(90deg, var(--signal), #B96B13); }
+.diamond { width: 26mm; height: 26mm; margin-bottom: 14mm; }
+.cover h1 { font-family: var(--mono); font-size: 40pt; letter-spacing: 0.14em; color: #fff; margin: 0 0 4mm; }
+.cover .sub { font-size: 15pt; color: #9DAFBE; max-width: 140mm; line-height: 1.5; }
+.cover .meta { position: absolute; bottom: 18mm; left: 24mm; right: 24mm; font-family: var(--mono); font-size: 9pt; color: #63768A; display: flex; justify-content: space-between; border-top: 1px solid #2A343E; padding-top: 5mm; }
+.toc-row { display: flex; align-items: baseline; gap: 4mm; padding: 2.6mm 0; border-bottom: 1px solid var(--hairline); }
+.toc-row .ch { font-family: var(--mono); font-size: 9pt; font-weight: 700; color: var(--signal-deep); flex: 0 0 10mm; }
+.toc-row .t { font-weight: 700; color: var(--ink); flex: 0 0 52mm; font-size: 10pt; }
+.toc-row .d { font-size: 8.5pt; color: var(--ink-3); flex: 1; }
+.toc-row .pg { font-family: var(--mono); font-size: 9pt; color: var(--ink-2); }
+.closing .tagline { font-size: 28pt; font-weight: 800; color: #fff; line-height: 1.25; margin: 30mm 0 10mm; max-width: 150mm; }
+.closing .links { font-family: var(--mono); font-size: 10pt; color: #9DAFBE; line-height: 2.1; }
+.closing .links strong { color: #FF9D2E; font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<section class="cover">
+  <svg class="diamond" viewBox="0 0 100 100"><rect x="25" y="25" width="50" height="50" fill="#FF9D2E" transform="rotate(45 50 50)"/><rect x="35" y="35" width="30" height="30" fill="#0A0D10" transform="rotate(45 50 50)"/><rect x="42.5" y="42.5" width="15" height="15" fill="#FF9D2E" transform="rotate(45 50 50)"/></svg>
+  <h1>CUSTOMS</h1>
+  <div class="sub">Operator manual. An agentic launch command center that clears your commercial for fifteen markets, cites the statute behind every finding, and re-renders what fails.</div>
+  <div class="meta">
+    <span>v1.0 / AUGUST 2026</span>
+    <span>AGENTIC CINEMA / GRAFANA LABS TRACK</span>
+    <span>TIM DRIES</span>
+  </div>
+  <div class="bar"></div>
+</section>
+
+<!-- TOC -->
+<div class="page">
+  <div class="eyebrow">Contents</div>
+  <h1>What is in this manual</h1>
+  <div class="toc-row"><span class="ch">01</span><span class="t">The problem</span><span class="d">one spot, dozens of markets, the public as QA</span><span class="pg">3</span></div>
+  <div class="toc-row"><span class="ch">02</span><span class="t">What Customs does</span><span class="d">decision plus localized master, by the numbers</span><span class="pg">4</span></div>
+  <div class="toc-row"><span class="ch">03</span><span class="t">Architecture</span><span class="d">observe once, judge per market; the seven-agent crew</span><span class="pg">5</span></div>
+  <div class="toc-row"><span class="ch">04</span><span class="t">Components</span><span class="d">every module, its role, and where it lives</span><span class="pg">6</span></div>
+  <div class="toc-row"><span class="ch">05</span><span class="t">Launch Board</span><span class="d">market tiles, verdict, embedded instrument panel</span><span class="pg">7</span></div>
+  <div class="toc-row"><span class="ch">06</span><span class="t">Mission Feed</span><span class="d">the crew's own event log over SSE</span><span class="pg">8</span></div>
+  <div class="toc-row"><span class="ch">07</span><span class="t">Market Room</span><span class="d">statutes, citations, and the Guard's human decisions</span><span class="pg">9</span></div>
+  <div class="toc-row"><span class="ch">08</span><span class="t">Cutting Room</span><span class="d">original vs localized master, change records</span><span class="pg">10</span></div>
+  <div class="toc-row"><span class="ch">09</span><span class="t">The remediation loop</span><span class="d">alert, edit, verify, resolve; before and after</span><span class="pg">11</span></div>
+  <div class="toc-row"><span class="ch">10</span><span class="t">The Grafana surface</span><span class="d">six dashboards, alert rules, three directions of traffic</span><span class="pg">12</span></div>
+  <div class="toc-row"><span class="ch">11</span><span class="t">Market packs</span><span class="d">the rule format and how to add market sixteen</span><span class="pg">13</span></div>
+  <div class="toc-row"><span class="ch">12</span><span class="t">Setup and deployment</span><span class="d">cold clone to running instance, local and Cloud Run</span><span class="pg">14</span></div>
+  <div class="toc-row"><span class="ch">13</span><span class="t">Limits and resources</span><span class="d">honest limits, links, repository layout</span><span class="pg">15</span></div>
+  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>02</span></div>
+</div>
+
+<!-- 01 PROBLEM -->
+<div class="page">
+  <div class="eyebrow">01 / The problem</div>
+  <h1>One spot, dozens of markets, and the public as your QA team</h1>
+  <p class="lead">Global brands ship a single commercial into dozens of markets and check maybe six of them. The defence today is a cultural consultant, a focus group and luck.</p>
+  <p>The regulated half is concrete and already carries an invoice. France bans alcohol advertising on television under Loi Evin, and the Toubon law constrains on-screen language. Quebec bans advertising directed at children under 13 outright. The UK requires pre-clearance of every TV ad through Clearcast. Nigeria requires ARCON pre-vetting. Direct-to-consumer pharma advertising is lawful in two countries on earth.</p>
+  <p>The unregulated half costs more. Pepsi and Kendall Jenner. Dolce &amp; Gabbana in China. H&amp;M's "coolest monkey" hoodie. Burger King Vietnam eating with chopsticks. Every one of those was caught by the public rather than by a process, at a cost measured in tens of millions.</p>
+  <table>
+    <tr><th></th><th>Today</th><th>With Customs</th></tr>
+    <tr><td>Coverage</td><td>A handful of markets, manually</td><td>15 markets in one run, extensible by YAML</td></tr>
+    <tr><td>Evidence</td><td>A consultant's opinion</td><td>A statute citation on every finding, checked live</td></tr>
+    <tr><td>Timeline</td><td>Days to weeks</td><td>Minutes</td></tr>
+    <tr><td>Monitoring</td><td>A PDF report</td><td>A Grafana panel the crew builds and updates itself</td></tr>
+    <tr><td>The fix</td><td>Re-edit by an agency</td><td>Re-letter, re-prop, re-voice; verified by re-observation</td></tr>
+    <tr><td>The hard cases</td><td>Silently "fixed"</td><td>Refused, cited, routed to a human</td></tr>
+  </table>
+  <div class="pull">Pilots get a pre-flight checklist and an instrument panel. Ad launches get luck. Nobody has an instrument for this. Customs is the instrument.</div>
+  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>03</span></div>
+</div>
+
+<!-- 02 WHAT IT DOES -->
+<div class="page">
+  <div class="eyebrow">02 / What Customs does</div>
+  <h1>A decision, and the version that can ship</h1>
+  <p class="lead">You load a commercial and a target market list, and you watch it clear customs in real time. The output is two things: a decision (can this air here, and on what evidence) and a localized master (the version that can).</p>
+  <div class="cards">
+    <div class="card"><div class="n">15</div><div class="d">market packs spanning distinct regulatory and cultural regimes, from Loi Evin to CONAR to RTUK</div></div>
+    <div class="card"><div class="n">114</div><div class="d">rules, every one naming a real statute, broadcaster code or documented sensitivity in its basis</div></div>
+    <div class="card"><div class="n">18</div><div class="d">observation dimensions in the fixed taxonomy, from alcohol to photosensitivity to gestures</div></div>
+  </div>
+  <div class="cards">
+    <div class="card"><div class="n">5/6</div><div class="d">planted landmines caught at the milestone gate, zero empty rationales, zero false positives on control shots</div></div>
+    <div class="card"><div class="n">339</div><div class="d">offline tests green; a live suite runs the same checks against real Gemini and a real Grafana stack</div></div>
+    <div class="card"><div class="n">3</div><div class="d">directions of Grafana traffic: the crew writes in, Grafana triggers the crew, the crew reads back</div></div>
+  </div>
+  <h2>The demo asset failed by its own maker</h2>
+  <p>The test commercial was generated with Veo and deliberately loaded with eight documented landmines: a wine toast, an English-only handwritten tagline, beach swimwear, a strobe transition, a comparative claim, a same-sex couple holding hands, and two clean control shots. The ground truth lives in <code>docs/samples/landmines.yaml</code>. Google's own tools made the ad, and then failed it.</p>
+  <h2>What it deliberately does not do</h2>
+  <p>When a rule's basis targets a protected characteristic (sexual orientation, gender identity, religion, race, ethnicity, disability, caste), the Guard takes auto-remediation off the table, states the reason, and renders the finding as a human decision. Customs will tell you that you cannot ship into a market without censoring who appears in your ad, and it will not do that for you.</p>
+  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>04</span></div>
+</div>
+
+<!-- 03 ARCHITECTURE -->
+<div class="page">
+  <div class="eyebrow">03 / Architecture</div>
+  <h1>Observe once, judge per market</h1>
+  <p class="lead">The architectural decision everything hangs off: a multimodal Analyst watches the film one time and emits neutral, timecoded observations. Per-market Adjudicators judge that single fact set against their own rulebook, in parallel.</p>
+  <pre>
+video ──> INGEST ──> ANALYST ──> ADJUDICATORS (x15, parallel) ──> GUARD ──> PUBLISHER ──> Grafana
+              <span class="c">ffmpeg + OCR    neutral facts     obs x pack x citation      rule layer   MCP + OTLP + Loki</span>
+
+Grafana alert ──> webhook ──> REMEDIATOR ──> VERIFIER ──> metric drops ──> alert resolves
+                     <span class="c">Cloud Run     edit + record   re-observe changed shots only</span></pre>
+  <p>A finding is always a join: <strong>observation x market rule x citation</strong>. The expensive multimodal pass happens once, not once per market; adjudicators are cheap, parallel, text-only agents; and when a brand disputes a finding, "is this fact wrong" and "is this rule wrong" are separable questions.</p>
+  <table>
+    <tr><th>Agent</th><th>Input</th><th>Output</th></tr>
+    <tr><td>Ingest</td><td>video file</td><td>shot table, keyframes, audio, transcript, OCR text</td></tr>
+    <tr><td>Analyst</td><td>shot, keyframes, audio</td><td>neutral observations across 18 dimensions, no verdicts</td></tr>
+    <tr><td>Adjudicator</td><td>observations + one market pack</td><td>findings with class, severity, rationale, grounded citation</td></tr>
+    <tr><td>Guard</td><td>findings</td><td>classified findings; protected-basis remediation blocked</td></tr>
+    <tr><td>Publisher</td><td>findings</td><td>Grafana metrics, logs, dashboards, annotations, alert rules</td></tr>
+    <tr><td>Remediator</td><td>one alerting finding</td><td>edited media segment plus a change record</td></tr>
+    <tr><td>Verifier</td><td>localized master</td><td>the finding cleared, or reopened, with evidence</td></tr>
+  </table>
+  <p>The Verifier closing back onto the Analyst is what makes this a crew rather than a pipeline: remediation is not trusted until the same instrument that found the problem agrees it is gone. Unsourced citations cap a finding at severity 40 and never trigger remediation or block a market.</p>
+  <h2>Vendor rule, enforced</h2>
+  <p>No Anthropic, OpenAI, AWS or Microsoft model, agent framework or AI API appears at runtime or in the dependency tree; the contest rule is enforced by <code>tests/test_no_forbidden_vendors.py</code>. Models are Gemini 3.x (vision, text, grounding), Gemini image editing, Gemini TTS and Veo, all via Vertex AI. Agents are coded agents on Google ADK.</p>
+  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>05</span></div>
+</div>
+
+<!-- 04 COMPONENTS -->
+<div class="page">
+  <div class="eyebrow">04 / Components</div>
+  <h1>Every module and where it lives</h1>
+  <table>
+    <tr><th>Component</th><th>Role</th><th>Path</th></tr>
+    <tr><td>Ingest</td><td>ffmpeg shot detection, keyframes, audio; Gemini transcription and OCR</td><td><code>src/customs/media.py</code></td></tr>
+    <tr><td>Analyst</td><td>one multimodal pass per shot, neutral observations, no verdicts</td><td><code>src/customs/analyst.py</code></td></tr>
+    <tr><td>Adjudicators</td><td>observations x pack, Google Search grounding for citations</td><td><code>src/customs/adjudicate.py</code></td></tr>
+    <tr><td>Guard</td><td>pure rule layer; protected-basis and offence-class blocking</td><td><code>src/customs/guard.py</code></td></tr>
+    <tr><td>Telemetry</td><td>OTLP metrics to Mimir, log push to Loki, timecode mapping</td><td><code>src/customs/telemetry.py</code></td></tr>
+    <tr><td>Grafana ops</td><td>MCP client with HTTP fallback; dashboards, annotations, alerts, embeds</td><td><code>src/customs/grafana_ops.py</code></td></tr>
+    <tr><td>ADK crew</td><td>the agent graph; the one module importing google.adk</td><td><code>src/customs/crew.py</code></td></tr>
+    <tr><td>Remediator</td><td>re-lettering, prop substitution, re-voicing; change records</td><td><code>src/customs/remediate.py</code></td></tr>
+    <tr><td>Verifier</td><td>re-runs the instrument on changed shots; resolves or reopens</td><td><code>src/customs/verify.py</code></td></tr>
+    <tr><td>Console</td><td>FastAPI + Jinja2 + SSE; four screens; alert webhook</td><td><code>src/customs/app.py</code></td></tr>
+    <tr><td>Run store</td><td>SQLite run store and mission event bus</td><td><code>src/customs/store.py</code></td></tr>
+    <tr><td>Market packs</td><td>15 YAML packs, 114 rules, plus the dimension taxonomy</td><td><code>markets/</code></td></tr>
+    <tr><td>Dashboards</td><td>the six dashboard definitions the Publisher provisions</td><td><code>grafana/dashboards/</code></td></tr>
+    <tr><td>Pipeline CLI</td><td>end-to-end clearance from the terminal</td><td><code>scripts/run_pipeline.py</code></td></tr>
+    <tr><td>Test ad generator</td><td>Veo commercial with documented landmines</td><td><code>scripts/make_test_ad.py</code></td></tr>
+    <tr><td>Deployment</td><td>Cloud Run, single instance, Secret Manager</td><td><code>Dockerfile</code>, <code>scripts/deploy.sh</code></td></tr>
+  </table>
+  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>06</span></div>
+</div>
+
+<!-- 05 LAUNCH BOARD -->
+<div class="page">
+  <div class="eyebrow">05 / Walkthrough</div>
+  <h1>Launch Board</h1>
+  <p class="lead">The front door. Upload an ad, pick markets, and the board is the campaign's go or no-go.</p>
+  <img class="screenshot" src="../screenshots/04-launch-board-final.png" alt="Launch Board">
+  <div class="caption">A finished FR / SA / US run: one cleared, two blocked, verdict NO GO.</div>
+  <ul class="plain">
+    <li><strong>Verdict and headline.</strong> "Cleared for launch in 1 of 3 markets" is derived from findings, never modelled: any unresolved legal finding at severity 70 or above blocks a market; policy findings at 70+ mark it at risk.</li>
+    <li><strong>Market tiles.</strong> Pending, cleared, at risk or blocked, flipping live as each adjudicator returns. Each tile counts findings and how many need a human.</li>
+    <li><strong>Instrument panel.</strong> The embedded Grafana panels underneath (market clearance status, risk-by-timecode heatmap) are the ones the Publisher built during this very run.</li>
+  </ul>
+  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>07</span></div>
+</div>
+
+<!-- 06 MISSION FEED -->
+<div class="page">
+  <div class="eyebrow">06 / Walkthrough</div>
+  <h1>Mission Feed</h1>
+  <p class="lead">Every move the crew made, in the order it made it, streamed over server-sent events straight out of the run store. Not a spinner.</p>
+  <img class="screenshot" src="../screenshots/05-mission-feed.png" alt="Mission Feed">
+  <div class="caption">Adjudicator citation checks, clearance verdicts, MCP tool calls, the remediation instruction, the Verifier's re-observation.</div>
+  <ul class="plain">
+    <li><strong>Real tool calls.</strong> <code>mcp update_dashboard('customs-overview')</code> and <code>push_run_telemetry</code> are the actual operations, not decoration.</li>
+    <li><strong>Stage errors surface here too.</strong> A clearance tool that silently skips a shot is worse than one that admits it; failed stages are published as <code>customs_stage_error</code> and rendered, never swallowed.</li>
+  </ul>
+  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>08</span></div>
+</div>
+
+<!-- 07 MARKET ROOM -->
+<div class="page">
+  <div class="eyebrow">07 / Walkthrough</div>
+  <h1>Market Room</h1>
+  <p class="lead">One market in full: regulator, pre-clearance regime, every finding with its statute and a live citation link, and the Guard's blocked items presented as human decisions.</p>
+  <img class="screenshot" src="../screenshots/06-market-room-sa.png" alt="Market Room for Saudi Arabia">
+  <div class="caption">Saudi Arabia: 11 findings, and the Guard holding SA-LGBT-01 for a human, with the regulation cited.</div>
+  <ul class="plain">
+    <li><strong>Human decision required.</strong> SA-LGBT-01 fires on a same-sex couple holding hands. The rule's basis targets a protected characteristic, so the Guard blocks auto-remediation and offers three honest actions: remediate anyway (a human choice), send to legal review, accept the risk.</li>
+    <li><strong>Every finding cites.</strong> Class, severity, timecode window, sourced flag, and the underlined citation resolved through Google Search grounding at adjudication time.</li>
+  </ul>
+  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>09</span></div>
+</div>
+
+<!-- 08 CUTTING ROOM -->
+<div class="page">
+  <div class="eyebrow">08 / Walkthrough</div>
+  <h1>Cutting Room</h1>
+  <p class="lead">The original, the localized master, and what moved between them. One edited master per market, written by the Remediator and confirmed by the Verifier.</p>
+  <img class="screenshot" src="../screenshots/07-cutting-room.png" alt="Cutting Room">
+  <div class="caption">FR master beside the original; both players open on the second that changed, with the change record underneath.</div>
+  <ul class="plain">
+    <li><strong>Nothing is edited silently.</strong> Every edit produces a change record with the source finding, the method, the frames touched, and before and after stills.</li>
+    <li><strong>Play both together</strong> locks the two players so an operator can eyeball that only the offending element moved.</li>
+  </ul>
+  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>10</span></div>
+</div>
+
+<!-- 09 REMEDIATION LOOP -->
+<div class="page">
+  <div class="eyebrow">09 / The remediation loop</div>
+  <h1>Alert, edit, verify, resolve</h1>
+  <p class="lead">The French pack flags the handwritten English tagline under the Toubon law (FR-LANG-01). What happens next is the whole product in one loop.</p>
+  <div class="two-col">
+    <div>
+      <img class="screenshot" src="../screenshots/02-remediation-before.png" alt="Before remediation">
+      <div class="caption">BEFORE / "Happiness is one sip away", English only.</div>
+    </div>
+    <div>
+      <img class="screenshot" src="../screenshots/03-remediation-after.png" alt="After remediation">
+      <div class="caption">AFTER / re-lettered in French, same paper, same light.</div>
+    </div>
+  </div>
+  <div class="steps">
+    <div class="step"><div class="num"></div><div class="body"><strong>The alert fires.</strong><span><code>customs_blocking_finding</code> trips on the FR series; Grafana webhooks the Cloud Run service. The webhook looks the finding up in the run store; it never trusts the payload body.</span></div></div>
+    <div class="step"><div class="num"></div><div class="body"><strong>The Remediator plans and edits.</strong><span>It reads campaign history over MCP first, then instructs Gemini image editing to translate the text in context: same handwriting, same colour, same position, change nothing except the words.</span></div></div>
+    <div class="step"><div class="num"></div><div class="body"><strong>ffmpeg recomposites.</strong><span>The edited frames are tracked across the shot and rendered into a localized FR master; a change record is written.</span></div></div>
+    <div class="step"><div class="num"></div><div class="body"><strong>The Verifier re-observes.</strong><span>The same Analyst and Adjudicator run again on the changed shots only. If the rule no longer fires, the finding resolves; anything new the edit surfaced is recorded and guarded like any other finding.</span></div></div>
+    <div class="step"><div class="num"></div><div class="body"><strong>Grafana closes its own alert.</strong><span>The metric drops, the alert resolves, and the resolving annotation lands on the run's timeline. The loop is closed by evidence.</span></div></div>
+  </div>
+  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>11</span></div>
+</div>
+
+<!-- 10 GRAFANA -->
+<div class="page">
+  <div class="eyebrow">10 / The Grafana surface</div>
+  <h1>Grafana is a participant, not a picture</h1>
+  <p class="lead">Traffic runs in three directions, which is what makes the integration structural rather than decorative.</p>
+  <div class="steps">
+    <div class="step"><div class="num"></div><div class="body"><strong>The crew writes into Grafana.</strong><span>The Publisher provisions six dashboards and the alert rules over the Grafana MCP server, pushes <code>customs_risk</code> per video-second to Mimir over OTLP, finding detail to Loki with labels <code>{asset, market, class, dimension, rule_id}</code>, and writes every finding as an annotation.</span></div></div>
+    <div class="step"><div class="num"></div><div class="body"><strong>Grafana triggers the crew.</strong><span>Alert rules fire a webhook contact point aimed at the Cloud Run service, which wakes the Remediator. Grafana sits upstream of the work, not in a report after it.</span></div></div>
+    <div class="step"><div class="num"></div><div class="body"><strong>The crew reads Grafana back.</strong><span>Before remediating, the Remediator queries campaign history over MCP: has this brand tripped this rule before, and what was done about it.</span></div></div>
+  </div>
+  <table>
+    <tr><th>Dashboard</th><th>What it shows</th></tr>
+    <tr><td>Clearance Overview</td><td>per-market status tiles, blocking counts, worst offending dimension</td></tr>
+    <tr><td>Timeline</td><td>market by timecode heatmap; the centrepiece panel</td></tr>
+    <tr><td>Findings</td><td>rule, class, severity, citation link, sourced flag, from Loki</td></tr>
+    <tr><td>Market Detail</td><td>one market: regulator, rules, findings with statutes</td></tr>
+    <tr><td>Remediation</td><td>changes, before and after frames, blocked items and why</td></tr>
+    <tr><td>Campaign History</td><td>across assets and time; has this brand tripped this rule before</td></tr>
+  </table>
+  <h2>The timecode trick</h2>
+  <p>Prometheus rejects backdated samples, so each run maps its timecode onto the wall clock at run start: video second <code>n</code> is written at <code>t0 + n</code>, and every panel is pinned to the run's window. The x-axis reads as the timecode because it is the timecode, offset by a constant. The run's <code>t0</code> rides on the run record and on every Loki line so panels and drill-downs agree.</p>
+  <p>Embeds use Grafana public dashboards (tokenised <code>d-solo</code> URLs) with a server-side image-render fallback behind one interface, because an iframe cannot carry a bearer token.</p>
+  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>12</span></div>
+</div>
+
+<!-- 11 MARKET PACKS -->
+<div class="page">
+  <div class="eyebrow">11 / Market packs</div>
+  <h1>A market is a YAML file, not code</h1>
+  <p class="lead">Fifteen packs with real citations beat a hundred and ninety-five without. The pack format is the extension point.</p>
+  <pre>market: FR
+name: France
+regulators: [ARPP, Arcom]
+pre_clearance: advisory        <span class="c"># none | advisory | mandatory</span>
+rules:
+  - id: FR-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: legal               <span class="c"># legal | policy | offence</span>
+    severity: 95
+    trigger: "Depiction of alcoholic drink in an advertisement"
+    basis: "Loi Evin, Code de la sante publique art. L3323-2"
+    source_hint: "legifrance.gouv.fr L3323-2"
+    remediable: true</pre>
+  <h2>Adding market sixteen</h2>
+  <div class="steps">
+    <div class="step"><div class="num"></div><div class="body"><strong>Copy a pack.</strong><span>Start from the closest regulatory regime in <code>markets/</code>.</span></div></div>
+    <div class="step"><div class="num"></div><div class="body"><strong>Write real rules.</strong><span>Every rule needs a globally unique <code>id</code>, a <code>dimension</code> from <code>markets/_taxonomy.yaml</code>, a class, a severity, and a <code>basis</code> naming the actual statute or code. Verify each basis with a grounded search while writing.</span></div></div>
+    <div class="step"><div class="num"></div><div class="body"><strong>Mark protected bases honestly.</strong><span>Set <code>protected_basis: true</code> where a rule targets who someone is. The Guard reads only that flag, never model output.</span></div></div>
+    <div class="step"><div class="num"></div><div class="body"><strong>Drop it in.</strong><span>The loader validates on startup; the market appears in the console on the next run. The pack test suite enforces unique ids, minimum rule counts, and that at least 40 percent of all rules are legal-class with a statute.</span></div></div>
+  </div>
+  <p>The launch pack spans distinct regimes rather than the largest economies: US, UK, France, Germany, Quebec, Brazil, Saudi Arabia, UAE, Turkey, India, China, Indonesia, Japan, Thailand, Nigeria.</p>
+  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>13</span></div>
+</div>
+
+<!-- 12 SETUP -->
+<div class="page">
+  <div class="eyebrow">12 / Setup and deployment</div>
+  <h1>Cold clone to running instance</h1>
+  <p><strong>Prerequisites:</strong> Python 3.12; ffmpeg on PATH; a Google Cloud project with Vertex AI enabled and <code>gcloud auth application-default login</code> done; a Grafana Cloud stack (free tier) with a service-account token (Admin) and an access-policy token (<code>metrics:write</code>, <code>logs:write</code>); the mcp-grafana v1.1.0 release binary at <code>bin/mcp-grafana</code>.</p>
+  <pre>git clone https://github.com/tdries/customs.git &amp;&amp; cd customs
+
+<span class="c"># 1. environment</span>
+python3.12 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+cp .env.example .env          <span class="c"># fill in Grafana + Google Cloud values</span>
+
+<span class="c"># 2. provision the Grafana surface (idempotent)</span>
+PYTHONPATH=src .venv/bin/python scripts/provision_grafana.py
+
+<span class="c"># 3. a clearance from the terminal</span>
+PYTHONPATH=src .venv/bin/python scripts/run_pipeline.py docs/samples/test_ad.mp4 FR SA US
+
+<span class="c"># 4. or run Launch Control</span>
+PYTHONPATH=src .venv/bin/uvicorn customs.app:app --reload
+<span class="c"># open http://127.0.0.1:8000</span>
+
+<span class="c"># 5. tests: offline by default, -m live hits Gemini and Grafana</span>
+.venv/bin/python -m pytest -q</pre>
+  <h2>Cloud Run</h2>
+  <pre>scripts/deploy.sh             <span class="c"># idempotent: APIs, secrets, IAM, deploy, webhook wiring</span></pre>
+  <p>The deploy script enables the required GCP APIs, stores the two Grafana tokens in Secret Manager (piped on stdin, never in shell history), grants the runtime service account only <code>aiplatform.user</code> plus accessor on those two secrets, deploys a single instance (SQLite and in-process locks are a stated demo-grade tradeoff), and repoints the Grafana webhook contact point at the new service URL. It prints the service URL as its last line.</p>
+  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>14</span></div>
+</div>
+
+<!-- 13 LIMITS + RESOURCES -->
+<div class="page">
+  <div class="eyebrow">13 / Limits and resources</div>
+  <h1>Honest limits, and where everything is</h1>
+  <h2>Limits, stated on purpose</h2>
+  <ul class="plain">
+    <li><strong>The Guard is deliberate friction.</strong> Protected-basis and offence-class findings are never auto-remediated; they are cited and routed to a human.</li>
+    <li><strong>Unsourced findings are capped.</strong> No live citation means severity capped at 40, no remediation, no market block. Hallucination is rendered as a visible quality signal, not a hidden risk.</li>
+    <li><strong>Input caps.</strong> 120 seconds and 200 MB per upload, enforced at the door.</li>
+    <li><strong>Single instance by design.</strong> SQLite, in-process locks, Cloud Run <code>--max-instances 1</code>. Demo-grade persistence, stated tradeoff.</li>
+    <li><strong>15 markets, not 195.</strong> The pack format is the extension point, and the packs are data.</li>
+  </ul>
+  <h2>Resources</h2>
+  <table>
+    <tr><th>Resource</th><th>Where</th></tr>
+    <tr><td>Repository</td><td>github.com/tdries/customs</td></tr>
+    <tr><td>Live instance</td><td>customs-app-akap4ao72a-ew.a.run.app</td></tr>
+    <tr><td>Design document</td><td><code>docs/superpowers/specs/2026-08-23-customs-design.md</code></td></tr>
+    <tr><td>Milestone gate report</td><td><code>docs/superpowers/plans/milestone1-gate.md</code></td></tr>
+    <tr><td>Landmine ground truth</td><td><code>docs/samples/landmines.yaml</code></td></tr>
+    <tr><td>Devpost copy</td><td><code>docs/devpost.md</code></td></tr>
+    <tr><td>Demo video script</td><td><code>docs/demo-video-script.md</code></td></tr>
+    <tr><td>License</td><td>Apache-2.0, <code>LICENSE</code></td></tr>
+  </table>
+  <h2>Repository layout</h2>
+  <pre>src/customs/     agents, console, telemetry, store   markets/    15 packs + taxonomy
+grafana/         dashboard definitions               scripts/    pipeline, provision, deploy
+tests/           339 offline + live suite            docs/       spec, plan, screenshots, manual</pre>
+  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>15</span></div>
+</div>
+
+<!-- CLOSING -->
+<section class="closing">
+  <svg class="diamond" viewBox="0 0 100 100"><rect x="25" y="25" width="50" height="50" fill="#FF9D2E" transform="rotate(45 50 50)"/><rect x="35" y="35" width="30" height="30" fill="#0A0D10" transform="rotate(45 50 50)"/><rect x="42.5" y="42.5" width="15" height="15" fill="#FF9D2E" transform="rotate(45 50 50)"/></svg>
+  <div class="tagline">A statute behind every finding.<br>A master that can actually ship.</div>
+  <div class="links">
+    <strong>github.com/tdries/customs</strong><br>
+    customs-app-akap4ao72a-ew.a.run.app<br>
+    Agentic Cinema 2026 / Grafana Labs track / Apache-2.0
+  </div>
+  <div class="bar"></div>
+</section>
+
+</body>
+</html>
