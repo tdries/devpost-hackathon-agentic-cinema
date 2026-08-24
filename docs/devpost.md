@@ -42,7 +42,7 @@ python, google-gemini, google-adk, grafana, grafana-cloud, mcp, imagen, veo, goo
 
 ## Links
 
-- GitHub repo: https://github.com/tdries/customs
+- GitHub repo: https://github.com/tdries/td-devpost-agentic-cinema
 - Live instance: https://customs-app-akap4ao72a-ew.a.run.app
 - Demo video: https://youtu.be/YOUTUBE_VIDEO_ID (record and replace)
 

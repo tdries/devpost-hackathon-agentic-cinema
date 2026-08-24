@@ -365,7 +365,7 @@ rules:
   <div class="eyebrow">12 / Setup and deployment</div>
   <h1>Cold clone to running instance</h1>
   <p><strong>Prerequisites:</strong> Python 3.12; ffmpeg on PATH; a Google Cloud project with Vertex AI enabled and <code>gcloud auth application-default login</code> done; a Grafana Cloud stack (free tier) with a service-account token (Admin) and an access-policy token (<code>metrics:write</code>, <code>logs:write</code>); the mcp-grafana v1.1.0 release binary at <code>bin/mcp-grafana</code>.</p>
-  <pre>git clone https://github.com/tdries/customs.git &amp;&amp; cd customs
+  <pre>git clone https://github.com/tdries/td-devpost-agentic-cinema.git &amp;&amp; cd td-devpost-agentic-cinema
 
 <span class="c"># 1. environment</span>
 python3.12 -m venv .venv
@@ -405,7 +405,7 @@ PYTHONPATH=src .venv/bin/uvicorn customs.app:app --reload
   <h2>Resources</h2>
   <table>
     <tr><th>Resource</th><th>Where</th></tr>
-    <tr><td>Repository</td><td>github.com/tdries/customs</td></tr>
+    <tr><td>Repository</td><td>github.com/tdries/td-devpost-agentic-cinema</td></tr>
     <tr><td>Live instance</td><td>customs-app-akap4ao72a-ew.a.run.app</td></tr>
     <tr><td>Design document</td><td><code>docs/superpowers/specs/2026-08-23-customs-design.md</code></td></tr>
     <tr><td>Milestone gate report</td><td><code>docs/superpowers/plans/milestone1-gate.md</code></td></tr>
@@ -426,7 +426,7 @@ tests/           339 offline + live suite            docs/       spec, plan, scr
   <svg class="diamond" viewBox="0 0 100 100"><rect x="25" y="25" width="50" height="50" fill="#FF9D2E" transform="rotate(45 50 50)"/><rect x="35" y="35" width="30" height="30" fill="#0A0D10" transform="rotate(45 50 50)"/><rect x="42.5" y="42.5" width="15" height="15" fill="#FF9D2E" transform="rotate(45 50 50)"/></svg>
   <div class="tagline">A statute behind every finding.<br>A master that can actually ship.</div>
   <div class="links">
-    <strong>github.com/tdries/customs</strong><br>
+    <strong>github.com/tdries/td-devpost-agentic-cinema</strong><br>
     customs-app-akap4ao72a-ew.a.run.app<br>
     Agentic Cinema 2026 / Grafana Labs track / Apache-2.0
   </div>

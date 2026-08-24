@@ -111,8 +111,8 @@ Prerequisites:
 Then, from a cold clone:
 
 ```bash
-git clone https://github.com/tdries/customs.git
-cd customs
+git clone https://github.com/tdries/td-devpost-agentic-cinema.git
+cd td-devpost-agentic-cinema
 
 # 1. Environment
 python3.12 -m venv .venv
