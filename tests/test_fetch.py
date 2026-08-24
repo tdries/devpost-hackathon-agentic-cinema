@@ -113,11 +113,24 @@ def test_a_non_youtube_url_never_reaches_the_downloader(tmp_path):
     assert _FakeYDL.calls == []
 
 
-def test_the_downloader_is_told_to_dodge_the_web_bot_check(tmp_path):
+def test_without_cookies_the_downloader_dodges_the_web_bot_check(tmp_path):
     fetch_youtube(f"https://youtu.be/{VID}", tmp_path, 120.0,
                   200 * 1024 * 1024, ydl_cls=_FakeYDL)
     for opts in _FakeYDL.calls:
         assert opts["extractor_args"]["youtube"]["player_client"][0] == "tv"
+
+
+def test_with_cookies_the_web_client_leads(tmp_path, monkeypatch):
+    """Account cookies satisfy the web client; the tv client with cookies
+    attached answers 'The page needs to be reloaded' (seen live), so the
+    client order flips when a jar is in play."""
+    secret = tmp_path / "jar.txt"
+    secret.write_text("# Netscape HTTP Cookie File\n")
+    monkeypatch.setenv("YT_COOKIES_FILE", str(secret))
+    fetch_youtube(f"https://youtu.be/{VID}", tmp_path / "up", 120.0,
+                  200 * 1024 * 1024, ydl_cls=_FakeYDL)
+    for opts in _FakeYDL.calls:
+        assert opts["extractor_args"]["youtube"]["player_client"][0] == "web"
 
 
 def test_a_bot_check_refusal_tells_the_user_to_upload_instead(tmp_path):

@@ -91,26 +91,31 @@ def fetch_youtube(url: str, dest_dir, max_seconds: float, max_bytes: int,
     dest.mkdir(parents=True, exist_ok=True)
     canonical = f"https://www.youtube.com/watch?v={video_id}"
 
-    # The web client is the one YouTube bot-checks hardest on datacenter IPs
-    # (Cloud Run hit "Sign in to confirm you're not a bot" on day one), so
-    # yt-dlp is told to try the TV and Android player clients first: they are
-    # challenged far less. YT_COOKIES_FILE is the operator escape hatch when
-    # even that is refused: a Netscape-format cookies export mounted as a
-    # secret, never committed.
+    # Which player clients to ask for depends on whether we hold cookies.
+    # Without them, the web client is the one YouTube bot-checks hardest on
+    # datacenter IPs (Cloud Run hit "Sign in to confirm you're not a bot" on
+    # day one), so tv and android go first: they are challenged far less.
+    # WITH cookies the order flips: account cookies are exactly what
+    # satisfies the web client's check, while the tv client with cookies
+    # attached answers "The page needs to be reloaded" (seen live on both the
+    # laptop and Cloud Run). YT_COOKIES_FILE is the operator escape hatch: a
+    # Netscape-format export mounted as a secret, never committed.
     quiet = {
         "quiet": True, "no_warnings": True, "noprogress": True,
         "noplaylist": True,
-        "extractor_args": {"youtube": {"player_client": ["tv", "android", "web"]}},
     }
     cookies = os.environ.get("YT_COOKIES_FILE", "").strip()
     jar = None
     if cookies and Path(cookies).is_file():
         # yt-dlp rewrites the cookie file on close, and a secret mounted into
-        # the container is read-only, so it gets a scratch copy. Cleaned up in
-        # the finally below; the folder it lives in is this upload's own.
+        # the container is read-only, so it gets a scratch copy. Cleaned up
+        # before the fetched file is returned; the folder is this upload's own.
         jar = dest / ".cookies.txt"
         jar.write_bytes(Path(cookies).read_bytes())
         quiet["cookiefile"] = str(jar)
+        quiet["extractor_args"] = {"youtube": {"player_client": ["web", "web_safari"]}}
+    else:
+        quiet["extractor_args"] = {"youtube": {"player_client": ["tv", "android", "web"]}}
 
     try:
         with ydl_cls({**quiet, "skip_download": True}) as ydl:
