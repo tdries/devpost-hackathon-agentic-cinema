@@ -20,7 +20,7 @@
       <span class="label">Market room</span>
       <h1>{{ pack.name if pack else market }}</h1>
       <span class="mkt-facts">
-        <span class="pill s-{{ tile }}"><span class="dot"></span>{{ tile.replace('_', ' ') if tile != 'error' else 'not evaluated' }}</span>
+        <span class="pill s-{{ tile }}"><svg class="ic"><use href="#i-{{ tile.replace('_', '-') }}"/></svg>{{ tile.replace('_', ' ') if tile != 'error' else 'not evaluated' }}</span>
         <span class="chip">{{ state.findings }} findings</span>
         {% if pack %}<span class="chip {{ 'on' if pack.pre_clearance == 'mandatory' else '' }}">pre-clearance: {{ pack.pre_clearance }}</span>{% endif %}
         {% if pack and pack.regulators %}<span class="chip">{{ pack.regulators | join(' / ') }}</span>{% endif %}
@@ -36,7 +36,7 @@
 {% if blocked %}
 <section style="border-top:none;padding-top:0">
   <div class="guard">
-    <h2><span class="chip offence">guard</span> Human decision required</h2>
+    <h2><svg class="ic"><use href="#i-human"/></svg> Human decision required <span class="chip offence" style="margin-left:6px">guard</span></h2>
     <p class="why">The guard took auto-remediation off the table for {{ blocked | length }} finding{{ '' if blocked | length == 1 else 's' }} in this market. A rule written on a protected basis, or an offence-class rule, is not something this system edits its way around: it names the problem, cites it, and hands it to a person.</p>
     {% for finding in blocked %}
     <div class="guard-item">
@@ -47,13 +47,13 @@
         {% if finding.observation_id in evidence %}
         <a class="evidence" href="/runs/{{ run.id }}/evidence/{{ finding.observation_id }}" target="_blank" title="Open the frame that triggered this finding">
           <img src="/runs/{{ run.id }}/evidence/{{ finding.observation_id }}" alt="Frame that triggered {{ finding.rule_id }}" loading="lazy">
-          <span class="label">triggering frame</span>
+          <span class="label"><svg class="ic"><use href="#i-frame"/></svg>triggering frame</span>
         </a>
         {% endif %}
       </div>
       <div>
-        <span class="chip {{ finding.klass }}">{{ finding.klass }}</span>
-        {% if finding.sourced %}<span class="chip sourced">sourced</span>{% else %}<span class="chip unsourced">unsourced</span>{% endif %}
+        <span class="chip {{ finding.klass }}"><svg class="ic"><use href="#i-{{ finding.klass }}"/></svg>{{ finding.klass }}</span>
+        {% if finding.sourced %}<span class="chip sourced"><svg class="ic"><use href="#i-sourced"/></svg>sourced</span>{% else %}<span class="chip unsourced"><svg class="ic"><use href="#i-unsourced"/></svg>unsourced</span>{% endif %}
         <div class="reason" style="margin-top:10px">{{ finding.blocked_reason }}</div>
         <div class="rationale">{{ finding.rationale }}</div>
         <div class="decision">
@@ -93,15 +93,16 @@
           {% if finding.observation_id in evidence %}
           <a class="evidence" href="/runs/{{ run.id }}/evidence/{{ finding.observation_id }}" target="_blank" title="Open the frame that triggered this finding">
             <img src="/runs/{{ run.id }}/evidence/{{ finding.observation_id }}" alt="Frame that triggered {{ finding.rule_id }}" loading="lazy">
-            <span class="label">triggering frame</span>
+            <span class="label"><svg class="ic"><use href="#i-frame"/></svg>triggering frame</span>
           </a>
           {% endif %}
         </td>
-        <td class="tight"><span class="chip {{ finding.klass }}">{{ finding.klass }}</span></td>
+        <td class="tight"><span class="chip {{ finding.klass }}"><svg class="ic"><use href="#i-{{ finding.klass }}"/></svg>{{ finding.klass }}</span></td>
         <td class="tight">{{ severity(finding.severity) }}</td>
         <td class="tight">{{ window(finding) }}</td>
-        <td class="tight">{% if finding.sourced %}<span class="chip sourced">sourced</span>{% else %}<span class="chip unsourced">unsourced</span>{% endif %}</td>
-        <td class="tight"><span class="pill s-{{ {'open': 'blocked', 'remediating': 'pending', 'resolved': 'cleared'}[finding.status] }}"><span class="dot"></span>{{ finding.status }}</span></td>
+        <td class="tight">{% if finding.sourced %}<span class="chip sourced"><svg class="ic"><use href="#i-sourced"/></svg>sourced</span>{% else %}<span class="chip unsourced"><svg class="ic"><use href="#i-unsourced"/></svg>unsourced</span>{% endif %}</td>
+        {% set fst = {'open': 'blocked', 'remediating': 'pending', 'resolved': 'cleared'}[finding.status] %}
+        <td class="tight"><span class="pill s-{{ fst }}"><svg class="ic"><use href="#i-{{ fst }}"/></svg>{{ finding.status }}</span></td>
         <td class="tight">
           {% if finding.status == 'open' and finding.remediable %}
           <form method="post" action="/runs/{{ run.id }}/findings/{{ finding.id }}/remediate">
@@ -110,7 +111,7 @@
           {% elif finding.status == 'remediating' %}
           <button class="btn" disabled>Working</button>
           {% elif finding.status == 'resolved' %}
-          <span class="chip sourced">verified fixed</span>
+          <span class="chip sourced"><svg class="ic"><use href="#i-cleared"/></svg>verified fixed</span>
           {% else %}
           <button class="btn" disabled title="An offence-class finding is never auto-remediated">Not remediable</button>
           {% endif %}

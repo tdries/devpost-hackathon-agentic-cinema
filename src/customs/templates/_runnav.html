@@ -9,7 +9,7 @@
     {% endfor %}
     <span class="runnav-right">
       <span class="runid">{{ run.id }}</span>
-      <span class="pill s-{{ run_state }}"><span class="dot"></span>{{ run.status }}</span>
+      <span class="pill s-{{ run_state }}"><svg class="ic"><use href="#i-{{ run_state.replace('_', '-') }}"/></svg>{{ run.status }}</span>
     </span>
   </div>
 </nav>

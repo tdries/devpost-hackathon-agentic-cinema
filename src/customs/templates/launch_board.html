@@ -41,12 +41,12 @@
     <a class="tile t-{{ tile.state }}" id="tile-{{ tile.market }}" href="/runs/{{ run.id }}/markets/{{ tile.market }}">
       <span class="tile-top">
         <span class="tile-code">{{ tile.market }}</span>
-        <span class="pill s-{{ tile.state }}" data-role="state"><span class="dot"></span>{{ tile.state.replace('_', ' ') if tile.state != 'error' else 'not evaluated' }}</span>
+        <span class="pill s-{{ tile.state }}" data-role="state"><svg class="ic"><use href="#i-{{ tile.state.replace('_', '-') }}"/></svg>{{ tile.state.replace('_', ' ') if tile.state != 'error' else 'not evaluated' }}</span>
       </span>
       <span class="tile-name">{{ tile.pack.name if tile.pack else tile.market }}</span>
       <span class="tile-stats">
         <span><b data-role="findings">{{ tile.findings }}</b> findings</span>
-        <span><b data-role="blocked">{{ tile.blocked }}</b> need a human</span>
+        <span><svg class="ic ic-human"><use href="#i-human"/></svg><b data-role="blocked">{{ tile.blocked }}</b> need a human</span>
       </span>
       <span class="tile-go"><span>Open market room</span><span>&rarr;</span></span>
     </a>

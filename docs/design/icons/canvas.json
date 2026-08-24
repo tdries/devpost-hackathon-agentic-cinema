@@ -1,0 +1,11 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "The system", "x": 0, "y": 0, "w": 1220, "h": 1120 },
+    { "file": "InContext.dc.html", "title": "In context", "x": 1320, "y": 0, "w": 860, "h": 920 }
+  ],
+  "annotations": [
+    { "id": "icons-note", "x": 0, "y": -150, "w": 560,
+      "text": "Customs iconography: one stroke language for the console. 24 grid, 1.75 stroke, square terminals, currentColor everywhere so the state palette carries meaning.\nAlert taxonomy: legal = courthouse, policy = code document, offence = flag; alerts compose the bell with the state they fire. The guard is a person, deliberately.\nLeft: the full system. Right: the marks worn in the real UI." }
+  ],
+  "launch": { "view": "canvas" }
+}

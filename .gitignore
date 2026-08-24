@@ -25,3 +25,4 @@ bin/
 # stray uv lockfile: project pins deps in requirements.txt, pyproject declares none
 uv.lock
 docs/design/launch-control-styles.html
+docs/design/icons/customs-iconography.html

@@ -23,7 +23,7 @@
     {% for event in events %}
     <div class="line{% if 'stage_error' in event.message %} err{% endif %}">
       <span class="t">{{ event.ts | clock }}</span>
-      <span class="a a-{{ event.agent }}">{{ event.agent }}</span>
+      <span class="a a-{{ event.agent }}"><svg class="ic"><use href="#i-{{ event.agent if event.agent in ('pipeline', 'ingest', 'transcription', 'analyst', 'adjudicator', 'guard', 'publisher', 'remediator', 'verifier') else 'pipeline' }}"/></svg>{{ event.agent }}</span>
       <span class="m">{{ event.message }}</span>
     </div>
     {% else %}

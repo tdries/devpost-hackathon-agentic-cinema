@@ -53,7 +53,8 @@
       <span class="when">{{ item.run.t0 | stamp }}</span>
       <span class="flags">
         {% for code, state in item.states.items() %}
-        <span class="pill s-{{ 'error' if state.errored else state.clearance }}"><span class="dot"></span>{{ code }}</span>
+        {% set st = 'error' if state.errored else state.clearance %}
+        <span class="pill s-{{ st }}"><svg class="ic"><use href="#i-{{ st.replace('_', '-') }}"/></svg>{{ code }}</span>
         {% endfor %}
       </span>
     </a>

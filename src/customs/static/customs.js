@@ -16,6 +16,17 @@
   var STATE_WORDS = { error: "not evaluated", at_risk: "at risk" };
   var word = function (state) { return STATE_WORDS[state] || state; };
 
+  /* The icon system (see docs/design/icons): every state and agent has one
+     mark, drawn once as <symbol>s in base.html and referenced by id here. */
+  var STATE_ICONS = { cleared: 1, at_risk: 1, blocked: 1, pending: 1, error: 1 };
+  var icon = function (state) {
+    var id = STATE_ICONS[state] ? state.replace("_", "-") : "pending";
+    return '<svg class="ic"><use href="#i-' + id + '"/></svg>';
+  };
+  var AGENT_ICONS = { pipeline: 1, ingest: 1, transcription: 1, analyst: 1,
+                      adjudicator: 1, guard: 1, publisher: 1, remediator: 1,
+                      verifier: 1 };
+
   /* ---------- 1. the upload form ---------- */
 
   var drop = document.getElementById("drop");
@@ -69,7 +80,7 @@
           var pill = tile.querySelector('[data-role="state"]');
           if (pill) {
             pill.className = "pill s-" + state;
-            pill.innerHTML = '<span class="dot"></span>' + word(state);
+            pill.innerHTML = icon(state) + word(state);
           }
           var findings = tile.querySelector('[data-role="findings"]');
           var blocked = tile.querySelector('[data-role="blocked"]');
@@ -95,7 +106,7 @@
         var flags = { go: "GO FOR LAUNCH", no_go: "NO GO", pending: "CLEARANCE IN PROGRESS" };
         var states = { go: "cleared", no_go: "blocked", pending: "pending" };
         flag.className = "pill s-" + states[overall.state];
-        flag.innerHTML = '<span class="dot"></span>' + flags[overall.state];
+        flag.innerHTML = icon(states[overall.state]) + flags[overall.state];
       }
       if (subline) {
         if (overall.state === "pending") {
@@ -159,7 +170,9 @@
       when.textContent = event.clock;
       var who = document.createElement("span");
       who.className = "a a-" + event.agent;
-      who.textContent = event.agent;
+      who.innerHTML = '<svg class="ic"><use href="#i-' +
+        (AGENT_ICONS[event.agent] ? event.agent : "pipeline") + '"/></svg>';
+      who.appendChild(document.createTextNode(event.agent));
       var what = document.createElement("span");
       what.className = "m";
       what.textContent = event.message;

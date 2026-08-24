@@ -827,3 +827,28 @@ html[data-theme="screening"] .theme-switch .tbtn.on { background: rgba(255, 166,
 }
 .urlin::placeholder { color: var(--ink-3); }
 .urlin:focus { outline: none; border-color: var(--signal-d); }
+
+/* ---------- iconography ----------
+   One stroke language, drawn as <symbol>s in base.html (24 grid, 1.75
+   stroke, square terminals) and referenced with <use>. Everything inherits
+   currentColor so the state palette carries the meaning. */
+
+.defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+.ic {
+  width: 15px; height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  flex: none;
+}
+.pill .ic { width: 12.5px; height: 12.5px; stroke-width: 2; }
+.chip .ic { width: 11.5px; height: 11.5px; stroke-width: 2.1; vertical-align: -2px; margin-right: 5px; }
+.line .a .ic { width: 13px; height: 13px; margin-right: 7px; vertical-align: -2.5px; }
+.line .a::before { content: none; }
+.guard h2 .ic { width: 20px; height: 20px; color: #c39bff; }
+.tile-stats .ic-human { width: 12px; height: 12px; vertical-align: -2px; margin-right: 4px; color: #c39bff; }
+.evidence .label .ic { width: 12px; height: 12px; vertical-align: -2.5px; margin-right: 5px; }
+html[data-theme="studio"] .guard h2 .ic,
+html[data-theme="studio"] .tile-stats .ic-human { color: #6a3fd0; }
