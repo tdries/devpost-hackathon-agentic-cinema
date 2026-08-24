@@ -131,10 +131,16 @@ def test_a_bot_check_refusal_tells_the_user_to_upload_instead(tmp_path):
                       200 * 1024 * 1024, ydl_cls=_Challenged)
 
 
-def test_a_cookies_file_is_handed_to_the_downloader(tmp_path, monkeypatch):
-    jar = tmp_path / "cookies.txt"
-    jar.write_text("# Netscape HTTP Cookie File\n")
-    monkeypatch.setenv("YT_COOKIES_FILE", str(jar))
-    fetch_youtube(f"https://youtu.be/{VID}", tmp_path, 120.0,
+def test_a_cookies_file_is_copied_writable_and_handed_to_the_downloader(
+        tmp_path, monkeypatch):
+    secret = tmp_path / "mounted-secret-cookies.txt"
+    secret.write_text("# Netscape HTTP Cookie File\n")
+    monkeypatch.setenv("YT_COOKIES_FILE", str(secret))
+    dest = tmp_path / "upload"
+    fetch_youtube(f"https://youtu.be/{VID}", dest, 120.0,
                   200 * 1024 * 1024, ydl_cls=_FakeYDL)
-    assert all(c.get("cookiefile") == str(jar) for c in _FakeYDL.calls)
+    # a scratch copy (yt-dlp rewrites it; the mounted secret is read-only)...
+    assert all(c.get("cookiefile", "").endswith(".cookies.txt")
+               for c in _FakeYDL.calls)
+    # ...which does not outlive the fetch
+    assert not (dest / ".cookies.txt").exists()

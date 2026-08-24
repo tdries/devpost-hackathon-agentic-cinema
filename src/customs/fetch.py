@@ -103,8 +103,14 @@ def fetch_youtube(url: str, dest_dir, max_seconds: float, max_bytes: int,
         "extractor_args": {"youtube": {"player_client": ["tv", "android", "web"]}},
     }
     cookies = os.environ.get("YT_COOKIES_FILE", "").strip()
+    jar = None
     if cookies and Path(cookies).is_file():
-        quiet["cookiefile"] = cookies
+        # yt-dlp rewrites the cookie file on close, and a secret mounted into
+        # the container is read-only, so it gets a scratch copy. Cleaned up in
+        # the finally below; the folder it lives in is this upload's own.
+        jar = dest / ".cookies.txt"
+        jar.write_bytes(Path(cookies).read_bytes())
+        quiet["cookiefile"] = str(jar)
 
     try:
         with ydl_cls({**quiet, "skip_download": True}) as ydl:
@@ -146,6 +152,8 @@ def fetch_youtube(url: str, dest_dir, max_seconds: float, max_bytes: int,
     except Exception as exc:  # noqa: BLE001
         raise FetchError(f"The download failed: {exc}") from exc
 
+    if jar is not None:
+        jar.unlink(missing_ok=True)
     files = [p for p in sorted(dest.glob(f"{stem}.*"))
              if p.suffix.lower() in (".mp4", ".webm", ".mkv", ".mov")]
     if not files:

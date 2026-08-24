@@ -143,6 +143,23 @@ echo "-- Secret Manager --"
 put_secret grafana-sa-token "$DEPLOY_GRAFANA_SA_TOKEN"
 put_secret grafana-cloud-token "$DEPLOY_GRAFANA_CLOUD_TOKEN"
 
+# Optional: YouTube cookies for the link intake. YouTube bot-challenges
+# Google Cloud IPs even on the tv/android player clients, so if the operator
+# has created a yt-cookies secret (a Netscape-format export, see .env.example)
+# it is mounted read-only and fetch.py picks it up via YT_COOKIES_FILE.
+# Create it with:  gcloud secrets create yt-cookies --data-file=cookies.txt
+SET_SECRETS="GRAFANA_SA_TOKEN=grafana-sa-token:latest,GRAFANA_CLOUD_TOKEN=grafana-cloud-token:latest"
+GRANT_SECRETS=(grafana-sa-token grafana-cloud-token)
+YT_COOKIES_ENV=()
+if gcloud secrets describe yt-cookies --project "$PROJECT_ID" >/dev/null 2>&1; then
+    SET_SECRETS+=",/secrets/yt/cookies.txt=yt-cookies:latest"
+    GRANT_SECRETS+=(yt-cookies)
+    YT_COOKIES_ENV=("YT_COOKIES_FILE=/secrets/yt/cookies.txt")
+    echo "secret yt-cookies: found, will be mounted"
+else
+    echo "secret yt-cookies: not present, YouTube intake runs without cookies"
+fi
+
 echo "-- IAM: $RUNTIME_SA --"
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member "serviceAccount:${RUNTIME_SA}" \
@@ -150,7 +167,7 @@ gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --condition=None --quiet >/dev/null
 echo "  roles/aiplatform.user"
 
-for secret in grafana-sa-token grafana-cloud-token; do
+for secret in "${GRANT_SECRETS[@]}"; do
     gcloud secrets add-iam-policy-binding "$secret" \
         --project "$PROJECT_ID" \
         --member "serviceAccount:${RUNTIME_SA}" \
@@ -176,6 +193,7 @@ if [[ -n "$DEPLOY_GEMINI_MODEL_TEXT" ]]; then env_pairs+=("GEMINI_MODEL_TEXT=${D
 if [[ -n "$DEPLOY_IMAGEN_MODEL" ]]; then env_pairs+=("IMAGEN_MODEL=${DEPLOY_IMAGEN_MODEL}"); fi
 if [[ -n "$DEPLOY_VEO_MODEL" ]]; then env_pairs+=("VEO_MODEL=${DEPLOY_VEO_MODEL}"); fi
 if [[ -n "$DEPLOY_TTS_MODEL" ]]; then env_pairs+=("TTS_MODEL=${DEPLOY_TTS_MODEL}"); fi
+if [[ ${#YT_COOKIES_ENV[@]} -gt 0 ]]; then env_pairs+=("${YT_COOKIES_ENV[@]}"); fi
 
 joined="$(IFS=';'; echo "${env_pairs[*]}")"
 
@@ -191,7 +209,7 @@ gcloud run deploy "$SERVICE" \
     --memory 2Gi --cpu 2 \
     --timeout 900 \
     --set-env-vars "^;^${joined}" \
-    --set-secrets "GRAFANA_SA_TOKEN=grafana-sa-token:latest,GRAFANA_CLOUD_TOKEN=grafana-cloud-token:latest" \
+    --set-secrets "$SET_SECRETS" \
     --quiet
 
 SERVICE_URL="$(gcloud run services describe "$SERVICE" \
