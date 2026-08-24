@@ -111,3 +111,30 @@ def test_a_non_youtube_url_never_reaches_the_downloader(tmp_path):
         fetch_youtube("https://evil.example/video.mp4", tmp_path, 120.0,
                       200 * 1024 * 1024, ydl_cls=_FakeYDL)
     assert _FakeYDL.calls == []
+
+
+def test_the_downloader_is_told_to_dodge_the_web_bot_check(tmp_path):
+    fetch_youtube(f"https://youtu.be/{VID}", tmp_path, 120.0,
+                  200 * 1024 * 1024, ydl_cls=_FakeYDL)
+    for opts in _FakeYDL.calls:
+        assert opts["extractor_args"]["youtube"]["player_client"][0] == "tv"
+
+
+def test_a_bot_check_refusal_tells_the_user_to_upload_instead(tmp_path):
+    class _Challenged(_FakeYDL):
+        def extract_info(self, url, download=False):
+            raise RuntimeError(
+                "ERROR: [youtube] x: Sign in to confirm you're not a bot.")
+
+    with pytest.raises(FetchError, match="upload the file"):
+        fetch_youtube(f"https://youtu.be/{VID}", tmp_path, 120.0,
+                      200 * 1024 * 1024, ydl_cls=_Challenged)
+
+
+def test_a_cookies_file_is_handed_to_the_downloader(tmp_path, monkeypatch):
+    jar = tmp_path / "cookies.txt"
+    jar.write_text("# Netscape HTTP Cookie File\n")
+    monkeypatch.setenv("YT_COOKIES_FILE", str(jar))
+    fetch_youtube(f"https://youtu.be/{VID}", tmp_path, 120.0,
+                  200 * 1024 * 1024, ydl_cls=_FakeYDL)
+    assert all(c.get("cookiefile") == str(jar) for c in _FakeYDL.calls)

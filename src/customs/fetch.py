@@ -27,6 +27,7 @@ surfaces as the 400 below with YouTube's own words in it, never as a hang.
 """
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -89,12 +90,31 @@ def fetch_youtube(url: str, dest_dir, max_seconds: float, max_bytes: int,
     dest = Path(dest_dir)
     dest.mkdir(parents=True, exist_ok=True)
     canonical = f"https://www.youtube.com/watch?v={video_id}"
-    quiet = {"quiet": True, "no_warnings": True, "noplaylist": True}
+
+    # The web client is the one YouTube bot-checks hardest on datacenter IPs
+    # (Cloud Run hit "Sign in to confirm you're not a bot" on day one), so
+    # yt-dlp is told to try the TV and Android player clients first: they are
+    # challenged far less. YT_COOKIES_FILE is the operator escape hatch when
+    # even that is refused: a Netscape-format cookies export mounted as a
+    # secret, never committed.
+    quiet = {
+        "quiet": True, "no_warnings": True, "noprogress": True,
+        "noplaylist": True,
+        "extractor_args": {"youtube": {"player_client": ["tv", "android", "web"]}},
+    }
+    cookies = os.environ.get("YT_COOKIES_FILE", "").strip()
+    if cookies and Path(cookies).is_file():
+        quiet["cookiefile"] = cookies
 
     try:
         with ydl_cls({**quiet, "skip_download": True}) as ydl:
             info = ydl.extract_info(canonical, download=False) or {}
     except Exception as exc:  # noqa: BLE001 -- YouTube's refusal becomes the 400
+        if "Sign in to confirm" in str(exc):
+            raise FetchError(
+                "YouTube challenged this server with a bot check and refused "
+                "the video. Try again in a minute, or upload the file "
+                "directly; it clears identically.") from exc
         raise FetchError(f"YouTube would not hand over that video: {exc}") from exc
 
     if info.get("is_live"):
