@@ -25,6 +25,7 @@ Usage:
     python scripts/make_test_ad.py --generate --only 4 --force   # redo shot 4
 """
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -243,6 +244,15 @@ def generate_shot(n: int, allow_generate: bool) -> Path:
             f"shot {n}: {dest.name} is not in scripts/.cache/ and --generate "
             "was not passed; run with --generate to call Veo, or restore the "
             "cache file")
+    # Spend lock (2026-08-24): Veo is the expensive model in this project by an
+    # order of magnitude, and the test ad is already generated and cached. Even
+    # --generate refuses unless VEO_UNLOCK=1 is set in the environment, so a
+    # rebuilt cache or a stray --generate cannot silently start billing again.
+    if os.environ.get("VEO_UNLOCK") != "1":
+        raise NeedsGenerate(
+            f"shot {n}: Veo generation is locked to prevent accidental spend. "
+            "Set VEO_UNLOCK=1 in the environment (alongside --generate) to "
+            "deliberately re-generate this shot.")
     spec = SHOTS[n]
     cfg = types.GenerateVideosConfig(
         duration_seconds=VEO_SECONDS,
