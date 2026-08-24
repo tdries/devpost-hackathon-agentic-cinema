@@ -226,3 +226,34 @@
     linked(players[1], players[0]);
   });
 })();
+
+  /* ---------- 5. the style-mode switch ---------- */
+
+  (function () {
+    var KEY = "customs-theme";
+    var root = document.documentElement;
+    var buttons = document.querySelectorAll(".theme-switch [data-set-theme]");
+    if (!buttons.length) { return; }
+
+    var mark = function () {
+      var current = root.getAttribute("data-theme") || "";
+      buttons.forEach(function (b) {
+        b.classList.toggle("on", b.getAttribute("data-set-theme") === current);
+      });
+    };
+
+    buttons.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var mode = b.getAttribute("data-set-theme");
+        if (mode) { root.setAttribute("data-theme", mode); }
+        else { root.removeAttribute("data-theme"); }
+        try {
+          if (mode) { localStorage.setItem(KEY, mode); }
+          else { localStorage.removeItem(KEY); }
+        } catch (e) { /* private mode: the choice just does not persist */ }
+        mark();
+      });
+    });
+
+    mark();
+  })();

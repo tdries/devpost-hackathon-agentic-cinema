@@ -1,0 +1,38 @@
+{
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "title": "Mission (default)",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Studio.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    },
+    {
+      "file": "Screening.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900
+    }
+  ],
+  "annotations": [
+    {
+      "id": "modes-note",
+      "x": 0,
+      "y": -170,
+      "w": 560,
+      "text": "Customs Launch Control, revised: the same board in the console's three switchable style modes.\nMission: the dark launch-control room (default). Studio: light, for daylight desks and print. Screening: near-black for the grading suite.\nAll three ship in the app via the MISSION / STUDIO / SCREENING switch in the top bar; state colours stay identical across modes."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

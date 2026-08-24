@@ -44,6 +44,12 @@
         <div class="rule-id">{{ finding.rule_id }}</div>
         <div style="margin-top:8px">{{ severity(finding.severity) }}</div>
         <div style="margin-top:8px">{{ window(finding) }}</div>
+        {% if finding.observation_id in evidence %}
+        <a class="evidence" href="/runs/{{ run.id }}/evidence/{{ finding.observation_id }}" target="_blank" title="Open the frame that triggered this finding">
+          <img src="/runs/{{ run.id }}/evidence/{{ finding.observation_id }}" alt="Frame that triggered {{ finding.rule_id }}" loading="lazy">
+          <span class="label">triggering frame</span>
+        </a>
+        {% endif %}
       </div>
       <div>
         <span class="chip {{ finding.klass }}">{{ finding.klass }}</span>
@@ -83,6 +89,12 @@
           <div style="margin-top:8px"><a class="cite" href="{{ finding.citation_url }}" target="_blank" rel="noreferrer">{{ finding.citation_ref or 'citation' }}</a></div>
           {% elif finding.citation_ref %}
           <div class="mono" style="margin-top:8px;font-size:12px;color:var(--ink-3)">{{ finding.citation_ref }}</div>
+          {% endif %}
+          {% if finding.observation_id in evidence %}
+          <a class="evidence" href="/runs/{{ run.id }}/evidence/{{ finding.observation_id }}" target="_blank" title="Open the frame that triggered this finding">
+            <img src="/runs/{{ run.id }}/evidence/{{ finding.observation_id }}" alt="Frame that triggered {{ finding.rule_id }}" loading="lazy">
+            <span class="label">triggering frame</span>
+          </a>
           {% endif %}
         </td>
         <td class="tight"><span class="chip {{ finding.klass }}">{{ finding.klass }}</span></td>

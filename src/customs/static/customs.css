@@ -697,3 +697,117 @@ footer .label { color: #4b5c6c; }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
 }
+
+/* ---------- evidence frames ---------- */
+
+.evidence { display: block; margin-top: 12px; width: 168px; }
+.evidence img {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--line-2);
+  border-radius: 2px;
+  transition: border-color 0.15s ease;
+}
+.evidence .label { display: block; margin-top: 6px; }
+.evidence:hover img { border-color: var(--signal); }
+.evidence:hover .label { color: var(--signal); }
+
+/* ---------- style modes ----------
+   Three modes, switched by data-theme on <html> and persisted per browser:
+     (none)     MISSION    the dark launch-control room, the default
+     studio     STUDIO     light, for daylight desks, projectors and print
+     screening  SCREENING  near-black, for the grading suite
+   Every mode keeps the same four state colours; only ground, ink and the
+   signal's temperature move. */
+
+.theme-switch {
+  display: inline-flex;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.theme-switch .tbtn {
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 5px 9px;
+  border: none;
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.theme-switch .tbtn + .tbtn { border-left: 1px solid var(--line-2); }
+.theme-switch .tbtn:hover { color: var(--ink); }
+.theme-switch .tbtn.on { color: var(--ink); background: rgba(255, 157, 46, 0.12); }
+
+html[data-theme="studio"] {
+  --ground:   #f3f5f7;
+  --ground-2: #eaedf1;
+  --panel:    #ffffff;
+  --well:     #eef1f4;
+  --line:     #dbe2e8;
+  --line-2:   #c3cdd7;
+  --ink:      #17222c;
+  --ink-2:    #485866;
+  --ink-3:    #7e8fa0;
+  --signal:   #d86f00;
+  --signal-d: #a85800;
+  --cleared:  #14874d;
+  --at_risk:  #a97700;
+  --blocked:  #cf3040;
+  --error:    #64798c;
+  --pending:  #8fa1b2;
+}
+html[data-theme="studio"] body {
+  background:
+    radial-gradient(900px 420px at 78% -10%, rgba(216, 111, 0, 0.05), transparent 70%),
+    radial-gradient(700px 380px at 8% 0%, rgba(60, 130, 190, 0.05), transparent 65%),
+    var(--ground);
+  -webkit-font-smoothing: auto;
+}
+html[data-theme="studio"] .topbar { background: rgba(243, 245, 247, 0.86); }
+html[data-theme="studio"] .brand-mark { box-shadow: 0 0 10px rgba(216, 111, 0, 0.35); }
+html[data-theme="studio"] .btn.go { color: #ffffff; }
+html[data-theme="studio"] .btn.go:hover { background: #b95f00; color: #ffffff; }
+html[data-theme="studio"] .btn:hover { background: rgba(23, 34, 44, 0.04); }
+html[data-theme="studio"] .chip.on { background: rgba(23, 34, 44, 0.05); color: var(--ink); }
+html[data-theme="studio"] table.grid tr:hover td { background: rgba(23, 34, 44, 0.025); }
+html[data-theme="studio"] .line:hover { background: rgba(23, 34, 44, 0.03); }
+html[data-theme="studio"] .empty { background: rgba(23, 34, 44, 0.02); }
+html[data-theme="studio"] .theme-switch .tbtn.on { background: rgba(216, 111, 0, 0.12); }
+html[data-theme="studio"] .chip.legal { color: #b8303f; }
+html[data-theme="studio"] .chip.offence { color: #6a3fd0; border-color: rgba(106, 63, 208, 0.35); background: rgba(106, 63, 208, 0.07); }
+html[data-theme="studio"] .guard { border-color: rgba(106, 63, 208, 0.4); border-left-color: #6a3fd0; background: linear-gradient(180deg, rgba(106, 63, 208, 0.07), rgba(106, 63, 208, 0.015) 55%); }
+html[data-theme="studio"] .guard-item { border-top-color: rgba(106, 63, 208, 0.22); }
+html[data-theme="studio"] .guard-item .reason { color: #5a34b4; }
+html[data-theme="studio"] .line.err .m { color: #a8323f; }
+html[data-theme="studio"] .a-pipeline      { color: #5c7186 !important; }
+html[data-theme="studio"] .a-ingest        { color: #0f7f96 !important; }
+html[data-theme="studio"] .a-transcription { color: #0e7d6c !important; }
+html[data-theme="studio"] .a-analyst       { color: #2a63c4 !important; }
+html[data-theme="studio"] .a-guard         { color: #6a3fd0 !important; }
+html[data-theme="studio"] .a-remediator    { color: #c25412 !important; }
+html[data-theme="studio"] .a-verifier      { color: #0d8f6c !important; }
+html[data-theme="studio"] .pane video { background: #dde3e8; }
+
+html[data-theme="screening"] {
+  --ground:   #050607;
+  --ground-2: #07090b;
+  --panel:    #0a0c0f;
+  --well:     #060708;
+  --line:     #14181d;
+  --line-2:   #21262d;
+  --ink:      #f2f5f8;
+  --ink-2:    #a7b4c1;
+  --ink-3:    #596878;
+  --signal:   #ffa640;
+  --signal-d: #c47a1a;
+}
+html[data-theme="screening"] body {
+  background:
+    radial-gradient(1100px 480px at 50% -16%, rgba(255, 166, 64, 0.05), transparent 70%),
+    var(--ground);
+}
+html[data-theme="screening"] .topbar { background: rgba(5, 6, 7, 0.9); }
+html[data-theme="screening"] .theme-switch .tbtn.on { background: rgba(255, 166, 64, 0.14); }

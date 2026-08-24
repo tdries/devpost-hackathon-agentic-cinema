@@ -10,7 +10,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from customs import app as app_module
-from customs.schema import Finding
+from customs.schema import Finding, Observation
 from customs.store import Store
 
 ASSET = "docs/samples/test_ad.mp4"
@@ -817,3 +817,65 @@ def test_the_cutting_room_lists_the_change_records_with_both_stills(console, tmp
     assert "chg_1_before_kf0.png" in body and "chg_1_after_kf0.png" in body
     assert f"/runs/{run.id}/media/localized/FR" in body
     assert client.get(f"/runs/{run.id}/stills/chg_1_before_kf0.png").status_code == 200
+
+
+# -- evidence frames --
+
+def test_the_market_room_links_the_frame_that_triggered_each_finding(client, tmp_path):
+    """A finding is a claim about pixels; the room shows the pixels.
+
+    The observation behind the finding recorded its evidence keyframe. The
+    market room renders that frame as a thumbnail on the finding, served by
+    the evidence route, so a reviewer never has to take a rationale on faith.
+    """
+    test_client, store, run, _ = client
+    frame = tmp_path / "shot_0_kf0.png"
+    frame.write_bytes(b"\x89PNG\r\n\x1a\n not a real png but a real file")
+    store.add_observations(run.id, [Observation(
+        id="obs_shot_0_000", shot_id="shot_0", t_start=0.0, t_end=7.0,
+        dimension="alcohol_tobacco_drugs",
+        statement="A glass of red wine sits on the table.",
+        evidence_frame=str(frame), confidence=0.91,
+    )])
+
+    page = test_client.get(f"/runs/{run.id}/markets/FR")
+    assert page.status_code == 200
+    assert f"/runs/{run.id}/evidence/obs_shot_0_000" in page.text
+
+    img = test_client.get(f"/runs/{run.id}/evidence/obs_shot_0_000")
+    assert img.status_code == 200
+    assert img.headers["content-type"].startswith("image/")
+
+
+def test_a_finding_without_a_live_frame_shows_no_thumbnail_and_404s(client):
+    """No observation, an empty evidence_frame, or a deleted file: the page
+    simply omits the thumbnail and the route answers 404 rather than leaking
+    whether the id exists."""
+    test_client, store, run, _ = client
+    page = test_client.get(f"/runs/{run.id}/markets/FR")
+    assert page.status_code == 200
+    assert "/evidence/" not in page.text
+
+    assert test_client.get(f"/runs/{run.id}/evidence/obs_shot_0_000").status_code == 404
+
+    store.add_observations(run.id, [Observation(
+        id="obs_gone_000", shot_id="shot_1", t_start=7.0, t_end=9.0,
+        dimension="text_legibility", statement="A note.",
+        evidence_frame="/nonexistent/frame.png", confidence=0.8,
+    )])
+    assert test_client.get(f"/runs/{run.id}/evidence/obs_gone_000").status_code == 404
+
+
+# -- style modes --
+
+def test_every_page_offers_the_three_style_modes(client):
+    """The console ships three style modes: mission (default), studio and
+    screening. The switcher is in the top bar on every page, and the choice
+    is applied before first paint so a saved mode never flashes."""
+    test_client, _, run, _ = client
+    for path in ("/", f"/runs/{run.id}"):
+        page = test_client.get(path)
+        assert page.status_code == 200
+        assert 'data-set-theme="studio"' in page.text
+        assert 'data-set-theme="screening"' in page.text
+        assert "customs-theme" in page.text

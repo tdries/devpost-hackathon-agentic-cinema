@@ -847,7 +847,13 @@ def market_room(request: Request, run_id: str, market: str):
     findings = sorted(store().findings(run.id, market),
                       key=lambda f: (-f.severity, f.t_start))
     states = market_states(run)
+    # Observation ids whose evidence keyframe is still on disk: the template
+    # draws a thumbnail only for these, so a pruned workdir degrades to the
+    # text-only row rather than a broken image.
+    evidence = {o.id for o in store().observations(run.id)
+                if o.evidence_frame and Path(o.evidence_frame).is_file()}
     return _page(request, "market_room.html", run=run, market=market,
+                 evidence=evidence,
                  pack=market_packs().get(market),
                  findings=[f for f in findings if not f.remediation_blocked],
                  blocked=[f for f in findings if f.remediation_blocked],
@@ -977,6 +983,26 @@ def media_localized(run_id: str, market: str):
         raise HTTPException(status_code=404, detail="no localized master yet")
     return FileResponse(path, media_type="video/mp4",
                         filename=f"{run.id}_localized_{market}.mp4")
+
+@app.get("/runs/{run_id}/evidence/{observation_id}")
+def evidence_frame(run_id: str, observation_id: str):
+    """The keyframe that made the analyst write the observation a finding cites.
+
+    The path served is the one the analyst itself recorded on the observation
+    (store data written by this process, never a URL segment), so the only
+    thing the caller controls is which of this run's observation ids to ask
+    for. Missing observation, empty evidence_frame and a file that no longer
+    exists all answer the same 404: the route never reveals which it was.
+    """
+    run = _run_or_404(run_id)
+    obs = next((o for o in store().observations(run.id) if o.id == observation_id), None)
+    if obs is None or not obs.evidence_frame:
+        raise HTTPException(status_code=404, detail="no evidence frame")
+    path = Path(obs.evidence_frame)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="no evidence frame")
+    media_type = "image/jpeg" if path.suffix.lower() in (".jpg", ".jpeg") else "image/png"
+    return FileResponse(path, media_type=media_type)
 
 @app.get("/runs/{run_id}/stills/{filename:path}")
 def still(run_id: str, filename: str):

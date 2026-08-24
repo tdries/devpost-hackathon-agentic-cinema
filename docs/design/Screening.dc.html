@@ -1,0 +1,125 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    /* MODE:SCREENING */
+    :root {
+      --ground: #050607; --ground-2: #07090b; --panel: #0a0c0f; --well: #060708;
+      --line: #14181d; --line-2: #21262d;
+      --ink: #f2f5f8; --ink-2: #a7b4c1; --ink-3: #596878;
+      --signal: #ffa640; --signal-d: #c47a1a;
+      --cleared: #2fd67f; --at_risk: #ffbe3d; --blocked: #ff4d5e; --pending: #45596b;
+      --topbar: rgba(5, 6, 7, 0.9);
+      --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body { margin: 0; background: radial-gradient(900px 420px at 78% -10%, rgba(255,166,64,0.05), transparent 70%), var(--ground); color: var(--ink); font-family: var(--sans); font-size: 15px; line-height: 1.55; font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased; }
+    a { color: inherit; text-decoration: none; }
+    .wrap { max-width: 1376px; margin: 0 auto; padding: 0 32px; }
+    .label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.20em; text-transform: uppercase; color: var(--ink-3); }
+    .topbar { border-bottom: 1px solid var(--line); background: var(--topbar); }
+    .topbar .wrap { display: flex; align-items: center; gap: 20px; height: 58px; }
+    .brand { display: flex; align-items: baseline; gap: 10px; }
+    .brand-mark { width: 11px; height: 11px; background: var(--signal); transform: rotate(45deg); box-shadow: 0 0 14px rgba(255,166,64,0.5); align-self: center; }
+    .brand-name { font-family: var(--mono); font-size: 14px; letter-spacing: 0.28em; font-weight: 600; }
+    .brand-sub { font-family: var(--mono); font-size: 10px; letter-spacing: 0.24em; color: var(--ink-3); }
+    .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 18px; font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--ink-3); }
+    .theme-switch { display: inline-flex; border: 1px solid var(--line-2); border-radius: 3px; overflow: hidden; }
+    .tbtn { font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; padding: 5px 9px; color: var(--ink-3); }
+    .tbtn + .tbtn { border-left: 1px solid var(--line-2); }
+    .tbtn.on { color: var(--ink); background: rgba(255,166,64,0.14); }
+    .runnav { border-bottom: 1px solid var(--line); background: var(--ground-2); }
+    .runnav .wrap { display: flex; align-items: center; gap: 4px; min-height: 46px; }
+    .tab { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-3); padding: 14px 14px 13px; border-bottom: 2px solid transparent; }
+    .tab.on { color: var(--ink); border-bottom-color: var(--signal); }
+    .runid { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--ink-3); letter-spacing: 0.06em; }
+    .pill { display: inline-flex; align-items: center; gap: 7px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; padding: 4px 9px; border: 1px solid var(--line-2); border-radius: 999px; }
+    .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .s-cleared { color: var(--cleared); border-color: rgba(47,214,127,0.35); }
+    .hero { padding: 34px 0 26px; }
+    .headline { margin: 0; font-size: 54px; line-height: 1.02; letter-spacing: -0.025em; font-weight: 680; }
+    .count { color: var(--cleared); font-family: var(--mono); font-weight: 600; }
+    .subline { margin: 16px 0 0; max-width: 62ch; color: var(--ink-2); font-size: 16px; }
+    .subline strong { color: var(--ink); font-weight: 600; }
+    .verdict-strip { display: flex; gap: 5px; margin-top: 24px; padding: 5px; border: 1px solid var(--line); border-radius: 2px; background: var(--well); }
+    .verdict-strip span { height: 7px; flex: 1; border-radius: 1px; background: var(--pending); }
+    .v-c { background: var(--cleared) !important; }
+    .v-r { background: var(--at_risk) !important; }
+    .v-b { background: var(--blocked) !important; }
+    .specs { display: grid; grid-template-columns: repeat(5, 1fr); border: 1px solid var(--line); background: var(--panel); border-radius: 3px; margin-top: 24px; }
+    .spec { padding: 13px 18px; border-left: 1px solid var(--line); }
+    .spec:first-child { border-left: none; }
+    .spec .label { display: block; margin-bottom: 6px; }
+    .spec .value { font-family: var(--mono); font-size: 13px; color: var(--ink); }
+    .tiles { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-top: 20px; }
+    .tile { position: relative; border: 1px solid var(--line); background: var(--panel); border-radius: 3px; padding: 16px 16px 13px; overflow: hidden; }
+    .tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--pending); }
+    .tile.c::before { background: var(--cleared); } .tile.r::before { background: var(--at_risk); } .tile.b::before { background: var(--blocked); }
+    .tile-code { font-family: var(--mono); font-size: 24px; line-height: 1; letter-spacing: 0.06em; font-weight: 600; }
+    .tile-name { margin-top: 6px; color: var(--ink-2); font-size: 12.5px; }
+    .tile-stats { margin-top: 12px; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); letter-spacing: 0.06em; }
+    .tile-stats b { color: var(--ink); font-weight: 600; }
+    .st { font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; float: right; }
+    .st.c { color: var(--cleared); } .st.r { color: var(--at_risk); } .st.b { color: var(--blocked); }
+    .rule-row { display: flex; align-items: center; gap: 16px; margin: 26px 0 0; }
+    .rule-row::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--line-2), transparent); }
+  </style>
+</helmet>
+<div style="min-height: 900px">
+  <header class="topbar">
+    <div class="wrap">
+      <span class="brand"><span class="brand-mark"></span><span class="brand-name">CUSTOMS</span><span class="brand-sub">LAUNCH CONTROL</span></span>
+      <span class="topbar-right"><span>15 markets</span><span>New run</span>
+        <span class="theme-switch"><span class="tbtn">Mission</span><span class="tbtn">Studio</span><span class="tbtn on">Screening</span></span>
+      </span>
+    </div>
+  </header>
+  <nav class="runnav">
+    <div class="wrap">
+      <span class="tab on">Launch board</span><span class="tab">Mission feed</span><span class="tab">Cutting room</span><span class="tab">FR</span><span class="tab">SA</span><span class="tab">US</span><span class="tab">UK</span><span class="tab">JP</span>
+      <span class="runid">run_9daf97a80573</span>
+    </div>
+  </nav>
+  <main class="wrap">
+    <section class="hero">
+      <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 14px">
+        <span class="label">Launch verdict</span>
+        <span class="pill s-cleared"><span class="dot"></span>GO</span>
+      </div>
+      <h1 class="headline">CLEARED FOR LAUNCH IN <span class="count">12 OF 15</span> MARKETS</h1>
+      <p class="subline"><strong>FR, SA</strong> are holding the campaign and <strong>TR</strong> is at risk. Open a market room for the statute behind every finding.</p>
+      <div class="verdict-strip">
+        <span class="v-b"></span><span class="v-b"></span><span class="v-r"></span><span class="v-c"></span><span class="v-c"></span><span class="v-c"></span><span class="v-c"></span><span class="v-c"></span><span class="v-c"></span><span class="v-c"></span><span class="v-c"></span><span class="v-c"></span><span class="v-c"></span><span class="v-c"></span><span class="v-c"></span>
+      </div>
+      <div class="specs">
+        <div class="spec"><span class="label">Asset</span><span class="value">solstice_60s.mp4</span></div>
+        <div class="spec"><span class="label">Duration</span><span class="value">00:56.1</span></div>
+        <div class="spec"><span class="label">Markets</span><span class="value">15 cleared list</span></div>
+        <div class="spec"><span class="label">Started</span><span class="value">2026-08-24 10:41</span></div>
+        <div class="spec"><span class="label">Findings</span><span class="value">17 (2 need a human)</span></div>
+      </div>
+    </section>
+    <div class="rule-row"><span class="label">Market tiles</span></div>
+    <div class="tiles">
+      <div class="tile b"><span class="st b">Blocked</span><div class="tile-code">FR</div><div class="tile-name">France</div><div class="tile-stats"><b>5</b> findings &nbsp; <b>0</b> need a human</div></div>
+      <div class="tile b"><span class="st b">Blocked</span><div class="tile-code">SA</div><div class="tile-name">Saudi Arabia</div><div class="tile-stats"><b>11</b> findings &nbsp; <b>1</b> need a human</div></div>
+      <div class="tile r"><span class="st r">At risk</span><div class="tile-code">TR</div><div class="tile-name">Turkey</div><div class="tile-stats"><b>2</b> findings &nbsp; <b>0</b> need a human</div></div>
+      <div class="tile c"><span class="st c">Cleared</span><div class="tile-code">US</div><div class="tile-name">United States</div><div class="tile-stats"><b>1</b> finding &nbsp; <b>0</b> need a human</div></div>
+      <div class="tile c"><span class="st c">Cleared</span><div class="tile-code">UK</div><div class="tile-name">United Kingdom</div><div class="tile-stats"><b>0</b> findings</div></div>
+      <div class="tile c"><span class="st c">Cleared</span><div class="tile-code">DE</div><div class="tile-name">Germany</div><div class="tile-stats"><b>0</b> findings</div></div>
+      <div class="tile c"><span class="st c">Cleared</span><div class="tile-code">JP</div><div class="tile-name">Japan</div><div class="tile-stats"><b>1</b> finding</div></div>
+      <div class="tile c"><span class="st c">Cleared</span><div class="tile-code">BR</div><div class="tile-name">Brazil</div><div class="tile-stats"><b>0</b> findings</div></div>
+      <div class="tile c"><span class="st c">Cleared</span><div class="tile-code">IN</div><div class="tile-name">India</div><div class="tile-stats"><b>1</b> finding</div></div>
+      <div class="tile c"><span class="st c">Cleared</span><div class="tile-code">CN</div><div class="tile-name">China</div><div class="tile-stats"><b>0</b> findings</div></div>
+    </div>
+  </main>
+</div>
+</x-dc>
+</body>
+</html>

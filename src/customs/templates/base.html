@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}Customs Launch Control{% endblock %}</title>
+<script>/* apply the saved style mode before first paint so it never flashes */
+try { var _t = localStorage.getItem("customs-theme"); if (_t) { document.documentElement.setAttribute("data-theme", _t); } } catch (e) {}</script>
 <link rel="stylesheet" href="/static/customs.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230a0d10'/%3E%3Crect x='10' y='10' width='12' height='12' fill='%23ff9d2e' transform='rotate(45 16 16)'/%3E%3C/svg%3E">
 </head>
@@ -17,6 +19,11 @@
     </a>
     <div class="topbar-right">
       {% block topbar_right %}<span>AGENTIC AD CLEARANCE</span>{% endblock %}
+      <span class="theme-switch" role="group" aria-label="Style mode">
+        <button type="button" class="tbtn" data-set-theme="" title="Mission: the dark launch-control room">Mission</button>
+        <button type="button" class="tbtn" data-set-theme="studio" title="Studio: light, for daylight and print">Studio</button>
+        <button type="button" class="tbtn" data-set-theme="screening" title="Screening: near-black, for the grading suite">Screening</button>
+      </span>
     </div>
   </div>
 </header>
