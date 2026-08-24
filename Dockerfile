@@ -44,6 +44,22 @@ RUN curl -fsSL \
         | tar -xz -C /usr/local/bin mcp-grafana \
     && chmod +x /usr/local/bin/mcp-grafana
 
+# deno: the JavaScript runtime yt-dlp uses to solve YouTube's "n challenge"
+# on stream URLs (customs/fetch.py, the YouTube link intake). Without a JS
+# runtime the web player client extracts metadata fine but every protected
+# format is dropped and the download fails with "Requested format is not
+# available" -- observed live on this service. Developers' machines have
+# node, so this only ever bit the container. unzip exists only for this
+# step, so it is removed again with the apt lists.
+RUN apt-get update && apt-get install -y --no-install-recommends unzip \
+    && curl -fsSL -o /tmp/deno.zip \
+        https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip \
+    && unzip -q /tmp/deno.zip -d /usr/local/bin \
+    && chmod +x /usr/local/bin/deno \
+    && rm /tmp/deno.zip \
+    && apt-get purge -y unzip && rm -rf /var/lib/apt/lists/* \
+    && deno --version
+
 # The application. Templates and static files live inside src/customs/ and
 # come along with it. markets/ and grafana/ are data the app reads at
 # request time (market packs, dashboard JSON), not build inputs -- both are
