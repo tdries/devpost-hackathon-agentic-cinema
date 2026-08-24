@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640">
+  <rect width="640" height="640" rx="48" fill="#0a0d10"/>
+  <rect x="240" y="130" width="160" height="160" fill="#ff9d2e" transform="rotate(45 320 210)"/>
+  <rect x="272" y="162" width="96" height="96" fill="#0a0d10" transform="rotate(45 320 210)"/>
+  <rect x="296" y="186" width="48" height="48" fill="#ff9d2e" transform="rotate(45 320 210)"/>
+  <text x="320" y="452" text-anchor="middle" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="64" font-weight="700" letter-spacing="26" fill="#e8eef4">CUSTOMS</text>
+  <text x="320" y="512" text-anchor="middle" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="22" font-weight="500" letter-spacing="12" fill="#63768a">LAUNCH CONTROL</text>
+</svg>
