@@ -230,8 +230,17 @@ async def alert_webhook(request: Request, background: BackgroundTasks) -> dict:
     return {"accepted": accepted, "ignored": ignored}
 
 @app.get("/healthz")
+@app.get("/health")
 async def healthz() -> dict:
-    """Liveness for Cloud Run. Deliberately touches nothing."""
+    """Liveness. Deliberately touches nothing.
+
+    Two paths for one handler because Google's run.app frontend swallows
+    external requests to the literal path /healthz (it answers its own 404
+    before the container is consulted; verified live 2026-08-24, GFE error
+    page, zero request logs). Cloud Run's own probes hit the container
+    directly, so /healthz still serves them; /health is the spelling that
+    works from the public internet.
+    """
     return {"status": "ok"}
 
 
