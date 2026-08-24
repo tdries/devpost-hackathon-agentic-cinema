@@ -13,11 +13,14 @@
     <div>
       <div class="rule-row"><span class="label">The master</span></div>
       <label class="drop" id="drop">
-        <input type="file" name="asset" id="asset" accept="video/mp4,video/quicktime,video/*" required>
+        <input type="file" name="asset" id="asset" accept="video/mp4,video/quicktime,video/*">
         <span class="pick">Choose a file</span>
         <span class="picked" id="picked">or drop the master here</span>
       </label>
       <p class="limits">MP4 or MOV &middot; up to 120 seconds &middot; up to 200 MB</p>
+      <div class="rule-row" style="margin:20px 0 12px"><span class="label">Or a YouTube link</span></div>
+      <input class="urlin" type="url" name="youtube_url" placeholder="https://youtu.be/&hellip;" autocomplete="off" spellcheck="false">
+      <p class="limits">Public YouTube video &middot; same limits apply &middot; fetched at up to 720p</p>
       <p class="subline" style="font-size:13.5px">A run takes about four minutes: shot detection, a transcription and an observation pass per shot, then every market judged in parallel with a grounded citation for each finding.</p>
     </div>
     <div>

@@ -83,6 +83,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from customs import adjudicate, packs, pipeline, remediate, verify
+from customs.fetch import FetchError, fetch_youtube
 from customs.config import settings
 from customs.media import MediaError, probe_duration
 from customs.store import Store
@@ -631,7 +632,8 @@ def home(request: Request):
                  recent=recent)
 
 @app.post("/runs")
-async def create_run(asset: UploadFile = File(...),
+async def create_run(asset: UploadFile | None = File(None),
+                     youtube_url: str = Form(""),
                      markets: list[str] = Form(default=[])):
     """Accept an asset, create the run, start the crew, redirect to the board.
 
@@ -665,31 +667,62 @@ async def create_run(asset: UploadFile = File(...),
             f"No market pack for: {', '.join(unknown)}. "
             f"Known markets: {', '.join(sorted(known))}.", status_code=400)
 
+    url = youtube_url.strip()
+    has_file = asset is not None and bool((asset.filename or "").strip())
+    if url and has_file:
+        return PlainTextResponse(
+            "Provide either an uploaded master or a YouTube link, not both.",
+            status_code=400)
+    if not url and not has_file:
+        return PlainTextResponse(
+            "Provide a master: upload a file or paste a YouTube link.",
+            status_code=400)
+
     # One directory per upload, keeping the file's own name inside it. The
     # name matters beyond tidiness: telemetry labels every metric and every
     # alert with the asset path's *stem*, so a uniquifying prefix on the
     # filename would follow this asset onto the dashboards and into the alert
     # labels as "a1b2c3_spring_launch". The directory carries the uniqueness
     # instead, and two uploads of the same filename still cannot collide.
-    safe = _SAFE_NAME.sub("_", Path(asset.filename or "asset.mp4").name)[-60:]
     folder = uploads_dir() / uuid.uuid4().hex[:12]
     folder.mkdir(parents=True, exist_ok=True)
-    target = folder / safe
 
-    size = 0
-    try:
-        with target.open("wb") as out:
-            while chunk := await asset.read(_UPLOAD_CHUNK):
-                size += len(chunk)
-                if size > MAX_UPLOAD_BYTES:
-                    raise _TooLarge
-                await asyncio.to_thread(out.write, chunk)
-    except _TooLarge:
-        _discard(target)
-        return PlainTextResponse(
-            f"That file is too large. The limit is "
-            f"{MAX_UPLOAD_BYTES // (1024 * 1024)} MB and this upload is over it.",
-            status_code=400)
+    if url:
+        # The YouTube way in: fetch.fetch_youtube validates the link, refuses
+        # a too-long video before downloading, caps the download, and raises
+        # FetchError with a sentence made for this 400. It runs in a thread
+        # for the same reason the write loop below does: it is network plus
+        # an ffmpeg merge, and the event loop serves everyone else meanwhile.
+        try:
+            target = await asyncio.to_thread(
+                fetch_youtube, url, folder, MAX_DURATION_S, MAX_UPLOAD_BYTES)
+        except FetchError as exc:
+            for leftover in folder.glob("*"):
+                leftover.unlink(missing_ok=True)
+            try:
+                folder.rmdir()
+            except OSError:
+                pass
+            return PlainTextResponse(str(exc), status_code=400)
+        safe = target.name
+    else:
+        safe = _SAFE_NAME.sub("_", Path(asset.filename or "asset.mp4").name)[-60:]
+        target = folder / safe
+
+        size = 0
+        try:
+            with target.open("wb") as out:
+                while chunk := await asset.read(_UPLOAD_CHUNK):
+                    size += len(chunk)
+                    if size > MAX_UPLOAD_BYTES:
+                        raise _TooLarge
+                    await asyncio.to_thread(out.write, chunk)
+        except _TooLarge:
+            _discard(target)
+            return PlainTextResponse(
+                f"That file is too large. The limit is "
+                f"{MAX_UPLOAD_BYTES // (1024 * 1024)} MB and this upload is over it.",
+                status_code=400)
 
     try:
         duration = await asyncio.to_thread(probe_duration, str(target))

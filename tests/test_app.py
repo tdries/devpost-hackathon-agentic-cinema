@@ -879,3 +879,57 @@ def test_every_page_offers_the_three_style_modes(client):
         assert 'data-set-theme="studio"' in page.text
         assert 'data-set-theme="screening"' in page.text
         assert "customs-theme" in page.text
+
+
+# -- the youtube way in --
+
+def test_a_youtube_link_launches_a_clearance(console, monkeypatch, tmp_path):
+    """Paste a link, pick markets, and the crew starts on the fetched file."""
+    test_client, store, launched, _ = console
+
+    def fake_fetch(url, folder, max_s, max_b):
+        target = Path(folder) / "Solstice_Launch_Spot.mp4"
+        target.write_bytes(b"video")
+        return target
+
+    monkeypatch.setattr(app_module, "fetch_youtube", fake_fetch)
+    reply = test_client.post(
+        "/runs",
+        data={"youtube_url": "https://youtu.be/dQw4w9WgXcQ", "markets": ["FR"]},
+        follow_redirects=False)
+    assert reply.status_code == 303
+    assert len(launched) == 1
+    assert launched[0][1].endswith("Solstice_Launch_Spot.mp4")
+
+
+def test_a_refused_link_is_a_400_with_the_reason(console, monkeypatch):
+    test_client, *_ = console
+    from customs.fetch import FetchError
+
+    def refusing_fetch(url, folder, max_s, max_b):
+        raise FetchError("That video is 300 seconds long. Customs clears "
+                         "commercials up to 120 seconds.")
+
+    monkeypatch.setattr(app_module, "fetch_youtube", refusing_fetch)
+    reply = test_client.post(
+        "/runs",
+        data={"youtube_url": "https://youtu.be/dQw4w9WgXcQ", "markets": ["FR"]})
+    assert reply.status_code == 400
+    assert "300 seconds" in reply.text
+
+
+def test_neither_file_nor_link_is_a_400(console):
+    test_client, *_ = console
+    reply = test_client.post("/runs", data={"markets": ["FR"]})
+    assert reply.status_code == 400
+    assert "upload a file or paste a YouTube link" in reply.text
+
+
+def test_both_file_and_link_is_a_400(console):
+    test_client, *_ = console
+    reply = test_client.post(
+        "/runs",
+        data={"youtube_url": "https://youtu.be/dQw4w9WgXcQ", "markets": ["FR"]},
+        files={"asset": ("ad.mp4", b"bytes", "video/mp4")})
+    assert reply.status_code == 400
+    assert "not both" in reply.text

@@ -811,3 +811,19 @@ html[data-theme="screening"] body {
 }
 html[data-theme="screening"] .topbar { background: rgba(5, 6, 7, 0.9); }
 html[data-theme="screening"] .theme-switch .tbtn.on { background: rgba(255, 166, 64, 0.14); }
+
+/* ---------- youtube link input ---------- */
+
+.urlin {
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--well);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  letter-spacing: 0.02em;
+}
+.urlin::placeholder { color: var(--ink-3); }
+.urlin:focus { outline: none; border-color: var(--signal-d); }
