@@ -1780,3 +1780,36 @@ def test_recent_runs_opens_on_a_banner_made_of_the_products_own_icons(client):
 
     css = test_client.get("/static/customs.css").text
     assert "prefers-reduced-motion" in css, "the drift must be stoppable"
+
+
+def test_every_dashboard_is_painted_from_the_one_palette():
+    """A lane cannot be amber in Grafana and red on the tile beside it.
+
+    The palette lives in state.py and the dashboard JSON hardcodes the same
+    hexes, which is a convention rather than a mechanism -- so this is the
+    mechanism. Every colour literal in every dashboard must be one of the
+    four the app knows, or the two surfaces have drifted and the console is
+    telling two stories about the same severity.
+
+    It is written over all seven dashboards on purpose: asserting it for one
+    panel proved only that one panel, which is how the drift would start.
+    """
+    import json, pathlib, re
+    from customs import state
+
+    palette = {c.upper() for c in
+               (state.SIGNAL, state.BLOCKED, state.AT_RISK, state.CLEARED)}
+    seen: dict[str, set[str]] = {}
+    for path in sorted(pathlib.Path("grafana/dashboards").glob("*.json")):
+        found = {m.upper() for m in
+                 re.findall(r'#[0-9A-Fa-f]{6}', path.read_text())}
+        stray = found - palette
+        assert not stray, f"{path.name} paints with {sorted(stray)}, not the palette"
+        seen[path.name] = found
+
+    assert len(seen) == 7, f"expected 7 dashboards, found {sorted(seen)}"
+    # and the palette is actually used, rather than trivially satisfied by
+    # dashboards that carry no colour literal at all
+    assert set().union(*seen.values()) >= {state.BLOCKED.upper(),
+                                           state.AT_RISK.upper(),
+                                           state.CLEARED.upper()}

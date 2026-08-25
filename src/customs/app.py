@@ -801,13 +801,14 @@ def embeds(run) -> dict[str, str]:
 # Cloud has no anonymous access, so embedding is an auth problem." Public
 # dashboards solved the auth half -- those URLs open with no login, and the
 # board links to them -- but this stack answers every request, public
-# dashboards included, with the response header `x-frame-options: deny + frame-ancestors 'none'`
-# (re-verified live 2026-08-25 -- and note it is NOT a CSP frame-ancestors
-# directive: this stack's CSP has none. That matters, because
-# frame-ancestors can name permitted origins and could have been opened
-# for our domain, whereas `deny` takes no origin list and refuses every
-# parent unconditionally). A browser refuses to frame that, and the page
-# gets an empty box.
+# dashboards included, by refusing to be framed. The exact mechanism is in
+# spark.py's closing note and reproducible with scripts/probe_framing.py:
+# a GET -- which is what a browser's iframe issues -- comes back with CSP
+# `frame-ancestors 'none'` and no x-frame-options, while a HEAD comes back
+# with `x-frame-options: deny` and no CSP. An earlier version of this
+# comment read the HEAD and concluded the stack sets no frame-ancestors
+# directive. It does, and it is the one that decides. A browser refuses to
+# frame that, and the page gets an empty box.
 #
 # So the console runs the spec's own fallback, which was built at the same
 # time as the primary for this reason: "server-side panel rendering through

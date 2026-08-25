@@ -192,22 +192,26 @@ def bars(values: list[tuple[str, float]], *, width: int = 260, height: int = 40,
             f'preserveAspectRatio="none" aria-hidden="true">{"".join(out)}</svg>')
 
 
-# Why this module exists, corrected twice and now checked in a browser
-# rather than in a header dump.
+# Why this module exists. Settled by scripts/probe_framing.py, which is
+# checked in precisely because this has now been got wrong twice, in both
+# directions, by reading the answer off the wrong response.
 #
-# Grafana Cloud refuses to be framed by BOTH mechanisms at once:
-# `x-frame-options: deny` AND the CSP directive `frame-ancestors 'none'`.
-# The second is the one browsers report. An earlier note here claimed the
-# CSP had no frame-ancestors -- that was read off the 302 rather than the
-# 200 it redirects to, and was simply wrong.
+# Grafana Cloud refuses to be framed by both mechanisms -- but not on the
+# same request, which is the whole reason for the confusion:
+#
+#     GET  (what a browser's iframe issues)   csp frame-ancestors 'none'
+#                                             x-frame-options ABSENT
+#     HEAD (what you reach for by hand)       csp ABSENT
+#                                             x-frame-options: deny
+#
+# So the operative refusal is the CSP directive, and a header dump taken
+# with HEAD will tell you there is no frame-ancestors. There is.
 #
 # It matters because frame-ancestors CAN name permitted origins: 'none'
 # is a decision, not an absence, and on a self-hosted Grafana it is what
-# `allow_embedding = true` relaxes. Public dashboards -- which exist for
-# embedding -- are refused on this stack too, verified by loading one in
-# a real iframe and watching the browser reject it.
+# `allow_embedding = true` relaxes. On a Cloud stack it is not ours to
+# relax -- PUT /api/admin/settings answers 403. Public dashboards, which
+# exist to be embedded, are refused on the same terms.
 #
 # So drawing here is not a workaround for something nobody switched on.
-# It is what works today against this stack, and it buys something an
-# iframe never could: the dots are elements in our own DOM, so a cursor
-# can be tracked over them and mapped back to our own screenshots.
+# It is what works today against this stack.
