@@ -1407,3 +1407,18 @@ def test_recent_runs_opens_as_cards_and_remembers_a_choice_of_list(client):
     assert 'var saved = "cards"' in block
     assert 'localStorage.setItem(KEY, view)' in block
     assert "removeItem(KEY)" not in block.split("buttons.forEach")[-1]
+
+
+def test_studio_mode_lands_on_recent_runs(client):
+    """Entering the studio almost always means looking at work already done.
+
+    The switch used to point at the upload form, so leaving agent mode
+    dropped you on an empty form rather than on your runs. Starting a
+    clearance is still one tab away.
+    """
+    test_client, _, run, _ = client
+    for path in ("/", "/agent", f"/runs/{run.id}"):
+        body = test_client.get(path).text
+        switch = body.split('class="mode-switch"')[1].split("</span>")[0]
+        assert 'href="/runs"' in switch, path
+        assert 'href="/agent"' in switch, path

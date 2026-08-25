@@ -83,7 +83,10 @@ try {
     <div class="topbar-right">
       <span class="mode-switch" role="group" aria-label="Mode">
         <a class="{{ 'on' if screen == 'agent' }}" href="/agent"><svg class="ic"><use href="#i-adjudicator"/></svg>Agent</a>
-        <a class="{{ 'on' if screen != 'agent' }}" href="/"><svg class="ic"><use href="#n-board"/></svg>Studio</a>
+        {# Studio lands on Recent runs, not the upload form: entering the
+           studio almost always means looking at work already done, and
+           starting a clearance is one tab away when it does not. #}
+        <a class="{{ 'on' if screen != 'agent' }}" href="/runs"><svg class="ic"><use href="#n-board"/></svg>Studio</a>
       </span>
       {% block topbar_right %}{% endblock %}
       <span class="theme-switch" role="group" aria-label="Style mode">
