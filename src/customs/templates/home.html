@@ -78,7 +78,7 @@
       <span class="when">{{ item.run.t0 | stamp }}</span>
       <span class="flags">
         {% for code, state in item.states.items() %}
-        {% set st = 'error' if state.errored else state.clearance %}
+        {% set st = state.display %}
         <span class="pill s-{{ st }}"><svg class="ic"><use href="#i-{{ st.replace('_', '-') }}"/></svg>{{ code }}</span>
         {% endfor %}
       </span>

@@ -437,6 +437,64 @@ def pack_groups() -> list[dict]:
     return groups
 
 
+_SHOTS_RE = re.compile(r"merged to (\d+)")
+
+
+def run_progress(run, states: dict[str, dict]) -> dict:
+    """How far along a clearance is, from the crew's own events.
+
+    There is no progress counter to read: the run is a pipeline of stages
+    whose sizes are only known once the stage before it finished (nobody
+    knows the shot count until ingest has cut the film). So progress is
+    inferred from what the agents have already said they did, weighted by
+    how long each stage actually takes: the analyst is most of the wall
+    clock, the adjudicators are cheap and parallel, and the publisher is a
+    handful of calls at the end.
+    """
+    if run.status in ("done", "error"):
+        return {"pct": 100, "stage": "done"}
+
+    rows = store().events_since(run.id, 0)
+    shots, transcribed, observed, judged, published = 0, 0, 0, 0, False
+    for _id, _ts, agent, message in rows:
+        if agent == "ingest":
+            found = _SHOTS_RE.search(message)
+            if found:
+                shots = int(found.group(1))
+        elif agent == "transcription":
+            transcribed += 1
+        elif agent == "analyst" and message.startswith("observe ->"):
+            observed += 1
+        elif agent == "adjudicator" and "clearance ->" in message:
+            judged += 1
+        elif agent == "publisher" and message.startswith("push_run_telemetry"):
+            published = True
+
+    markets = max(1, len(run.markets))
+    # ingest is done the moment we know the shot count
+    pct = 4 if not shots else 10
+    if shots:
+        pct += 22 * min(1.0, transcribed / shots)
+        pct += 44 * min(1.0, observed / shots)
+    pct += 20 * min(1.0, judged / markets)
+    if published:
+        pct = max(pct, 96)
+
+    if published:
+        stage = "publishing to Grafana"
+    elif judged:
+        stage = f"judging markets, {judged} of {markets} back"
+    elif observed and shots:
+        stage = f"watching the film, shot {min(observed, shots)} of {shots}"
+    elif transcribed and shots:
+        stage = f"transcribing, {min(transcribed, shots)} of {shots}"
+    elif shots:
+        stage = f"{shots} shots detected"
+    else:
+        stage = "detecting shots"
+    return {"pct": int(min(99, max(2, round(pct)))), "stage": stage}
+
+
 def market_states(run) -> dict[str, dict]:
     """Per market: {clearance, findings, blocked, errored} for one run.
 
@@ -470,21 +528,29 @@ def market_states(run) -> dict[str, dict]:
             "blocked": sum(1 for f in findings if f.remediation_blocked),
             "errored": market in errored,
         }
+        states[market]["display"] = tile_state(states[market])
     return states
 
 def tile_state(state: dict) -> str:
     """The one word a tile is drawn with.
 
-    Errored beats every verdict, and an edit in flight beats a verdict the
-    edit has not earned yet: clearance() deliberately ignores findings at
-    status "remediating" so the alert can resolve, which would otherwise
-    have a market showing CLEARED while the Remediator is still working on
-    the thing holding it.
+    Four things can be true at once and only one of them fits on a badge, so
+    the order is: an unevaluated market first, then an edit in flight, then
+    the "cleared but not clean" case, then the verdict itself.
+
+    That third one is why this function exists. clearance() says "cleared"
+    when nothing OPEN disqualifies the market, and offence findings, unsourced
+    ones and anything under severity 70 never disqualify anything. So a market
+    could carry two open findings and wear a green CLEARED badge, which reads
+    as a contradiction to the only people who matter here. It gets its own
+    state instead: cleared to air, with things still on the table.
     """
     if state["errored"]:
         return "error"
     if state.get("working"):
         return "pending"
+    if state["clearance"] == "cleared" and state.get("open"):
+        return "noted"
     return state["clearance"]
 
 def overall(states: dict[str, dict]) -> dict:
@@ -901,7 +967,8 @@ def launch_board(request: Request, run_id: str):
               "pack": market_packs().get(m)} for m, s in states.items()]
     tiles.sort(key=lambda t: (TILE_ORDER.get(t["state"], 9), t["market"]))
     return _page(request, "launch_board.html", run=run, tiles=tiles,
-                 overall=overall(states), embeds=embeds(run),
+                 overall=overall(states), progress=run_progress(run, states),
+                 embeds=embeds(run),
                  duration=asset_duration(run), published=published(run),
                  changes=len(store().changes(run.id)), screen="board")
 
@@ -1019,6 +1086,7 @@ def run_status(run_id: str):
         "done": run.status in ("done", "error"),
         "status": run.status,
         "overall": overall(states),
+        "progress": run_progress(run, states),
         "markets": states,
     }
 

@@ -13,12 +13,13 @@
 (function () {
   "use strict";
 
-  var STATE_WORDS = { error: "not evaluated", at_risk: "at risk" };
+  var STATE_WORDS = { error: "not evaluated", at_risk: "at risk",
+                      noted: "cleared, notes" };
   var word = function (state) { return STATE_WORDS[state] || state; };
 
   /* The icon system (see docs/design/icons): every state and agent has one
      mark, drawn once as <symbol>s in base.html and referenced by id here. */
-  var STATE_ICONS = { cleared: 1, at_risk: 1, blocked: 1, pending: 1, error: 1 };
+  var STATE_ICONS = { cleared: 1, at_risk: 1, blocked: 1, pending: 1, error: 1, noted: 1 };
   var icon = function (state) {
     var id = STATE_ICONS[state] ? state.replace("_", "-") : "pending";
     return '<svg class="ic"><use href="#i-' + id + '"/></svg>';
@@ -73,7 +74,7 @@
     var paint = function (data) {
       Object.keys(data.markets).forEach(function (code) {
         var market = data.markets[code];
-        var state = market.errored ? "error" : market.clearance;
+        var state = market.display || (market.errored ? "error" : market.clearance);
         var tile = document.getElementById("tile-" + code);
         if (tile) {
           tile.className = "tile t-" + state;
@@ -95,6 +96,18 @@
           }
         }
       });
+
+      /* the run's own progress, from what the agents have reported */
+      var progress = document.getElementById("progress");
+      if (progress && data.progress) {
+        var fill = document.getElementById("progress-fill");
+        var pct = document.getElementById("progress-pct");
+        var stage = document.getElementById("progress-stage");
+        if (fill) { fill.style.width = data.progress.pct + "%"; }
+        if (pct) { pct.textContent = data.progress.pct + "%"; }
+        if (stage) { stage.textContent = data.progress.stage; }
+        if (data.done) { progress.remove(); }
+      }
 
       var overall = data.overall;
       if (headline) {

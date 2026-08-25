@@ -22,6 +22,15 @@
       Every market cleared. The findings, the citations and the edits are all one click down.
     {% endif %}
   </p>
+  {% if overall.state == 'pending' %}
+  <div class="progress" id="progress">
+    <div class="progress-head">
+      <span class="label" id="progress-stage">{{ progress.stage }}</span>
+      <span class="mono" id="progress-pct">{{ progress.pct }}%</span>
+    </div>
+    <div class="progress-track"><span id="progress-fill" style="width:{{ progress.pct }}%"></span></div>
+  </div>
+  {% endif %}
   <div class="verdict-strip" id="strip">
     {% for tile in tiles %}<span class="v-{{ tile.state }}" data-market="{{ tile.market }}" title="{{ tile.market }}: {{ tile.state }}"></span>{% endfor %}
   </div>
@@ -41,7 +50,7 @@
     <a class="tile t-{{ tile.state }}" id="tile-{{ tile.market }}" href="/runs/{{ run.id }}/markets/{{ tile.market }}">
       <span class="tile-top">
         <span class="tile-code">{{ tile.market }}</span>
-        <span class="pill s-{{ tile.state }}" data-role="state"><svg class="ic"><use href="#i-{{ tile.state.replace('_', '-') }}"/></svg>{{ tile.state.replace('_', ' ') if tile.state != 'error' else 'not evaluated' }}</span>
+        <span class="pill s-{{ tile.state }}" data-role="state"><svg class="ic"><use href="#i-{{ tile.state.replace('_', '-') }}"/></svg>{{ {'error': 'not evaluated', 'at_risk': 'at risk', 'noted': 'cleared, notes'}.get(tile.state, tile.state) }}</span>
       </span>
       <span class="tile-name">{{ tile.pack.name if tile.pack else tile.market }}</span>
       {% if tile.pack and tile.pack.level == 'channel' %}

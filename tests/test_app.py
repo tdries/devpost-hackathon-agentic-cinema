@@ -485,8 +485,8 @@ def test_status_reports_a_clearance_a_count_and_the_errored_market(console):
     assert body["done"] is True
     assert set(body["markets"]) == set(MARKETS)
     assert body["markets"]["FR"] == {
-        "clearance": "blocked", "findings": 2, "open": 2, "working": 0,
-        "resolved": 0, "blocked": 0, "errored": False}
+        "clearance": "blocked", "display": "blocked", "findings": 2, "open": 2,
+        "working": 0, "resolved": 0, "blocked": 0, "errored": False}
     assert body["markets"]["SA"]["errored"] is True
     assert body["markets"]["SA"]["blocked"] == 1
     assert body["markets"]["US"]["clearance"] == "cleared"
@@ -1076,7 +1076,8 @@ def test_cleared_never_stands_alone_when_findings_are_still_open(client):
     page = test_client.get(f"/runs/{run.id}/markets/SA")
     assert page.status_code == 200
     # an offence finding never blocks, so the market reads cleared...
-    assert "Cleared does not mean clean" in page.text
+    assert "Cleared to air, but not clean" in page.text
+    assert "s-noted" in page.text
     assert "still open" in page.text
 
 
@@ -1092,3 +1093,33 @@ def test_a_market_being_edited_does_not_report_the_verdict_it_has_not_earned(cli
     assert body["markets"]["FR"]["working"] == 1
     board = test_client.get(f"/runs/{run.id}")
     assert "t-pending" in board.text                          # the operator's view
+    assert body["markets"]["FR"]["display"] == "pending"
+
+
+def test_a_running_clearance_reports_how_far_along_it_is(client):
+    """There is no counter to read: progress is inferred from what the
+    agents have already said they did, which is the only honest source."""
+    test_client, store, run, _ = client
+    store.set_run_status(run.id, "running")
+
+    first = test_client.get(f"/runs/{run.id}/status").json()["progress"]
+    assert first["pct"] < 10 and "detecting" in first["stage"]
+
+    store.emit(run.id, "ingest", "ingest -> 12 raw shot(s) merged to 8")
+    for i in range(8):
+        store.emit(run.id, "transcription", f"shot_{i} -> 40 char(s)")
+    for i in range(4):
+        store.emit(run.id, "analyst", f"observe -> shot_{i}")
+    half = test_client.get(f"/runs/{run.id}/status").json()["progress"]
+    assert 30 < half["pct"] < 70
+    assert "shot 4 of 8" in half["stage"]
+
+    store.emit(run.id, "adjudicator", "FR clearance -> blocked (2 finding(s))")
+    judging = test_client.get(f"/runs/{run.id}/status").json()["progress"]
+    assert judging["pct"] > half["pct"]
+    assert "judging markets" in judging["stage"]
+
+    # and a finished run is simply done, whatever the events say
+    store.set_run_status(run.id, "done")
+    assert test_client.get(f"/runs/{run.id}/status").json()["progress"] == {
+        "pct": 100, "stage": "done"}
