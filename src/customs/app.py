@@ -1315,7 +1315,8 @@ def all_runs(request: Request):
     """
     rows = [{"run": run, "states": market_states(run)}
             for run in store().recent_runs(500)]
-    return _page(request, "runs.html", rows=rows, screen="runs")
+    return _page(request, "runs.html", rows=rows, screen="runs",
+                 packs_total=len(market_packs()), dims_total=len(packs.taxonomy()))
 
 @app.get("/runs/{run_id}/timeline", response_class=HTMLResponse)
 def timeline(request: Request, run_id: str):
