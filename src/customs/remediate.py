@@ -104,6 +104,23 @@ _ON_SCREEN_MARKERS = (
 # painted across the packet: the label is a description of the job, and the
 # job is to work out the words. An intent picks the instruction; only a
 # human typing exact text sets `replacement`.
+def _directive_for(finding, intent: str | None) -> str | None:
+    """The edit instruction an intent stands for.
+
+    "remedy:N" indexes the judge's own remedies on the finding, which is why
+    the directive never travels through the browser: the form submits a
+    position, not model-written prose that could end up painted onto the
+    frame the way an intent label once was.
+    """
+    if not intent:
+        return None
+    if intent.startswith("remedy:"):
+        try:
+            return (getattr(finding, "remedies", None) or [])[int(intent[7:])]["directive"]
+        except (ValueError, IndexError, KeyError, TypeError):
+            return None
+    return INTENT_INSTRUCTIONS.get(intent)
+
 INTENT_INSTRUCTIONS = {
     "translate": None,          # the default: the model translates for the market
     "swap": None,               # the default: a market-appropriate substitute
@@ -367,7 +384,7 @@ def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str
                      intent: str | None = None) -> tuple[Path, str]:
     """relettering / prop_swap: edit the keyframe, fit it, composite the span."""
     market_name = _market_name(finding.market)
-    directive = INTENT_INSTRUCTIONS.get(intent or "") if intent else None
+    directive = _directive_for(finding, intent)
     if directive:
         # an intent with its own directive replaces the whole instruction
         instruction = (f"Edit this frame from a television commercial. {directive} "

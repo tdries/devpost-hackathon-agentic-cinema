@@ -138,10 +138,14 @@ def options(span: float, spent_today: float, scope: str = "segment",
 # removing the glass are three different films, and the operator owns that
 # call, not the model.
 
+# One dimension covers alcohol, tobacco AND drugs, so this fallback cannot
+# name a drink: it was offering "swap the drink for a non-alcoholic one" over
+# a lit cigarette. Wording here stays neutral about the substance; the
+# specific naming comes from the judge's own remedies, which saw the frame.
 _SUGGESTIONS = {
     "alcohol_tobacco_drugs": [
-        ("swap", "Swap the drink for a non-alcoholic one"),
-        ("empty", "Keep the glass, change what is in it"),
+        ("swap", "Swap it for a permitted product"),
+        ("empty", "Keep the container, change the contents"),
         ("remove", "Remove it from the shot entirely"),
     ],
     "modesty_dress_body": [
@@ -198,7 +202,22 @@ _DEFAULT_SUGGESTIONS = [
 ]
 
 
-def suggestions(dimension: str) -> list[dict]:
-    """Three concrete ways to deal with a finding of this kind."""
+def suggestions(dimension: str, finding=None) -> list[dict]:
+    """Three concrete ways to deal with a finding.
+
+    The judge writes three while it is deciding the finding, so they name the
+    thing it actually saw. Those win. The dimension table is the fallback for
+    findings judged before that existed, and it can only ever speak in
+    categories -- which is how a cigarette came to be offered a non-alcoholic
+    drink, both being alcohol_tobacco_drugs.
+
+    A judge-written remedy is addressed by index, never by its text: the
+    directive reaches the image editor from the stored finding, so nothing a
+    model wrote has to survive a round trip through a form field.
+    """
+    own = list(getattr(finding, "remedies", None) or [])
+    if own:
+        return [{"key": f"remedy:{i}", "label": r["label"]}
+                for i, r in enumerate(own) if r.get("label")]
     raw = _SUGGESTIONS.get(dimension, _DEFAULT_SUGGESTIONS)
     return [{"key": key, "label": label} for key, label in raw]
