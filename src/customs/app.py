@@ -83,7 +83,7 @@ from fastapi.responses import (FileResponse, HTMLResponse, PlainTextResponse,
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from customs import (adjudicate, agentmode, analyst, costs, media, packs,
+from customs import (adjudicate, agentmode, analyst, costs, media, packs, replyfmt,
                      persist, pipeline, remediate, scope as scope_mod, spark,
                      state as state_mod, verify)
 from customs.fetch import FetchError, fetch_youtube
@@ -1208,8 +1208,17 @@ async def agent_ask(message: str = Form(...), session: str = Form("default"),
     if len(text) > 2000:
         raise HTTPException(status_code=400, detail="that is too long for one turn")
     turn = await agentmode.ask(store(), text, session_id=session, run_id=run)
+    # The agent answers in prose; the console speaks in chips. reply_html
+    # renders the same sentence in the interface's own language -- a rule
+    # id as its class chip, a market as its country chip, a dimension as
+    # its taxonomy icon -- so an answer reads like part of the product
+    # rather than like a transcript pasted into it. Plain `reply` is kept
+    # so anything consuming this API is unaffected.
+    known = market_packs()
+    rules = {r.id: r.klass for pack in known.values() for r in pack.rules}
     return {
         "reply": turn.reply or ("" if not turn.error else ""),
+        "reply_html": replyfmt.render(turn.reply or "", markets=set(known), rules=rules),
         "view": turn.view, "view_label": turn.view_label,
         "view_external": turn.view_external,
         "calls": turn.calls, "error": turn.error,
