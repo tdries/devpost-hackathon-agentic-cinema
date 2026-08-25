@@ -671,3 +671,71 @@ def test_nothing_from_the_run_can_leak_into_the_veo_prompt(monkeypatch, tmp_path
         "Veo's prompt must be one of a finite set, not built per finding"
     for leaked in ("wine", "halter", "sleeveless", "woman", "SA-MOD-01"):
         assert leaked not in sent["prompt"], f"{leaked!r} reached Veo"
+
+
+def test_a_blocked_generation_is_never_charged(monkeypatch, tmp_path):
+    """Google says it plainly: "You will not be charged for blocked videos."
+
+    A SA-ROTANA alcohol bridge came back rai_media_filtered_count=1 and the
+    operator's budget was debited EUR 1.88 for a video that was never
+    produced and never billed. The charge was written down BEFORE the call.
+    """
+    from customs import remediate
+    from customs.genai_client import VeoBlocked
+    from customs.schema import Finding
+
+    charged, tries = [], []
+    monkeypatch.setattr(remediate, "_edit_image", lambda *a, **k: b"png")
+    monkeypatch.setattr(remediate, "_anchor_check",
+                        lambda *a, **k: {"fixed": True, "still_visible": "", "added": ""})
+    monkeypatch.setattr(remediate.media, "extract_keyframes",
+                        lambda *a, **k: [tmp_path / "kf.png"])
+    monkeypatch.setattr(remediate.media, "fit_image", lambda a, b, c: pathlib.Path(c))
+    monkeypatch.setattr(remediate.media, "splice_clip", lambda *a, **k: None)
+    def blocked(**kw):
+        tries.append(1)
+        raise VeoBlocked("filtered")
+    monkeypatch.setattr(remediate, "generate_bridge", blocked)
+    (tmp_path / "kf.png").write_bytes(b"raw")
+
+    finding = Finding(id="f", run_id="r", observation_id="o", market="SA-ROTANA",
+                      rule_id="SA-ALC-01", klass="legal", severity=90, t_start=1.0,
+                      t_end=5.0, rationale="", citation_ref="", citation_url="",
+                      sourced=True, remediable=True, remediation_blocked=False,
+                      blocked_reason="")
+
+    with pytest.raises(remediate.RemediationError, match="safety filter"):
+        remediate._bridge_span(tmp_path / "b.mp4", finding, None, tmp_path,
+                               tmp_path / "out.mp4", spend=lambda: charged.append(1))
+
+    assert len(tries) == 2, "the filter is stochastic; a free retry is worth taking"
+    assert charged == [], "a blocked generation must not touch the budget"
+
+
+def test_a_generation_that_fails_any_other_way_is_charged(monkeypatch, tmp_path):
+    """Veo did the work and billed for it, whether or not it came back."""
+    from customs import remediate
+    from customs.schema import Finding
+
+    charged = []
+    monkeypatch.setattr(remediate, "_edit_image", lambda *a, **k: b"png")
+    monkeypatch.setattr(remediate, "_anchor_check",
+                        lambda *a, **k: {"fixed": True, "still_visible": "", "added": ""})
+    monkeypatch.setattr(remediate.media, "extract_keyframes",
+                        lambda *a, **k: [tmp_path / "kf.png"])
+    monkeypatch.setattr(remediate.media, "fit_image", lambda a, b, c: pathlib.Path(c))
+    monkeypatch.setattr(remediate.media, "splice_clip", lambda *a, **k: None)
+    def timeout(**kw):
+        raise RuntimeError("Veo bridge still running after 600s")
+    monkeypatch.setattr(remediate, "generate_bridge", timeout)
+    (tmp_path / "kf.png").write_bytes(b"raw")
+
+    finding = Finding(id="f", run_id="r", observation_id="o", market="SA",
+                      rule_id="SA-ALC-01", klass="legal", severity=90, t_start=1.0,
+                      t_end=5.0, rationale="", citation_ref="", citation_url="",
+                      sourced=True, remediable=True, remediation_blocked=False,
+                      blocked_reason="")
+    with pytest.raises(RuntimeError, match="still running"):
+        remediate._bridge_span(tmp_path / "b.mp4", finding, None, tmp_path,
+                               tmp_path / "out.mp4", spend=lambda: charged.append(1))
+    assert charged == [1], "a real generation that died is still billed by Google"
