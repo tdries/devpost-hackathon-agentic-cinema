@@ -294,6 +294,22 @@ def extract_keyframes(path, shot: Shot, out_dir, per_shot: int | None = None) ->
         frames.append(out_path)
     return frames
 
+def poster(path, out_path, at: float = 1.0, width: int = 320) -> Path:
+    """One small JPEG from the asset, for a list that has to show many at once.
+
+    Deliberately not an evidence frame: those are full-resolution PNGs around
+    1.3MB each, so a page showing a dozen runs would ship seventeen megabytes
+    of stills to say what each advert looks like. This is a few kilobytes.
+    """
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    args = [
+        "ffmpeg", "-y", "-ss", f"{max(0.0, at):.3f}", "-i", str(path),
+        "-frames:v", "1", "-vf", f"scale={width}:-2", "-q:v", "5", str(out_path),
+    ]
+    _run(args, timeout=_TIMEOUT)
+    return out_path
+
 def extract_audio(path, out_wav) -> Path:
     out_wav = Path(out_wav)
     out_wav.parent.mkdir(parents=True, exist_ok=True)
