@@ -15,10 +15,20 @@ methods are even offered:
                camera is still; otherwise the motion has to be followed.
 * **scene**    the whole shot is the violation. Only regeneration reaches
                it, and only if the shot is short enough for Veo to bridge.
-* **concept**  the premise of the commercial is the violation. Nothing in
-               this system fixes it, and pretending otherwise would be the
-               dishonest kind of automation: it goes to whoever can
-               commission a different film.
+* **concept**  the premise of the commercial is the violation.
+
+Scope alone is not the whole answer, because "the premise is the violation"
+covers two different situations. In one, the forbidden thing IS the idea: an
+advertisement for alcohol cannot be an advertisement for alcohol with the
+alcohol taken out, and no amount of generation reaches that. In the other,
+the idea is fine and the element inside it is not: a slingshot gag is legal,
+a child in the slingshot is not, and putting an adult, a mannequin or a giant
+crisp packet in the same slingshot leaves the joke standing. That second case
+is expensive rather than impossible, because it means regenerating the scene
+rather than patching a frame.
+
+So findings carry a second answer from the judge: substitutable. Swap the
+element and the film survives, or the element is the film.
 
 Scope comes from two places that have to agree, and the stricter one wins.
 The adjudicator names it, because "is this the premise" is a judgement about
@@ -111,8 +121,20 @@ _WHY_NOT = {
 }
 
 
-def allows(scope: str, method: str) -> tuple[bool, str]:
-    """Whether this method can address a violation of this scope."""
+def allows(scope: str, method: str, substitutable: bool = True) -> tuple[bool, str]:
+    """Whether this method can address a violation of this scope.
+
+    A concept-scope violation whose element is substitutable is reachable by
+    regeneration and by nothing else: the whole scene has to be remade with
+    the permitted element in place of the forbidden one. If the element is
+    not substitutable, nothing reaches it and saying so is the answer.
+    """
+    if scope == "concept" and substitutable:
+        if method == "bridge":
+            return True, ""
+        return False, ("The element runs through the whole scene, so a patch "
+                       "cannot reach it: the scene has to be regenerated "
+                       "with the permitted element in its place.")
     if method in _METHODS_BY_SCOPE.get(scope, ()):
         return True, ""
     return False, _WHY_NOT.get((scope, method), "Not applicable at this scope.")
@@ -124,6 +146,18 @@ DESCRIPTION = {
     "scene": "the whole shot is the violation",
     "concept": "the premise of the commercial is the violation",
 }
+
+def verdict(scope: str, substitutable: bool = True) -> str:
+    """What an operator needs to understand before choosing anything."""
+    if scope == "concept" and substitutable:
+        return ("The element runs through the whole scene, but the idea does not "
+                "depend on it: put a permitted element in its place and the "
+                "commercial still works. That means regenerating the scene, not "
+                "editing a frame, so it is priced accordingly.")
+    if scope == "concept":
+        return VERDICT["concept"]
+    return VERDICT.get(scope, "")
+
 
 VERDICT = {
     "concept": ("This is not an edit. The commercial is built on what the rule "

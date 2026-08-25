@@ -44,6 +44,10 @@ class Finding(_JsonMixin):
     # See customs/scope.py. Defaulted because findings written before scope
     # existed are still findings, and "" means "nobody judged it, measure it".
     scope: str = ""
+    # Whether swapping the offending element for a permitted one would
+    # satisfy the rule and leave the commercial standing. A child in a
+    # slingshot gag is substitutable; an advertisement for alcohol is not.
+    substitutable: bool = True
 
     def __post_init__(self):
         if self.status not in FINDING_STATUSES:

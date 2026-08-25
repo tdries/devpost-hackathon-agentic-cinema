@@ -200,7 +200,9 @@ def _remediate_and_verify(run_id: str, finding_id: str, market: str,
             shape = scope_mod.classify(finding, db.findings(run_id),
                                        asset_duration(run) or 120.0)
             chosen = "bridge" if method == "bridge" else remediate.plan(finding, observation)
-            allowed, why = scope_mod.allows(shape, "bridge" if chosen == "bridge" else "overlay")
+            allowed, why = scope_mod.allows(shape,
+                                            "bridge" if chosen == "bridge" else "overlay",
+                                            finding.substitutable)
             if not allowed:
                 db.emit(run_id, "remediator",
                         f"{finding.rule_id} ({market}) -> not remediable at "
@@ -1109,9 +1111,10 @@ def market_room(request: Request, run_id: str, market: str):
     fixes = {
         f.id: {
             "scope": scopes[f.id],
-            "options": costs.options(max(0.0, f.t_end - f.t_start), spent, scopes[f.id]),
+            "options": costs.options(max(0.0, f.t_end - f.t_start), spent,
+                                     scopes[f.id], f.substitutable),
             "suggestions": costs.suggestions(dimension_of.get(f.observation_id, "")),
-            "verdict": scope_mod.VERDICT.get(scopes[f.id], ""),
+            "verdict": scope_mod.verdict(scopes[f.id], f.substitutable),
         }
         for f in findings if f.status == "open" and not f.remediation_blocked
         and f.remediable
@@ -1165,7 +1168,7 @@ def remediate_now(run_id: str, finding_id: str, background: BackgroundTasks,
     if choice != "auto":
         finding_scope = scope_mod.classify(finding, store().findings(run.id),
                                            asset_duration(run) or MAX_DURATION_S)
-        ok, why = scope_mod.allows(finding_scope, choice)
+        ok, why = scope_mod.allows(finding_scope, choice, finding.substitutable)
         if not ok:
             raise HTTPException(status_code=409, detail=why)
         ok, why = costs.available(choice, span, store().spent_today())

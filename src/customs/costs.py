@@ -105,7 +105,8 @@ def available(method: str, span: float, spent_today: float) -> tuple[bool, str]:
     return True, ""
 
 
-def options(span: float, spent_today: float, scope: str = "segment") -> list[dict]:
+def options(span: float, spent_today: float, scope: str = "segment",
+            substitutable: bool = True) -> list[dict]:
     """Every method with its price and whether it can run, for the console.
 
     Scope closes doors before price does: a patch cannot fix a shot, and
@@ -116,7 +117,7 @@ def options(span: float, spent_today: float, scope: str = "segment") -> list[dic
 
     out = []
     for method in METHODS:
-        ok, why = scope_mod.allows(scope, method.key)
+        ok, why = scope_mod.allows(scope, method.key, substitutable)
         if ok:
             ok, why = available(method.key, span, spent_today)
         out.append({
@@ -164,8 +165,8 @@ _SUGGESTIONS = {
         ("drop", "Cut the claim from the line"),
     ],
     "children_and_minors": [
-        ("adult", "Recast the moment with an adult"),
-        ("reframe", "Reframe so the child is not the subject"),
+        ("adult", "Recast with an adult in the child's place"),
+        ("object", "Put an object where the child is"),
         ("remove", "Remove the sequence"),
     ],
     "gambling_and_finance": [

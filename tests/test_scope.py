@@ -42,10 +42,37 @@ def test_scope_closes_methods_that_cannot_reach_it():
     assert scope.allows("frame", "overlay")[0]
     ok, why = scope.allows("scene", "overlay")
     assert not ok and "whole shot" in why
-    ok, why = scope.allows("concept", "bridge")
+    # a premise whose element cannot be swapped offers nothing at all
+    ok, why = scope.allows("concept", "bridge", substitutable=False)
     assert not ok and "premise" in why
-    # a premise-level violation offers nothing at all
-    assert all(not o["available"] for o in costs.options(3.0, 0.0, "concept"))
+    assert all(not o["available"]
+               for o in costs.options(3.0, 0.0, "concept", False))
     # a shot-level one offers only regeneration
     scene = {o["key"]: o["available"] for o in costs.options(6.0, 0.0, "scene")}
     assert scene == {"overlay": False, "track": False, "bridge": True}
+
+
+def test_a_premise_can_still_be_fixable_when_the_element_is_swappable():
+    """The slingshot gag is legal; the child in it is not. Putting an adult
+    in the same slingshot leaves the joke standing, so this is expensive
+    rather than impossible."""
+    ok, why = scope.allows("concept", "bridge", substitutable=True)
+    assert ok
+    ok, why = scope.allows("concept", "overlay", substitutable=True)
+    assert not ok and "regenerated" in why
+    assert "still works" in scope.verdict("concept", True)
+
+    # an advertisement for alcohol is not an advertisement for alcohol with
+    # the alcohol removed: nothing reaches that
+    assert not scope.allows("concept", "bridge", substitutable=False)[0]
+    assert "different film" in scope.verdict("concept", False)
+
+
+def test_the_console_prices_a_recast_and_refuses_the_patches(monkeypatch):
+    from customs import costs
+    opts = {o["key"]: o for o in costs.options(6.0, 0.0, "concept", True)}
+    assert opts["bridge"]["available"] and opts["bridge"]["eur"] > 1.0
+    assert not opts["overlay"]["available"]
+    # and the day's budget still governs it
+    broke = {o["key"]: o for o in costs.options(6.0, costs.DAILY_BUDGET_EUR, "concept", True)}
+    assert not broke["bridge"]["available"] and "budget" in broke["bridge"]["why_not"]

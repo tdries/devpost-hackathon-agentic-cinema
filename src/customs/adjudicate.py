@@ -30,7 +30,12 @@ does not. rationale: two sentences max, cite the rule basis text.
 scope: how structural the violation is. "frame" if it is a detail visible in a
 moment, "segment" if it is part of the action inside the shot, "scene" if the
 whole shot is the violation, "concept" if the premise of the commercial is
-what the rule forbids and no edit to the footage could satisfy it."""
+what the rule forbids.
+substitutable: true if replacing the offending element with a permitted one
+would satisfy the rule and leave the commercial's idea standing (a child in a
+slingshot gag becomes an adult, and the gag survives), false if the forbidden
+thing IS the idea (an advertisement for alcohol cannot be an advertisement for
+alcohol with the alcohol removed)."""
 
 # Verbatim citation-verification prompt (task-8-brief.md Step 3), formatted
 # per triggered finding via .format(basis=rule.basis, trigger=rule.trigger,
@@ -57,9 +62,10 @@ _JUDGE_RESPONSE_SCHEMA = {
             "rationale": {"type": "string"},
             "scope": {"type": "string",
                       "enum": ["frame", "segment", "scene", "concept"]},
+            "substitutable": {"type": "boolean"},
         },
         "required": ["observation_id", "rule_id", "triggers", "severity_adjust",
-                     "rationale", "scope"],
+                     "rationale", "scope", "substitutable"],
     },
 }
 
@@ -244,6 +250,7 @@ def judge(run_id: str, observations: list[Observation], pack: MarketPack, on_eve
             blocked_reason="",
             status="open",
             scope=scope_named,
+            substitutable=bool(item.get("substitutable", True)),
         ))
 
     return findings
