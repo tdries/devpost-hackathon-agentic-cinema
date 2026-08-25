@@ -336,3 +336,36 @@ def test_observe_shot_live_wine_toast_shot_flags_alcohol(tmp_path):
     observations = analyst.observe_shot(TEST_AD, shot, tmp_path)
     dims = {o.dimension for o in observations}
     assert "alcohol_tobacco_drugs" in dims, f"observed dimensions: {dims}"
+
+
+def test_each_observation_points_at_the_frame_it_was_seen_in(monkeypatch, tmp_path):
+    """A long take is sampled at eight frames; recording the shot's first
+    frame for all of them put a thumbnail from the start of the shot next to
+    a finding half a minute later."""
+    payload = [
+        {"dimension": "alcohol_tobacco_drugs", "statement": "A lit cigarette.",
+         "confidence": 0.9, "frame_index": 5},
+        {"dimension": "text_legibility", "statement": "On-screen text.",
+         "confidence": 0.8, "frame_index": 0},
+        {"dimension": "gender_portrayal", "statement": "A woman walks.",
+         "confidence": 0.7, "frame_index": 99},          # out of range
+        {"dimension": "food_and_animals", "statement": "A dog.",
+         "confidence": 0.7},                              # missing entirely
+    ]
+    long_clip = tmp_path / "long.mp4"          # the fixture clip is 2s; a long take is the point
+    subprocess.run([
+        "ffmpeg", "-y", "-f", "lavfi", "-i", "color=blue:s=160x120:d=25",
+        "-pix_fmt", "yuv420p", str(long_clip)],
+        check=True, capture_output=True, timeout=60)
+
+    monkeypatch.setattr(analyst, "generate_json", lambda *a, **k: payload)
+    shot = analyst.Shot(shot_id="shot_0", t_start=0.0, t_end=25.0)
+    got = analyst.observe_shot(long_clip, shot, tmp_path)
+
+    frames = sorted((tmp_path / "frames").glob("shot_0_kf*.png"))
+    assert len(frames) == 8                                # duration-sampled
+    assert got[0].evidence_frame == str(frames[5])         # the frame it named
+    assert got[1].evidence_frame == str(frames[0])
+    # out of range and missing both fall back to the first frame
+    assert got[2].evidence_frame == str(frames[0])
+    assert got[3].evidence_frame == str(frames[0])

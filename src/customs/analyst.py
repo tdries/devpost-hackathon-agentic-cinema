@@ -26,7 +26,10 @@ keyframes and the transcript span of one shot of a commercial. Record every
 observable element that could conceivably matter to any culture, regulator,
 or broadcaster on earth. Do not judge, do not localize, do not filter.
 For each element emit: dimension (one of {taxonomy}), a one-sentence factual
-statement naming only what is visible or audible, and your confidence 0..1.
+statement naming only what is visible or audible, your confidence 0..1, and
+frame_index: which supplied keyframe you saw it in, numbered from 0 in the
+order given (use the earliest frame that shows it; for something heard and
+not seen, the frame nearest when it is said).
 Log products, drinks, food, clothing and skin exposure, gestures, symbols,
 flags, religious items, text visible on screen (quote it exactly), claims
 made in speech (quote them), humor devices, physical contact between people,
@@ -41,8 +44,9 @@ _RESPONSE_SCHEMA = {
             "dimension": {"type": "string"},
             "statement": {"type": "string"},
             "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+            "frame_index": {"type": "integer", "minimum": 0},
         },
-        "required": ["dimension", "statement", "confidence"],
+        "required": ["dimension", "statement", "confidence", "frame_index"],
     },
 }
 
@@ -123,7 +127,19 @@ def observe_shot(video_path, shot: Shot, workdir, on_event=None, transcripts=Non
         )
         return []
 
-    evidence_frame = str(keyframes[0]) if keyframes else ""
+    # Which frame each observation points at. The analyst now looks at up to
+    # eight frames of a long take, so recording the shot's first frame for
+    # all of them put a thumbnail from 00:00 next to a finding at 00:30. The
+    # model names the frame it saw; anything missing or out of range falls
+    # back to the first, which is what this always used to do.
+    def _evidence_for(item: dict) -> str:
+        if not keyframes:
+            return ""
+        index = item.get("frame_index")
+        if isinstance(index, bool) or not isinstance(index, int):
+            return str(keyframes[0])
+        return str(keyframes[index]) if 0 <= index < len(keyframes) else str(keyframes[0])
+
     observations = []
     for i, item in enumerate(raw):
         if not isinstance(item, dict):
@@ -168,7 +184,7 @@ def observe_shot(video_path, shot: Shot, workdir, on_event=None, transcripts=Non
             t_end=shot.t_end,
             dimension=dimension,
             statement=statement,
-            evidence_frame=evidence_frame,
+            evidence_frame=_evidence_for(item),
             confidence=confidence,
         ))
     return observations
