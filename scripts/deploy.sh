@@ -255,6 +255,21 @@ gcloud builds submit \
     --substitutions "_IMAGE=${IMAGE},SHORT_SHA=${SHA}" \
     --quiet
 
+# FAST=1 never computed the env vars, the secrets or the state volume above,
+# and does not need to: a Cloud Run deploy that changes only the image
+# inherits the previous revision's configuration wholesale. So the fast path
+# ships code and leaves the wiring exactly as the last full deploy set it,
+# rather than reaching for variables that were never bound.
+deploy_args=()
+if [ "$FAST" != "1" ]; then
+    deploy_args=(
+        --set-env-vars "^;^${joined}"
+        --set-secrets "$SET_SECRETS"
+        --add-volume "name=state,type=cloud-storage,bucket=${STATE_BUCKET}"
+        --add-volume-mount "volume=state,mount-path=/mnt/state"
+    )
+fi
+
 echo "-- gcloud run deploy $SERVICE --"
 gcloud run deploy "$SERVICE" \
     --image "${IMAGE}:${SHA}" \
@@ -266,10 +281,7 @@ gcloud run deploy "$SERVICE" \
     --concurrency 20 \
     --memory 2Gi --cpu 2 \
     --timeout 900 \
-    --set-env-vars "^;^${joined}" \
-    --set-secrets "$SET_SECRETS" \
-    --add-volume "name=state,type=cloud-storage,bucket=${STATE_BUCKET}" \
-    --add-volume-mount "volume=state,mount-path=/mnt/state" \
+    ${deploy_args[@]+"${deploy_args[@]}"} \
     --quiet
 
 SERVICE_URL="$(gcloud run services describe "$SERVICE" \
