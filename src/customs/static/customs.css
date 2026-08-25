@@ -1114,3 +1114,58 @@ html[data-theme="studio"] .line.err { background: rgba(207, 48, 64, 0.06); }
 .a-adjudicator, .a-remediator                  { color: var(--g-yellow) !important; }
 .a-transcription, .a-publisher, .a-verifier    { color: var(--g-green) !important; }
 .a-remediator                                  { color: var(--g-red) !important; }
+
+/* nav tabs wear their screen's mark */
+.tab { display: inline-flex; align-items: center; gap: 7px; }
+.tab .ic { width: 14px; height: 14px; opacity: 0.85; }
+.tab.on .ic, .tab:hover .ic { opacity: 1; }
+
+/* ---------- the library ---------- */
+.lib { display: grid; gap: 8px; }
+.libcard { border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.libcard > summary { display: flex; align-items: center; gap: 16px; padding: 14px 18px; cursor: pointer; list-style: none; }
+.libcard > summary::-webkit-details-marker { display: none; }
+.dimic { width: 30px; height: 30px; flex: none; }
+.libname { display: grid; gap: 3px; }
+.libname .t { font-size: 15px; text-transform: capitalize; letter-spacing: -0.01em; }
+.libname .b { font-size: 12.5px; color: var(--ink-3); }
+.libcount { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.libcount .mono { font-size: 12px; color: var(--ink-2); min-width: 22px; text-align: right; }
+.libcard table.grid { border-top: 1px solid var(--line); }
+.libcard table.grid th { padding-top: 12px; }
+
+/* ---------- mission feed: a row per stage ----------
+   Consecutive events from one agent are one stage. The row carries its mark,
+   its latest line and a bar: animated while the stage is live, solid once it
+   has moved on. Click to open the individual events. */
+
+.grp { position: relative; border-bottom: 1px solid var(--line); }
+.grp:last-child { border-bottom: none; }
+.grp > summary {
+  display: grid;
+  grid-template-columns: 18px 118px 1fr auto auto;
+  gap: 14px; align-items: center;
+  padding: 13px 20px 14px;
+  cursor: pointer; list-style: none;
+}
+.grp > summary::-webkit-details-marker { display: none; }
+.grp > summary:hover { background: rgba(255, 255, 255, 0.03); }
+html[data-theme="studio"] .grp > summary:hover { background: rgba(23, 34, 44, 0.04); }
+.grp .ga { font-family: var(--mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; }
+.grp .gm { font-family: var(--mono); font-size: 12.5px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grp[open] .gm { color: var(--ink-3); }
+.grp .gc { font-size: 11px; color: var(--ink-3); }
+
+.grp .gt { font-size: 11px; color: var(--ink-3); }
+.glines { padding: 2px 20px 14px 150px; }
+.glines .line { grid-template-columns: 74px 1fr; padding: 3px 0; border-left: none; }
+.glines .line:hover { background: none; }
+
+.gbar { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; overflow: hidden; }
+.gbar i { display: block; height: 100%; width: 100%; background: currentColor; opacity: 0.5; }
+.grp.live .gbar i { width: 34%; animation: sweep 1.5s ease-in-out infinite; opacity: 1; }
+.grp.err .gbar i { background: var(--g-red); opacity: 1; }
+@keyframes sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(330%); }
+}

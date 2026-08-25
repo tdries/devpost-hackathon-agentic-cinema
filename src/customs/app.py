@@ -862,6 +862,64 @@ def launch_board(request: Request, run_id: str):
                  duration=asset_duration(run), published=published(run),
                  changes=len(store().changes(run.id)), screen="board")
 
+_DIMENSION_BLURB = {
+    "alcohol_tobacco_drugs": "drink, smoke and substances on screen",
+    "religious_symbols_practices": "faith, ritual and sacred imagery",
+    "modesty_dress_body": "how much skin a market allows",
+    "gesture_body_language": "a gesture that means something else here",
+    "food_and_animals": "what may be eaten, and what may not be shown",
+    "gender_portrayal": "roles, stereotypes and objectification",
+    "sexual_orientation_gender_id": "who may be shown together",
+    "children_and_minors": "advertising to, and with, children",
+    "national_symbols_politics": "flags, anthems, leaders, borders",
+    "health_claims_pharma": "medicinal and nutritional promises",
+    "gambling_and_finance": "betting, credit and financial promotion",
+    "violence_and_weapons": "force, threat and weaponry",
+    "language_profanity_idiom": "words that do not travel",
+    "humour_irony_satire": "jokes that land differently",
+    "superstition_number_colour": "numbers, colours and omens",
+    "photosensitivity_sensory": "flashing, strobing and sensory risk",
+    "text_legibility": "on-screen text, language and readability",
+    "comparative_claims": "superiority, firsts and head-to-heads",
+}
+
+
+@app.get("/library", response_class=HTMLResponse)
+def library(request: Request):
+    """What this system actually tests for, by category, across every level.
+
+    One card per observation dimension, carrying every rule that references
+    it. own_rules, not rules: inheritance means a global rule is present in
+    every pack beneath it, and the library is about where a rule is written,
+    not how many packs end up carrying it.
+    """
+    all_packs = market_packs()
+    cards = []
+    for dimension in sorted(packs.taxonomy()):
+        entries = [
+            {"rule": rule, "pack": pack}
+            for pack in all_packs.values() for rule in pack.own_rules
+            if rule.dimension == dimension
+        ]
+        entries.sort(key=lambda e: (_LEVEL_ORDER.index(e["pack"].level)
+                                    if e["pack"].level in _LEVEL_ORDER else 9,
+                                    -e["rule"].severity))
+        cards.append({
+            "dimension": dimension,
+            "label": dimension.replace("_", " "),
+            "blurb": _DIMENSION_BLURB.get(dimension, ""),
+            "entries": entries,
+            "count": len(entries),
+            "markets": len({e["pack"].market for e in entries}),
+            "classes": {k: sum(1 for e in entries if e["rule"].klass == k)
+                        for k in ("legal", "policy", "offence")},
+        })
+    cards.sort(key=lambda c: -c["count"])
+    total = sum(c["count"] for c in cards)
+    return _page(request, "library.html", cards=cards, total=total,
+                 packs_total=len(all_packs))
+
+
 @app.get("/runs", response_class=HTMLResponse)
 def all_runs(request: Request):
     """The archive: every run this store holds, newest first.
@@ -937,7 +995,22 @@ def mission_page(request: Request, run_id: str):
     rows = store().events_since(run.id, 0)
     events = [{"id": i, "ts": ts, "agent": agent, "message": message}
               for (i, ts, agent, message) in rows]
+    # Consecutive events from the same agent are one stage of the run, so the
+    # feed shows a stage per row with its own progress and folds the detail
+    # away. A thirty-shot run is eight rows, not a hundred and twenty lines.
+    groups: list[dict] = []
+    for event in events:
+        if groups and groups[-1]["agent"] == event["agent"]:
+            groups[-1]["events"].append(event)
+        else:
+            groups.append({"agent": event["agent"], "events": [event]})
+    for group in groups:
+        group["count"] = len(group["events"])
+        group["last"] = group["events"][-1]["message"]
+        group["ts"] = group["events"][0]["ts"]
+        group["errored"] = any("stage_error" in e["message"] for e in group["events"])
     return _page(request, "mission_feed.html", run=run, events=events,
+                 groups=groups, running=run.status not in ("done", "error"),
                  last_id=events[-1]["id"] if events else 0, screen="mission")
 
 @app.get("/runs/{run_id}/feed")

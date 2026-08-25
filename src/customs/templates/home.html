@@ -27,7 +27,7 @@
       <div class="rule-row"><span class="label">Markets</span></div>
       <div class="levels">
         {% for group in groups %}
-        <details class="level" {% if group.level == 'national' %}open{% endif %}>
+        <details class="level">
           <summary>
             <span class="lv-name">{{ group.level }}</span>
             <span class="lv-blurb">{{ group.blurb }}</span>

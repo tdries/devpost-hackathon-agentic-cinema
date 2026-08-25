@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Library{% endblock %}
+{% block topbar_right %}<a href="/">New run</a>{% endblock %}
+{% macro severity(value) %}<span class="sev"><span class="sev-track"><span class="sev-fill{{ ' hot' if value >= 70 else '' }}" style="width:{{ value }}%"></span></span><span class="sev-num">{{ value }}</span></span>{% endmacro %}
+{% block main %}
+
+<section class="hero" style="padding-bottom:22px">
+  <div class="rule-row"><span class="label">Library</span></div>
+  <h1 class="headline" style="font-size:clamp(26px,3.4vw,38px)">What every market is checked for.</h1>
+  <p class="subline">{{ total }} rules across {{ packs_total }} jurisdictions, filed under the {{ cards | length }} things an analyst can observe in a frame. Open a category to see the rule, the level it is written at, and the statute or code behind it.</p>
+</section>
+
+<section style="border-top:none;padding-top:0">
+  <div class="lib">
+    {% for card in cards %}
+    <details class="libcard">
+      <summary>
+        <svg class="dimic"><use href="#d-{{ card.dimension }}"/></svg>
+        <span class="libname">
+          <span class="t">{{ card.label }}</span>
+          <span class="b">{{ card.blurb }}</span>
+        </span>
+        <span class="libcount">
+          {% if card.classes.legal %}<span class="chip legal"><svg class="ic"><use href="#i-legal"/></svg>{{ card.classes.legal }}</span>{% endif %}
+          {% if card.classes.policy %}<span class="chip policy"><svg class="ic"><use href="#i-policy"/></svg>{{ card.classes.policy }}</span>{% endif %}
+          {% if card.classes.offence %}<span class="chip offence"><svg class="ic"><use href="#i-offence"/></svg>{{ card.classes.offence }}</span>{% endif %}
+          <span class="mono">{{ card.count }}</span>
+        </span>
+      </summary>
+      {% if card.entries %}
+      <table class="grid">
+        <tr><th>Rule</th><th>Where</th><th>Class</th><th>Severity</th><th>Basis</th></tr>
+        {% for entry in card.entries %}
+        <tr>
+          <td class="tight"><span class="rule-id">{{ entry.rule.id }}</span></td>
+          <td class="tight"><span class="chip on">{{ entry.pack.market }}</span> <span class="label">{{ entry.pack.level }}</span></td>
+          <td class="tight"><span class="chip {{ entry.rule.klass }}"><svg class="ic"><use href="#i-{{ entry.rule.klass }}"/></svg>{{ entry.rule.klass }}</span></td>
+          <td class="tight">{{ severity(entry.rule.severity) }}</td>
+          <td>{{ entry.rule.trigger }}<div class="mono" style="margin-top:6px;font-size:11.5px;color:var(--ink-3)">{{ entry.rule.basis }}</div></td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% else %}
+      <p class="subline" style="padding:14px 16px;font-size:13px">No rule references this dimension yet. The analyst still observes it, and any market pack can claim it by naming it in a rule.</p>
+      {% endif %}
+    </details>
+    {% endfor %}
+  </div>
+</section>
+
+{% endblock %}

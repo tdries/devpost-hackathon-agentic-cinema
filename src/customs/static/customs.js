@@ -158,28 +158,62 @@
     var stream = new EventSource("/runs/" + run + "/feed?after=" + last);
     stream.addEventListener("open", function () { mark("live", true); });
     stream.addEventListener("error", function () { mark("reconnecting", false); });
+    var AGENTS = { pipeline: 1, ingest: 1, transcription: 1, analyst: 1,
+                   adjudicator: 1, guard: 1, publisher: 1, remediator: 1,
+                   verifier: 1 };
+
+    /* One row per stage: consecutive events from the same agent land in the
+       row that is already open, and a different agent closes it and starts
+       the next. The bar animates on whichever row is still receiving. */
+    var group = function (agent, clock) {
+      Array.prototype.forEach.call(feed.querySelectorAll(".grp.live"), function (g) {
+        g.classList.remove("live");
+      });
+      var el = document.createElement("details");
+      el.className = "grp live";
+      el.setAttribute("data-agent", agent);
+      var markId = AGENTS[agent] ? agent : "pipeline";
+      el.innerHTML =
+        '<summary><svg class="ic"><use href="#i-' + markId + '"/></svg>' +
+        '<span class="ga a-' + agent + '"></span>' +
+        '<span class="gm"></span><span class="gc mono">0 events</span>' +
+        '<span class="gt mono"></span></summary>' +
+        '<div class="glines"></div><span class="gbar"><i></i></span>';
+      el.querySelector(".ga").textContent = agent;
+      el.querySelector(".gt").textContent = clock;
+      feed.appendChild(el);
+      return el;
+    };
+
     stream.addEventListener("mission", function (message) {
       var event = JSON.parse(message.data);
       var empty = feed.querySelector(".empty");
       if (empty) { empty.remove(); }
 
+      var last = feed.lastElementChild;
+      if (!last || !last.classList || !last.classList.contains("grp") ||
+          last.getAttribute("data-agent") !== event.agent) {
+        last = group(event.agent, event.clock);
+      }
+      last.classList.add("live");
+
       var line = document.createElement("div");
-      line.className = "line new" + (event.message.indexOf("stage_error") >= 0 ? " err" : "");
+      line.className = "line";
+      var failed = event.message.indexOf("stage_error") >= 0;
+      if (failed) { line.classList.add("err"); last.classList.add("err"); }
       var when = document.createElement("span");
       when.className = "t";
       when.textContent = event.clock;
-      var who = document.createElement("span");
-      who.className = "a a-" + event.agent;
-      who.innerHTML = '<svg class="ic"><use href="#i-' +
-        (AGENT_ICONS[event.agent] ? event.agent : "pipeline") + '"/></svg>';
-      who.appendChild(document.createTextNode(event.agent));
       var what = document.createElement("span");
       what.className = "m";
       what.textContent = event.message;
       line.appendChild(when);
-      line.appendChild(who);
       line.appendChild(what);
-      feed.appendChild(line);
+      last.querySelector(".glines").appendChild(line);
+
+      var count = last.querySelector(".glines").children.length;
+      last.querySelector(".gc").textContent = count + (count === 1 ? " event" : " events");
+      last.querySelector(".gm").textContent = event.message;
 
       seen += 1;
       if (counter) { counter.textContent = seen + " events"; }

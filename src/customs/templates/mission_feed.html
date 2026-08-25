@@ -19,13 +19,26 @@
       <input type="checkbox" id="follow" checked style="accent-color:var(--signal)"> Follow tail
     </label>
   </div>
-  <div class="feed" id="feed" data-run="{{ run.id }}" data-last="{{ last_id }}">
-    {% for event in events %}
-    <div class="line{% if 'stage_error' in event.message %} err{% endif %}">
-      <span class="t">{{ event.ts | clock }}</span>
-      <span class="a a-{{ event.agent }}"><svg class="ic"><use href="#i-{{ event.agent if event.agent in ('pipeline', 'ingest', 'transcription', 'analyst', 'adjudicator', 'guard', 'publisher', 'remediator', 'verifier') else 'pipeline' }}"/></svg>{{ event.agent }}</span>
-      <span class="m">{{ event.message }}</span>
-    </div>
+  <div class="feed" id="feed" data-run="{{ run.id }}" data-last="{{ last_id }}" data-running="{{ 1 if running else 0 }}">
+    {% for group in groups %}
+    <details class="grp{% if group.errored %} err{% endif %}{% if loop.last and running %} live{% endif %}" data-agent="{{ group.agent }}">
+      <summary>
+        <svg class="ic"><use href="#i-{{ group.agent if group.agent in ('pipeline', 'ingest', 'transcription', 'analyst', 'adjudicator', 'guard', 'publisher', 'remediator', 'verifier') else 'pipeline' }}"/></svg>
+        <span class="ga a-{{ group.agent }}">{{ group.agent }}</span>
+        <span class="gm">{{ group.last }}</span>
+        <span class="gc mono">{{ group.count }} event{{ '' if group.count == 1 else 's' }}</span>
+        <span class="gt mono">{{ group.ts | clock }}</span>
+      </summary>
+      <div class="glines">
+        {% for event in group.events %}
+        <div class="line{% if 'stage_error' in event.message %} err{% endif %}">
+          <span class="t">{{ event.ts | clock }}</span>
+          <span class="m">{{ event.message }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      <span class="gbar"><i></i></span>
+    </details>
     {% else %}
     <div class="empty" style="margin:26px">
       <span class="big">Waiting for the first event</span>
