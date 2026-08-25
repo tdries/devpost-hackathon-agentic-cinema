@@ -329,3 +329,59 @@ def test_the_picked_intent_becomes_an_instruction_not_the_words_on_screen(
     # ...and the label never becomes words to paint on the frame
     assert "Re-letter the text" not in said
     assert "market's language" not in said
+
+
+# -- what Veo is told, and what it is not told --
+
+def test_veo_is_told_to_interpolate_not_to_repeat_the_edit():
+    """The bridge prompt must not carry the frame-edit instruction.
+
+    It used to. Veo was handed "Replace every alcoholic drink, bottle and
+    glass with a non-alcoholic drink... for example tea" -- an instruction
+    written for an image editor working on one frame. Veo generates video,
+    so it read that as a description of the scene and furnished the set with
+    tea: the SA-ROTANA bridge came back with a glass beside a piano player
+    who had never held a drink. Both anchors were already correct before Veo
+    was called; the edit was finished, and repeating it invented props.
+    """
+    from customs import remediate
+    prompt = remediate._BRIDGE_PROMPT
+    # none of the frame-edit vocabulary survives into the video prompt
+    assert "Replace every" not in prompt
+    assert "Edit this frame" not in prompt
+    assert "for example tea" not in prompt
+    # it names what it actually is
+    assert "motion between these two frames" in prompt
+
+
+def test_the_bridge_prompt_forbids_inventing_without_forbidding_changing():
+    """Provenance, not prohibition.
+
+    "Change nothing" would be the wrong rule and was the first thing I
+    wrote: an object that turns or catches the light still has to render,
+    and whatever the anchors altered has to stay altered across the span or
+    the drink reverts to wine halfway through. The rule is that everything
+    on screen must trace back to the two frames -- how it looks is Veo's
+    business, whether it exists at all is not.
+    """
+    from customs import remediate
+    prompt = remediate._BRIDGE_PROMPT
+
+    # changing what is there is explicitly allowed
+    assert "You may render what is there" in prompt
+    assert "must stay in that form for the whole span" in prompt
+
+    # introducing what is not there is explicitly refused
+    assert "must not do is introduce" in prompt
+    assert "already be visible in one of these two frames" in prompt
+    assert "A person holding nothing keeps holding nothing." in prompt
+
+
+def test_the_frame_edit_does_not_invite_new_props_either(monkeypatch):
+    """The anchors are edited by an image model with the same failure mode."""
+    from customs import remediate
+    swap = remediate._EDIT_INSTRUCTIONS["prop_swap"]
+    assert "Do not add any new object anywhere in the frame" in swap
+    assert "do not put a replacement where there was nothing before" in swap
+    default = remediate._DEFAULT_REPLACEMENT["prop_swap"]
+    assert "already visible" in default and "adding none" in default
