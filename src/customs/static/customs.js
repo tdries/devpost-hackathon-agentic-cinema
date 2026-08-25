@@ -136,6 +136,46 @@
     });
   });
 
+  /* ---------- 1d. the problem lanes ----------
+     Hovering a dot shows the frame the analyst actually read. That is the
+     whole reason this chart is inline SVG and not an image: an <img>
+     cannot tell you which observation you are pointing at. */
+
+  (function () {
+    var wrap = document.querySelector(".lanes-wrap");
+    if (!wrap) { return; }
+    var peek = wrap.querySelector(".lane-peek");
+    var img = peek.querySelector("img");
+    var when = peek.querySelector(".when");
+    var what = peek.querySelector(".what");
+    var run = wrap.getAttribute("data-run");
+
+    wrap.addEventListener("mouseover", function (e) {
+      var dot = e.target.closest(".lane-dot");
+      if (!dot) { return; }
+      var obs = dot.getAttribute("data-obs");
+      if (!obs) { return; }
+      img.src = "/runs/" + run + "/evidence/" + obs;
+      when.textContent = dot.getAttribute("data-t") + "s";
+      var markets = dot.getAttribute("data-markets");
+      what.textContent = (dot.getAttribute("data-dim") || "").replace(/_/g, " ")
+        + (markets ? " — " + markets : "");
+      var r = dot.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+      peek.style.left = (r.left - w.left + wrap.scrollLeft + r.width / 2) + "px";
+      peek.style.top = (r.top - w.top - 10) + "px";
+      peek.hidden = false;
+    });
+    wrap.addEventListener("mouseout", function (e) {
+      if (e.target.closest(".lane-dot")) { peek.hidden = true; }
+    });
+    wrap.addEventListener("click", function (e) {
+      var dot = e.target.closest(".lane-dot");
+      if (dot && dot.getAttribute("data-obs")) {
+        window.location = "/runs/" + run + "/frames#" + dot.getAttribute("data-obs");
+      }
+    });
+  })();
+
   /* ---------- 2. the launch board ---------- */
 
   var board = document.getElementById("board");

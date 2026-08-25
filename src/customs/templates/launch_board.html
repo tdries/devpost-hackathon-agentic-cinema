@@ -111,6 +111,27 @@
   {% endif %}
 </section>
 
+{% if lanes %}
+<section>
+  <div class="rule-row">
+    <span class="label">Where the problems are</span>
+    <span class="right label">hover a dot for the frame</span>
+  </div>
+  <p class="subline" style="max-width:92ch;font-size:13.5px">
+    One lane per category the analyst can see, across this film's own clock. A solid dot is
+    something a market objected to, coloured by severity. A faint one is something we saw and
+    nobody minded &mdash; a lane full of those is a category this campaign is safe on.
+  </p>
+  <div class="lanes-wrap" data-run="{{ run.id }}">
+    {{ lanes | safe }}
+    <div class="lane-peek" hidden>
+      <img alt="">
+      <div class="lane-peek-meta"><span class="mono when"></span><span class="what"></span></div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
 <section>
   <div class="rule-row"><span class="label">Go deeper</span></div>
   <div class="cards">

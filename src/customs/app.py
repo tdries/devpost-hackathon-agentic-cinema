@@ -510,6 +510,49 @@ def run_progress(run, states: dict[str, dict]) -> dict:
     return {"pct": int(min(99, max(2, round(pct)))), "stage": stage}
 
 
+def problem_lanes(run) -> str:
+    """Where in the film each KIND of problem happens, as one lane each.
+
+    The board says which markets are unhappy and the frame board says
+    what the analyst saw, but nothing said WHEN -- whether a run has one
+    bad shot or trouble throughout. This is that view: a lane per
+    dimension, the ad's own clock across the bottom, a dot at every
+    observation, filled and coloured where a market objected and faint
+    where nobody did.
+
+    Faint dots are the point as much as the loud ones. A lane thick with
+    pale dots and one red one says "we look at this constantly and it is
+    almost always fine", which is exactly the negative space the verdict
+    record exists to make visible.
+    """
+    db = store()
+    observations = db.observations(run.id)
+    if not observations:
+        return ""
+    by_obs: dict[str, list] = {}
+    for f in db.findings(run.id):
+        by_obs.setdefault(f.observation_id, []).append(f)
+
+    lanes: dict[str, list] = {}
+    for obs in observations:
+        if not obs.dimension:
+            continue
+        hits = by_obs.get(obs.id, [])
+        lanes.setdefault(obs.dimension, []).append({
+            "t": obs.t_start,
+            "flagged": bool(hits),
+            "severity": max((f.severity for f in hits), default=0),
+            "obs": obs.id,
+            "market": ", ".join(sorted({f.market for f in hits})[:4]),
+        })
+    # worst first, so the lane that blocks a market is the top line
+    rows = [{"dimension": d, "events": sorted(e, key=lambda x: x["t"])}
+            for d, e in sorted(lanes.items(),
+                               key=lambda kv: -max((x["severity"] for x in kv[1]),
+                                                   default=0))]
+    return spark.lanes(rows, asset_duration(run) or MAX_DURATION_S)
+
+
 def _kinds_found(findings) -> list[str]:
     """Which KINDS of problem a market found, worst first.
 
@@ -1146,6 +1189,7 @@ def launch_board(request: Request, run_id: str):
             more.append(dict(group, families=families,
                              count=sum(len(f["packs"]) for f in families)))
     return _page(request, "launch_board.html", run=run, tiles=tiles,
+                 lanes=problem_lanes(run),
                  more=more,
                  can_add=bool(store().observations(run.id)),
                  overall=overall(states), progress=run_progress(run, states),
