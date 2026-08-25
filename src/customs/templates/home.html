@@ -41,6 +41,15 @@
             {% for pack in family.packs %}
             <label class="market-pick">
               <input type="checkbox" name="markets" value="{{ pack.market }}">
+              {% if pack.level == 'channel' %}
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              {% elif pack.level == 'global' %}
+              <svg class="ic lvl"><use href="#d-national_symbols_politics"/></svg>
+              {% elif pack.level == 'continental' %}
+              <svg class="ic lvl"><use href="#n-market"/></svg>
+              {% else %}
+              <svg class="ic lvl country"><use href="#c-{{ pack.market }}"/></svg>
+              {% endif %}
               <span class="code">{{ pack.market }}</span>
               <span class="name">{{ pack.name }}</span>
               <span class="regime chip">{{ pack.rules | length }} rules</span>

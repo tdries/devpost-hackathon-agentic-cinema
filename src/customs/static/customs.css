@@ -1240,3 +1240,9 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 .runlist:not(.as-rows) { grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); display: grid; gap: 12px; }
 .runlist:not(.as-rows) .runrow { grid-template-columns: 1fr; gap: 10px; padding: 18px; align-items: start; }
 .runlist:not(.as-rows) .runrow .flags { justify-content: flex-start; }
+
+/* the picker's rows carry what they are: a country by its outline, a
+   channel by the film mark, the layers above by their own */
+.market-pick .ic.lvl { width: 17px; height: 17px; }
+.market-pick .ic.lvl.country { fill: none; stroke: var(--g-blue); stroke-width: 2.4; opacity: 0.85; }
+.market-pick:has(input:checked) .ic.lvl.country { stroke: var(--signal); opacity: 1; }
