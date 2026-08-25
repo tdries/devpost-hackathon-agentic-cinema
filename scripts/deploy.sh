@@ -68,6 +68,20 @@ if [[ ! -f "$ENV_FILE" ]]; then
     exit 1
 fi
 
+# Preflight. `set -e` already aborts on a missing binary, but the message
+# is "gcloud: command not found" from whichever line hit it first, which
+# reads like a step failing rather than the tool being absent. Worse, a
+# caller who pipes this script to `tail` sees the PIPELINE's status --
+# tail's, which is 0 -- and believes a deploy happened that did not.
+for tool in gcloud docker git; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+        echo "FATAL: $tool is not on PATH. Nothing was deployed." >&2
+        echo "  PATH=$PATH" >&2
+        [ "$tool" = "gcloud" ] && echo "  try: export PATH=/opt/homebrew/bin:\$PATH" >&2
+        exit 78
+    fi
+done
+
 echo "== customs -> Cloud Run ($PROJECT_ID / $REGION, service account $RUNTIME_SA) =="
 
 echo "-- enabling required APIs (idempotent) --"
