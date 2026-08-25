@@ -20,6 +20,13 @@ class Observation(_JsonMixin):
     statement: str
     evidence_frame: str
     confidence: float
+    # Where in the evidence frame the thing actually is, as [ymin, xmin,
+    # ymax, xmax] normalised to 0-1000 (Gemini's own box convention).
+    # Empty when nobody has asked. Drawn as an overlay in the browser and
+    # NEVER burned into the PNG: that file is what a remediation edits and
+    # what Veo is anchored on, and a rectangle painted into it would become
+    # part of the commercial.
+    box: list = field(default_factory=list)
 
 @dataclass
 class Finding(_JsonMixin):
