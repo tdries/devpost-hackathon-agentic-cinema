@@ -722,6 +722,26 @@ def _render_panel(run, spec) -> bytes:
     return ops.render_png(spec["uid"], spec["panel"], run, duration=duration,
                           width=spec["width"], height=spec["height"])
 
+@app.get("/runs/{run_id}/changes/{change_id}/generated.mp4")
+def generated_clip(run_id: str, change_id: str):
+    """The footage a model invented, exactly as it came back.
+
+    A bridge splices generated seconds into the master, and the master is
+    what ships, but the raw clip is what a brand actually wants to watch
+    before signing anything: it is the only part of the film nobody shot.
+    Kept beside the change record's stills, so it survives a deploy like
+    everything else there.
+    """
+    run = _run_or_404(run_id)
+    if not re.fullmatch(r"chg_[0-9a-f]{6,32}", change_id):
+        raise HTTPException(status_code=404, detail="no such change")
+    clip = run_dir(run) / "changes" / f"{change_id}_bridge.mp4"
+    if not clip.is_file():
+        raise HTTPException(status_code=404,
+                            detail="no generated clip for this change")
+    return FileResponse(clip, media_type="video/mp4")
+
+
 @app.get("/grafana/{uid}.png")
 def grafana_png(uid: str, run: str = ""):
     """A whole Grafana dashboard, rendered server-side as an image.
@@ -1437,6 +1457,8 @@ def cutting_room(request: Request, run_id: str):
             "market": finding.market if finding else "",
             "before": _still_name(directory, change.before_frame),
             "after": _still_name(directory, change.after_frame),
+            # only a bridge leaves generated footage behind
+            "generated": (directory / "changes" / f"{change.id}_bridge.mp4").is_file(),
         })
     localized = [m for m in run.markets
                  if (directory / f"localized_{m}.mp4").exists()]

@@ -402,7 +402,8 @@ def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str
     return edited, instruction
 
 def _bridge_span(base: Path, finding: Finding, replacement: str | None,
-                 workdir: Path, out_path: Path) -> tuple[Path, str]:
+                 workdir: Path, out_path: Path,
+                 keep_dir: Path | None = None) -> tuple[Path, str]:
     """Edit both ends of the span and let Veo generate the motion between.
 
     The only method that can follow genuine 3D motion, and the only one that
@@ -429,6 +430,18 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
                 f"lighting, same performers. {instruction}"),
         first_frame=anchors[0], last_frame=anchors[1],
         seconds=seconds, out_path=workdir / "bridge.mp4")
+    # Keep the generated footage itself, not just the master it went into.
+    # The scratch workdir is deliberately not mirrored, so a clip left there
+    # is gone the next time the container is replaced, and "nothing is edited
+    # silently" has to cover the seconds a model invented most of all: they
+    # are the ones a brand will want to watch before signing anything.
+    if keep_dir is not None:
+        keep_dir.mkdir(parents=True, exist_ok=True)
+        kept = keep_dir / f"{out_path.stem.split('_')[0]}_bridge.mp4"
+        try:
+            kept.write_bytes(Path(clip).read_bytes())
+        except OSError:
+            pass
     media.splice_clip(base, clip, finding.t_start, finding.t_end, out_path)
     return anchors[0], instruction
 
@@ -494,7 +507,7 @@ def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
 
     try:
         edit = _run_method(run, finding, method, replacement, intent, base, before,
-                           workdir, staged, store)
+                           workdir, staged, store, changes_dir)
     except Exception:
         # A half-done remediation must never look like a done one. The finding
         # goes straight back to open, so clearance() counts it again and the
@@ -523,7 +536,8 @@ def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
 
 def _run_method(run, finding: Finding, method: str, replacement: str | None,
                 intent: str | None,
-                base: Path, before: Path, workdir: Path, staged: Path, store) -> str:
+                base: Path, before: Path, workdir: Path, staged: Path, store,
+                changes_dir: Path | None = None) -> str:
     """Produce the edited video at `staged` and return the change description.
 
     Split out of apply() so every failure mode of every method funnels through
@@ -558,7 +572,8 @@ def _run_method(run, finding: Finding, method: str, replacement: str | None,
         return f'replaced the spoken line with "{line}"'
     if method == "bridge":
         _edited, instruction = _bridge_span(base, finding, replacement,
-                                            Path(workdir), staged)
+                                            Path(workdir), staged,
+                                            keep_dir=changes_dir)
         return (f"regenerated {costs.bridge_seconds(finding.t_end - finding.t_start):.0f}s "
                 f"of motion between two edited anchor frames")
     media.crop_span(base, finding.t_start, finding.t_end, staged)

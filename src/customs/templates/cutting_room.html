@@ -50,6 +50,7 @@
     <div class="change">
       <div class="change-head">
         <span class="chip method"><svg class="ic"><use href="#i-remediator"/></svg>{{ item.change.method }}</span>
+        {% if item.generated %}<a class="chip on" href="/runs/{{ run.id }}/changes/{{ item.change.id }}/generated.mp4" target="_blank"><svg class="ic"><use href="#n-cut"/></svg>the generated seconds</a>{% endif %}
         {% if item.market %}<span class="chip on">{{ item.market }}</span>{% endif %}
         {% if item.finding %}<span class="rule-id">{{ item.finding.rule_id }}</span>{% endif %}
         {% if item.finding %}<span class="mono" style="font-size:12px;color:var(--ink-3)">{{ item.finding.t_start | timecode }} to {{ item.finding.t_end | timecode }}</span>{% endif %}

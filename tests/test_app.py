@@ -1183,3 +1183,23 @@ def test_the_run_nav_puts_each_jurisdiction_level_on_its_own_labelled_row(client
     channel_row = body.split('>channel</span>')[1][:400]
     assert "BE-VRT" in channel_row and "FR-M6" in channel_row
     assert "GLOBAL" not in channel_row
+
+
+def test_the_generated_seconds_are_downloadable(client, tmp_path):
+    """A bridge invents footage. The master is what ships, but the raw clip
+    is the part nobody shot, so it is kept beside the change record's stills
+    and served rather than left in a scratch directory a deploy will wipe."""
+    test_client, store, run, _ = client
+    changes = app_module.run_dir(run) / "changes"
+    changes.mkdir(parents=True, exist_ok=True)
+    (changes / "chg_abc123_bridge.mp4").write_bytes(b"\x00\x00\x00\x18ftypmp42")
+
+    got = test_client.get(f"/runs/{run.id}/changes/chg_abc123/generated.mp4")
+    assert got.status_code == 200
+    assert got.headers["content-type"] == "video/mp4"
+
+    # a change with no generated footage, and a forged id, answer the same way
+    assert test_client.get(
+        f"/runs/{run.id}/changes/chg_ffffff/generated.mp4").status_code == 404
+    assert test_client.get(
+        f"/runs/{run.id}/changes/not-an-id/generated.mp4").status_code == 404
