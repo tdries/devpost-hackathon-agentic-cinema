@@ -340,3 +340,58 @@
       });
     });
   })();
+
+
+  /* ---------- 7. a market room with work in flight ----------
+     Remediation takes a minute of model calls and ffmpeg. The room is
+     server-rendered, so without this the operator watches a row that says
+     "working" and never sees it stop. Polls only while something is
+     actually running, and stops the moment nothing is. */
+
+  (function () {
+    var room = document.querySelector('[data-room]');
+    if (!room) { return; }
+    var busy = function () { return room.querySelectorAll('[data-busy]').length > 0; };
+    if (!busy()) { return; }
+    var tick = function () {
+      fetch(window.location.pathname, { headers: { "X-Poll": "1" } })
+        .then(function (r) { return r.ok ? r.text() : null; })
+        .then(function (html) {
+          if (!html) { return window.setTimeout(tick, 8000); }
+          if (html.indexOf("data-busy") === -1) { window.location.reload(); return; }
+          window.setTimeout(tick, 8000);
+        })
+        .catch(function () { window.setTimeout(tick, 8000); });
+    };
+    window.setTimeout(tick, 8000);
+  })();
+
+  /* ---------- 8. the archive's list or cards ---------- */
+
+  (function () {
+    var KEY = "customs-runs-view";
+    var list = document.getElementById("runlist");
+    var buttons = document.querySelectorAll(".view-switch [data-set-runs]");
+    if (!list || !buttons.length) { return; }
+
+    var apply = function (view) {
+      list.classList.toggle("as-rows", view !== "cards");
+      buttons.forEach(function (b) {
+        b.classList.toggle("on", b.getAttribute("data-set-runs") === view);
+      });
+    };
+    var saved = "";
+    try { saved = localStorage.getItem(KEY) || ""; } catch (e) { /* private mode */ }
+    apply(saved);
+
+    buttons.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var view = b.getAttribute("data-set-runs");
+        try {
+          if (view) { localStorage.setItem(KEY, view); }
+          else { localStorage.removeItem(KEY); }
+        } catch (e) { /* private mode */ }
+        apply(view);
+      });
+    });
+  })();

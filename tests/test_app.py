@@ -485,7 +485,8 @@ def test_status_reports_a_clearance_a_count_and_the_errored_market(console):
     assert body["done"] is True
     assert set(body["markets"]) == set(MARKETS)
     assert body["markets"]["FR"] == {
-        "clearance": "blocked", "findings": 2, "blocked": 0, "errored": False}
+        "clearance": "blocked", "findings": 2, "open": 2, "working": 0,
+        "resolved": 0, "blocked": 0, "errored": False}
     assert body["markets"]["SA"]["errored"] is True
     assert body["markets"]["SA"]["blocked"] == 1
     assert body["markets"]["US"]["clearance"] == "cleared"
@@ -1059,3 +1060,35 @@ def test_the_store_is_never_opened_over_the_mount(tmp_path, monkeypatch):
     assert "restored store=True" in persist.restore(fresh)
     assert not any(str(bucket) in path for path in opened)
     assert Store(fresh).get_run(run.id) is not None
+
+
+def test_cleared_never_stands_alone_when_findings_are_still_open(client):
+    """"Cleared" means nothing open disqualifies the market, which is not
+    the same as nothing being wrong. The room says so in words, and the
+    count travels with the verdict."""
+    test_client, store, run, _ = client
+    store.set_run_status(run.id, "done")     # a verdict needs a finished run
+    store.add_findings([_finding(
+        run.id, id="fnd_SA_SA-HUM-01_obs_shot_2_000", market="SA",
+        rule_id="SA-HUM-01", klass="offence", severity=90,
+        rationale="a joke that does not travel", remediable=False)])
+
+    page = test_client.get(f"/runs/{run.id}/markets/SA")
+    assert page.status_code == 200
+    # an offence finding never blocks, so the market reads cleared...
+    assert "Cleared does not mean clean" in page.text
+    assert "still open" in page.text
+
+
+def test_a_market_being_edited_does_not_report_the_verdict_it_has_not_earned(client):
+    """clearance() ignores findings at "remediating" so the alert can
+    resolve. The tile must not inherit that optimism while the edit runs."""
+    test_client, store, run, _ = client
+    store.set_run_status(run.id, "done")
+    store.update_finding_status("fnd_FR_FR-ALC-01_obs_shot_0_000", "remediating", run.id)
+
+    body = test_client.get(f"/runs/{run.id}/status").json()
+    assert body["markets"]["FR"]["clearance"] == "cleared"   # the metric's view
+    assert body["markets"]["FR"]["working"] == 1
+    board = test_client.get(f"/runs/{run.id}")
+    assert "t-pending" in board.text                          # the operator's view

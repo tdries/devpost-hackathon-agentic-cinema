@@ -4,14 +4,19 @@
 {% block main %}
 
 <section class="hero" style="padding-bottom:24px">
-  <div class="rule-row"><span class="label">Campaign history</span></div>
+  <div class="rule-row"><span class="label">Campaign history</span>
+    <span class="right view-switch" role="group" aria-label="Runs view">
+      <button type="button" class="tbtn" data-set-runs="cards">Cards</button>
+      <button type="button" class="tbtn" data-set-runs="">List</button>
+    </span>
+  </div>
   <h1 class="headline" style="font-size:clamp(26px,3.4vw,38px)">All runs, newest first.</h1>
   <p class="subline">Every clearance this instance has performed. Open one for its board, its timeline and its cutting room.</p>
 </section>
 
 <section style="border-top:none;padding-top:0">
   {% if rows %}
-  <div class="runlist">
+  <div class="runlist as-rows" id="runlist">
     {% for item in rows %}
     <a class="runrow" href="/runs/{{ item.run.id }}">
       <span class="id">{{ item.run.id }}</span>

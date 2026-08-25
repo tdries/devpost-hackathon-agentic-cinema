@@ -3,6 +3,7 @@
 {% block topbar_right %}<a href="/runs/{{ run.id }}">Launch board</a>{% endblock %}
 {% block nav %}{% include "_runnav.html" %}{% endblock %}
 {% block main %}
+<div data-room="{{ market }}">
 
 {% macro severity(value) %}
 <span class="sev">
@@ -22,12 +23,17 @@
       <span class="mkt-facts">
         <span class="pill s-{{ tile }}"><svg class="ic"><use href="#i-{{ tile.replace('_', '-') }}"/></svg>{{ tile.replace('_', ' ') if tile != 'error' else 'not evaluated' }}</span>
         <span class="chip">{{ state.findings }} findings</span>
+        {% if state.open %}<span class="chip policy">{{ state.open }} still open</span>{% endif %}
+        {% if state.resolved %}<span class="chip sourced"><svg class="ic"><use href="#i-cleared"/></svg>{{ state.resolved }} fixed</span>{% endif %}
         {% if pack %}<span class="chip {{ 'on' if pack.pre_clearance == 'mandatory' else '' }}">pre-clearance: {{ pack.pre_clearance }}</span>{% endif %}
         {% if pack and pack.regulators %}<span class="chip">{{ pack.regulators | join(' / ') }}</span>{% endif %}
         {% if localized %}<a class="chip on" href="/runs/{{ run.id }}/cutting">localized master ready</a>{% endif %}
       </span>
     </span>
   </div>
+  {% if tile == 'cleared' and state.open %}
+  <p class="subline"><strong>Cleared does not mean clean.</strong> {{ state.open }} finding{{ '' if state.open == 1 else 's' }} {{ 'is' if state.open == 1 else 'are' }} still open here; none of them disqualify the market on their own, because offence-class findings never block, an unsourced citation never blocks, and nothing under severity 70 blocks. They are listed below and they are still yours to decide about.</p>
+  {% endif %}
   {% if state.errored %}
   <p class="subline"><strong>This market was never evaluated.</strong> Its adjudicator exhausted every retry, so what is below is not a verdict and the tile stays out of the cleared count. The mission feed has the stage error.</p>
   {% endif %}
@@ -148,7 +154,7 @@
             </form>
           </details>
           {% elif finding.status == 'remediating' %}
-          <button class="btn" disabled>Working</button>
+          <button class="btn" disabled data-busy><span class="spin"></span>Working</button>
           {% elif finding.status == 'resolved' %}
           <span class="chip sourced"><svg class="ic"><use href="#i-cleared"/></svg>verified fixed</span>
           {% else %}
@@ -173,5 +179,5 @@
   </div>
   {% endif %}
 </section>
-
+</div>
 {% endblock %}

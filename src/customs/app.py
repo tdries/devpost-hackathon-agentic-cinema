@@ -207,6 +207,7 @@ def _remediate_and_verify(run_id: str, finding_id: str, market: str,
                 db.emit(run_id, "remediator",
                         f"{finding.rule_id} ({market}) -> not remediable at "
                         f"{shape} scope: {why}")
+                db.update_finding_status(finding.id, "open", run_id)
                 return False
             db.emit(run_id, "remediator",
                     f"{finding.rule_id} ({market}) -> planned {chosen}")
@@ -454,17 +455,37 @@ def market_states(run) -> dict[str, dict]:
     for market in run.markets:
         findings = db.findings(run.id, market)
         decided = finished or market in judged or market in errored
+        # "cleared" means nothing OPEN is disqualifying, which is not the
+        # same as nothing being wrong: offence-class findings, unsourced ones
+        # and anything under the severity threshold stay open and stay
+        # visible. The tile carries that count so the word never stands
+        # alone, and a market with an edit in flight says so rather than
+        # reporting the verdict it would have if the edit worked.
         states[market] = {
             "clearance": adjudicate.clearance(findings) if decided else "pending",
             "findings": len(findings),
+            "open": sum(1 for f in findings if f.status == "open"),
+            "working": sum(1 for f in findings if f.status == "remediating"),
+            "resolved": sum(1 for f in findings if f.status == "resolved"),
             "blocked": sum(1 for f in findings if f.remediation_blocked),
             "errored": market in errored,
         }
     return states
 
 def tile_state(state: dict) -> str:
-    """The one word a tile is drawn with. Errored beats every verdict."""
-    return "error" if state["errored"] else state["clearance"]
+    """The one word a tile is drawn with.
+
+    Errored beats every verdict, and an edit in flight beats a verdict the
+    edit has not earned yet: clearance() deliberately ignores findings at
+    status "remediating" so the alert can resolve, which would otherwise
+    have a market showing CLEARED while the Remediator is still working on
+    the thing holding it.
+    """
+    if state["errored"]:
+        return "error"
+    if state.get("working"):
+        return "pending"
+    return state["clearance"]
 
 def overall(states: dict[str, dict]) -> dict:
     """The headline: how many markets are cleared, and which are not.
@@ -1187,6 +1208,12 @@ def remediate_now(run_id: str, finding_id: str, background: BackgroundTasks,
                  + (f" [{choice}"
                     + (f", {price:.2f} EUR" if price else "")
                     + (f', "{want}"' if want else "") + "]" if choice != "auto" else ""))
+    # Flip the row before answering, not inside the background task: the
+    # browser follows this redirect in milliseconds and would otherwise
+    # re-render the same page it just left, which reads as a dead button.
+    # Whatever happens next puts the status back: apply() sets remediating
+    # itself, verify resolves or reopens, and every refusal below restores it.
+    store().update_finding_status(finding.id, "remediating", run.id)
     background.add_task(remediate_and_verify, run.id, finding.id, finding.market,
                         method=choice, replacement=want)
     return RedirectResponse(f"/runs/{run.id}/markets/{finding.market}",
