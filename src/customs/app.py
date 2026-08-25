@@ -83,8 +83,8 @@ from fastapi.responses import (FileResponse, HTMLResponse, PlainTextResponse,
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from customs import (adjudicate, agentmode, costs, packs, persist, pipeline,
-                     remediate, scope as scope_mod, verify)
+from customs import (adjudicate, agentmode, costs, media, packs, persist,
+                     pipeline, remediate, scope as scope_mod, verify)
 from customs.fetch import FetchError, fetch_youtube
 from customs.config import settings
 from customs.media import MediaError, probe_duration
@@ -1605,6 +1605,33 @@ def evidence_frame(run_id: str, observation_id: str):
         raise HTTPException(status_code=404, detail="no evidence frame")
     media_type = "image/jpeg" if path.suffix.lower() in (".jpg", ".jpeg") else "image/png"
     return FileResponse(path, media_type=media_type)
+
+@app.get("/runs/{run_id}/poster.jpg")
+def run_poster(run_id: str):
+    """A small still of the asset, cached, for the run lists.
+
+    Written once per run and served from disk after that. It falls back to
+    an evidence frame when the upload is gone -- a pruned workdir keeps
+    work/**/frames, so a run whose master was cleaned up can still say what
+    it was a picture of.
+    """
+    run = _run_or_404(run_id)
+    cached = run_dir(run) / "poster.jpg"
+    if not cached.is_file():
+        source = Path(run.asset_path)
+        if not source.is_file():
+            frames = [Path(o.evidence_frame) for o in store().observations(run.id)
+                      if o.evidence_frame and Path(o.evidence_frame).is_file()]
+            if not frames:
+                raise HTTPException(status_code=404, detail="nothing to show for this run")
+            source = frames[0]
+        try:
+            media.poster(source, cached, at=1.0)
+        except Exception as exc:  # noqa: BLE001 -- a missing thumbnail is not a 500
+            log.warning("poster failed for %s: %s", run.id, exc)
+            raise HTTPException(status_code=404, detail="no poster") from exc
+    return FileResponse(cached, media_type="image/jpeg",
+                        headers={"Cache-Control": "public, max-age=86400"})
 
 @app.get("/runs/{run_id}/stills/{filename:path}")
 def still(run_id: str, filename: str):
