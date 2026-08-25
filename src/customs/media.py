@@ -47,6 +47,18 @@ _FLASH_MAX_GAP = 0.5
 _FLASH_MIN_EDGES = 3
 _FLASH_MIN_SPAN = 0.5
 
+def _encode_timeout(duration: float) -> int:
+    """How long a full-file re-encode may take.
+
+    A flat 60s was fine for the 56s test ad on a laptop and wrong for a 79s
+    upload on a two-vCPU Cloud Run instance: the remediation died mid-encode
+    and the finding went back to open (seen live, Heinz ad, FR-ALC-01).
+    Encoding is roughly real-time per vCPU at this preset, so the budget is
+    the asset's own duration with room to spare, floored at the old value.
+    """
+    return max(_TIMEOUT, int(duration * 6) + 30)
+
+
 def _run(args: list[str], timeout: int = _TIMEOUT) -> subprocess.CompletedProcess:
     """Run an ffmpeg/ffprobe command with an explicit arg list (never shell=True)."""
     try:
@@ -212,11 +224,11 @@ def crop_span(path, t_start: float, t_end: float, out_path, factor: float = 0.8)
         "ffmpeg", "-y", "-i", str(path),
         "-filter_complex", filt,
         "-map", "[v]", "-map", "0:a?",
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "copy",
+        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "copy",
         "-t", f"{duration:.3f}", "-shortest", "-movflags", "+faststart",
         str(out_path),
     ]
-    _run(args, timeout=_TIMEOUT)
+    _run(args, timeout=_encode_timeout(duration))
     return Path(out_path)
 
 def detect_shots(path) -> list[Shot]:
@@ -311,7 +323,7 @@ def replace_segment_video(path, t_start: float, t_end: float, new_frames_dir, ou
         "-i", str(new_frames_dir / "*.png"),
         "-filter_complex", filt,
         "-map", "[v]", "-map", "0:a?",
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "copy",
+        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "copy",
         # -shortest alone only bounds the encode via a *mapped* stream reaching a
         # real EOF (e.g. audio, when present); with no audio track the only output
         # stream is [v], fed by an infinite -loop input, so it never ends on its
@@ -319,7 +331,7 @@ def replace_segment_video(path, t_start: float, t_end: float, new_frames_dir, ou
         "-t", f"{duration:.3f}", "-shortest", "-movflags", "+faststart",
         str(out_path),
     ]
-    _run(args, timeout=_TIMEOUT)
+    _run(args, timeout=_encode_timeout(duration))
     return Path(out_path)
 
 def overlay_image(path, png, t_start: float, t_end: float, out_path) -> Path:
@@ -331,13 +343,13 @@ def overlay_image(path, png, t_start: float, t_end: float, out_path) -> Path:
         "-loop", "1", "-i", str(png),
         "-filter_complex", filt,
         "-map", "[v]", "-map", "0:a?",
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "copy",
+        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "copy",
         # see replace_segment_video: -t is the unconditional bound, -shortest is
         # belt-and-suspenders for whenever a real audio stream is also mapped.
         "-t", f"{duration:.3f}", "-shortest", "-movflags", "+faststart",
         str(out_path),
     ]
-    _run(args, timeout=_TIMEOUT)
+    _run(args, timeout=_encode_timeout(duration))
     return Path(out_path)
 
 def replace_audio_span(path, wav, t_start: float, t_end: float, out_path) -> Path:
