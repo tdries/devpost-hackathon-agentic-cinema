@@ -160,15 +160,56 @@ _EDIT_INSTRUCTIONS = {
     "prop_swap": (
         "Edit this frame from a television commercial. {replacement} Keep the "
         "lighting, the composition, the camera angle, the hands and the "
-        "people exactly as they are, and change nothing else in the frame."
+        "people exactly as they are, and change nothing else in the frame. "
+        "Do not add any new object anywhere in the frame, and do not put a "
+        "replacement where there was nothing before: only what is already "
+        "there may change."
     ),
 }
+# What Veo is asked to do, and it is NOT the edit.
+#
+# This used to hand Veo the frame-edit instruction verbatim -- "Replace every
+# alcoholic drink, bottle and glass with a non-alcoholic drink... for example
+# tea". Veo is not editing a frame, it is generating video, so it read that
+# as a description of the scene to render and furnished the whole set with
+# tea: the SA-ROTANA bridge came back with a glass beside the piano player,
+# who had never had a drink of any kind.
+#
+# The line this prompt has to draw is not "change nothing". Veo must be free
+# to change what is already there -- an object that turns, catches the light
+# or passes behind a hand still has to render, and whatever the anchors
+# altered has to stay altered for the whole span or the drink reverts to
+# wine halfway through. What it must not do is INVENT: put something into
+# the scene that neither anchor shows.
+#
+# So the test is provenance, not permission. Everything in the finished span
+# has to trace back to something visible in the two frames. How it looks is
+# Veo's business; whether it exists at all is not.
+_BRIDGE_PROMPT = (
+    "Generate only the motion between these two frames of a television "
+    "commercial. Both frames are already correct as they are: reproduce the "
+    "scene they show and carry it continuously from the first frame to the "
+    "last, moving only as the camera and the performers move.\n\n"
+    "Everything visible in the finished shot must already be visible in one "
+    "of these two frames. You may render what is there as it turns, moves, "
+    "or changes with the light, and anything the two frames show in a "
+    "particular form must stay in that form for the whole span. What you "
+    "must not do is introduce anything: no extra object, prop, drink, "
+    "container, food, garment, text or person anywhere in the scene, nothing "
+    "put into anyone's hands, and nothing set down on a table, a surface or "
+    "into the background that these two frames do not already show. A person "
+    "holding nothing keeps holding nothing.\n\n"
+    "Same camera move, same lighting, same performers, same wardrobe, same "
+    "set, same framing."
+)
+
 _DEFAULT_REPLACEMENT = {
     "relettering": "the same sentence translated into the language of {market_name}",
     "prop_swap": (
-        "Replace every alcoholic drink, bottle and glass with a non-alcoholic "
-        "drink that suits {market_name}, for example tea in the same style of "
-        "glass, keeping the same number of items in the same places."
+        "Replace each alcoholic drink, bottle and glass that is already "
+        "visible with a non-alcoholic drink that suits {market_name}, for "
+        "example tea in the same style of glass, keeping the same number of "
+        "items in the same places and adding none."
     ),
 }
 
@@ -389,7 +430,8 @@ def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str
         # an intent with its own directive replaces the whole instruction
         instruction = (f"Edit this frame from a television commercial. {directive} "
                        f"Keep the lighting, the composition, the camera angle and "
-                       f"every other pixel of the frame identical. The market is "
+                       f"every other pixel of the frame identical. Add nothing "
+                       f"that is not already in the frame. The market is "
                        f"{market_name}.")
         edited_raw = workdir / f"{before.stem}_edited_raw.png"
         edited_raw.parent.mkdir(parents=True, exist_ok=True)
@@ -442,9 +484,12 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
         anchors.append(media.fit_image(edited_raw, base, workdir / f"bridge_{tag}.png"))
 
     seconds = costs.bridge_seconds(finding.t_end - finding.t_start)
+    # _BRIDGE_PROMPT, not `instruction`: the anchors already carry the swap,
+    # and telling a video model to "replace every alcoholic drink with tea"
+    # makes it add tea to the scene rather than leave the corrected frames
+    # alone. See _BRIDGE_PROMPT.
     clip = generate_bridge(
-        prompt=(f"Continue this shot exactly as filmed, same camera move, same "
-                f"lighting, same performers. {instruction}"),
+        prompt=_BRIDGE_PROMPT,
         first_frame=anchors[0], last_frame=anchors[1],
         seconds=seconds, out_path=workdir / "bridge.mp4")
     # Keep the generated footage itself, not just the master it went into.
