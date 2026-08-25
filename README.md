@@ -119,6 +119,14 @@ Ten server-rendered screens. FastAPI, Jinja2, one stylesheet, one script — **n
 
 Every screen renders its content on the server: the board shows the state it had when the page was served, the mission feed shows a server-rendered backlog, and the cutting room is two ordinary `<video>` elements. Agent mode, the feed's Generated-content tab and the frame board's evidence overlay are the client-side exceptions.
 
+### New clearance run
+
+Hand it a master — an MP4 up to 120 s and 200 MB, or a public YouTube link — and pick your jurisdictions. The picker *is* the ladder: a global baseline, what a continent adds on top, sixteen countries, and eighty broadcasters that inherit their country's rules and add their own.
+
+![New clearance run](docs/screenshots/08-new-run.png)
+
+The crew, the verdicts and all 18 dimensions are named on the way in, because a tool that tells you afterwards what it was looking for is asking you to take its word for it.
+
 ### Recent runs
 
 The archive — every run this store holds, newest first. Cards or list, your choice, remembered per browser.
