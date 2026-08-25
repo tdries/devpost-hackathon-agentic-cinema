@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}The Media Customs{% endblock %}
+{% block nav %}{% include "_topnav.html" %}{% endblock %}
 {% block main %}
 
 <section class="hero">
@@ -67,30 +68,5 @@
   </form>
 </section>
 
-<section>
-  <div class="rule-row"><span class="label">Recent runs</span><span class="right"><a class="cite" href="/runs">All runs</a></span></div>
-  {% if recent %}
-  <div class="runlist">
-    {% for item in recent %}
-    <a class="runrow" href="/runs/{{ item.run.id }}">
-      <span class="id">{{ item.run.id }}</span>
-      <span class="asset">{{ item.run.asset_path.split('/')[-1] }}</span>
-      <span class="when">{{ item.run.t0 | stamp }}</span>
-      <span class="flags">
-        {% for code, state in item.states.items() %}
-        {% set st = state.display %}
-        <span class="pill s-{{ st }}"><svg class="ic"><use href="#i-{{ st.replace('_', '-') }}"/></svg>{{ code }}</span>
-        {% endfor %}
-      </span>
-    </a>
-    {% endfor %}
-  </div>
-  {% else %}
-  <div class="empty">
-    <span class="big">No runs yet</span>
-    <p>Nothing has been cleared on this machine. Send the first master through the form above and this list becomes the campaign history.</p>
-  </div>
-  {% endif %}
-</section>
 
 {% endblock %}

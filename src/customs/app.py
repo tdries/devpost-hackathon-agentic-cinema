@@ -863,14 +863,14 @@ templates.env.globals["market_rows"] = market_rows
 
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    """Upload form plus the runs already in the store, newest first."""
-    db = store()
-    recent = []
-    for run in db.recent_runs(12):
-        recent.append({"run": run, "states": market_states(run)})
-    return _page(request, "home.html",
-                 groups=pack_groups(),
-                 recent=recent)
+    """The upload form. Nothing else.
+
+    It used to carry the last twelve runs underneath, so the page did two
+    unrelated jobs and the run list was a scroll away from a form nobody
+    was filling in. Reading the history is now its own tab (/runs), which
+    is also the one that has the card/list toggle.
+    """
+    return _page(request, "home.html", groups=pack_groups(), screen="home")
 
 @app.post("/runs")
 async def create_run(asset: UploadFile | None = File(None),
@@ -1199,7 +1199,7 @@ def library(request: Request):
         })
     cards.sort(key=lambda c: -c["count"])
     total = sum(c["count"] for c in cards)
-    return _page(request, "library.html", cards=cards, total=total,
+    return _page(request, "library.html", cards=cards, total=total, screen="library",
                  packs_total=len(all_packs))
 
 
@@ -1213,7 +1213,7 @@ def all_runs(request: Request):
     """
     rows = [{"run": run, "states": market_states(run)}
             for run in store().recent_runs(500)]
-    return _page(request, "runs.html", rows=rows)
+    return _page(request, "runs.html", rows=rows, screen="runs")
 
 @app.get("/runs/{run_id}/timeline", response_class=HTMLResponse)
 def timeline(request: Request, run_id: str):

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Launch board {{ run.id }}{% endblock %}
-{% block topbar_right %}<span>{{ run.markets | length }} markets</span><a href="/">New run</a>{% endblock %}
+{% block topbar_right %}<a class="tab" href="/runs"><svg class="ic"><use href="#n-board"/></svg>All runs</a>{% endblock %}
 {% block nav %}{% include "_runnav.html" %}{% endblock %}
 {% block main %}
 

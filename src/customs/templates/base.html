@@ -53,6 +53,7 @@ try { var _t = localStorage.getItem("customs-theme"); if (_t) { document.documen
   <symbol id="d-text_legibility" viewBox="0 0 24 24"><path fill="#4285F4" d="M3.4 4.2h17.2v3H13.5v12.6h-3V7.2H3.4z"/><path fill="#EA4335" d="M3.4 12.6h5v2.4h-5z"/><path fill="#FBBC05" d="M3.4 16.8h5v2.4h-5z"/><path fill="#34A853" d="M16.2 12.6h4.4v6.6h-4.4z"/></symbol>
   <symbol id="d-comparative_claims" viewBox="0 0 24 24"><path fill="#4285F4" d="M2.6 12.6h4.4v9H2.6z"/><path fill="#EA4335" d="M9.8 7.4h4.4v14.2H9.8z"/><path fill="#34A853" d="M17 2.6h4.4v19H17z"/><path fill="#FBBC05" d="M2.6 2.6h4.4v2.6H2.6z"/></symbol>
 
+  <symbol id="n-new" viewBox="0 0 24 24"><path fill="#4285F4" d="M12 2.4 18.6 9.6H5.4z"/><path fill="#EA4335" d="M9.8 9.6h4.4v7H9.8z"/><path fill="#FBBC05" d="M2.6 18.4h8.2v3H2.6z"/><path fill="#34A853" d="M13.2 18.4h8.2v3h-8.2z"/></symbol>
   <symbol id="n-board" viewBox="0 0 24 24"><path fill="#4285F4" d="M2.6 2.6h8.2v8.2H2.6z"/><path fill="#EA4335" d="M13.2 2.6h8.2v8.2h-8.2z"/><path fill="#FBBC05" d="M2.6 13.2h8.2v8.2H2.6z"/><path fill="#34A853" d="M13.2 13.2h8.2v8.2h-8.2z"/></symbol>
   <symbol id="n-feed" viewBox="0 0 24 24"><circle cx="4.6" cy="5.6" r="2.4" fill="#4285F4"/><path fill="#4285F4" d="M9 4.2h12.4v2.8H9z"/><circle cx="4.6" cy="12" r="2.4" fill="#FBBC05"/><path fill="#FBBC05" d="M9 10.6h12.4v2.8H9z"/><circle cx="4.6" cy="18.4" r="2.4" fill="#34A853"/><path fill="#34A853" d="M9 17h12.4v2.8H9z"/></symbol>
   <symbol id="n-timeline" viewBox="0 0 24 24"><path fill="#EA4335" d="M2.4 4h11v3.4h-11z"/><path fill="#FBBC05" d="M6.4 10.3h15.2v3.4H6.4z"/><path fill="#34A853" d="M2.4 16.6h13.2V20H2.4z"/><path fill="#4285F4" d="M20.4 16.6h1.2V20h-1.2z"/></symbol>
@@ -74,8 +75,7 @@ try { var _t = localStorage.getItem("customs-theme"); if (_t) { document.documen
         <a class="{{ 'on' if screen == 'agent' }}" href="/agent"><svg class="ic"><use href="#i-adjudicator"/></svg>Agent</a>
         <a class="{{ 'on' if screen != 'agent' }}" href="/"><svg class="ic"><use href="#n-board"/></svg>Studio</a>
       </span>
-      <a class="tab" href="/library"><svg class="ic"><use href="#n-library"/></svg>Library</a>
-      {% block topbar_right %}<span>AGENTIC AD CLEARANCE</span>{% endblock %}
+      {% block topbar_right %}{% endblock %}
       <span class="theme-switch" role="group" aria-label="Style mode">
         <button type="button" class="tbtn" data-set-theme="" title="Mission: the dark launch-control room">Mission</button>
         <button type="button" class="tbtn" data-set-theme="studio" title="Studio: light, for daylight and print">Studio</button>
