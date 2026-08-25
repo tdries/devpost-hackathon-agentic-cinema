@@ -166,7 +166,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "{app=\"customs\", kind!=\"observation\", kind!=\"observation\"} | json severity=\"severity\", sourced=\"sourced\", citation=\"citation_ref\", rationale=\"rationale\", status=\"status\", t_start=\"t_start\"",
+          "expr": "{app=\"customs\", kind!=\"observation\"} | json severity=\"severity\", sourced=\"sourced\", citation=\"citation_ref\", rationale=\"rationale\", status=\"status\", t_start=\"t_start\"",
           "queryType": "range",
           "editorMode": "code",
           "maxLines": 500

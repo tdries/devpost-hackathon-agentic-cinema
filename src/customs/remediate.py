@@ -1,7 +1,7 @@
 """The Remediator: turn one finding into one edit of the localized master.
 
-Design spec section 10. Four methods, ordered by cost and by risk of looking
-fake, and the spine proves three of them on real pixels and real audio:
+Design spec section 10. Five methods, ordered by cost and by risk of looking
+fake, and the spine proves four of them on real pixels and real audio:
 
     relettering  the on-screen text is re-lettered in the market's language
     prop_swap    the offending prop becomes a market-appropriate one

@@ -1,7 +1,8 @@
 """The Customs crew, as a Google ADK agent graph.
 
-This is the ONLY module in the project that imports `google.adk`, so an ADK
-API drift is a one-file fix (task-13-brief.md). Everything it runs already
+This is the crew's only contact with `google.adk` -- the console agent in
+agentmode.py is the other one, and there are no more -- so an ADK API drift
+is a two-file fix (task-13-brief.md). Everything it runs already
 exists and is already tested somewhere else: this module composes those
 functions into agents, it does not reimplement any of them.
 
@@ -95,11 +96,12 @@ from customs.store import Store
 APP_NAME = "customs"
 USER_ID = "customs"
 
-# The six dashboards grafana_ops provisions; the publisher is asked to confirm
+# The dashboards grafana_ops provisions; the publisher is asked to confirm
 # every one of them is on the stack before it writes to any of them.
 DASHBOARD_UIDS = (
     "customs-overview", "customs-timeline", "customs-findings",
     "customs-market", "customs-remediation", "customs-history",
+    "customs-lanes",
 )
 OVERVIEW_UID = "customs-overview"
 
