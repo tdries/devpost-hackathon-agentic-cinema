@@ -58,10 +58,11 @@ ALL_MARKET_CODES = {
 
 def test_all_real_packs_load_without_error():
     packs = load(MARKETS_DIR)
-    assert set(packs.keys()) == ALL_MARKET_CODES
+    assert ALL_MARKET_CODES <= set(packs.keys())
     for market, pack in packs.items():
         assert pack.market == market
-        assert len(pack.rules) >= 5
+        assert pack.level in ("global", "continental", "regional",
+                              "national", "subnational", "channel")
         ids = [r.id for r in pack.rules]
         assert len(ids) == len(set(ids))
         for rule in pack.rules:
@@ -70,17 +71,33 @@ def test_all_real_packs_load_without_error():
             assert rule.trigger
 
 
-def test_fifteen_market_packs_load():
-    # Task 16: all fifteen packs load together, no market missing, none extra.
+def test_the_fifteen_national_packs_still_load():
+    # Task 16 shipped fifteen national packs; the jurisdiction ladder added
+    # global, continental and channel nodes around them without moving them.
     packs = load(MARKETS_DIR)
-    assert set(packs.keys()) == ALL_MARKET_CODES
-    assert len(packs) == 15
+    national = {m for m, p in packs.items() if p.level == "national"}
+    assert ALL_MARKET_CODES <= national
 
 
-def test_every_pack_has_at_least_five_rules():
+def test_every_national_pack_has_at_least_five_rules():
+    # Levels above a country are deliberately thin: they carry only what is
+    # genuinely true everywhere beneath them.
     packs = load(MARKETS_DIR)
     for market, pack in packs.items():
+        if pack.level != "national":
+            continue
         assert len(pack.rules) >= 5, f"{market} has only {len(pack.rules)} rules"
+
+
+def test_a_channel_inherits_its_country_and_everything_above_it():
+    packs = load(MARKETS_DIR)
+    vrt, be = packs["BE-VRT"], packs["BE"]
+    assert vrt.level == "channel" and vrt.parent == "BE"
+    assert {r.id for r in be.rules} <= {r.id for r in vrt.rules}
+    assert vrt.own_rules and vrt.inherited == len(be.rules)
+    # a registry-only channel has no rules of its own but is still judgeable
+    rtbf = packs["BE-RTBF"]
+    assert rtbf.own_rules == [] and len(rtbf.rules) == len(be.rules)
 
 
 def test_rule_ids_globally_unique_across_all_fifteen_packs():
@@ -88,13 +105,15 @@ def test_rule_ids_globally_unique_across_all_fifteen_packs():
     # below), so this mainly documents and locks in the invariant across the real
     # fifteen-pack set rather than a synthetic tmp_path pair.
     packs = load(MARKETS_DIR)
-    all_ids = [rule.id for pack in packs.values() for rule in pack.rules]
+    # own_rules, not rules: a rule inherited by a channel is deliberately the
+    # same rule, appearing in every pack below the one that defines it.
+    all_ids = [rule.id for pack in packs.values() for rule in pack.own_rules]
     assert len(all_ids) == len(set(all_ids))
 
 
 def test_at_least_40_percent_of_all_rules_are_legal_with_a_basis():
     packs = load(MARKETS_DIR)
-    all_rules = [rule for pack in packs.values() for rule in pack.rules]
+    all_rules = [rule for pack in packs.values() for rule in pack.own_rules]
     legal_with_statute = [r for r in all_rules if r.klass == "legal" and r.basis.strip()]
     assert len(all_rules) > 0
     assert len(legal_with_statute) / len(all_rules) >= 0.4

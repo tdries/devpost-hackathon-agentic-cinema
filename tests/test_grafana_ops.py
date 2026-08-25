@@ -756,7 +756,9 @@ def test_overview_uses_the_status_metric_with_the_three_clearance_mappings():
     assert mappings["1"]["text"] == "AT RISK"
     assert mappings["2"]["text"] == "BLOCKED"
     steps = stat["fieldConfig"]["defaults"]["thresholds"]["steps"]
-    assert [s["color"] for s in steps] == ["green", "yellow", "red"]
+    # exact brand hex, not Grafana's named colours: the dashboards use the
+    # same four codes as the console's icons.
+    assert [s["color"] for s in steps] == ["#34A853", "#FBBC05", "#EA4335"]
     assert [s["value"] for s in steps] == [None, 1, 2]
 
     assert any(p["type"] == "bargauge" and "customs_blocking" in p["targets"][0]["expr"]
