@@ -87,6 +87,55 @@
     });
   })();
 
+  /* ---------- 1c. "show what was spotted" ----------
+     A green rectangle over the evidence frame, per thumbnail, off by
+     default. The box is fetched once and cached on the element: an
+     observation made before the analyst was asked for one has to be
+     located by a model, which costs a call, so it happens on the first
+     tick and never again. Nothing is ever drawn into the image itself --
+     that PNG is what a remediation edits and what Veo is anchored on. */
+
+  document.querySelectorAll(".box-toggle").forEach(function (input) {
+    var wrap = input.closest(".fb-frame");
+    if (!wrap) { return; }
+    var shot = wrap.querySelector(".fb-shot");
+    var svg = wrap.querySelector(".fb-box");
+    var note = input.parentElement.querySelector(".box-note");
+    if (!shot || !svg) { return; }
+
+    var draw = function (box) {
+      if (!box || box.length !== 4) {
+        svg.hidden = true;
+        if (note) { note.textContent = "nothing to box in this frame"; }
+        return;
+      }
+      var y0 = box[0], x0 = box[1], y1 = box[2], x1 = box[3];
+      svg.innerHTML = '<rect x="' + x0 + '" y="' + y0 + '" width="' +
+        (x1 - x0) + '" height="' + (y1 - y0) + '" rx="8"></rect>';
+      svg.hidden = false;
+      if (note) { note.textContent = ""; }
+    };
+
+    input.addEventListener("change", function () {
+      if (!input.checked) { svg.hidden = true; return; }
+      if (shot.dataset.box) {
+        draw(JSON.parse(shot.dataset.box));
+        return;
+      }
+      if (note) { note.textContent = "locating..."; }
+      fetch("/runs/" + shot.dataset.run + "/evidence/" +
+            shot.dataset.boxFor + "/box")
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          shot.dataset.box = JSON.stringify(d.box || []);
+          if (input.checked) { draw(d.box); }
+        })
+        .catch(function () {
+          if (note) { note.textContent = "could not locate it"; }
+        });
+    });
+  });
+
   /* ---------- 2. the launch board ---------- */
 
   var board = document.getElementById("board");

@@ -16,13 +16,25 @@
     <div class="fb-row{{ ' hit' if row.findings }}">
       <div class="fb-frame">
         {% if row.frame %}
-        <a href="/runs/{{ run.id }}/evidence/{{ row.obs.id }}" target="_blank" title="Open the full frame">
-          <img src="/runs/{{ run.id }}/evidence/{{ row.obs.id }}" alt="Frame at {{ row.obs.t_start | timecode }}" loading="lazy">
-        </a>
+        {# The box is drawn OVER the image, never into it: this PNG is what a
+           remediation edits and what Veo is anchored on, so a rectangle
+           burned into the file would be treated as part of the picture. #}
+        <div class="fb-shot" data-box-for="{{ row.obs.id }}" data-run="{{ run.id }}">
+          <a href="/runs/{{ run.id }}/evidence/{{ row.obs.id }}" target="_blank" title="Open the full frame">
+            <img src="/runs/{{ run.id }}/evidence/{{ row.obs.id }}" alt="Frame at {{ row.obs.t_start | timecode }}" loading="lazy">
+          </a>
+          <svg class="fb-box" viewBox="0 0 1000 1000" preserveAspectRatio="none" hidden aria-hidden="true"></svg>
+        </div>
         {% else %}
         <div class="fb-noframe label">no frame kept</div>
         {% endif %}
         <span class="mono fb-time">{{ row.obs.t_start | timecode }} to {{ row.obs.t_end | timecode }}</span>
+        {% if row.frame %}
+        <label class="fb-boxtoggle label">
+          <input type="checkbox" class="box-toggle"> show what was spotted
+          <span class="box-note"></span>
+        </label>
+        {% endif %}
       </div>
       <div class="fb-read">
         <div class="fb-top">

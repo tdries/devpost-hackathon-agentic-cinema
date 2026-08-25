@@ -237,6 +237,27 @@ class Store:
         return [Observation.from_json(json.loads(r[0])) for r in rows]
 
     @_locked
+    def set_observation_box(self, run_id: str, obs_id: str, box: list) -> None:
+        """Record where in its frame an observation's subject is.
+
+        Written back so a box is computed once and then simply read. Old
+        observations were made before the analyst was asked for one, and
+        locating them lazily is what lets a run from this morning show the
+        same overlay as one from tonight.
+        """
+        row = self._conn.execute(
+            "SELECT data FROM observations WHERE id = ? AND run_id = ?",
+            (obs_id, run_id)).fetchone()
+        if row is None:
+            raise ValueError(f"unknown observation: {obs_id}")
+        data = json.loads(row[0])
+        data["box"] = list(box)
+        self._conn.execute(
+            "UPDATE observations SET data = ? WHERE id = ? AND run_id = ?",
+            (json.dumps(data), obs_id, run_id))
+        self._conn.commit()
+
+    @_locked
     def add_findings(self, findings: list[Finding]) -> None:
         rows = [
             (f.id, f.run_id, f.market, json.dumps(f.to_json())) for f in findings

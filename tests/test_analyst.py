@@ -369,3 +369,34 @@ def test_each_observation_points_at_the_frame_it_was_seen_in(monkeypatch, tmp_pa
     # out of range and missing both fall back to the first frame
     assert got[2].evidence_frame == str(frames[0])
     assert got[3].evidence_frame == str(frames[0])
+
+
+def test_a_failed_locate_is_not_cached_as_an_empty_box(monkeypatch):
+    """An expired credential must not become a permanent "nothing here".
+
+    locate() swallowed every exception and returned []. That is
+    indistinguishable from a frame with genuinely nothing to box, and the
+    caller writes the result back to the store -- so one auth blip would
+    have marked an observation unlocatable forever.
+    """
+    from customs import analyst
+
+    def boom(*a, **k):
+        raise RuntimeError("Reauthentication is needed")
+    monkeypatch.setattr("customs.genai_client.generate_json_image", boom)
+    with pytest.raises(analyst.LocateFailed):
+        analyst.locate(b"png", "a glass of wine")
+
+    # a real "not found" is still an empty list, and IS cacheable
+    monkeypatch.setattr("customs.genai_client.generate_json_image",
+                        lambda *a, **k: {"found": False, "box_2d": [0, 0, 0, 0]})
+    assert analyst.locate(b"png", "a spoken line") == []
+
+    monkeypatch.setattr("customs.genai_client.generate_json_image",
+                        lambda *a, **k: {"found": True, "box_2d": [100, 200, 400, 600]})
+    assert analyst.locate(b"png", "a glass of wine") == [100, 200, 400, 600]
+
+    # an inverted or zero-area box is a refusal, not a location
+    monkeypatch.setattr("customs.genai_client.generate_json_image",
+                        lambda *a, **k: {"found": True, "box_2d": [400, 200, 100, 600]})
+    assert analyst.locate(b"png", "x") == []

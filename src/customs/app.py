@@ -83,8 +83,8 @@ from fastapi.responses import (FileResponse, HTMLResponse, PlainTextResponse,
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from customs import (adjudicate, agentmode, costs, media, packs, persist,
-                     pipeline, remediate, scope as scope_mod, verify)
+from customs import (adjudicate, agentmode, analyst, costs, media, packs,
+                     persist, pipeline, remediate, scope as scope_mod, verify)
 from customs.fetch import FetchError, fetch_youtube
 from customs.config import settings
 from customs.media import MediaError, probe_duration
@@ -1697,6 +1697,42 @@ def run_poster(run_id: str):
             raise HTTPException(status_code=404, detail="no poster") from exc
     return FileResponse(cached, media_type="image/jpeg",
                         headers={"Cache-Control": "public, max-age=86400"})
+
+@app.get("/runs/{run_id}/evidence/{observation_id}/box")
+def evidence_box(run_id: str, observation_id: str):
+    """Where in its frame this observation's subject is, 0-1000 normalised.
+
+    Answered from the store when the analyst recorded one, and located on
+    demand when it did not -- every observation made before boxes existed
+    still gets an overlay, and pays for it once.
+
+    The rectangle is drawn by the browser over the image. It is never
+    written into the PNG: that file is what a remediation edits and what
+    Veo is anchored on, so a box burned into it would be treated as part
+    of the picture and could end up in the commercial.
+    """
+    run = _run_or_404(run_id)
+    obs = next((o for o in store().observations(run.id) if o.id == observation_id), None)
+    if obs is None:
+        raise HTTPException(status_code=404, detail="no such observation")
+    box = list(getattr(obs, "box", None) or [])
+    if box:
+        return {"box": box, "cached": True}
+    frame = Path(obs.evidence_frame or "")
+    if not frame.is_file():
+        return {"box": [], "cached": False, "why": "the frame is not on disk"}
+    try:
+        box = analyst.locate(frame.read_bytes(), obs.statement)
+    except analyst.LocateFailed as exc:
+        # Not written back: a failed call is not an answer, and caching it
+        # would make this observation permanently unlocatable.
+        log.warning("locate failed for %s: %s", obs.id, exc)
+        return {"box": [], "cached": False, "why": "could not reach the model"}
+    try:
+        store().set_observation_box(run.id, obs.id, box)
+    except ValueError:
+        pass
+    return {"box": box, "cached": False}
 
 @app.get("/runs/{run_id}/stills/{filename:path}")
 def still(run_id: str, filename: str):
