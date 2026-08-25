@@ -31,6 +31,13 @@ scope: how structural the violation is. "frame" if it is a detail visible in a
 moment, "segment" if it is part of the action inside the shot, "scene" if the
 whole shot is the violation, "concept" if the premise of the commercial is
 what the rule forbids.
+remedies: exactly three concrete, different ways to deal with THIS violation,
+each describing the actual thing you were shown rather than its category: a
+lit cigarette is not "the drink", a headline is not "the text". label is a
+short imperative for a button, six words or fewer. directive is one sentence
+telling an image editor what to change in the frame, naming the object and
+what replaces it, and never asking for words to be written on screen unless
+the violation is itself on-screen text.
 substitutable: true if replacing the offending element with a permitted one
 would satisfy the rule and leave the commercial's idea standing (a child in a
 slingshot gag becomes an adult, and the gag survives), false if the forbidden
@@ -63,9 +70,18 @@ _JUDGE_RESPONSE_SCHEMA = {
             "scope": {"type": "string",
                       "enum": ["frame", "segment", "scene", "concept"]},
             "substitutable": {"type": "boolean"},
+            "remedies": {
+                "type": "array", "minItems": 3, "maxItems": 3,
+                "items": {
+                    "type": "object",
+                    "properties": {"label": {"type": "string"},
+                                   "directive": {"type": "string"}},
+                    "required": ["label", "directive"],
+                },
+            },
         },
         "required": ["observation_id", "rule_id", "triggers", "severity_adjust",
-                     "rationale", "scope", "substitutable"],
+                     "rationale", "scope", "substitutable", "remedies"],
     },
 }
 
@@ -88,6 +104,25 @@ def candidates(observations: list[Observation], pack: MarketPack) -> list[tuple[
         for rule in pack.rules
         if rule.dimension == obs.dimension
     ]
+
+def _remedies(raw) -> list[dict]:
+    """The judge's three remedies, or nothing rather than something malformed.
+
+    Same posture as every other field here: a bad shape costs the remedies,
+    not the finding. costs.suggestions() falls back to its dimension table
+    when this is empty, so a finding without them is still actionable.
+    """
+    if not isinstance(raw, list):
+        return []
+    out = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        label = str(item.get("label") or "").strip()
+        directive = str(item.get("directive") or "").strip()
+        if label and directive:
+            out.append({"label": label, "directive": directive})
+    return out[:3]
 
 def _clamp_severity_adjust(value: int) -> int:
     """Clamp an already-numeric severity_adjust into [SEVERITY_ADJUST_MIN, SEVERITY_ADJUST_MAX].
@@ -251,6 +286,7 @@ def judge(run_id: str, observations: list[Observation], pack: MarketPack, on_eve
             status="open",
             scope=scope_named,
             substitutable=bool(item.get("substitutable", True)),
+            remedies=_remedies(item.get("remedies")),
         ))
 
     return findings

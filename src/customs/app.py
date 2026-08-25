@@ -1352,7 +1352,7 @@ def market_room(request: Request, run_id: str, market: str):
             "scope": scopes[f.id],
             "options": costs.options(max(0.0, f.t_end - f.t_start), spent,
                                      scopes[f.id], f.substitutable),
-            "suggestions": costs.suggestions(dimension_of.get(f.observation_id, "")),
+            "suggestions": costs.suggestions(dimension_of.get(f.observation_id, ""), f),
             "verdict": scope_mod.verdict(scopes[f.id], f.substitutable),
         }
         for f in findings if f.status == "open" and not f.remediation_blocked

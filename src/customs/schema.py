@@ -1,4 +1,4 @@
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 
 FINDING_STATUSES = {"open", "remediating", "resolved"}
 
@@ -48,6 +48,12 @@ class Finding(_JsonMixin):
     # satisfy the rule and leave the commercial standing. A child in a
     # slingshot gag is substitutable; an advertisement for alcohol is not.
     substitutable: bool = True
+    # Three concrete ways to deal with THIS finding, written by the judge in
+    # the same call that decided it triggered, so they describe the thing it
+    # actually saw. Each is {"label": shown to the operator, "directive":
+    # given to the image editor}. Empty on findings judged before this
+    # existed, and on those costs.suggestions falls back to its table.
+    remedies: list = field(default_factory=list)
 
     def __post_init__(self):
         if self.status not in FINDING_STATUSES:
