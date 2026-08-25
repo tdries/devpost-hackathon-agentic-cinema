@@ -1453,3 +1453,17 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   .specs { grid-template-columns: 1fr; }
   .fix-cost b { font-size: 12px; }
 }
+
+/* one nav row per jurisdiction level, labelled */
+.runnav .wrap.markets-row { min-height: 40px; gap: 2px; }
+.runnav .wrap.markets-row + .markets-row { border-top: 1px solid var(--line); }
+.lvl-tag {
+  flex: none; width: 88px; padding-right: 10px;
+  font-size: 9px; letter-spacing: 0.18em; color: var(--ink-3);
+}
+.runnav .markets-row .tab .ic.country { stroke: var(--g-blue); stroke-width: 2.4; fill: none; }
+.runnav .markets-row .tab.on .ic.country { stroke: var(--signal); }
+@media (max-width: 720px) {
+  .lvl-tag { width: auto; padding-right: 6px; }
+}
+.agent-shot { display: block; width: 100%; height: auto; }

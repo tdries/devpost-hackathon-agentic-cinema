@@ -77,6 +77,7 @@ from pathlib import Path
 
 from fastapi import (BackgroundTasks, FastAPI, File, Form, HTTPException,
                      Request, UploadFile)
+from fastapi import Response
 from fastapi.responses import (FileResponse, HTMLResponse, PlainTextResponse,
                                RedirectResponse, StreamingResponse)
 from fastapi.staticfiles import StaticFiles
@@ -721,6 +722,34 @@ def _render_panel(run, spec) -> bytes:
     return ops.render_png(spec["uid"], spec["panel"], run, duration=duration,
                           width=spec["width"], height=spec["height"])
 
+@app.get("/grafana/{uid}.png")
+def grafana_png(uid: str, run: str = ""):
+    """A whole Grafana dashboard, rendered server-side as an image.
+
+    Grafana Cloud answers every page with `frame-ancestors 'none'`, so a
+    dashboard cannot be put in an iframe: the browser refuses the connection
+    and the panel comes back blank, which is exactly what agent mode did
+    when it handed back the URL of a dashboard it had just built. The board
+    has always solved this by rendering panels through Grafana's own
+    renderer with the service account token, and a dashboard the agent
+    composed is no different.
+    """
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,60}", uid):
+        raise HTTPException(status_code=404, detail="no such dashboard")
+    record = store().get_run(run) if run else None
+    try:
+        from customs.grafana_ops import GrafanaOps  # local: pulls the MCP client
+        with GrafanaOps(settings) as ops:
+            png = ops.render_png(uid, None, record, asset_duration(record) if record else None,
+                                 width=1200, height=700)
+    except Exception as exc:  # noqa: BLE001 -- a dead renderer is not a 500 here
+        log.warning("dashboard render failed for %s: %s", uid, exc)
+        raise HTTPException(status_code=502,
+                            detail="Grafana would not render that dashboard") from exc
+    return Response(content=png, media_type="image/png",
+                    headers={"Cache-Control": "public, max-age=60"})
+
+
 @app.get("/runs/{run_id}/panels/{name}.png")
 def panel_png(run_id: str, name: str):
     """A Grafana panel for this run, rendered server-side and cached on disk.
@@ -784,8 +813,32 @@ templates.env.filters["timecode"] = _timecode
 templates.env.filters["clock"] = _clock
 templates.env.filters["stamp"] = _stamp
 
+_LEVEL_ROWS = ("global", "continental", "national", "subnational", "channel")
+
+
+def market_rows(run) -> list[dict]:
+    """This run's markets, grouped into one row per jurisdiction level.
+
+    A run can cover a global baseline, a continent, a dozen countries and
+    twenty broadcasters at once, and a single strip of tabs makes that look
+    like one flat list of codes. One row per level, labelled, says what you
+    are actually looking at.
+    """
+    all_packs = market_packs()
+    rows = []
+    for level in _LEVEL_ROWS:
+        codes = [m for m in run.markets
+                 if (all_packs[m].level if m in all_packs else "national") == level]
+        if codes:
+            rows.append({"level": level, "markets": sorted(codes)})
+    return rows
+
+
 def _page(request: Request, name: str, **context):
     return templates.TemplateResponse(request, name, context)
+
+
+templates.env.globals["market_rows"] = market_rows
 
 # -- the front door --
 
@@ -1034,6 +1087,7 @@ async def agent_ask(message: str = Form(...), session: str = Form("default"),
     return {
         "reply": turn.reply or ("" if not turn.error else ""),
         "view": turn.view, "view_label": turn.view_label,
+        "view_external": turn.view_external,
         "calls": turn.calls, "error": turn.error,
     }
 

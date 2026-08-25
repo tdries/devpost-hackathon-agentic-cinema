@@ -443,18 +443,28 @@
       return el;
     };
 
-    var open = function (url, label) {
+    var open = function (url, label, external) {
       if (!url) { return; }
       canvas.innerHTML = "";
-      var frame = document.createElement("iframe");
-      frame.src = url;
-      frame.setAttribute("title", label || "view");
-      canvas.appendChild(frame);
+      if (url.indexOf(".png") > 0) {
+        /* Grafana refuses to be framed, so a dashboard arrives as a
+           server-side render. An image, not an iframe. */
+        var shot = document.createElement("img");
+        shot.src = url;
+        shot.alt = label || "dashboard";
+        shot.className = "agent-shot";
+        canvas.appendChild(shot);
+      } else {
+        var frame = document.createElement("iframe");
+        frame.src = url;
+        frame.setAttribute("title", label || "view");
+        canvas.appendChild(frame);
+      }
       if (viewLabel) {
         viewLabel.innerHTML = '<svg class="ic"><use href="#n-board"/></svg>' +
                               (label || "view");
       }
-      if (viewOpen) { viewOpen.href = url; viewOpen.style.display = ""; }
+      if (viewOpen) { viewOpen.href = external || url; viewOpen.style.display = ""; }
     };
 
     var ask = function (text) {
@@ -493,7 +503,7 @@
             });
             last.appendChild(calls);
           }
-          open(data.view, data.view_label);
+          open(data.view, data.view_label, data.view_external);
           log.scrollTop = log.scrollHeight;
         })
         .catch(function () {

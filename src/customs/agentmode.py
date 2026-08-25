@@ -64,6 +64,7 @@ class Turn:
     reply: str = ""
     view: str = ""            # a URL for the right hand pane
     view_label: str = ""
+    view_external: str = ""   # where the real thing lives, when it is not ours
     calls: list[dict] = field(default_factory=list)
     error: str = ""
 
@@ -333,7 +334,12 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
                 made = ops.create_adhoc_dashboard(spec)
         except Exception as exc:  # noqa: BLE001 -- the agent reports the failure
             return f"could not build the dashboard: {exc}"
-        turn.view, turn.view_label = made["url"], made["title"]
+        # not the Grafana URL: Grafana Cloud refuses to be framed
+        # (frame-ancestors 'none'), so the console shows the same server-side
+        # render the launch board uses and keeps the real link beside it.
+        turn.view = f"/grafana/{made['uid']}.png" + (f"?run={target}" if target else "")
+        turn.view_label = made["title"]
+        turn.view_external = made["url"]
         return json.dumps(made)
 
     return LlmAgent(

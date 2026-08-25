@@ -1166,3 +1166,20 @@ def test_agent_mode_talks_to_vertex_on_the_endpoint_that_has_the_models(monkeypa
     agentmode._vertex_env()
     assert os.environ["GOOGLE_CLOUD_LOCATION"] == "global"
     assert os.environ["GOOGLE_GENAI_USE_VERTEXAI"] == "true"
+
+
+def test_the_run_nav_puts_each_jurisdiction_level_on_its_own_labelled_row(client):
+    """A run can cover a baseline, a continent, countries and broadcasters at
+    once; one flat strip of codes hides which is which."""
+    test_client, store, _run, _ = client
+    run = store.create_run(asset_path=ASSET,
+                           markets=["GLOBAL", "EU", "FR", "BE", "BE-VRT", "FR-M6"])
+    page = test_client.get(f"/runs/{run.id}")
+    assert page.status_code == 200
+    for level in ("global", "continental", "national", "channel"):
+        assert f'<span class="lvl-tag label">{level}</span>' in page.text
+    # and the rows carry the right members
+    body = page.text
+    channel_row = body.split('>channel</span>')[1][:400]
+    assert "BE-VRT" in channel_row and "FR-M6" in channel_row
+    assert "GLOBAL" not in channel_row

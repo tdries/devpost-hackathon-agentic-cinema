@@ -7,13 +7,22 @@
     <a class="tab {% if screen == 'timeline' %}on{% endif %}" href="/runs/{{ run.id }}/timeline"><svg class="ic"><use href="#n-timeline"/></svg>Timeline</a>
     <a class="tab {% if screen == 'cutting' %}on{% endif %}" href="/runs/{{ run.id }}/cutting"><svg class="ic"><use href="#n-cut"/></svg>Cutting room</a>
   </div>
+  {% for row in market_rows(run) %}
   <div class="wrap markets-row">
-    {% for code in run.markets %}
-    <a class="tab {% if screen == 'market' and market == code %}on{% endif %}" href="/runs/{{ run.id }}/markets/{{ code }}"><svg class="ic"><use href="#n-market"/></svg>{{ code }}</a>
+    <span class="lvl-tag label">{{ row.level }}</span>
+    {% for code in row.markets %}
+    <a class="tab {% if screen == 'market' and market == code %}on{% endif %}" href="/runs/{{ run.id }}/markets/{{ code }}">
+      {% if row.level == 'channel' %}<svg class="ic"><use href="#n-cut"/></svg>
+      {% elif row.level == 'global' %}<svg class="ic"><use href="#d-national_symbols_politics"/></svg>
+      {% elif row.level == 'continental' %}<svg class="ic"><use href="#n-market"/></svg>
+      {% else %}<svg class="ic lvl country"><use href="#c-{{ code }}"/></svg>{% endif %}{{ code }}</a>
     {% endfor %}
+    {% if loop.last %}
     <span class="runnav-right">
       <span class="runid">{{ run.id }}</span>
       <span class="pill s-{{ run_state }}"><svg class="ic"><use href="#i-{{ run_state.replace('_', '-') }}"/></svg>{{ run.status }}</span>
     </span>
+    {% endif %}
   </div>
+  {% endfor %}
 </nav>
