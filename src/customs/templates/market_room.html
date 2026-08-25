@@ -129,7 +129,7 @@
               <div class="fix-h label">What should change</div>
               {% for s in fix.suggestions %}
               <label class="fix-opt">
-                <input type="radio" name="replacement" value="{{ s.label }}" {{ 'checked' if loop.first }}>
+                <input type="radio" name="intent" value="{{ s.key }}" {{ 'checked' if loop.first }}>
                 <span>{{ s.label }}</span>
               </label>
               {% endfor %}

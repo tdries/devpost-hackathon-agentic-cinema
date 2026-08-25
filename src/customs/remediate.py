@@ -98,6 +98,40 @@ _ON_SCREEN_MARKERS = (
     "superimposed", "written", "printed", "label", "sign",
 )
 
+# What the operator picked in the console is an INTENT, not the words to
+# put on screen. Sending the label through as `replacement` is how a
+# re-lettering came back with "Re-letter the text in the market's language"
+# painted across the packet: the label is a description of the job, and the
+# job is to work out the words. An intent picks the instruction; only a
+# human typing exact text sets `replacement`.
+INTENT_INSTRUCTIONS = {
+    "translate": None,          # the default: the model translates for the market
+    "swap": None,               # the default: a market-appropriate substitute
+    "adult": "Replace the child with an adult doing exactly the same thing.",
+    "object": "Replace the person with an inanimate object of similar size.",
+    "empty": "Keep the container exactly as it is and change only its contents "
+             "to a non-alcoholic drink of a different colour.",
+    "remove": "Remove it from the frame entirely and reconstruct what would be "
+              "behind it from the surrounding pixels.",
+    "neutral": "Replace it with a plain, neutral element that matches the "
+               "surroundings and carries no words, symbols or branding.",
+    "cover": "Extend the existing clothing so that it covers more of the body, "
+             "in the same fabric, colour and lighting.",
+    "replace": "Replace the garment with a modest one in the same colour and "
+               "fabric, leaving the person and the pose unchanged.",
+    "qualify": "Rewrite the on-screen claim so it is qualified and "
+               "substantiated, in the same typeface and position.",
+    "soften": "Rewrite the on-screen claim without any comparison, in the same "
+              "typeface and position.",
+    "drop": "Remove the claim from the frame, reconstructing the surface "
+            "behind it.",
+    "slow": None,
+    "dim": None,
+    "cut": None,
+    "disclaim": None,
+    "reframe": None,
+}
+
 _EDIT_INSTRUCTIONS = {
     "relettering": (
         "Edit this frame from a television commercial. Replace the on-screen "
@@ -329,9 +363,24 @@ def _still(video_path, change_id: str, tag: str, finding: Finding, out_dir: Path
     return media.extract_keyframes(video_path, span, out_dir, per_shot=1)[0]
 
 def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str | None,
-                     before: Path, workdir: Path, out_path: Path) -> tuple[Path, str]:
+                     before: Path, workdir: Path, out_path: Path,
+                     intent: str | None = None) -> tuple[Path, str]:
     """relettering / prop_swap: edit the keyframe, fit it, composite the span."""
     market_name = _market_name(finding.market)
+    directive = INTENT_INSTRUCTIONS.get(intent or "") if intent else None
+    if directive:
+        # an intent with its own directive replaces the whole instruction
+        instruction = (f"Edit this frame from a television commercial. {directive} "
+                       f"Keep the lighting, the composition, the camera angle and "
+                       f"every other pixel of the frame identical. The market is "
+                       f"{market_name}.")
+        edited_raw = workdir / f"{before.stem}_edited_raw.png"
+        edited_raw.parent.mkdir(parents=True, exist_ok=True)
+        edited_raw.write_bytes(_edit_image(instruction, before.read_bytes()))
+        edited = media.fit_image(edited_raw, base,
+                                 before.with_name(f"{before.stem}_edited.png"))
+        media.overlay_image(base, edited, finding.t_start, finding.t_end, out_path)
+        return edited, instruction
     if replacement is None:
         subject = _DEFAULT_REPLACEMENT[method].format(market_name=market_name)
     elif method == "relettering":
@@ -385,7 +434,7 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
 
 
 def apply(run, finding: Finding, method: str, workdir, store, *,
-          replacement: str | None = None) -> ChangeRecord:
+          replacement: str | None = None, intent: str | None = None) -> ChangeRecord:
     """Apply one remediation to this market's localized master.
 
     Args:
@@ -426,9 +475,10 @@ def apply(run, finding: Finding, method: str, workdir, store, *,
     changes_dir.mkdir(parents=True, exist_ok=True)
 
     with market_lock(run.id, finding.market):
-        return _apply_locked(run, finding, method, workdir, store, replacement, changes_dir)
+        return _apply_locked(run, finding, method, workdir, store, intent, replacement, changes_dir)
 
 def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
+                  intent: str | None,
                   replacement: str | None, changes_dir: Path) -> ChangeRecord:
     """apply()'s body, with this market's master already locked."""
     master = localized_master(run, finding.market, store)
@@ -443,7 +493,7 @@ def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
     staged = run_dir(run, store) / f".{change_id}_{master.name}"
 
     try:
-        edit = _run_method(run, finding, method, replacement, base, before,
+        edit = _run_method(run, finding, method, replacement, intent, base, before,
                            workdir, staged, store)
     except Exception:
         # A half-done remediation must never look like a done one. The finding
@@ -472,6 +522,7 @@ def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
     return change
 
 def _run_method(run, finding: Finding, method: str, replacement: str | None,
+                intent: str | None,
                 base: Path, before: Path, workdir: Path, staged: Path, store) -> str:
     """Produce the edited video at `staged` and return the change description.
 
@@ -482,7 +533,8 @@ def _run_method(run, finding: Finding, method: str, replacement: str | None,
     market_name = _market_name(finding.market)
     if method in ("relettering", "prop_swap"):
         _edited, instruction = _edit_frame_onto(
-            base, finding, method, replacement, before, workdir, staged)
+            base, finding, method, replacement, before, workdir, staged,
+            intent=intent)
         # The full edit instruction goes in the run's event log, not in the
         # change description: the description is read on dashboards and in
         # Grafana annotations, where a paragraph of prompt is noise, but

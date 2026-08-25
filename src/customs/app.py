@@ -137,10 +137,12 @@ def store() -> Store:
 
 def remediate_and_verify(run_id: str, finding_id: str, market: str,
                          workdir=None, *, method: str = "auto",
-                         replacement: str | None = None) -> bool:
+                         replacement: str | None = None,
+                         intent: str | None = None) -> bool:
     try:
         return _remediate_and_verify(run_id, finding_id, market, workdir,
-                                     method=method, replacement=replacement)
+                                     method=method, replacement=replacement,
+                                     intent=intent)
     finally:
         # the edit, the change record and the verifier verdict all just
         # landed in the store; put them somewhere a new revision can find
@@ -149,7 +151,8 @@ def remediate_and_verify(run_id: str, finding_id: str, market: str,
 
 def _remediate_and_verify(run_id: str, finding_id: str, market: str,
                           workdir=None, *, method: str = "auto",
-                          replacement: str | None = None) -> bool:
+                          replacement: str | None = None,
+                          intent: str | None = None) -> bool:
     """plan -> apply -> confirm, for one finding. Runs off the request thread.
 
     Everything is re-read from the store here rather than carried over from
@@ -212,7 +215,7 @@ def _remediate_and_verify(run_id: str, finding_id: str, market: str,
             db.emit(run_id, "remediator",
                     f"{finding.rule_id} ({market}) -> planned {chosen}")
             change = remediate.apply(run, finding, chosen, workdir, db,
-                                     replacement=replacement)
+                                     replacement=replacement, intent=intent)
             return verify.confirm(run, market, [change], db, workdir)
     except Exception as exc:  # noqa: BLE001 -- a background task has nobody to raise to
         log.exception("remediation of %s failed", finding_id)
@@ -1254,7 +1257,8 @@ def market_room(request: Request, run_id: str, market: str):
 
 @app.post("/runs/{run_id}/findings/{finding_id}/remediate")
 def remediate_now(run_id: str, finding_id: str, background: BackgroundTasks,
-                  method: str = Form("auto"), replacement: str = Form("")):
+                  method: str = Form("auto"), intent: str = Form(""),
+                  replacement: str = Form("")):
     """Remediate one finding by hand. The demo's affordance, not the trigger.
 
     The real trigger is a Grafana alert rule firing into POST /webhook/alert;
@@ -1284,6 +1288,7 @@ def remediate_now(run_id: str, finding_id: str, background: BackgroundTasks,
     span = max(0.0, finding.t_end - finding.t_start)
     choice = (method or "auto").strip()
     want = (replacement or "").strip() or None
+    how = (intent or "").strip() or None
     if choice not in ("auto", "overlay", "track", "bridge"):
         raise HTTPException(status_code=400, detail=f"unknown method: {choice}")
     if choice != "auto":
@@ -1307,6 +1312,7 @@ def remediate_now(run_id: str, finding_id: str, background: BackgroundTasks,
                  f"({finding.market}) -> {finding.id}"
                  + (f" [{choice}"
                     + (f", {price:.2f} EUR" if price else "")
+                    + (f", {how}" if how else "")
                     + (f', "{want}"' if want else "") + "]" if choice != "auto" else ""))
     # Flip the row before answering, not inside the background task: the
     # browser follows this redirect in milliseconds and would otherwise
@@ -1315,7 +1321,7 @@ def remediate_now(run_id: str, finding_id: str, background: BackgroundTasks,
     # itself, verify resolves or reopens, and every refusal below restores it.
     store().update_finding_status(finding.id, "remediating", run.id)
     background.add_task(remediate_and_verify, run.id, finding.id, finding.market,
-                        method=choice, replacement=want)
+                        method=choice, replacement=want, intent=how)
     return RedirectResponse(f"/runs/{run.id}/markets/{finding.market}",
                             status_code=303)
 

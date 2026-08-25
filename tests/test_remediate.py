@@ -306,3 +306,26 @@ def test_apply_raises_and_leaves_the_master_untouched_when_the_model_returns_no_
     assert store.findings(run.id, "FR")[0].status == "open"
     messages = [m for (_i, _t, _a, m) in store.events_since(run.id, 0)]
     assert any("stage_error: remediate" in m for m in messages), messages
+
+
+def test_the_picked_intent_becomes_an_instruction_not_the_words_on_screen(
+        store_with_run, tmp_path, fake_models, png_bytes):
+    """The console's three choices are intents. Passing the label through as
+    the replacement is how a re-lettering came back with "Re-letter the text
+    in the market's language" painted across the packet."""
+    store, run, finding = store_with_run
+    fake_models["png"] = png_bytes
+
+    remediate.apply(run, finding, "relettering", tmp_path / "work", store,
+                    intent="remove")
+
+    instructions = [message for _i, _t, agent, message
+                    in store.events_since(run.id, 0)
+                    if "instruction:" in message]
+    assert instructions, "the edit instruction was never recorded"
+    said = instructions[-1]
+    # the directive reaches the model...
+    assert "Remove it from the frame entirely" in said
+    # ...and the label never becomes words to paint on the frame
+    assert "Re-letter the text" not in said
+    assert "market's language" not in said
