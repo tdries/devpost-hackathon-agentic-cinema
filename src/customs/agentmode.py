@@ -195,6 +195,8 @@ def view_url(view: str, run_id: str = "", market: str = "") -> tuple[str, str]:
 # label nobody writes with no rows and no error, which is what "No data"
 # was.
 _STREAM_LABELS = {"market", "klass", "rule_id", "asset", "dimension"}
+# Labels the risk gauge in Mimir carries but a Loki finding line does not.
+_MIMIR_LABELS = {"dimension"}
 _GROUPINGS = {
     "dimension": "dimension",
     "market": "market",
@@ -219,9 +221,24 @@ def dashboard_spec(title: str, run_id: str, group_by: str) -> dict:
     """
     label = _GROUPINGS.get(group_by, "dimension")
     stream = '{app="customs"}'
-    # a JSON line parse is what makes the non-label fields groupable
-    parsed = stream if label in _STREAM_LABELS else f"{stream} | json"
-    counted = f"sum by ({label}) (count_over_time({parsed} [$__range]))"
+    if label in _MIMIR_LABELS:
+        # dimension is a property of the observation, not of the finding, so
+        # it never reached a Loki line: grouping findings by it there found
+        # an empty label and drew "No data". The risk gauge has carried it
+        # since the first run -- one sample per market per video second,
+        # labelled with the covering finding's dimension and "none" when
+        # nothing covered that second. Dropping "none" leaves exactly the
+        # seconds a dimension put at risk, over every run ever pushed.
+        counted = (f'sum by ({label}) (count_over_time('
+                   f'customs_risk{{dimension!="none"}}[$__range]))')
+        source = {"type": "prometheus", "uid": "grafanacloud-prom"}
+        unit = "market-seconds at risk"
+    else:
+        # a JSON line parse is what makes the non-label fields groupable
+        parsed = stream if label in _STREAM_LABELS else f"{stream} | json"
+        counted = f"sum by ({label}) (count_over_time({parsed} [$__range]))"
+        source = {"type": "loki", "uid": "grafanacloud-logs"}
+        unit = "findings"
     uid = f"customs-adhoc-{label}-{int(time.time())}"[:40]
     return {
         "uid": uid,
@@ -230,9 +247,9 @@ def dashboard_spec(title: str, run_id: str, group_by: str) -> dict:
         "time": {"from": "now-24h", "to": "now"},
         "panels": [
             {
-                "type": "barchart", "title": f"Findings by {label}",
+                "type": "barchart", "title": f"{unit.capitalize()} by {label}",
                 "gridPos": {"h": 10, "w": 12, "x": 0, "y": 0},
-                "datasource": {"type": "loki", "uid": "grafanacloud-logs"},
+                "datasource": source,
                 "targets": [{"expr": counted, "queryType": "instant", "refId": "A"}],
                 "fieldConfig": {"defaults": {"color": {"mode": "fixed",
                                                        "fixedColor": "#4285F4"}}},
@@ -240,7 +257,7 @@ def dashboard_spec(title: str, run_id: str, group_by: str) -> dict:
             {
                 "type": "piechart", "title": f"Share by {label}",
                 "gridPos": {"h": 10, "w": 12, "x": 12, "y": 0},
-                "datasource": {"type": "loki", "uid": "grafanacloud-logs"},
+                "datasource": source,
                 "targets": [{"expr": counted, "queryType": "instant", "refId": "A"}],
             },
             {
