@@ -1348,3 +1348,62 @@ def test_a_restore_that_fails_the_first_time_still_gets_its_runs(tmp_path, monke
     assert persist._restore_db(src, live, on_note=notes.append) is True
     assert len(Store(live).recent_runs(5)) == 1
     assert "Stale file handle" in notes[0]  # and it said so
+
+
+def test_the_mission_feed_has_a_second_tab_for_what_came_out_of_the_run(console):
+    """The feed says what is happening; nothing said what it produced.
+
+    Checking a generated clip meant knowing the change id and typing a URL,
+    and the two frames handed to Veo were not kept at all -- they were
+    written to the scratch workdir, which is never mirrored, so they went
+    with the container. Those two frames are the entire brief Veo was
+    given: without them there is no way to tell whether it invented
+    something or was handed it.
+    """
+    client, store, _launched, _jobs = console
+    run = store.create_run(asset_path="/x/ad.mp4", markets=["SA"])
+
+    body = client.get(f"/runs/{run.id}/mission").text
+    assert 'data-mtab="live"' in body and 'data-mtab="made"' in body
+    assert "Nothing generated yet" in body      # honest empty state
+
+    changes = Path(app_module.run_dir(run)) / "changes"
+    changes.mkdir(parents=True, exist_ok=True)
+    change = ChangeRecord(id="chg_abc123", run_id=run.id, finding_id="fnd_x",
+                          method="bridge", description="regenerated 4s",
+                          before_frame=str(changes / "chg_abc123_before.png"),
+                          after_frame=str(changes / "chg_abc123_after.png"))
+    store.add_change(change)
+    for name in ("chg_abc123_anchor_head.png", "chg_abc123_anchor_tail.png",
+                 "chg_abc123_before.png", "chg_abc123_after.png"):
+        (changes / name).write_bytes(b"\x89PNG\r\n\x1a\n")
+    (changes / "chg_abc123_bridge.mp4").write_bytes(b"\x00")
+
+    body = client.get(f"/runs/{run.id}/mission").text
+    assert "Nothing generated yet" not in body
+    assert "chg_abc123_anchor_head.png" in body, "the first frame Veo was given"
+    assert "chg_abc123_anchor_tail.png" in body, "and the last"
+    assert f"/runs/{run.id}/changes/chg_abc123/generated.mp4" in body
+    # and the frames are servable through the existing stills route
+    assert client.get(f"/runs/{run.id}/stills/chg_abc123_anchor_head.png").status_code == 200
+
+
+def test_recent_runs_opens_as_cards_and_remembers_a_choice_of_list(client):
+    """Cards by default, and an explicit List has to survive a reload.
+
+    List used to be stored as the ABSENCE of a key. With cards now the
+    default, absence means "has not chosen", so removing the key on a List
+    click would revert to cards on the next page load -- the same trap the
+    style switch had.
+    """
+    test_client, _, _run, _ = client
+    body = test_client.get("/runs").text
+    assert 'class="runlist" id="runlist"' in body, "no as-rows: cards by default"
+    assert 'data-set-runs="list"' in body, "list stores a real value"
+    assert 'data-set-runs=""' not in body
+
+    js = test_client.get("/static/customs.js").text
+    block = js.split('var KEY = "customs-runs-view";')[1].split("})();")[0]
+    assert 'var saved = "cards"' in block
+    assert 'localStorage.setItem(KEY, view)' in block
+    assert "removeItem(KEY)" not in block.split("buttons.forEach")[-1]

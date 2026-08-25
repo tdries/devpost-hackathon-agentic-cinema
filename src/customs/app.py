@@ -1330,6 +1330,35 @@ def run_status(run_id: str):
 
 # -- the mission feed --
 
+def generated_items(run) -> list[dict]:
+    """Everything a model produced for this run, newest first.
+
+    The mission feed answers "what is happening"; this answers "what came
+    out of it". Both stills, the raw Veo clip, and for a bridge the two
+    anchor frames -- which are the brief Veo was given, and therefore the
+    only way to tell whether it invented something or was handed it.
+    """
+    directory = run_dir(run) / "changes"
+    by_id = {f.id: f for f in store().findings(run.id)}
+    items = []
+    for change in store().changes(run.id):
+        finding = by_id.get(change.finding_id)
+        anchors = [(tag, f"{change.id}_anchor_{tag}.png") for tag in ("head", "tail")]
+        items.append({
+            "change": change,
+            "finding": finding,
+            "market": finding.market if finding else "",
+            "before": _still_name(run_dir(run), change.before_frame),
+            "after": _still_name(run_dir(run), change.after_frame),
+            "generated": (directory / f"{change.id}_bridge.mp4").is_file()
+                         or (directory / ".chg_bridge.mp4").is_file(),
+            "anchors": [{"tag": tag, "file": name} for tag, name in anchors
+                        if (directory / name).is_file()],
+        })
+    items.reverse()
+    return items
+
+
 @app.get("/runs/{run_id}/mission", response_class=HTMLResponse)
 def mission_page(request: Request, run_id: str):
     """The feed as a page: the backlog server-rendered, the rest over SSE.
@@ -1358,8 +1387,10 @@ def mission_page(request: Request, run_id: str):
         group["last"] = group["events"][-1]["message"]
         group["ts"] = group["events"][0]["ts"]
         group["errored"] = any("stage_error" in e["message"] for e in group["events"])
+    made = generated_items(run)
     return _page(request, "mission_feed.html", run=run, events=events,
                  groups=groups, running=run.status not in ("done", "error"),
+                 made=made,
                  last_id=events[-1]["id"] if events else 0, screen="mission")
 
 @app.get("/runs/{run_id}/feed")

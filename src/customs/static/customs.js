@@ -69,6 +69,24 @@
     return d.innerHTML;
   }
 
+  /* ---------- 1b. the mission feed's two tabs ---------- */
+
+  (function () {
+    var buttons = document.querySelectorAll("[data-mtab]");
+    if (!buttons.length) { return; }
+    buttons.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var want = b.getAttribute("data-mtab");
+        buttons.forEach(function (other) {
+          var name = other.getAttribute("data-mtab");
+          other.classList.toggle("on", name === want);
+          var panel = document.getElementById("mtab-" + name);
+          if (panel) { panel.hidden = name !== want; }
+        });
+      });
+    });
+  })();
+
   /* ---------- 2. the launch board ---------- */
 
   var board = document.getElementById("board");
@@ -412,23 +430,28 @@
     var buttons = document.querySelectorAll(".view-switch [data-set-runs]");
     if (!list || !buttons.length) { return; }
 
+    /* Cards are the default. List is stored as "list", never as a missing
+       key: with cards defaulting, absence means "has not chosen", so
+       removing the key would throw an explicit List choice away on the next
+       page load -- the same trap the style switch had. */
     var apply = function (view) {
-      list.classList.toggle("as-rows", view !== "cards");
+      list.classList.toggle("as-rows", view === "list");
       buttons.forEach(function (b) {
         b.classList.toggle("on", b.getAttribute("data-set-runs") === view);
       });
     };
-    var saved = "";
-    try { saved = localStorage.getItem(KEY) || ""; } catch (e) { /* private mode */ }
+    var saved = "cards";
+    try {
+      var stored = localStorage.getItem(KEY);
+      if (stored === "list" || stored === "cards") { saved = stored; }
+      else if (stored) { localStorage.removeItem(KEY); }
+    } catch (e) { /* private mode */ }
     apply(saved);
 
     buttons.forEach(function (b) {
       b.addEventListener("click", function () {
-        var view = b.getAttribute("data-set-runs");
-        try {
-          if (view) { localStorage.setItem(KEY, view); }
-          else { localStorage.removeItem(KEY); }
-        } catch (e) { /* private mode */ }
+        var view = b.getAttribute("data-set-runs") || "cards";
+        try { localStorage.setItem(KEY, view); } catch (e) { /* private mode */ }
         apply(view);
       });
     });
