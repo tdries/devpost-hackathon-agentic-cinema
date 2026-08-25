@@ -243,3 +243,20 @@ def test_crop_span_preserves_duration_and_resolution(clip, tmp_path):
     assert result == out and out.exists()
     assert media.probe_resolution(out) == media.probe_resolution(clip)
     assert abs(media.probe_duration(out) - media.probe_duration(clip)) < 0.3
+
+
+def test_long_takes_are_sampled_more_densely_than_short_cuts(clip, tmp_path):
+    """The fixed two-frames-per-shot rate is what let a 43 second cigarette
+    ad clear the EU: judged on four stills, none showing tobacco. Frame
+    count now follows the shot's own duration."""
+    assert media.frames_for(1.0) == 2          # a quick cut still gets two
+    assert media.frames_for(25.0) == 8         # a long take gets the cap
+    assert media.frames_for(9.0) == 3
+    assert media.frames_for(120.0) == 8        # capped, not unbounded
+
+    short = media.Shot(shot_id="shot_s", t_start=0.0, t_end=1.0)
+    long_take = media.Shot(shot_id="shot_l", t_start=0.0, t_end=25.0)
+    assert len(media.extract_keyframes(clip, short, tmp_path / "a")) == 2
+    assert len(media.extract_keyframes(clip, long_take, tmp_path / "b")) > 2
+    # an explicit count still wins: remediation edits exactly one frame
+    assert len(media.extract_keyframes(clip, long_take, tmp_path / "c", per_shot=1)) == 1

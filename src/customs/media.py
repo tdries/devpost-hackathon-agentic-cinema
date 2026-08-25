@@ -254,13 +254,36 @@ def detect_shots(path) -> list[Shot]:
         for i in range(len(boundaries) - 1)
     ]
 
-def extract_keyframes(path, shot: Shot, out_dir, per_shot: int = 2) -> list[Path]:
+# How densely a shot is sampled. Two frames per shot was the original
+# fixed rate, and it is wrong for long takes: a 43 second cigarette
+# commercial that shot detection saw as two shots was judged on four
+# stills, none of which happened to contain a cigarette, so the tobacco
+# rule never got a candidate observation to fire on (run_1e2bdef192bc,
+# cleared for the EU with zero findings). Sampling by duration instead
+# gives a 25 second take eight frames and leaves a two second cut at two.
+_SECONDS_PER_FRAME = 3.0
+_MIN_FRAMES, _MAX_FRAMES = 2, 8
+
+
+def frames_for(span: float) -> int:
+    """How many stills a shot of this length is worth."""
+    return max(_MIN_FRAMES, min(_MAX_FRAMES, round(span / _SECONDS_PER_FRAME)))
+
+
+def extract_keyframes(path, shot: Shot, out_dir, per_shot: int | None = None) -> list[Path]:
+    """Evenly spaced stills across the shot.
+
+    per_shot is an explicit override for callers that need exactly one
+    frame (remediation edits a single frame); left unset, the count comes
+    from the shot's own duration.
+    """
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     span = shot.t_end - shot.t_start
+    count = per_shot if per_shot is not None else frames_for(span)
     frames = []
-    for i in range(per_shot):
-        frac = (i + 0.5) / per_shot
+    for i in range(count):
+        frac = (i + 0.5) / count
         t = shot.t_start + frac * span
         out_path = out_dir / f"{shot.shot_id}_kf{i}.png"
         args = [
