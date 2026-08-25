@@ -1,0 +1,134 @@
+{
+  "uid": "customs-lanes",
+  "title": "Where the problems are",
+  "tags": [
+    "customs"
+  ],
+  "timezone": "utc",
+  "editable": true,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "asset",
+        "type": "query",
+        "datasource": {
+          "type": "loki",
+          "uid": "grafanacloud-logs"
+        },
+        "query": {
+          "label": "asset",
+          "refId": "asset",
+          "stream": "{app=\"customs\", kind=\"observation\"}",
+          "type": 1
+        },
+        "refresh": 1,
+        "includeAll": false,
+        "definition": "label_values({app=\"customs\", kind=\"observation\"}, asset)"
+      },
+      {
+        "name": "run",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "label": "run id"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "type": "state-timeline",
+      "title": "Every category the analyst can see, across the film's own clock",
+      "gridPos": {
+        "h": 15,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "grafanacloud-logs"
+      },
+      "targets": [
+        {
+          "expr": "max by (dimension) (max_over_time({app=\"customs\", kind=\"observation\", asset=\"$asset\"} | json | run_id=\"$run\" | unwrap max_severity [$__interval]))",
+          "queryType": "range",
+          "refId": "A",
+          "legendFormat": "{{dimension}}",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          }
+        }
+      ],
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "rowHeight": 0.85,
+        "alignValue": "center",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#34A853",
+                "value": null
+              },
+              {
+                "color": "#FBBC05",
+                "value": 40
+              },
+              {
+                "color": "#EA4335",
+                "value": 70
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "fillOpacity": 78,
+            "lineWidth": 0,
+            "spanNulls": false
+          },
+          "min": 0,
+          "max": 100,
+          "unit": "short",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "seen, nobody objected",
+                  "index": 0
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "id": 1
+    }
+  ],
+  "schemaVersion": 39,
+  "description": "Every observation dimension across a run's own mapped clock. Coloured by the worst severity any market attached to it, so a flat lane is a category that was looked at and cleared."
+}
