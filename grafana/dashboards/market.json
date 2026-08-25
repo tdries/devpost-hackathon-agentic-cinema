@@ -319,7 +319,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "{app=\"customs\", asset=~\"$asset\", market=\"$market\"} | json severity=\"severity\", sourced=\"sourced\", citation=\"citation_ref\", rationale=\"rationale\", status=\"status\", t_start=\"t_start\"",
+          "expr": "{app=\"customs\", kind!=\"observation\", asset=~\"$asset\", market=\"$market\"} | json severity=\"severity\", sourced=\"sourced\", citation=\"citation_ref\", rationale=\"rationale\", status=\"status\", t_start=\"t_start\"",
           "queryType": "range",
           "editorMode": "code",
           "maxLines": 500

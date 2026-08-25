@@ -668,8 +668,12 @@ def embeds(run) -> dict[str, str]:
 # Cloud has no anonymous access, so embedding is an auth problem." Public
 # dashboards solved the auth half -- those URLs open with no login, and the
 # board links to them -- but this stack answers every request, public
-# dashboards included, with `Content-Security-Policy: frame-ancestors 'none'`
-# (verified live, 2026-08-23). A browser refuses to frame that, and the page
+# dashboards included, with the response header `x-frame-options: deny`
+# (re-verified live 2026-08-25 -- and note it is NOT a CSP frame-ancestors
+# directive: this stack's CSP has none. That matters, because
+# frame-ancestors can name permitted origins and could have been opened
+# for our domain, whereas `deny` takes no origin list and refuses every
+# parent unconditionally). A browser refuses to frame that, and the page
 # gets an empty box.
 #
 # So the console runs the spec's own fallback, which was built at the same
@@ -765,7 +769,7 @@ def generated_clip(run_id: str, change_id: str):
 def grafana_png(uid: str, run: str = ""):
     """A whole Grafana dashboard, rendered server-side as an image.
 
-    Grafana Cloud answers every page with `frame-ancestors 'none'`, so a
+    Grafana Cloud answers every page with `x-frame-options: deny`, so a
     dashboard cannot be put in an iframe: the browser refuses the connection
     and the panel comes back blank, which is exactly what agent mode did
     when it handed back the URL of a dashboard it had just built. The board
@@ -1704,7 +1708,7 @@ def run_spark(run_id: str):
     """This run's severity profile, drawn from Grafana's own numbers.
 
     The card cannot hold an iframe -- Grafana Cloud answers with
-    frame-ancestors 'none' -- and a rendered PNG is the wrong shape for
+    x-frame-options: deny -- and a rendered PNG is the wrong shape for
     something this small: fixed size, fixed theme, and a second round
     trip. So Mimir stays the source of truth and the drawing happens
     here, in the product's own hex, as inline SVG.
@@ -1734,6 +1738,43 @@ def run_spark(run_id: str):
         svg = spark.sparkline(points, width=280, height=44)
         if not svg:
             raise HTTPException(status_code=404, detail="no series for this run")
+        cached.parent.mkdir(parents=True, exist_ok=True)
+        cached.write_text(svg)
+    return Response(content=cached.read_text(), media_type="image/svg+xml",
+                    headers={"Cache-Control": "public, max-age=300"})
+
+@app.get("/runs/{run_id}/markets/{market}/spark.svg")
+def market_spark(run_id: str, market: str):
+    """One market's severity profile across the film, from Mimir.
+
+    The same split as the run card: Grafana owns the series, the tile
+    draws it. A tile has to feel instant and follow the current style
+    mode, which rules out both an iframe and a rendered image.
+    """
+    run = _run_or_404(run_id)
+    if market not in run.markets:
+        raise HTTPException(status_code=404, detail="market not on this run")
+    if run.t0 is None:
+        raise HTTPException(status_code=404, detail="this run has no mapped clock")
+    safe = re.sub(r"[^A-Za-z0-9_-]", "", market)
+    cached = run_dir(run) / "sparks" / f"{safe}.svg"
+    fresh = cached.is_file() and (time.time() - cached.stat().st_mtime) < 300
+    if not fresh:
+        duration = asset_duration(run) or MAX_DURATION_S
+        asset = Path(run.asset_path).stem or run.asset_path
+        try:
+            from customs.grafana_ops import GrafanaOps
+            with GrafanaOps(settings) as ops:
+                series = ops.prom_window(
+                    f'max(customs_risk{{asset="{asset}",market="{safe}"}})',
+                    run.t0, run.t0 + duration, 40)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("market spark failed for %s/%s: %s", run.id, market, exc)
+            series = []
+        svg = spark.sparkline(series[0]["points"] if series else [],
+                              width=240, height=30)
+        if not svg:
+            raise HTTPException(status_code=404, detail="no series for this market")
         cached.parent.mkdir(parents=True, exist_ok=True)
         cached.write_text(svg)
     return Response(content=cached.read_text(), media_type="image/svg+xml",

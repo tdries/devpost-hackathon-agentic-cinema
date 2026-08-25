@@ -220,7 +220,10 @@ def dashboard_spec(title: str, run_id: str, group_by: str) -> dict:
     the findings themselves.
     """
     label = _GROUPINGS.get(group_by, "dimension")
-    stream = '{app="customs"}'
+    # kind!="observation" rather than kind="finding": the 471 lines pushed
+    # before the kind label existed carry no kind at all, and Loki treats an
+    # absent label as empty, so only the negative matcher sees the history.
+    stream = '{app="customs", kind!="observation"}'
     if label in _MIMIR_LABELS:
         # dimension is a property of the observation, not of the finding, so
         # it never reached a Loki line: grouping findings by it there found
@@ -451,7 +454,7 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
         except Exception as exc:  # noqa: BLE001 -- the agent reports the failure
             return f"could not build the dashboard: {exc}"
         # not the Grafana URL: Grafana Cloud refuses to be framed
-        # (frame-ancestors 'none'), so the console shows the same server-side
+        # (x-frame-options: deny), so the console shows the same server-side
         # render the launch board uses and keeps the real link beside it.
         turn.view = f"/grafana/{made['uid']}.png" + (f"?run={target}" if target else "")
         turn.view_label = made["title"]
