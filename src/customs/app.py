@@ -197,23 +197,22 @@ def _remediate_and_verify(run_id: str, finding_id: str, market: str,
             # "bridge" is the operator's call, never the planner's: it is
             # the only method that regenerates footage. "overlay" means
             # "patch it, and let plan() pick which kind of patch".
-            # What the violation's shape allows, checked before anything
-            # runs. A centre crop over a baby suspended in the middle of the
-            # frame is not a fix, it is a re-encode that the verifier then
-            # has to reject: refusing here says so honestly and costs
-            # nobody a cycle. See customs/scope.py.
+            # The violation's shape is recorded, not enforced. It used to
+            # refuse the job, and at concept scope it refused nearly every
+            # one: the verifier is what decides whether an edit actually
+            # worked, and it is better at that than a rule of thumb about
+            # shape. A poor fit is written to the feed so the operator can
+            # see it was expected. See customs/scope.py.
             shape = scope_mod.classify(finding, db.findings(run_id),
                                        asset_duration(run) or 120.0)
             chosen = "bridge" if method == "bridge" else remediate.plan(finding, observation)
-            allowed, why = scope_mod.allows(shape,
-                                            "bridge" if chosen == "bridge" else "overlay",
-                                            finding.substitutable)
-            if not allowed:
+            fits, why = scope_mod.allows(shape,
+                                         "bridge" if chosen == "bridge" else "overlay",
+                                         finding.substitutable)
+            if not fits:
                 db.emit(run_id, "remediator",
-                        f"{finding.rule_id} ({market}) -> not remediable at "
-                        f"{shape} scope: {why}")
-                db.update_finding_status(finding.id, "open", run_id)
-                return False
+                        f"{finding.rule_id} ({market}) -> {shape} scope, "
+                        f"running {chosen} anyway: {why}")
             db.emit(run_id, "remediator",
                     f"{finding.rule_id} ({market}) -> planned {chosen}")
             change = remediate.apply(run, finding, chosen, workdir, db,
@@ -1407,11 +1406,9 @@ def remediate_now(run_id: str, finding_id: str, background: BackgroundTasks,
     if choice not in ("auto", "overlay", "track", "bridge"):
         raise HTTPException(status_code=400, detail=f"unknown method: {choice}")
     if choice != "auto":
-        finding_scope = scope_mod.classify(finding, store().findings(run.id),
-                                           asset_duration(run) or MAX_DURATION_S)
-        ok, why = scope_mod.allows(finding_scope, choice, finding.substitutable)
-        if not ok:
-            raise HTTPException(status_code=409, detail=why)
+        # Scope is advice: the operator picked this knowing the caveat the
+        # picker showed them. Only what cannot physically or financially
+        # run is refused here.
         ok, why = costs.available(choice, span, store().spent_today())
         if not ok:
             raise HTTPException(status_code=409, detail=why)

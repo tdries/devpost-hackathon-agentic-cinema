@@ -109,17 +109,18 @@ def options(span: float, spent_today: float, scope: str = "segment",
             substitutable: bool = True) -> list[dict]:
     """Every method with its price and whether it can run, for the console.
 
-    Scope closes doors before price does: a patch cannot fix a shot, and
-    nothing fixes a premise, so those are refused with the reason rather
-    than offered at a price nobody should pay.
+    Scope no longer closes doors. It rides along as `caveat`, the sentence
+    explaining why this method is a poor fit for a violation of this shape,
+    and the operator decides. `available` reflects only what genuinely
+    cannot run: an unimplemented method, a span longer than Veo will
+    generate, or a price the day's budget will not cover.
     """
     from customs import scope as scope_mod
 
     out = []
     for method in METHODS:
-        ok, why = scope_mod.allows(scope, method.key, substitutable)
-        if ok:
-            ok, why = available(method.key, span, spent_today)
+        fits, caveat = scope_mod.allows(scope, method.key, substitutable)
+        ok, why = available(method.key, span, spent_today)
         out.append({
             "key": method.key, "name": method.name, "how": method.how,
             "complexity": method.complexity, "best_for": method.best_for,
@@ -127,6 +128,7 @@ def options(span: float, spent_today: float, scope: str = "segment",
             "length": (f"{bridge_seconds(span):.0f}s generated"
                        if method.key == "bridge" else f"{span:.1f}s patched"),
             "available": ok, "why_not": why,
+            "caveat": "" if fits else caveat,
         })
     return out
 

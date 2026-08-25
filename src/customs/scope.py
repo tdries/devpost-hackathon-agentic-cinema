@@ -122,7 +122,20 @@ _WHY_NOT = {
 
 
 def allows(scope: str, method: str, substitutable: bool = True) -> tuple[bool, str]:
-    """Whether this method can address a violation of this scope.
+    """Whether this method FITS a violation of this scope, and why not.
+
+    This is advice, not permission. It used to gate the buttons, and at
+    concept scope it gated nearly all of them: a rule that fires across
+    enough of the running time reads as the premise, and the premise
+    refused every method, so operators met a wall of disabled options on
+    the findings they most wanted to try something on. The judgement was
+    often right and still not the caller's to make -- an operator who
+    wants to see what a patch does to a shot is entitled to see it.
+
+    So callers show the caveat and run the fix anyway. What still stops a
+    job is physical or financial: Veo will not generate past MAX_BRIDGE_S,
+    the day's budget is the day's budget, and a method nobody implemented
+    cannot run. Those live in costs.available().
 
     A concept-scope violation whose element is substitutable is reachable by
     regeneration and by nothing else: the whole scene has to be remade with
@@ -152,17 +165,21 @@ def verdict(scope: str, substitutable: bool = True) -> str:
     if scope == "concept" and substitutable:
         return ("The element runs through the whole scene, but the idea does not "
                 "depend on it: put a permitted element in its place and the "
-                "commercial still works. That means regenerating the scene, not "
-                "editing a frame, so it is priced accordingly.")
+                "commercial still works. Regenerating the scene is the method "
+                "most likely to hold, and it is priced accordingly; a patch is "
+                "still worth trying on a shot that barely moves.")
     if scope == "concept":
         return VERDICT["concept"]
     return VERDICT.get(scope, "")
 
 
+# Read before choosing, not instead of choosing: every method stays
+# selectable, and the verifier is what decides whether the result cleared.
 VERDICT = {
-    "concept": ("This is not an edit. The commercial is built on what the rule "
-                "forbids, so clearing this market means a different film, not a "
-                "different frame."),
+    "concept": ("The commercial is built on what the rule forbids, so an edit is "
+                "unlikely to clear it on its own -- expect the verifier to keep "
+                "this open. Worth a try if you want to see how close it gets; "
+                "clearing this market properly means a different film."),
     "scene": ("The shot itself has to change. Regeneration can reach it if it is "
               "short enough; otherwise it is a reshoot."),
 }
