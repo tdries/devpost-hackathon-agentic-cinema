@@ -102,17 +102,51 @@
           </a>
           {% endif %}
         </td>
-        <td class="tight"><span class="chip {{ finding.klass }}"><svg class="ic"><use href="#i-{{ finding.klass }}"/></svg>{{ finding.klass }}</span></td>
+        <td class="tight">
+          <span class="chip {{ finding.klass }}"><svg class="ic"><use href="#i-{{ finding.klass }}"/></svg>{{ finding.klass }}</span>
+          {% if finding.id in scopes %}
+          <div style="margin-top:6px"><span class="chip sc-{{ scopes[finding.id] }}" title="{{ scope_text[scopes[finding.id]] }}">{{ scopes[finding.id] }}</span></div>
+          {% endif %}
+        </td>
         <td class="tight">{{ severity(finding.severity) }}</td>
         <td class="tight">{{ window(finding) }}</td>
         <td class="tight">{% if finding.sourced %}<span class="chip sourced"><svg class="ic"><use href="#i-sourced"/></svg>sourced</span>{% else %}<span class="chip unsourced"><svg class="ic"><use href="#i-unsourced"/></svg>unsourced</span>{% endif %}</td>
         {% set fst = {'open': 'blocked', 'remediating': 'pending', 'resolved': 'cleared'}[finding.status] %}
         <td class="tight"><span class="pill s-{{ fst }}"><svg class="ic"><use href="#i-{{ fst }}"/></svg>{{ finding.status }}</span></td>
         <td class="tight">
-          {% if finding.status == 'open' and finding.remediable %}
-          <form method="post" action="/runs/{{ run.id }}/findings/{{ finding.id }}/remediate">
-            <button class="btn" type="submit">Remediate now</button>
-          </form>
+          {% if finding.status == 'open' and finding.remediable and finding.id in fixes %}
+          {% set fix = fixes[finding.id] %}
+          <details class="fixer">
+            <summary class="btn">Remediate now</summary>
+            <form method="post" action="/runs/{{ run.id }}/findings/{{ finding.id }}/remediate">
+              {% if fix.verdict %}<div class="fix-verdict">{{ fix.verdict }}</div>{% endif %}
+              <div class="fix-h label">What should change</div>
+              {% for s in fix.suggestions %}
+              <label class="fix-opt">
+                <input type="radio" name="replacement" value="{{ s.label }}" {{ 'checked' if loop.first }}>
+                <span>{{ s.label }}</span>
+              </label>
+              {% endfor %}
+              <div class="fix-h label">How to do it</div>
+              {% for o in fix.options %}
+              <label class="fix-opt{{ ' off' if not o.available }}" title="{{ o.why_not or o.best_for }}">
+                <input type="radio" name="method" value="{{ o.key }}" {{ 'checked' if o.key == 'overlay' }} {{ 'disabled' if not o.available }}>
+                <span class="fix-m">
+                  <b>{{ o.name }}</b>
+                  <span class="fix-why">{{ o.why_not or o.best_for }}</span>
+                </span>
+                <span class="fix-cost mono">
+                  <b>{{ '%.2f'|format(o.eur) }} EUR</b>
+                  <span>{{ o.length }} &middot; {{ o.complexity }}</span>
+                </span>
+              </label>
+              {% endfor %}
+              <div class="fix-foot">
+                <span class="label">Generation budget {{ '%.2f'|format(budget_left) }} of {{ '%.2f'|format(budget_total) }} EUR left today</span>
+                <button class="btn go" type="submit">Run the fix</button>
+              </div>
+            </form>
+          </details>
           {% elif finding.status == 'remediating' %}
           <button class="btn" disabled>Working</button>
           {% elif finding.status == 'resolved' %}

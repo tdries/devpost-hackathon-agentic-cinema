@@ -102,8 +102,44 @@ class Store:
             );
             CREATE INDEX IF NOT EXISTS idx_events_run
                 ON events (run_id, id);
+            CREATE TABLE IF NOT EXISTS spend (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                day TEXT NOT NULL,
+                ts REAL NOT NULL,
+                method TEXT NOT NULL,
+                eur REAL NOT NULL,
+                run_id TEXT NOT NULL,
+                finding_id TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_spend_day ON spend (day);
         """)
         self._conn.commit()
+
+    # --- the generation budget ---
+    #
+    # Veo is the only thing here that costs real money per use, so every
+    # bridge is written down before it runs and the day's total is what the
+    # console checks before offering the option. Keyed by UTC date because a
+    # budget that resets on local midnight resets twice a year.
+
+    @_locked
+    def record_spend(self, method: str, eur: float, run_id: str,
+                     finding_id: str, now: float | None = None) -> None:
+        stamp = time.time() if now is None else now
+        day = time.strftime("%Y-%m-%d", time.gmtime(stamp))
+        self._conn.execute(
+            "INSERT INTO spend (day, ts, method, eur, run_id, finding_id) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            (day, stamp, method, float(eur), run_id, finding_id))
+        self._conn.commit()
+
+    @_locked
+    def spent_today(self, now: float | None = None) -> float:
+        stamp = time.time() if now is None else now
+        day = time.strftime("%Y-%m-%d", time.gmtime(stamp))
+        row = self._conn.execute(
+            "SELECT COALESCE(SUM(eur), 0) FROM spend WHERE day = ?", (day,)).fetchone()
+        return float(row[0] or 0.0)
 
     @_locked
     def create_run(self, asset_path: str, markets: list[str]) -> RunRecord:

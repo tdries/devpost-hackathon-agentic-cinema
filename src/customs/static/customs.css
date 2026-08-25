@@ -1169,3 +1169,53 @@ html[data-theme="studio"] .grp > summary:hover { background: rgba(23, 34, 44, 0.
   0% { transform: translateX(-100%); }
   100% { transform: translateX(330%); }
 }
+
+/* ---------- the fix picker ----------
+   Remediation is two decisions an operator owns: what should change, and
+   how much you are willing to spend changing it. Both are on the button. */
+
+.fixer { display: inline-block; position: relative; }
+.fixer > summary { list-style: none; cursor: pointer; }
+.fixer > summary::-webkit-details-marker { display: none; }
+.fixer[open] > summary { border-color: var(--g-blue); color: var(--ink); }
+.fixer form {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 30;
+  width: 430px; padding: 14px;
+  border: 1px solid var(--line-2); border-radius: var(--radius);
+  background: var(--panel); box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
+  text-align: left;
+}
+.fix-h { display: block; margin: 4px 0 8px; }
+.fix-h + .fix-opt { margin-top: 0; }
+.fix-opt {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; margin-bottom: 5px;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--well); cursor: pointer; font-size: 13px;
+}
+.fix-opt:hover { border-color: var(--line-2); }
+.fix-opt input { accent-color: var(--g-blue); }
+.fix-opt:has(input:checked) { border-color: var(--g-blue); background: rgba(66, 133, 244, 0.08); }
+.fix-opt.off { opacity: 0.45; cursor: not-allowed; }
+.fix-m { display: grid; gap: 2px; }
+.fix-m b { font-weight: 600; }
+.fix-why { font-size: 11.5px; color: var(--ink-3); line-height: 1.35; }
+.fix-cost { margin-left: auto; text-align: right; display: grid; gap: 2px; white-space: nowrap; }
+.fix-cost b { font-size: 12.5px; color: var(--ink); }
+.fix-cost span { font-size: 10.5px; color: var(--ink-3); }
+.fix-foot { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.fix-foot .btn { margin-left: auto; }
+.fix-h.label { margin-top: 12px; }
+html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44, 0.22); }
+
+/* nav on two rows: the screens, then the markets */
+.runnav .wrap.screens { min-height: 44px; border-bottom: 1px solid var(--line); }
+.runnav .wrap.markets-row { min-height: 42px; }
+.runnav .wrap.markets-row .tab { padding: 11px 12px 10px; font-size: 10px; }
+
+/* how structural a finding is */
+.chip.sc-frame   { color: var(--g-green); border-color: rgba(52, 168, 83, 0.4); }
+.chip.sc-segment { color: var(--g-blue); border-color: rgba(66, 133, 244, 0.4); }
+.chip.sc-scene   { color: var(--g-yellow); border-color: rgba(251, 188, 5, 0.4); }
+.chip.sc-concept { color: var(--g-red); border-color: rgba(234, 67, 53, 0.45); background: rgba(234, 67, 53, 0.08); }
+.fix-verdict { font-size: 12.5px; color: var(--ink-2); line-height: 1.4; padding: 4px 2px 8px; }

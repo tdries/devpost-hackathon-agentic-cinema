@@ -37,3 +37,54 @@ def generate_grounded(model: str, prompt: str) -> tuple[str, list[dict]]:
             if web and web.uri:
                 chunks.append({"uri": web.uri, "title": web.title or ""})
     return r.text or "", chunks
+
+
+def generate_bridge(prompt: str, first_frame, last_frame, seconds: float,
+                    out_path, poll_s: float = 10.0, timeout_s: float = 600.0):
+    """Veo, anchored on two frames: generate the motion between them.
+
+    The frames are the brand's own footage with the offending object already
+    edited out, so the generated span starts and ends on pixels that match
+    the untouched material either side of it. Veo bills per second of output
+    and refuses to emit fewer than four, which is why costs.bridge_seconds
+    exists and why the console prices this before anyone runs it.
+    """
+    from pathlib import Path
+    import time as _time
+
+    first, last = Path(first_frame), Path(last_frame)
+    config = types.GenerateVideosConfig(
+        duration_seconds=int(seconds),
+        aspect_ratio="16:9",
+        number_of_videos=1,
+        resolution="720p",
+        generate_audio=False,
+        last_frame=types.Image(image_bytes=last.read_bytes(), mime_type="image/png"),
+    )
+    source = types.GenerateVideosSource(
+        prompt=prompt,
+        image=types.Image(image_bytes=first.read_bytes(), mime_type="image/png"),
+    )
+    operation = client().models.generate_videos(
+        model=settings.model_video, source=source, config=config)
+
+    waited = 0.0
+    while not operation.done:
+        _time.sleep(poll_s)
+        waited += poll_s
+        if waited > timeout_s:
+            raise RuntimeError(f"Veo bridge still running after {waited:.0f}s")
+        operation = client().operations.get(operation)
+
+    result = getattr(operation, "response", None) or getattr(operation, "result", None)
+    videos = getattr(result, "generated_videos", None) or []
+    if not videos:
+        raise RuntimeError(f"Veo returned no video: {result!r}")
+    data = videos[0].video.video_bytes
+    if not data:
+        client().files.download(file=videos[0].video)
+        data = videos[0].video.video_bytes
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(data)
+    return out

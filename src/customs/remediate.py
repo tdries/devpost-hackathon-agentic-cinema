@@ -46,9 +46,9 @@ from pathlib import Path
 
 from google.genai import types
 
-from customs import media
+from customs import costs, media
 from customs.config import settings
-from customs.genai_client import client, generate_json
+from customs.genai_client import client, generate_bridge, generate_json
 from customs.media import Shot
 from customs.packs import load as load_packs
 from customs.schema import ChangeRecord, Finding, Observation
@@ -59,7 +59,10 @@ class RemediationBlocked(Exception):
 class RemediationError(Exception):
     """Raised when an edit could not be produced (no image back, no audio back)."""
 
-METHODS = ("relettering", "prop_swap", "revoice", "reframe")
+# "bridge" is never chosen by plan(): it regenerates pixels and costs real
+# money, so it only ever runs because an operator picked it in the console
+# and the day's budget allowed it.
+METHODS = ("relettering", "prop_swap", "revoice", "reframe", "bridge")
 
 # --- the mapping table (task-14 contract) ---
 #
@@ -349,6 +352,38 @@ def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str
     media.overlay_image(base, edited, finding.t_start, finding.t_end, out_path)
     return edited, instruction
 
+def _bridge_span(base: Path, finding: Finding, replacement: str | None,
+                 workdir: Path, out_path: Path) -> tuple[Path, str]:
+    """Edit both ends of the span and let Veo generate the motion between.
+
+    The only method that can follow genuine 3D motion, and the only one that
+    puts pixels on screen the brand never shot, so it is the expensive tier
+    and the console prices it before anyone presses the button. Both anchors
+    are edited with the same instruction the patch methods use, so the
+    generated motion starts and ends on frames that are already compliant.
+    """
+    market_name = _market_name(finding.market)
+    subject = replacement or _DEFAULT_REPLACEMENT["prop_swap"].format(market_name=market_name)
+    instruction = _EDIT_INSTRUCTIONS["prop_swap"].format(replacement=subject)
+
+    anchors = []
+    for tag, when in (("head", finding.t_start), ("tail", max(finding.t_start, finding.t_end - 0.08))):
+        span = Shot(shot_id=f"bridge_{tag}", t_start=when, t_end=when + 0.04)
+        raw = media.extract_keyframes(base, span, workdir / "bridge", per_shot=1)[0]
+        edited_raw = workdir / f"bridge_{tag}_edited_raw.png"
+        edited_raw.write_bytes(_edit_image(instruction, raw.read_bytes()))
+        anchors.append(media.fit_image(edited_raw, base, workdir / f"bridge_{tag}.png"))
+
+    seconds = costs.bridge_seconds(finding.t_end - finding.t_start)
+    clip = generate_bridge(
+        prompt=(f"Continue this shot exactly as filmed, same camera move, same "
+                f"lighting, same performers. {instruction}"),
+        first_frame=anchors[0], last_frame=anchors[1],
+        seconds=seconds, out_path=workdir / "bridge.mp4")
+    media.splice_clip(base, clip, finding.t_start, finding.t_end, out_path)
+    return anchors[0], instruction
+
+
 def apply(run, finding: Finding, method: str, workdir, store, *,
           replacement: str | None = None) -> ChangeRecord:
     """Apply one remediation to this market's localized master.
@@ -469,6 +504,11 @@ def _run_method(run, finding: Finding, method: str, replacement: str | None,
         wav = _write_wav(pcm, rate, workdir / f"{staged.stem}.wav")
         media.replace_audio_span(base, wav, finding.t_start, finding.t_end, staged)
         return f'replaced the spoken line with "{line}"'
+    if method == "bridge":
+        _edited, instruction = _bridge_span(base, finding, replacement,
+                                            Path(workdir), staged)
+        return (f"regenerated {costs.bridge_seconds(finding.t_end - finding.t_start):.0f}s "
+                f"of motion between two edited anchor frames")
     media.crop_span(base, finding.t_start, finding.t_end, staged)
     return (
         "centre crop for the span, excluding the outer edge of the frame "

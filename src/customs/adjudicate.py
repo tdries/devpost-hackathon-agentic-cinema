@@ -26,7 +26,11 @@ PROMPT = """You are the advertising clearance officer for {market_name}. For eac
 candidate pairing of an observed fact with a rule of this market, decide
 whether the fact actually triggers the rule. Be strict about the rule's
 wording: a wine glass triggers an alcohol-advertising ban; a water glass
-does not. rationale: two sentences max, cite the rule basis text."""
+does not. rationale: two sentences max, cite the rule basis text.
+scope: how structural the violation is. "frame" if it is a detail visible in a
+moment, "segment" if it is part of the action inside the shot, "scene" if the
+whole shot is the violation, "concept" if the premise of the commercial is
+what the rule forbids and no edit to the footage could satisfy it."""
 
 # Verbatim citation-verification prompt (task-8-brief.md Step 3), formatted
 # per triggered finding via .format(basis=rule.basis, trigger=rule.trigger,
@@ -51,8 +55,11 @@ _JUDGE_RESPONSE_SCHEMA = {
                 "maximum": SEVERITY_ADJUST_MAX,
             },
             "rationale": {"type": "string"},
+            "scope": {"type": "string",
+                      "enum": ["frame", "segment", "scene", "concept"]},
         },
-        "required": ["observation_id", "rule_id", "triggers", "severity_adjust", "rationale"],
+        "required": ["observation_id", "rule_id", "triggers", "severity_adjust",
+                     "rationale", "scope"],
     },
 }
 
@@ -180,6 +187,7 @@ def judge(run_id: str, observations: list[Observation], pack: MarketPack, on_eve
 
         # JSON null survives the response_schema's declared "string" type, so
         # an explicit null must be coalesced by hand (analyst.py precedent).
+        scope_named = item.get("scope") if isinstance(item.get("scope"), str) else ""
         rationale = item.get("rationale")
         if not isinstance(rationale, str):
             rationale = ""
@@ -235,6 +243,7 @@ def judge(run_id: str, observations: list[Observation], pack: MarketPack, on_eve
             remediation_blocked=False,
             blocked_reason="",
             status="open",
+            scope=scope_named,
         ))
 
     return findings

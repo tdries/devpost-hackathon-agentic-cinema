@@ -39,7 +39,7 @@ def client(tmp_path, monkeypatch):
     jobs = []
     monkeypatch.setattr(
         app_module, "remediate_and_verify",
-        lambda run_id, finding_id, market, workdir=None: jobs.append(
+        lambda run_id, finding_id, market, workdir=None, **kw: jobs.append(
             (run_id, finding_id, market)),
     )
     with TestClient(app_module.app) as test_client:
@@ -304,7 +304,7 @@ def console(tmp_path, monkeypatch):
     jobs = []
     monkeypatch.setattr(
         app_module, "remediate_and_verify",
-        lambda run_id, finding_id, market, workdir=None: jobs.append(
+        lambda run_id, finding_id, market, workdir=None, **kw: jobs.append(
             (run_id, finding_id, market)),
     )
     with TestClient(app_module.app) as test_client:

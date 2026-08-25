@@ -40,6 +40,10 @@ class Finding(_JsonMixin):
     remediation_blocked: bool
     blocked_reason: str
     status: str = "open"
+    # How structural the violation is: frame | segment | scene | concept.
+    # See customs/scope.py. Defaulted because findings written before scope
+    # existed are still findings, and "" means "nobody judged it, measure it".
+    scope: str = ""
 
     def __post_init__(self):
         if self.status not in FINDING_STATUSES:

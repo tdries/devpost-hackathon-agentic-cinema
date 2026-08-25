@@ -396,3 +396,36 @@ def replace_audio_span(path, wav, t_start: float, t_end: float, out_path) -> Pat
     ]
     _run(args, timeout=_TIMEOUT)
     return Path(out_path)
+
+
+def splice_clip(path, clip, t_start: float, t_end: float, out_path) -> Path:
+    """Replace [t_start, t_end) of `path` with the first (t_end - t_start)
+    seconds of `clip`, keeping the original audio across the whole file.
+
+    Used by the Veo bridge: the generated motion carries the picture for the
+    span and nothing else, so the performance either side is the brand's own
+    footage, untouched, and the soundtrack never breaks. Veo will not emit a
+    clip shorter than four seconds, so the clip is trimmed here rather than
+    asked for at span length.
+    """
+    duration = probe_duration(path)
+    span = max(t_end - t_start, 0.04)
+    width, height = probe_resolution(path)
+    filt = (
+        f"[1:v]trim=0:{span:.3f},setpts=PTS-STARTPTS,"
+        f"scale={width}:{height},setsar=1[patch];"
+        f"[0:v][patch]overlay=enable='between(t,{t_start:.3f},{t_end:.3f})':"
+        f"eof_action=pass[v]"
+    )
+    args = [
+        "ffmpeg", "-y",
+        "-i", str(path),
+        "-itsoffset", f"{t_start:.3f}", "-i", str(clip),
+        "-filter_complex", filt,
+        "-map", "[v]", "-map", "0:a?",
+        "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "copy",
+        "-t", f"{duration:.3f}", "-shortest", "-movflags", "+faststart",
+        str(out_path),
+    ]
+    _run(args, timeout=_encode_timeout(duration))
+    return Path(out_path)

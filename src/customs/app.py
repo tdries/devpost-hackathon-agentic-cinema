@@ -82,7 +82,7 @@ from fastapi.responses import (FileResponse, HTMLResponse, PlainTextResponse,
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from customs import adjudicate, packs, persist, pipeline, remediate, verify
+from customs import adjudicate, costs, packs, persist, pipeline, remediate, scope as scope_mod, verify
 from customs.fetch import FetchError, fetch_youtube
 from customs.config import settings
 from customs.media import MediaError, probe_duration
@@ -136,9 +136,11 @@ def store() -> Store:
     return _store_singleton
 
 def remediate_and_verify(run_id: str, finding_id: str, market: str,
-                         workdir=None) -> bool:
+                         workdir=None, *, method: str = "auto",
+                         replacement: str | None = None) -> bool:
     try:
-        return _remediate_and_verify(run_id, finding_id, market, workdir)
+        return _remediate_and_verify(run_id, finding_id, market, workdir,
+                                     method=method, replacement=replacement)
     finally:
         # the edit, the change record and the verifier verdict all just
         # landed in the store; put them somewhere a new revision can find
@@ -146,7 +148,8 @@ def remediate_and_verify(run_id: str, finding_id: str, market: str,
 
 
 def _remediate_and_verify(run_id: str, finding_id: str, market: str,
-                          workdir=None) -> bool:
+                          workdir=None, *, method: str = "auto",
+                          replacement: str | None = None) -> bool:
     """plan -> apply -> confirm, for one finding. Runs off the request thread.
 
     Everything is re-read from the store here rather than carried over from
@@ -186,10 +189,17 @@ def _remediate_and_verify(run_id: str, finding_id: str, market: str,
             (o for o in db.observations(run_id) if o.id == finding.observation_id), None
         )
         with remediate.market_lock(run_id, market):
-            method = remediate.plan(finding, observation)
+            # "bridge" is the operator's call, never the planner's: it is
+            # the only method that regenerates footage. "overlay" means
+            # "patch it, and let plan() pick which kind of patch".
+            if method == "bridge":
+                chosen = "bridge"
+            else:
+                chosen = remediate.plan(finding, observation)
             db.emit(run_id, "remediator",
-                    f"{finding.rule_id} ({market}) -> planned {method}")
-            change = remediate.apply(run, finding, method, workdir, db)
+                    f"{finding.rule_id} ({market}) -> planned {chosen}")
+            change = remediate.apply(run, finding, chosen, workdir, db,
+                                     replacement=replacement)
             return verify.confirm(run, market, [change], db, workdir)
     except Exception as exc:  # noqa: BLE001 -- a background task has nobody to raise to
         log.exception("remediation of %s failed", finding_id)
@@ -1080,8 +1090,27 @@ def market_room(request: Request, run_id: str, market: str):
     # text-only row rather than a broken image.
     evidence = {o.id for o in store().observations(run.id)
                 if o.evidence_frame and Path(o.evidence_frame).is_file()}
+    # What each fix would cost, priced against the day's remaining budget so
+    # the operator sees the number before pressing anything.
+    dimension_of = {o.id: o.dimension for o in store().observations(run.id)}
+    spent = store().spent_today()
+    duration = asset_duration(run) or MAX_DURATION_S
+    scopes = {f.id: scope_mod.classify(f, findings, duration) for f in findings}
+    fixes = {
+        f.id: {
+            "scope": scopes[f.id],
+            "options": costs.options(max(0.0, f.t_end - f.t_start), spent, scopes[f.id]),
+            "suggestions": costs.suggestions(dimension_of.get(f.observation_id, "")),
+            "verdict": scope_mod.VERDICT.get(scopes[f.id], ""),
+        }
+        for f in findings if f.status == "open" and not f.remediation_blocked
+        and f.remediable
+    }
     return _page(request, "market_room.html", run=run, market=market,
-                 evidence=evidence,
+                 evidence=evidence, fixes=fixes, scopes=scopes,
+                 scope_text=scope_mod.DESCRIPTION,
+                 budget_left=max(0.0, costs.DAILY_BUDGET_EUR - spent),
+                 budget_total=costs.DAILY_BUDGET_EUR,
                  pack=market_packs().get(market),
                  findings=[f for f in findings if not f.remediation_blocked],
                  blocked=[f for f in findings if f.remediation_blocked],
@@ -1090,7 +1119,8 @@ def market_room(request: Request, run_id: str, market: str):
                  screen="market")
 
 @app.post("/runs/{run_id}/findings/{finding_id}/remediate")
-def remediate_now(run_id: str, finding_id: str, background: BackgroundTasks):
+def remediate_now(run_id: str, finding_id: str, background: BackgroundTasks,
+                  method: str = Form("auto"), replacement: str = Form("")):
     """Remediate one finding by hand. The demo's affordance, not the trigger.
 
     The real trigger is a Grafana alert rule firing into POST /webhook/alert;
@@ -1114,10 +1144,38 @@ def remediate_now(run_id: str, finding_id: str, background: BackgroundTasks):
         raise HTTPException(
             status_code=409,
             detail=finding.blocked_reason or "this finding is not auto-remediable")
+    # What the operator chose, priced and budget-checked before anything
+    # runs. "auto" keeps the old behaviour: plan() picks the patch method
+    # from the finding's dimension and nothing is billed beyond one edit.
+    span = max(0.0, finding.t_end - finding.t_start)
+    choice = (method or "auto").strip()
+    want = (replacement or "").strip() or None
+    if choice not in ("auto", "overlay", "track", "bridge"):
+        raise HTTPException(status_code=400, detail=f"unknown method: {choice}")
+    if choice != "auto":
+        finding_scope = scope_mod.classify(finding, store().findings(run.id),
+                                           asset_duration(run) or MAX_DURATION_S)
+        ok, why = scope_mod.allows(finding_scope, choice)
+        if not ok:
+            raise HTTPException(status_code=409, detail=why)
+        ok, why = costs.available(choice, span, store().spent_today())
+        if not ok:
+            raise HTTPException(status_code=409, detail=why)
+    price = 0.0 if choice == "auto" else costs.estimate(choice, span)
+    if choice == "bridge":
+        # Written down before the work starts: a bridge that dies halfway
+        # still consumed the generation, and a budget that only counts
+        # successes is not a budget.
+        store().record_spend("bridge", price, run.id, finding.id)
+
     store().emit(run.id, "remediator",
                  f"console requested remediation: {finding.rule_id} "
-                 f"({finding.market}) -> {finding.id}")
-    background.add_task(remediate_and_verify, run.id, finding.id, finding.market)
+                 f"({finding.market}) -> {finding.id}"
+                 + (f" [{choice}"
+                    + (f", {price:.2f} EUR" if price else "")
+                    + (f', "{want}"' if want else "") + "]" if choice != "auto" else ""))
+    background.add_task(remediate_and_verify, run.id, finding.id, finding.market,
+                        method=choice, replacement=want)
     return RedirectResponse(f"/runs/{run.id}/markets/{finding.market}",
                             status_code=303)
 
