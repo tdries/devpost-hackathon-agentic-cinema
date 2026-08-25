@@ -316,8 +316,10 @@
     var buttons = document.querySelectorAll(".view-switch [data-set-view]");
     if (!panel || !buttons.length) { return; }
 
+    /* List is the default: a market with fifteen findings should open as
+       fifteen rows, not five screens. "detail" is the stored opt-out. */
     var apply = function (view) {
-      panel.classList.toggle("as-list", view === "list");
+      panel.classList.toggle("as-list", view !== "detail");
       buttons.forEach(function (b) {
         b.classList.toggle("on", b.getAttribute("data-set-view") === view);
       });

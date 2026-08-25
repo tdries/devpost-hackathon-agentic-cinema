@@ -989,8 +989,8 @@ html[data-theme="spectrum"] .view-switch .tbtn.on { background: rgba(66, 133, 24
 .as-list .mono[style*="margin-top:8px"] { display: none; }
 .as-list .evidence {
   display: inline-block;
-  width: 54px;
-  margin: 0 0 0 12px;
+  width: 108px;
+  margin: 0 0 0 14px;
   vertical-align: middle;
 }
 .as-list .evidence .label { display: none; }

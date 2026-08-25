@@ -74,12 +74,12 @@
 <section>
   <div class="rule-row"><span class="label">Findings</span>
     <span class="right view-switch" role="group" aria-label="Findings view">
-      <button type="button" class="tbtn" data-set-view="">Detail</button>
-      <button type="button" class="tbtn" data-set-view="list">List</button>
+      <button type="button" class="tbtn" data-set-view="detail">Detail</button>
+      <button type="button" class="tbtn" data-set-view="">List</button>
     </span>
   </div>
   {% if findings %}
-  <div class="panel" id="findings"><div class="panel-body" style="padding:18px 4px 4px">
+  <div class="panel as-list" id="findings"><div class="panel-body" style="padding:18px 4px 4px">
     <table class="grid">
       <thead><tr>
         <th>Rule</th><th>Class</th><th>Severity</th><th>Window</th><th>Source</th><th>Status</th><th></th>
