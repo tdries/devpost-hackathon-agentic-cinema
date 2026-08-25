@@ -968,7 +968,7 @@ class GrafanaOps:
     # --- Grafana as a data source for the app's own UI ----------------
     #
     # An iframe is not available: Grafana Cloud answers with
-    # x-frame-options: deny. A server-rendered PNG works and is what the
+    # x-frame-options: deny + frame-ancestors 'none'. A server-rendered PNG works and is what the
     # big panels use, but it is an image -- it cannot be small, sharp,
     # theme-aware and instant, which is exactly what a chart INSIDE a card
     # has to be.
@@ -1036,7 +1036,8 @@ class GrafanaOps:
                 continue
         return out
 
-    def loki_lines(self, query: str, days: int = 30, limit: int = 2000
+    def loki_lines(self, query: str, days: int = 30, limit: int = 2000,
+                   start: float | None = None, end: float | None = None
                    ) -> list[dict]:
         """Raw log lines from Loki, with the JSON body already parsed.
 
@@ -1046,11 +1047,15 @@ class GrafanaOps:
         parsed to.
         """
         now = time.time()
+        # An explicit window when the caller knows one. A run's lines sit on
+        # its mapped clock, so asking for [t0, t0+duration] is twenty
+        # seconds of index instead of a month of it.
+        lo = start if start is not None else now - days * 86400
+        hi = end if end is not None else now
         answer = self._api_json(
             "GET", "/api/datasources/proxy/uid/" + LOKI_UID + "/loki/api/v1/query_range",
             params={"query": query,
-                    "start": str(int((now - days * 86400) * 1e9)),
-                    "end": str(int(now * 1e9)),
+                    "start": str(int(lo * 1e9)), "end": str(int(hi * 1e9)),
                     "limit": limit, "direction": "backward"})
         out = []
         for stream in (answer.get("data") or {}).get("result") or []:

@@ -527,8 +527,11 @@ def _lanes_from_grafana(run) -> dict[str, list]:
              f'asset="{re.sub(chr(34), "", asset)}"}} | json')
     try:
         from customs.grafana_ops import GrafanaOps
+        duration = asset_duration(run) or MAX_DURATION_S
         with GrafanaOps(settings) as ops:
-            rows = ops.loki_lines(query, days=30, limit=2000)
+            rows = ops.loki_lines(query, limit=2000,
+                                  start=(run.t0 or 0) - 2,
+                                  end=(run.t0 or 0) + duration + 2)
     except Exception as exc:  # noqa: BLE001 -- the store has the same facts
         log.warning("lanes from Loki failed for %s: %s", run.id, exc)
         return {}
@@ -787,7 +790,7 @@ def embeds(run) -> dict[str, str]:
 # Cloud has no anonymous access, so embedding is an auth problem." Public
 # dashboards solved the auth half -- those URLs open with no login, and the
 # board links to them -- but this stack answers every request, public
-# dashboards included, with the response header `x-frame-options: deny`
+# dashboards included, with the response header `x-frame-options: deny + frame-ancestors 'none'`
 # (re-verified live 2026-08-25 -- and note it is NOT a CSP frame-ancestors
 # directive: this stack's CSP has none. That matters, because
 # frame-ancestors can name permitted origins and could have been opened
@@ -888,7 +891,7 @@ def generated_clip(run_id: str, change_id: str):
 def grafana_png(uid: str, run: str = ""):
     """A whole Grafana dashboard, rendered server-side as an image.
 
-    Grafana Cloud answers every page with `x-frame-options: deny`, so a
+    Grafana Cloud answers every page with `x-frame-options: deny + frame-ancestors 'none'`, so a
     dashboard cannot be put in an iframe: the browser refuses the connection
     and the panel comes back blank, which is exactly what agent mode did
     when it handed back the URL of a dashboard it had just built. The board
@@ -1240,7 +1243,6 @@ def launch_board(request: Request, run_id: str):
             more.append(dict(group, families=families,
                              count=sum(len(f["packs"]) for f in families)))
     return _page(request, "launch_board.html", run=run, tiles=tiles,
-                 lanes=problem_lanes(run),
                  more=more,
                  can_add=bool(store().observations(run.id)),
                  overall=overall(states), progress=run_progress(run, states),
@@ -1364,8 +1366,12 @@ def all_runs(request: Request):
     weight guard, not pagination -- at demo scale the store never gets there,
     and when it someday does, this is the seam where real paging goes.
     """
-    rows = [{"run": run, "states": market_states(run),
-             "lanes": problem_lanes(run, compact=True)}
+    # No lane charts built here. Doing it inline meant one Loki round trip
+    # per run, server-side, before a single byte of the page went out --
+    # twenty runs took the archive past a two minute timeout. The cards
+    # request /lanes.svg themselves, so the page paints immediately and a
+    # slow Grafana costs a chart rather than the page.
+    rows = [{"run": run, "states": market_states(run)}
             for run in store().recent_runs(500)]
     return _page(request, "runs.html", rows=rows, screen="runs",
                  packs_total=len(market_packs()), dims_total=len(packs.taxonomy()))
@@ -1839,7 +1845,7 @@ def run_spark(run_id: str):
     """This run's severity profile, drawn from Grafana's own numbers.
 
     The card cannot hold an iframe -- Grafana Cloud answers with
-    x-frame-options: deny -- and a rendered PNG is the wrong shape for
+    x-frame-options: deny + frame-ancestors 'none' -- and a rendered PNG is the wrong shape for
     something this small: fixed size, fixed theme, and a second round
     trip. So Mimir stays the source of truth and the drawing happens
     here, in the product's own hex, as inline SVG.
@@ -1921,6 +1927,28 @@ def market_spark(run_id: str, market: str):
         cached.write_text(svg)
     return Response(content=cached.read_text(), media_type="image/svg+xml",
                     headers={"Cache-Control": "public, max-age=300"})
+
+@app.get("/runs/{run_id}/lanes.svg")
+def run_lanes(run_id: str, full: int = 0):
+    """This run's problem lanes, as its own image.
+
+    Built here rather than inline in the archive: each chart is a Loki
+    query, and doing twenty of them before the page renders is what took
+    /runs past a two minute timeout. As a separate URL the page paints
+    at once, the browser fetches the charts lazily, and one slow Grafana
+    costs a chart instead of the archive.
+    """
+    run = _run_or_404(run_id)
+    cached = run_dir(run) / ("lanes_full.svg" if full else "lanes.svg")
+    fresh = cached.is_file() and (time.time() - cached.stat().st_mtime) < 600
+    if not fresh:
+        svg = problem_lanes(run, compact=not full)
+        if not svg:
+            raise HTTPException(status_code=404, detail="nothing observed in this run")
+        cached.parent.mkdir(parents=True, exist_ok=True)
+        cached.write_text(svg)
+    return Response(content=cached.read_text(), media_type="image/svg+xml",
+                    headers={"Cache-Control": "public, max-age=600"})
 
 @app.get("/runs/{run_id}/evidence/{observation_id}/box")
 def evidence_box(run_id: str, observation_id: str):

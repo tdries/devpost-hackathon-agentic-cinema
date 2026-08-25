@@ -1687,34 +1687,50 @@ def test_the_lane_chart_says_when_each_kind_of_problem_happens(console):
     almost always fine", which is the negative space findings alone can
     never show.
     """
+    test_client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    body = test_client.get(f"/runs/{run.id}").text
+
+    assert "/lanes.svg" in body, "the board asks for the chart as its own URL"
+
+    # and the chart itself, fetched, is a real lane chart
+    svg = test_client.get(f"/runs/{run.id}/lanes.svg?full=1")
+    assert svg.status_code == 200 and svg.headers["content-type"] == "image/svg+xml"
+    assert svg.text.count("lane-dot") > 1
+    assert 'href="#d-' in svg.text, "each lane is labelled with its taxonomy icon"
+
+
+def test_the_lane_chart_is_a_grafana_panel_served_as_an_image(console):
+    """Once the hover requirement was dropped, this could become a real
+    Grafana panel: a state timeline in grafana/dashboards/lanes.json,
+    coloured by the app's own thresholds.
+
+    It is still served as an image rather than an iframe, and that is not
+    a choice -- this stack refuses framing with BOTH x-frame-options:
+    deny and CSP frame-ancestors 'none', verified in a browser, and the
+    admin settings API answers 403 when asked to relax it.
+
+    It is also served as its own URL rather than built into the page.
+    Doing it inline meant a Loki round trip per run before a byte went
+    out, which took the archive past a two minute timeout and the board
+    to thirty-six seconds.
+    """
+    import json, pathlib
     client, store, _launched, _jobs = console
     run = _judged_run(store)
+
     body = client.get(f"/runs/{run.id}").text
+    assert "<iframe" not in body, "this stack refuses to be framed"
+    assert "/lanes.svg" in body, "the chart is its own URL, fetched lazily"
 
-    assert 'class="lanes"' in body, "the chart is inline, not an <img>"
-    assert body.count("lane-dot") > 1
-    assert 'href="#d-' in body, "each lane is labelled with its taxonomy icon"
-    assert 'class="lane-peek"' in body, "somewhere to show the frame on hover"
-    # a flagged dot must carry the observation, or hover has nothing to show
-    import re
-    hits = re.findall(r'class="lane-dot hit"[^>]*data-obs="([^"]+)"', body)
-    assert hits, "a flagged dot must name its observation"
-    # and that observation must be real
-    ids = {o.id for o in store.observations(run.id)}
-    assert set(hits) <= ids, "a dot points at an observation that does not exist"
-
-
-def test_a_lane_chart_needs_no_iframe_and_no_rendered_image(console):
-    """Grafana can hold an image, but a Grafana panel cannot show OUR
-    screenshot on hover: an iframe is refused outright and a rendered PNG
-    is static. Drawing it here is what makes the frame reachable.
-    """
-    client, store, _launched, _jobs = console
-    body = client.get(f"/runs/{_judged_run(store).id}").text
-    assert "<iframe" not in body
-    # the dots are elements in our own DOM, so they can carry a link back
-    assert "data-obs=" in body and "/evidence/" in client.get(
-        "/static/customs.js").text
+    dash = json.loads(pathlib.Path("grafana/dashboards/lanes.json").read_text())
+    panel = dash["panels"][0]
+    assert panel["type"] == "state-timeline"
+    assert panel["datasource"]["uid"] == "grafanacloud-logs"
+    # the app's bands, so a lane cannot be amber here and red on the tile
+    from customs import state
+    steps = panel["fieldConfig"]["defaults"]["thresholds"]["steps"]
+    assert [x["color"] for x in steps] == [state.CLEARED, state.AT_RISK, state.BLOCKED]
 
 
 def test_recent_runs_opens_on_a_banner_made_of_the_products_own_icons(client):

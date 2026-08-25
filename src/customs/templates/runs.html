@@ -48,15 +48,8 @@
       {# What was found and WHEN, a lane per category. Inline rather than an
          image so a dot can still show the frame it came from -- the same
          reason the full version on the launch board is inline. #}
-      {% if item.lanes %}
-      <div class="lanes-wrap card-lanes" data-run="{{ item.run.id }}">
-        {{ item.lanes | safe }}
-        <div class="lane-peek" hidden>
-          <img alt="">
-          <div class="lane-peek-meta"><span class="mono when"></span><span class="what"></span></div>
-        </div>
-      </div>
-      {% endif %}
+      <img class="cardlanes" src="/runs/{{ item.run.id }}/lanes.svg" alt=""
+           loading="lazy" onerror="this.remove()">
       <span class="id">{{ item.run.id }}</span>
       <span class="asset">{{ item.run.asset_path.split('/')[-1] }}</span>
       <span class="when">{{ item.run.t0 | stamp }}</span>
