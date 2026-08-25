@@ -896,6 +896,30 @@ def test_every_page_offers_both_style_modes(client):
         assert "customs-theme" in page.text
 
 
+def test_a_phone_gets_studio_unless_it_asked_for_mission(client):
+    """Mission is built for a dark room and a big screen. It is the wrong
+    thing to hand someone reading outdoors, so a phone with no stored choice
+    starts in Studio.
+
+    The half that is easy to get wrong: an explicit Mission has to be stored
+    AS "mission". If it were stored as a missing key -- which is how it used
+    to work -- then on a phone it would be indistinguishable from never
+    having chosen, and the next page load would silently revert to Studio.
+    """
+    test_client, _, _run, _ = client
+    head = test_client.get("/").text.split("</head>")[0]
+    assert 'matchMedia("(max-width: 900px)")' in head
+    assert '_t = "studio"' in head
+    assert '_t !== "studio" && _t !== "mission"' in head
+
+    # scoped to the theme switch: the card/list view switches have their own
+    # KEY in their own closure and legitimately still remove it
+    js = test_client.get("/static/customs.js").text
+    theme_block = js.split('var KEY = "customs-theme";')[1].split("})();")[0]
+    assert 'localStorage.setItem(KEY, mode || "mission")' in theme_block
+    assert "removeItem" not in theme_block
+
+
 def test_a_browser_holding_a_deleted_mode_falls_back_to_mission(client):
     """A stored "spectrum" would otherwise set data-theme with no CSS behind
     it, leaving that browser on a half-styled page nothing could undo: the
