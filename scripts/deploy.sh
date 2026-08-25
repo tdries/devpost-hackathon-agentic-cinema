@@ -84,6 +84,17 @@ done
 
 echo "== customs -> Cloud Run ($PROJECT_ID / $REGION, service account $RUNTIME_SA) =="
 
+# FAST=1 skips everything below that only has to be true ONCE: the APIs,
+# the secrets, the IAM grants, the bucket and the Grafana contact point.
+# They are idempotent, which is exactly why re-running them on the tenth
+# deploy of an hour changes nothing and still costs the wall clock. Use it
+# for a code change; leave it off after touching .env, IAM or the stack.
+FAST="${FAST:-0}"
+if [ "$FAST" = "1" ]; then
+    echo "-- FAST=1: skipping APIs, secrets, IAM and Grafana wiring --"
+fi
+
+if [ "$FAST" != "1" ]; then
 echo "-- enabling required APIs (idempotent) --"
 gcloud services enable \
     run.googleapis.com \
@@ -228,9 +239,25 @@ if [[ ${#YT_COOKIES_ENV[@]} -gt 0 ]]; then env_pairs+=("${YT_COOKIES_ENV[@]}"); 
 
 joined="$(IFS=';'; echo "${env_pairs[*]}")"
 
+fi   # end of the once-only preamble
+
+# Build with layer caching rather than gcloud run deploy --source, which
+# starts every build from nothing. See cloudbuild.yaml: the previous image
+# is pulled so Docker can reuse its layers, and the Dockerfile is already
+# ordered so an ordinary source edit invalidates only COPY src/ and below.
+IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/${SERVICE}"
+SHA="$(git rev-parse --short HEAD 2>/dev/null || date +%s)"
+
+echo "-- building ${IMAGE}:${SHA} (cached) --"
+gcloud builds submit \
+    --project "$PROJECT_ID" --region "$REGION" \
+    --config cloudbuild.yaml \
+    --substitutions "_IMAGE=${IMAGE},SHORT_SHA=${SHA}" \
+    --quiet
+
 echo "-- gcloud run deploy $SERVICE --"
 gcloud run deploy "$SERVICE" \
-    --source . \
+    --image "${IMAGE}:${SHA}" \
     --project "$PROJECT_ID" \
     --region "$REGION" \
     --service-account "$RUNTIME_SA" \
@@ -248,6 +275,7 @@ gcloud run deploy "$SERVICE" \
 SERVICE_URL="$(gcloud run services describe "$SERVICE" \
     --project "$PROJECT_ID" --region "$REGION" --format='value(status.url)')"
 
+if [ "$FAST" != "1" ]; then
 echo "-- wiring the Grafana contact point to ${SERVICE_URL}/webhook/alert --"
 PYTHONPATH="$ROOT/src" "$PY" - "$SERVICE_URL" <<'PYEOF'
 import sys
@@ -260,6 +288,8 @@ with GrafanaOps(settings, mcp_tools=set()) as ops:
     uid = ops.ensure_contact_point(url)
 print(f"customs-webhook -> {url} (uid {uid or 'existing'})")
 PYEOF
+
+fi   # end of the Grafana wiring
 
 echo "== deployed =="
 echo "$SERVICE_URL"
