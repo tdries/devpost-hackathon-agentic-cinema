@@ -48,8 +48,8 @@ from google.genai import types
 
 from customs import costs, media
 from customs.config import settings
-from customs.genai_client import (client, generate_bridge, generate_json,
-                                  generate_json_image)
+from customs.genai_client import (VeoBlocked, client, generate_bridge,
+                                  generate_json, generate_json_image)
 from customs.media import Shot
 from customs.packs import load as load_packs
 from customs.schema import ChangeRecord, Finding, Observation
@@ -667,21 +667,45 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
             except OSError:
                 pass
 
-    # Only now is anything actually spent: both anchors are compliant, so
-    # the generation is worth paying for. Written down before the call
-    # rather than after, because a bridge that dies halfway still consumed it.
-    if spend is not None:
-        spend()
-
     seconds = costs.bridge_seconds(finding.t_end - finding.t_start)
     # _BRIDGE_PROMPT, not `instruction`: the anchors already carry the swap,
     # and telling a video model to "replace every alcoholic drink with tea"
     # makes it add tea to the scene rather than leave the corrected frames
     # alone. See _BRIDGE_PROMPT.
-    clip = generate_bridge(
-        prompt=_BRIDGE_PROMPT,
-        first_frame=anchors[0], last_frame=anchors[1],
-        seconds=seconds, out_path=workdir / "bridge.mp4")
+    # Veo's safety filter is stochastic: the same two frames can be accepted
+    # on a second attempt. A blocked generation is free, so retrying one
+    # costs nothing and often works.
+    def _generate(attempt: int):
+        return generate_bridge(
+            prompt=_BRIDGE_PROMPT,
+            first_frame=anchors[0], last_frame=anchors[1],
+            seconds=seconds, out_path=workdir / f"bridge{attempt}.mp4")
+
+    clip = None
+    for attempt in (1, 2):
+        try:
+            clip = _generate(attempt)
+        except VeoBlocked as exc:
+            # Google does not charge for a blocked video, so neither do we.
+            _note(on_event, f"bridge: Veo's safety filter rejected the "
+                            f"generation (attempt {attempt}/2), not charged")
+            if attempt == 2:
+                raise RemediationError(
+                    "Veo's safety filter rejected this generation twice. "
+                    "Nothing was charged. Try a different remedy, or patch "
+                    "the frame instead of regenerating the shot.") from exc
+            continue
+        except Exception:
+            # Any other failure means the generation was attempted and
+            # billed, whether or not it came back.
+            if spend is not None:
+                spend()
+            raise
+        break
+
+    # Charged once, for a generation that actually happened.
+    if spend is not None:
+        spend()
     # Keep the generated footage itself, not just the master it went into.
     # The scratch workdir is deliberately not mirrored, so a clip left there
     # is gone the next time the container is replaced, and "nothing is edited

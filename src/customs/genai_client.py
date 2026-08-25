@@ -57,6 +57,15 @@ def generate_grounded(model: str, prompt: str) -> tuple[str, list[dict]]:
     return r.text or "", chunks
 
 
+class VeoBlocked(RuntimeError):
+    """Veo's safety filter rejected the generated video.
+
+    Distinct from every other failure because Google says explicitly: "You
+    will not be charged for blocked videos." Charging the operator's budget
+    for one would be taking money for work nobody did.
+    """
+
+
 def generate_bridge(prompt: str, first_frame, last_frame, seconds: float,
                     out_path, poll_s: float = 10.0, timeout_s: float = 600.0):
     """Veo, anchored on two frames: generate the motion between them.
@@ -77,6 +86,10 @@ def generate_bridge(prompt: str, first_frame, last_frame, seconds: float,
         number_of_videos=1,
         resolution="720p",
         generate_audio=False,
+        # Commercials are made of people. Left unset this defaults to a
+        # stricter policy and rejects perfectly ordinary advertising
+        # footage; the anchors are the brand's own frames of adults.
+        person_generation="allow_adult",
         last_frame=types.Image(image_bytes=last.read_bytes(), mime_type="image/png"),
     )
     source = types.GenerateVideosSource(
@@ -97,6 +110,13 @@ def generate_bridge(prompt: str, first_frame, last_frame, seconds: float,
     result = getattr(operation, "response", None) or getattr(operation, "result", None)
     videos = getattr(result, "generated_videos", None) or []
     if not videos:
+        blocked = getattr(result, "rai_media_filtered_count", 0) or 0
+        if blocked:
+            reasons = getattr(result, "rai_media_filtered_reasons", None) or []
+            raise VeoBlocked(
+                "Veo's safety filter rejected the generated video. Google "
+                "does not charge for a blocked generation, so neither do we. "
+                + (str(reasons[0])[:200] if reasons else ""))
         raise RuntimeError(f"Veo returned no video: {result!r}")
     data = videos[0].video.video_bytes
     if not data:
