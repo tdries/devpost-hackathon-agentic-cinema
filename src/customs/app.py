@@ -510,6 +510,25 @@ def run_progress(run, states: dict[str, dict]) -> dict:
     return {"pct": int(min(99, max(2, round(pct)))), "stage": stage}
 
 
+def _kinds_found(findings) -> list[str]:
+    """Which KINDS of problem a market found, worst first.
+
+    A Finding carries the rule it broke, not the dimension -- dimension is
+    a property of the Observation -- so this resolves it the same way
+    telemetry does, through the market pack. Deduplicated, because a
+    market objecting three times about dress is still one kind of problem,
+    and ordered by worst severity so a tile leads with what matters.
+    """
+    from customs.telemetry import _dimension_for
+    worst: dict[str, int] = {}
+    for f in findings:
+        dimension = _dimension_for(f.market, f.rule_id)
+        if not dimension or dimension == "none":
+            continue
+        worst[dimension] = max(worst.get(dimension, 0), f.severity)
+    return [d for d, _ in sorted(worst.items(), key=lambda kv: -kv[1])]
+
+
 def market_states(run) -> dict[str, dict]:
     """Per market: {clearance, findings, blocked, errored} for one run.
 
@@ -542,6 +561,12 @@ def market_states(run) -> dict[str, dict]:
             "resolved": sum(1 for f in findings if f.status == "resolved"),
             "blocked": sum(1 for f in findings if f.remediation_blocked),
             "errored": market in errored,
+            # WHICH KINDS of problem this market found, as the taxonomy's
+            # own icons. A count says a market is unhappy; these say what
+            # about. Ordered by worst severity first so the tile leads with
+            # the thing that matters, and deduplicated because one market
+            # objecting three times over dress is still one kind of problem.
+            "kinds": _kinds_found(findings),
         }
         states[market]["display"] = tile_state(states[market])
     return states

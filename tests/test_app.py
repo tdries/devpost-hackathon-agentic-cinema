@@ -496,7 +496,11 @@ def test_status_reports_a_clearance_a_count_and_the_errored_market(console):
     assert set(body["markets"]) == set(MARKETS)
     assert body["markets"]["FR"] == {
         "clearance": "blocked", "display": "blocked", "findings": 2, "open": 2,
-        "working": 0, "resolved": 0, "blocked": 0, "errored": False}
+        "working": 0, "resolved": 0, "blocked": 0, "errored": False,
+        # which KINDS of problem, worst severity first -- the tile draws
+        # these as the taxonomy's own icons, so a count is no longer the
+        # only thing it can say about a market
+        "kinds": ["alcohol_tobacco_drugs", "text_legibility"]}
     assert body["markets"]["SA"]["errored"] is True
     assert body["markets"]["SA"]["blocked"] == 1
     assert body["markets"]["US"]["clearance"] == "cleared"
@@ -1584,3 +1588,25 @@ def test_every_chart_is_a_valid_standalone_svg_document():
         # and an intrinsic size, so it never depends on CSS to know how big it is
         assert root.get("width") and root.get("height"), f"{name} has no intrinsic size"
         assert root.get("viewBox"), f"{name} has no viewBox"
+
+
+def test_a_tile_says_what_kind_of_problem_not_only_how_many(console):
+    """A count tells you a market is unhappy, not what about.
+
+    The kinds are drawn as the taxonomy's own 18 dimension icons -- the
+    same glyphs the frame board and the library use -- so one symbol
+    means one thing everywhere in the product. Worst severity first, so
+    the tile leads with what matters, and deduplicated: a market
+    objecting three times over dress is one kind of problem.
+    """
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    body = client.get(f"/runs/{run.id}").text
+    assert 'class="tile-kinds"' in body
+    assert 'href="#d-' in body, "the icons come from the dimension taxonomy"
+    # and every icon it asks for must actually exist in the sprite sheet
+    import re, pathlib
+    sprite = pathlib.Path("src/customs/templates/base.html").read_text()
+    for kind in set(re.findall(r'href="#(d-[a-z_]+)"', body)):
+        assert f'id="{kind}"' in sprite, f"{kind} is not in the icon set"
+

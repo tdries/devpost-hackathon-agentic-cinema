@@ -1606,3 +1606,33 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
    style mode. A market with no series simply has no chart. */
 .tilespark { display: block; width: 100%; height: 60px; margin: 8px 0 2px; }
 .tile:hover .tilespark { opacity: 1; }
+
+/* What a market objected to, as the taxonomy's own icons.
+
+   The tile already carried a COUNT, which tells you a market is unhappy
+   without telling you what about. These are the same 18 dimension icons
+   the frame board and the library use, so one glyph means one thing
+   everywhere in the product. Capped at six with a +n overflow: past that
+   they stop being scannable and become a texture. */
+.tile-kinds {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  margin: 10px 0 2px; min-height: 22px;
+}
+.tile-kinds .ic.kind { width: 21px; height: 21px; flex: none; }
+.tile-kinds .more {
+  font-size: 10px; letter-spacing: .08em; color: var(--ink-3);
+  align-self: center;
+}
+
+/* Room for the icons and the stat card without anything colliding. The
+   tile was sized for a code, a name and three stat lines; it now carries
+   two more blocks. */
+.tiles { grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 14px; }
+.tile { min-height: 340px; padding: 18px 18px 16px; }
+.tile .tile-name { margin-bottom: 2px; }
+.tile .tile-stats { margin-top: 4px; }
+.tile .tile-go { margin-top: auto; padding-top: 10px; }
+@media (max-width: 720px) {
+  .tiles { grid-template-columns: 1fr; }
+  .tile { min-height: 0; }
+}

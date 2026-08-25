@@ -64,6 +64,18 @@
         {% if tile.open %}<span><b data-role="open">{{ tile.open }}</b> still open</span>{% endif %}
         <span><svg class="ic ic-human"><use href="#i-human"/></svg><b data-role="blocked">{{ tile.blocked }}</b> need a human</span>
       </span>
+      {# WHAT this market objected to, in the taxonomy's own icons. The
+         count says a market is unhappy; these say what about, at a glance
+         and without opening the room. Worst severity first. #}
+      {% if tile.kinds %}
+      <span class="tile-kinds">
+        {% for kind in tile.kinds[:6] %}
+        <svg class="ic kind" title="{{ kind.replace('_', ' ') }}"><use href="#d-{{ kind }}"/></svg>
+        {% endfor %}
+        {% if tile.kinds | length > 6 %}<span class="more mono">+{{ tile.kinds | length - 6 }}</span>{% endif %}
+      </span>
+      {% endif %}
+
       {# where the risk sits across the film, from Mimir, drawn here #}
       <img class="tilespark" src="/runs/{{ run.id }}/markets/{{ tile.market }}/spark.svg"
            alt="" loading="lazy" onerror="this.remove()">
