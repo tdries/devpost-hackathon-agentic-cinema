@@ -55,7 +55,7 @@ def _mirror_files(src: Path, dst: Path) -> int:
     """Copy every file under src that dst lacks (or has at a different size)."""
     copied = 0
     for item in src.rglob("*"):
-        if item.is_dir() or item.suffix in (".db", ".db-wal", ".db-shm"):
+        if item.is_dir() or item.suffix in (".db", ".db-wal", ".db-shm", ".tmp"):
             continue
         rel = item.relative_to(src)
         if rel.parts and rel.parts[0] in _SKIP:
@@ -72,20 +72,45 @@ def _mirror_files(src: Path, dst: Path) -> int:
     return copied
 
 
-def _copy_db(src: Path, dst: Path) -> bool:
-    """A consistent snapshot of the store, taken with sqlite's backup API."""
-    if not src.is_file():
+def _snapshot_db(live: Path, dst: Path) -> bool:
+    """Copy the live store out to the bucket.
+
+    Two steps on purpose. sqlite's backup API makes the consistent copy, but
+    it writes it to a local temporary file, not to the mount: opening a
+    SQLite database *on* Cloud Storage FUSE fails outright (no locking, no
+    atomic rename), which is exactly how the first version of this silently
+    restored nothing. The finished file then goes across as plain bytes,
+    which is the one thing FUSE does well.
+    """
+    if not live.is_file():
         return False
+    tmp = live.with_suffix(".snapshot.tmp")
     try:
         dst.parent.mkdir(parents=True, exist_ok=True)
-        source = sqlite3.connect(f"file:{src}?mode=ro", uri=True)
-        target = sqlite3.connect(str(dst))
+        source = sqlite3.connect(str(live))
+        target = sqlite3.connect(str(tmp))
         with target:
             source.backup(target)
         source.close()
         target.close()
+        shutil.copy2(tmp, dst)
         return True
-    except sqlite3.Error:
+    except (sqlite3.Error, OSError):
+        return False
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+def _restore_db(src: Path, live: Path) -> bool:
+    """Copy the bucket's store in. Plain bytes: the source is a finished
+    snapshot, and SQLite must never be opened over the mount."""
+    if not src.is_file():
+        return False
+    try:
+        live.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, live)
+        return True
+    except OSError:
         return False
 
 
@@ -107,7 +132,7 @@ def restore(db_path) -> str:
         files = _mirror_files(state, runs)
         if local_db.exists() and local_db.stat().st_size > 0:
             return f"kept local store, merged {files} artifact(s)"
-        ok = _copy_db(state / local_db.name, local_db)
+        ok = _restore_db(state / local_db.name, local_db)
         return f"restored store={ok} artifacts={files}"
 
 
@@ -118,6 +143,6 @@ def snapshot(db_path) -> str:
         return "no state dir"
     local_db = Path(db_path)
     with _lock:
-        ok = _copy_db(local_db, state / local_db.name)
+        ok = _snapshot_db(local_db, state / local_db.name)
         files = _mirror_files(local_db.parent, state)
     return f"snapshot store={ok} artifacts={files}"

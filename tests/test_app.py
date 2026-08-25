@@ -1021,3 +1021,36 @@ def test_without_a_bucket_persistence_is_a_no_op(tmp_path, monkeypatch):
     monkeypatch.delenv("CUSTOMS_STATE_DIR", raising=False)
     assert persist.snapshot(tmp_path / "x.db") == "no state dir"
     assert persist.restore(tmp_path / "x.db") == "no state dir"
+
+
+def test_the_store_is_never_opened_over_the_mount(tmp_path, monkeypatch):
+    """SQLite on Cloud Storage FUSE is the trap that made restore silently
+    do nothing: the snapshot is built locally and copied across as bytes,
+    and the restore is a byte copy back."""
+    from customs import persist
+    from customs.store import Store
+
+    bucket = tmp_path / "bucket"
+    monkeypatch.setenv("CUSTOMS_STATE_DIR", str(bucket))
+    live = tmp_path / "live" / "customs.db"
+    live.parent.mkdir(parents=True)
+    run = Store(live).create_run(asset_path="a.mp4", markets=["BE"])
+
+    opened: list[str] = []
+    real_connect = persist.sqlite3.connect
+
+    def spy(target, *args, **kwargs):
+        opened.append(str(target))
+        return real_connect(target, *args, **kwargs)
+
+    monkeypatch.setattr(persist.sqlite3, "connect", spy)
+    assert "store=True" in persist.snapshot(live)
+    assert not any(str(bucket) in path for path in opened)
+    assert not list(live.parent.glob("*.tmp"))         # the temp copy is cleaned up
+
+    fresh = tmp_path / "fresh" / "customs.db"
+    fresh.parent.mkdir(parents=True)
+    opened.clear()
+    assert "restored store=True" in persist.restore(fresh)
+    assert not any(str(bucket) in path for path in opened)
+    assert Store(fresh).get_run(run.id) is not None
