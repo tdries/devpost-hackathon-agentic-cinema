@@ -7,7 +7,9 @@ _speak (TTS) -- which is the same boundary tests/test_adjudicate.py fakes
 generate_json/generate_grounded at. Everything below those seams is real:
 real ffmpeg, real store writes, real ChangeRecords.
 """
+import pathlib
 import subprocess
+import types
 
 import pytest
 
@@ -385,3 +387,69 @@ def test_the_frame_edit_does_not_invite_new_props_either(monkeypatch):
     assert "do not put a replacement where there was nothing before" in swap
     default = remediate._DEFAULT_REPLACEMENT["prop_swap"]
     assert "already visible" in default and "adding none" in default
+
+
+def test_the_second_anchor_is_edited_against_the_first(monkeypatch, tmp_path):
+    """Both ends of a bridge must hold the same object, not two guesses at it.
+
+    Editing the head and the tail independently asks the image model the
+    same question twice, and it rarely answers identically -- a taller
+    glass, a darker tea, a different fill. Veo then spends the whole span
+    morphing one answer into the other, which reads as exactly the artefact
+    it is. The tail is therefore edited with the head's result in hand.
+    """
+    from customs import remediate
+    from customs.schema import Finding
+
+    calls = []
+    def spy(instruction, image_bytes, mime_type="image/png", reference=None):
+        calls.append({"reference": reference})
+        return b"edited-" + bytes(str(len(calls)), "ascii")
+
+    monkeypatch.setattr(remediate, "_edit_image", spy)
+    monkeypatch.setattr(remediate.media, "extract_keyframes",
+                        lambda *a, **k: [tmp_path / "kf.png"])
+    monkeypatch.setattr(remediate.media, "fit_image", lambda a, b, c: pathlib.Path(c))
+    monkeypatch.setattr(remediate.media, "splice_clip", lambda *a, **k: None)
+    monkeypatch.setattr(remediate, "generate_bridge",
+                        lambda **kw: kw["out_path"])
+    (tmp_path / "kf.png").write_bytes(b"raw")
+
+    finding = Finding(id="f", run_id="r", observation_id="o", market="SA",
+                      rule_id="SA-ALC-01", klass="legal", severity=90,
+                      t_start=6.0, t_end=11.0, rationale="", citation_ref="",
+                      citation_url="", sourced=True, remediable=True,
+                      remediation_blocked=False, blocked_reason="")
+    remediate._bridge_span(tmp_path / "base.mp4", finding, None,
+                           tmp_path, tmp_path / "out.mp4")  # noqa: F841
+
+    assert len(calls) == 2
+    assert calls[0]["reference"] is None, "the head has nothing to match yet"
+    assert calls[1]["reference"] == b"edited-1", "the tail must match the head"
+
+
+def test_a_reference_edit_labels_which_image_to_change(monkeypatch):
+    """Two bare images in one request is an invitation to edit the wrong one."""
+    from customs import remediate
+    sent = {}
+
+    class FakePart:
+        inline_data = types.SimpleNamespace(data=b"png-out", mime_type="image/png")
+
+    class FakeModels:
+        def generate_content(self, model, contents, config):
+            sent["parts"] = contents
+            content = types.SimpleNamespace(parts=[FakePart()])
+            return types.SimpleNamespace(
+                candidates=[types.SimpleNamespace(content=content)])
+
+    monkeypatch.setattr(remediate, "client",
+                        lambda: types.SimpleNamespace(models=FakeModels()))
+
+    out = remediate._edit_image("swap the drink", b"target", reference=b"already-done")
+    assert out == b"png-out"
+    texts = [p for p in sent["parts"] if isinstance(p, str)]
+    assert any("REFERENCE" in t and "Do not edit this image" in t for t in texts)
+    assert any("THE FRAME TO EDIT" in t for t in texts)
+    # the image to edit is the last part, so "this image" is unambiguous
+    assert not isinstance(sent["parts"][-1], str)
