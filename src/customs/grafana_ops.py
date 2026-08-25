@@ -968,7 +968,7 @@ class GrafanaOps:
     # --- Grafana as a data source for the app's own UI ----------------
     #
     # An iframe is not available: Grafana Cloud answers with
-    # frame-ancestors 'none'. A server-rendered PNG works and is what the
+    # x-frame-options: deny. A server-rendered PNG works and is what the
     # big panels use, but it is an image -- it cannot be small, sharp,
     # theme-aware and instant, which is exactly what a chart INSIDE a card
     # has to be.

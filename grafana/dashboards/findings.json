@@ -55,10 +55,10 @@
         },
         "query": {
           "qryType": 1,
-          "query": "label_values({app=\"customs\"}, asset)",
+          "query": "label_values({app=\"customs\", kind!=\"observation\", kind!=\"observation\"}, asset)",
           "refId": "VariableQuery-asset"
         },
-        "definition": "label_values({app=\"customs\"}, asset)",
+        "definition": "label_values({app=\"customs\", kind!=\"observation\", kind!=\"observation\"}, asset)",
         "refresh": 2,
         "regex": "",
         "sort": 1,
@@ -98,7 +98,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "{app=\"customs\", asset=~\"$asset\"}",
+          "expr": "{app=\"customs\", kind!=\"observation\", asset=~\"$asset\"}",
           "queryType": "range",
           "editorMode": "code",
           "maxLines": 500
@@ -142,7 +142,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "{app=\"customs\", asset=~\"$asset\"} | json severity=\"severity\", sourced=\"sourced\", citation=\"citation_ref\", rationale=\"rationale\", status=\"status\", t_start=\"t_start\"",
+          "expr": "{app=\"customs\", kind!=\"observation\", asset=~\"$asset\"} | json severity=\"severity\", sourced=\"sourced\", citation=\"citation_ref\", rationale=\"rationale\", status=\"status\", t_start=\"t_start\"",
           "queryType": "range",
           "editorMode": "code",
           "maxLines": 500

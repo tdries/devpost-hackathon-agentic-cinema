@@ -64,6 +64,9 @@
         {% if tile.open %}<span><b data-role="open">{{ tile.open }}</b> still open</span>{% endif %}
         <span><svg class="ic ic-human"><use href="#i-human"/></svg><b data-role="blocked">{{ tile.blocked }}</b> need a human</span>
       </span>
+      {# where the risk sits across the film, from Mimir, drawn here #}
+      <img class="tilespark" src="/runs/{{ run.id }}/markets/{{ tile.market }}/spark.svg"
+           alt="" loading="lazy" onerror="this.remove()">
       <span class="tile-go"><span>Open market room</span><span>&rarr;</span></span>
     </a>
     {% endfor %}

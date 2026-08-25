@@ -1447,7 +1447,7 @@ def test_the_agent_can_discover_the_schema_and_query_it(client):
 
 
 def test_a_run_card_charts_grafanas_numbers_without_an_iframe(client):
-    """Grafana Cloud sends frame-ancestors 'none', so a card cannot embed it.
+    """Grafana Cloud sends x-frame-options: deny, so a card cannot embed it.
 
     A rendered PNG is also wrong for something card-sized: fixed width,
     fixed theme, second round trip. The numbers come from Mimir, the
@@ -1476,3 +1476,49 @@ def test_one_palette_governs_the_app_and_grafana(client):
     assert state.colour_for_severity(95) == state.BLOCKED
     assert state.colour_for_severity(50) == state.AT_RISK
     assert state.colour_for_severity(10) == state.CLEARED
+
+
+def test_a_market_tile_charts_its_own_risk(client):
+    """The tile and its chart must agree, because they share the thresholds.
+
+    A market peaking at 85 draws red, at 60 amber, because
+    spark.sparkline colours by state.colour_for_severity -- the same
+    function the pill uses. They cannot drift.
+    """
+    from customs import spark, state
+    red = spark.sparkline([(0, 85), (1, 85)])
+    amber = spark.sparkline([(0, 60), (1, 60)])
+    green = spark.sparkline([(0, 10), (1, 10)])
+    assert state.BLOCKED in red and state.AT_RISK in amber and state.CLEARED in green
+    # an empty series draws nothing rather than a flat line at zero
+    assert spark.sparkline([]) == ""
+
+    test_client, _, run, _ = client
+    body = test_client.get(f"/runs/{run.id}").text
+    assert 'class="tilespark"' in body and "/spark.svg" in body
+    assert "<iframe" not in body
+
+
+def test_finding_queries_cannot_be_inflated_by_observation_lines():
+    """The kind label was added to findings AFTER 471 of them were pushed.
+
+    Those 471 carry no kind at all, so {app="customs", kind="finding"}
+    returns zero against the real history -- while bare {app="customs"}
+    now returns findings AND observations together, silently inflating
+    every finding count by the observation total. Both are wrong.
+
+    Loki treats an absent label as empty, so the negative matcher is the
+    only selector that partitions correctly across the history.
+    """
+    import json, pathlib
+    for path in pathlib.Path("grafana/dashboards").glob("*.json"):
+        raw = path.read_text()
+        assert '{app=\\"customs\\"}' not in raw, f"{path.name} counts observations as findings"
+        assert '{app=\\"customs\\", asset' not in raw, f"{path.name} unscoped"
+        json.loads(raw)          # and it is still valid JSON after the edit
+
+    from customs import agentmode
+    spec = agentmode.dashboard_spec("", "", "market")
+    expr = spec["panels"][0]["targets"][0]["expr"]
+    assert 'kind!="observation"' in expr, "the ad-hoc builder must scope too"
+    assert 'kind="finding"' not in expr, "that selector misses all of the history"

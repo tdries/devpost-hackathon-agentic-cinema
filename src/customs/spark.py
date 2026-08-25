@@ -1,7 +1,7 @@
 """Grafana's numbers, drawn here.
 
 A chart inside a card cannot be an iframe: Grafana Cloud answers with
-frame-ancestors 'none'. It should not be a server-rendered PNG either --
+x-frame-options: deny. It should not be a server-rendered PNG either --
 a PNG is a fixed size, a fixed theme and a network round trip, and a card
 has to be small, sharp, instant and follow whichever style mode the
 operator picked.
@@ -80,3 +80,18 @@ def bars(values: list[tuple[str, float]], *, width: int = 260, height: int = 40,
                    f'<title>{name}: {value:g}</title></rect>')
     return (f'<svg class="spark" viewBox="0 0 {width} {height}" '
             f'preserveAspectRatio="none" aria-hidden="true">{"".join(out)}</svg>')
+
+
+# A note on why this module exists at all, corrected 2026-08-25 after
+# checking the actual response headers rather than trusting a comment:
+#
+# Grafana Cloud blocks framing with `x-frame-options: deny`, NOT with a
+# CSP `frame-ancestors` directive -- its CSP has no frame-ancestors at
+# all. The difference is not pedantry. frame-ancestors can enumerate
+# permitted origins, so "have Grafana allow-list our Cloud Run domain"
+# would have been a real avenue worth pursuing. `deny` takes no origin
+# list: it refuses every parent, always. There is no configuration that
+# opens it.
+#
+# So drawing here is not a workaround for a setting nobody got round to
+# changing. It is the only route.
