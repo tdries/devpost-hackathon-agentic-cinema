@@ -265,8 +265,13 @@ def _vertex_env() -> None:
     os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "true")
     if settings.gcp_project:
         os.environ.setdefault("GOOGLE_CLOUD_PROJECT", settings.gcp_project)
-    if settings.gcp_location:
-        os.environ.setdefault("GOOGLE_CLOUD_LOCATION", settings.gcp_location)
+    # Not the deployment's region: the Gemini models this project can reach
+    # live on Vertex's "global" endpoint, which is why genai_client pins
+    # location="global" rather than reading the region. ADK builds its own
+    # client from the environment, so it has to be told the same thing, and
+    # told rather than defaulted, because deploy.sh has already set
+    # GOOGLE_CLOUD_LOCATION to europe-west1 for everything else.
+    os.environ["GOOGLE_CLOUD_LOCATION"] = "global"
 
 
 def build_agent(store: Store, turn: Turn, run_id: str = ""):

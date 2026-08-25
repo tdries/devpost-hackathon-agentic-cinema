@@ -1152,3 +1152,17 @@ def test_the_frame_board_puts_every_frame_beside_what_was_read_from_it(client, t
     assert "no frame kept" in page.text
 
     assert test_client.get("/runs/nope/frames").status_code == 404
+
+
+def test_agent_mode_talks_to_vertex_on_the_endpoint_that_has_the_models(monkeypatch):
+    """The models this project can reach are on Vertex's global endpoint,
+    which is why genai_client pins it. ADK builds its own client from the
+    environment, so it has to be told the same thing: deploying with
+    GOOGLE_CLOUD_LOCATION=europe-west1 had the agent asking a region that
+    does not carry the model."""
+    from customs import agentmode
+
+    monkeypatch.setenv("GOOGLE_CLOUD_LOCATION", "europe-west1")
+    agentmode._vertex_env()
+    assert os.environ["GOOGLE_CLOUD_LOCATION"] == "global"
+    assert os.environ["GOOGLE_GENAI_USE_VERTEXAI"] == "true"
