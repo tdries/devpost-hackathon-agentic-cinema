@@ -734,7 +734,16 @@ def generated_clip(run_id: str, change_id: str):
     run = _run_or_404(run_id)
     if not re.fullmatch(r"chg_[0-9a-f]{6,32}", change_id):
         raise HTTPException(status_code=404, detail="no such change")
-    clip = run_dir(run) / "changes" / f"{change_id}_bridge.mp4"
+    changes = run_dir(run) / "changes"
+    clip = changes / f"{change_id}_bridge.mp4"
+    if not clip.is_file():
+        # Bridges written before 2026-08-25 all landed on one hidden file,
+        # ".chg_bridge.mp4", because the name came from the staged master
+        # rather than the change record. Only the newest survives per run,
+        # but it is a real generated clip and worth serving.
+        legacy = changes / ".chg_bridge.mp4"
+        if legacy.is_file():
+            return FileResponse(legacy, media_type="video/mp4")
     if not clip.is_file():
         raise HTTPException(status_code=404,
                             detail="no generated clip for this change")

@@ -453,3 +453,70 @@ def test_a_reference_edit_labels_which_image_to_change(monkeypatch):
     assert any("THE FRAME TO EDIT" in t for t in texts)
     # the image to edit is the last part, so "this image" is unambiguous
     assert not isinstance(sent["parts"][-1], str)
+
+
+def test_a_bridge_edits_what_the_finding_is_about_not_always_a_drink():
+    """The green can.
+
+    A Saudi modesty finding -- "a sleeveless halter top displaying bare
+    shoulders and upper arms" -- was bridged by instructing the image model
+    to "replace each alcoholic drink with a non-alcoholic drink that suits
+    Saudi Arabia". _bridge_span hardcoded the alcohol substitution whatever
+    the finding was about. There was no drink in the shot, so the model
+    invented one: a green can. No sleeves were ever asked for, so both
+    anchors went to Veo still sleeveless, and Veo did exactly what it was
+    given -- interpolate between two frames that each had a can in them.
+    """
+    from customs import remediate
+    from customs.schema import Finding
+
+    def make(market, rule):
+        return Finding(id="f", run_id="r", observation_id="o", market=market,
+                       rule_id=rule, klass="legal", severity=80, t_start=1.0,
+                       t_end=5.0, rationale="", citation_ref="", citation_url="",
+                       sourced=True, remediable=True, remediation_blocked=False,
+                       blocked_reason="")
+
+    modesty = remediate._frame_instruction(make("SA", "SA-MOD-01"), None, None, "Saudi Arabia")
+    assert "clothing" in modesty and "covers more of the body" in modesty
+    assert "alcoholic" not in modesty and "drink" not in modesty
+
+    # the dimensions that really are substitutions still substitute
+    alcohol = remediate._frame_instruction(make("SA-ROTANA", "SA-ALC-01"), None, None, "Rotana")
+    assert "alcoholic drink" in alcohol
+    text = remediate._frame_instruction(make("FR", "FR-LANG-01"), None, None, "France")
+    assert "on-screen text" in text
+
+
+def test_the_operators_choice_reaches_a_bridge(monkeypatch, tmp_path):
+    """Intent was accepted by apply() and then dropped before the bridge.
+
+    _run_method called _bridge_span without passing it, so whichever remedy
+    the operator picked in the console was silently discarded for exactly
+    the tier that costs real money.
+    """
+    from customs import remediate
+    from customs.schema import Finding
+
+    seen = {}
+    monkeypatch.setattr(remediate, "_edit_image",
+                        lambda instruction, image_bytes, mime_type="image/png",
+                               reference=None: seen.setdefault("instruction", instruction) and b"x" or b"x")
+    monkeypatch.setattr(remediate.media, "extract_keyframes",
+                        lambda *a, **k: [tmp_path / "kf.png"])
+    monkeypatch.setattr(remediate.media, "fit_image", lambda a, b, c: pathlib.Path(c))
+    monkeypatch.setattr(remediate.media, "splice_clip", lambda *a, **k: None)
+    monkeypatch.setattr(remediate, "generate_bridge", lambda **kw: kw["out_path"])
+    (tmp_path / "kf.png").write_bytes(b"raw")
+
+    finding = Finding(id="f", run_id="r", observation_id="o", market="SA",
+                      rule_id="SA-MOD-01", klass="legal", severity=80, t_start=1.0,
+                      t_end=5.0, rationale="", citation_ref="", citation_url="",
+                      sourced=True, remediable=True, remediation_blocked=False,
+                      blocked_reason="",
+                      remedies=[{"label": "Add sleeves",
+                                 "directive": "Extend the halter top into a long-sleeved blouse."}])
+
+    remediate._bridge_span(tmp_path / "b.mp4", finding, None, tmp_path,
+                           tmp_path / "out.mp4", intent="remedy:0")
+    assert "long-sleeved blouse" in seen["instruction"]
