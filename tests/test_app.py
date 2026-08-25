@@ -1553,3 +1553,34 @@ def test_a_cleared_market_still_shows_something(client):
     assert state.BLOCKED in loud and ">85</text>" in loud
     hot_ys = [float(y) for _, y in re.findall(r"[ML](\d+\.\d+),(\d+\.\d+)", loud)]
     assert max(hot_ys) - min(hot_ys) > 20, "a real profile must actually move"
+
+
+def test_every_chart_is_a_valid_standalone_svg_document():
+    """These are served as files and loaded through <img src>, not inlined.
+
+    Inline in a page the SVG namespace is implied, so a missing xmlns is
+    invisible to any test that only reads the string. Served as its own
+    file it is invalid SVG: the browser fetches it (HTTP 200), fails to
+    decode it, fires onerror, and the img tag removes itself. Every market
+    tile downloaded its card and then deleted it, which looked exactly
+    like the feature never shipping.
+
+    Parsing with a real XML parser is the check that catches it, because
+    that is what a browser does.
+    """
+    import xml.etree.ElementTree as ET
+    from customs import spark
+
+    points = [(float(i), float(i * 7 % 100)) for i in range(20)]
+    charts = {
+        "sparkline": spark.sparkline(points),
+        "statcard": spark.statcard(points, value="85", label="PEAK SEVERITY"),
+        "bars": spark.bars([("a", 3.0), ("b", 7.0)]),
+    }
+    for name, svg in charts.items():
+        root = ET.fromstring(svg)          # raises on anything malformed
+        assert root.tag == "{http://www.w3.org/2000/svg}svg", \
+            f"{name} has no SVG namespace, so <img> will refuse it"
+        # and an intrinsic size, so it never depends on CSS to know how big it is
+        assert root.get("width") and root.get("height"), f"{name} has no intrinsic size"
+        assert root.get("viewBox"), f"{name} has no viewBox"
