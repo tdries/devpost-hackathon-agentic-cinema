@@ -191,7 +191,7 @@ Traffic runs in **three directions**.
 
 ### 1. The crew writes into Grafana
 
-The **Publisher** is an ADK `LlmAgent` with five tools, three of which are raw [grafana/mcp-grafana](https://github.com/grafana/mcp-grafana) calls it makes itself with arguments it chooses. It provisions **7 dashboards / 22 panels**, then searches the stack, fetches the overview dashboard, and **writes its own prose summary of the run into the dashboard description** — real model output, landing in Grafana, on every run that reaches the MCP server — and when it cannot, the stage degrades to HTTP and says so rather than failing the run.
+The **Publisher** is an ADK `LlmAgent` with five tools, three of which are raw [grafana/mcp-grafana](https://github.com/grafana/mcp-grafana) calls it makes itself with arguments it chooses. It provisions **7 dashboards / 22 panels**, then searches the stack, fetches the overview dashboard, and **writes its own prose summary of the run into the dashboard description** — real model output, landing in Grafana, on every run. When the MCP server is unreachable the stage degrades to HTTP and says so on the feed, rather than failing the run.
 
 What gets written:
 
@@ -204,7 +204,7 @@ What gets written:
 
 Two details that took real work:
 
-**Two clocks, never mixed.** `customs_risk` is written on a *mapped clock* where `t0 = push_time − duration`, so **wall-clock second `t0+n` is video second `n`** and Grafana's time axis becomes the film's timecode for free. Every other metric is stamped at real time. The backdate window was measured live rather than assumed — samples at −10m through +90s were all accepted — and since Mimir accepted a sample backdated a full 600 s, the ~240 s this formula ever needs is comfortably inside it. Every sample lands at or before push time, because `t0 = push_time − duration`.
+**Two clocks, never mixed.** `customs_risk` is written on a *mapped clock* where `t0 = push_time − duration`, so **wall-clock second `t0+n` is video second `n`** and Grafana's time axis becomes the film's timecode for free. Every other metric is stamped at real time. The backdate window was measured rather than assumed — samples at −10m through +90s were all accepted, so the ~240 s this formula ever needs sits comfortably inside what Mimir will take. And because `t0 = push_time − duration`, every sample lands at or before push time.
 
 **Labels versus body, as a cardinality decision.** Only low-cardinality, group-by-able fields become Loki stream labels. Everything else goes in the JSON body, reachable with `| json`, costing nothing in the index. A finding line carries all 20 fields of the `Finding` dataclass, so no query ever needs to join back to SQLite.
 
