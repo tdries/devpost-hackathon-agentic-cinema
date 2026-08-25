@@ -112,7 +112,7 @@ def statcard(points: list[tuple[float, float]], *, value: str, label: str,
 
 
 def lanes(rows: list[dict], duration: float, *, width: int = 1180,
-          row_h: int = 30, pad_left: int = 34) -> str:
+          row_h: int = 30, pad_left: int = 34, ruler: bool = True) -> str:
     """One lane per problem category, dots where it happens.
 
     Inline, not an <img>: this one has to be hoverable, and an SVG loaded
@@ -125,15 +125,17 @@ def lanes(rows: list[dict], duration: float, *, width: int = 1180,
     """
     if not rows or duration <= 0:
         return ""
-    height = len(rows) * row_h + 26
+    height = len(rows) * row_h + (26 if ruler else 10)
     inner = width - pad_left - 12
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" class="lanes" '
            f'width="{width}" height="{height}" viewBox="0 0 {width} {height}">']
 
-    # the ruler: a mark every five seconds, and the ad's own clock on it
+    # the ruler: a mark every five seconds, and the ad's own clock on it.
+    # A card has no room for it and does not need it -- the shape is the
+    # point there, not the exact second.
     step = 5.0 if duration > 12 else 2.0
     t = 0.0
-    while t <= duration + 0.01:
+    while ruler and t <= duration + 0.01:
         x = pad_left + (t / duration) * inner
         out.append(f'<line x1="{x:.1f}" y1="16" x2="{x:.1f}" y2="{height - 8}" '
                    f'stroke="currentColor" stroke-opacity=".10" stroke-width="1"/>')
@@ -142,8 +144,9 @@ def lanes(rows: list[dict], duration: float, *, width: int = 1180,
                    f'fill="currentColor" fill-opacity=".45">{int(t)}s</text>')
         t += step
 
+    top = 26 if ruler else 8
     for i, row in enumerate(rows):
-        y = 26 + i * row_h
+        y = top + i * row_h
         out.append(f'<line x1="{pad_left}" y1="{y:.1f}" x2="{width - 12}" y2="{y:.1f}" '
                    f'stroke="currentColor" stroke-opacity=".13" stroke-width="1"/>')
         out.append(f'<use href="#d-{row["dimension"]}" x="4" y="{y - 10:.1f}" '
@@ -152,7 +155,8 @@ def lanes(rows: list[dict], duration: float, *, width: int = 1180,
             x = pad_left + (min(ev["t"], duration) / duration) * inner
             flagged = ev.get("flagged")
             colour = colour_for_severity(ev.get("severity", 0)) if flagged else CLEARED
-            r = 5.5 if flagged else 3.0
+            scale = 1.0 if ruler else 0.72
+            r = (5.5 if flagged else 3.0) * scale
             out.append(
                 f'<circle class="lane-dot{" hit" if flagged else ""}" '
                 f'cx="{x:.1f}" cy="{y:.1f}" r="{r}" fill="{colour}" '

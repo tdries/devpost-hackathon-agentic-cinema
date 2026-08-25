@@ -510,7 +510,68 @@ def run_progress(run, states: dict[str, dict]) -> dict:
     return {"pct": int(min(99, max(2, round(pct)))), "stage": stage}
 
 
-def problem_lanes(run) -> str:
+def _lanes_from_grafana(run) -> dict[str, list]:
+    """The lanes, out of Loki.
+
+    Every observation is a line there now, carrying its dimension as a
+    label and its timecode, its flagged state, its severity and the
+    markets that objected in the body. That is the whole chart, so this
+    is the chart's real source: Grafana holds the data, the app draws it,
+    exactly like the stat cards on the tiles.
+
+    Returns {} rather than raising, so a dead Grafana costs the chart its
+    provenance, not its existence -- the store still has the same facts.
+    """
+    asset = Path(run.asset_path).stem or run.asset_path
+    query = (f'{{app="customs", kind="observation", '
+             f'asset="{re.sub(chr(34), "", asset)}"}} | json')
+    try:
+        from customs.grafana_ops import GrafanaOps
+        with GrafanaOps(settings) as ops:
+            rows = ops.loki_lines(query, days=30, limit=2000)
+    except Exception as exc:  # noqa: BLE001 -- the store has the same facts
+        log.warning("lanes from Loki failed for %s: %s", run.id, exc)
+        return {}
+    lanes: dict[str, list] = {}
+    for row in rows:
+        body = row.get("parsed") or {}
+        if body.get("run_id") != run.id:
+            continue
+        dimension = body.get("dimension")
+        if not dimension or dimension == "none":
+            continue
+        markets = body.get("markets") or []
+        lanes.setdefault(dimension, []).append({
+            "t": float(body.get("t_start") or 0.0),
+            "flagged": bool(body.get("findings")),
+            "severity": int(body.get("max_severity") or 0),
+            "obs": body.get("observation_id") or "",
+            "market": ", ".join(markets[:4]) if isinstance(markets, list) else "",
+        })
+    return lanes
+
+
+def _lanes_from_store(run) -> dict[str, list]:
+    """The same lanes from SQLite, for a run older than the Loki history."""
+    db = store()
+    by_obs: dict[str, list] = {}
+    for f in db.findings(run.id):
+        by_obs.setdefault(f.observation_id, []).append(f)
+    lanes: dict[str, list] = {}
+    for obs in db.observations(run.id):
+        if not obs.dimension:
+            continue
+        hits = by_obs.get(obs.id, [])
+        lanes.setdefault(obs.dimension, []).append({
+            "t": obs.t_start, "flagged": bool(hits),
+            "severity": max((f.severity for f in hits), default=0),
+            "obs": obs.id,
+            "market": ", ".join(sorted({f.market for f in hits})[:4]),
+        })
+    return lanes
+
+
+def problem_lanes(run, compact: bool = False) -> str:
     """Where in the film each KIND of problem happens, as one lane each.
 
     The board says which markets are unhappy and the frame board says
@@ -525,31 +586,21 @@ def problem_lanes(run) -> str:
     almost always fine", which is exactly the negative space the verdict
     record exists to make visible.
     """
-    db = store()
-    observations = db.observations(run.id)
-    if not observations:
+    lanes = _lanes_from_grafana(run) or _lanes_from_store(run)
+    if not lanes:
         return ""
-    by_obs: dict[str, list] = {}
-    for f in db.findings(run.id):
-        by_obs.setdefault(f.observation_id, []).append(f)
-
-    lanes: dict[str, list] = {}
-    for obs in observations:
-        if not obs.dimension:
-            continue
-        hits = by_obs.get(obs.id, [])
-        lanes.setdefault(obs.dimension, []).append({
-            "t": obs.t_start,
-            "flagged": bool(hits),
-            "severity": max((f.severity for f in hits), default=0),
-            "obs": obs.id,
-            "market": ", ".join(sorted({f.market for f in hits})[:4]),
-        })
     # worst first, so the lane that blocks a market is the top line
     rows = [{"dimension": d, "events": sorted(e, key=lambda x: x["t"])}
             for d, e in sorted(lanes.items(),
                                key=lambda kv: -max((x["severity"] for x in kv[1]),
                                                    default=0))]
+    if compact:
+        # A card is not a page. Six lanes is what fits under a thumbnail
+        # without the card becoming a chart with a title, and they are the
+        # six that matter because rows are already worst-first.
+        rows = rows[:6]
+        return spark.lanes(rows, asset_duration(run) or MAX_DURATION_S,
+                           width=560, row_h=17, pad_left=24, ruler=False)
     return spark.lanes(rows, asset_duration(run) or MAX_DURATION_S)
 
 
@@ -1313,7 +1364,8 @@ def all_runs(request: Request):
     weight guard, not pagination -- at demo scale the store never gets there,
     and when it someday does, this is the seam where real paging goes.
     """
-    rows = [{"run": run, "states": market_states(run)}
+    rows = [{"run": run, "states": market_states(run),
+             "lanes": problem_lanes(run, compact=True)}
             for run in store().recent_runs(500)]
     return _page(request, "runs.html", rows=rows, screen="runs",
                  packs_total=len(market_packs()), dims_total=len(packs.taxonomy()))
