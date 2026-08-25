@@ -878,6 +878,7 @@ def test_every_page_offers_the_three_style_modes(client):
         assert page.status_code == 200
         assert 'data-set-theme="studio"' in page.text
         assert 'data-set-theme="screening"' in page.text
+        assert 'data-set-theme="spectrum"' in page.text
         assert "customs-theme" in page.text
 
 
@@ -933,3 +934,40 @@ def test_both_file_and_link_is_a_400(console):
         files={"asset": ("ad.mp4", b"bytes", "video/mp4")})
     assert reply.status_code == 400
     assert "not both" in reply.text
+
+
+# -- the archive and the timeline --
+
+def test_the_archive_lists_every_run(client):
+    test_client, store, run, _ = client
+    other = store.create_run(asset_path=ASSET, markets=["US"])
+    page = test_client.get("/runs")
+    assert page.status_code == 200
+    assert run.id in page.text and other.id in page.text
+    assert "All runs" in page.text
+    # and home points at it
+    assert 'href="/runs"' in test_client.get("/").text
+
+
+def test_the_timeline_shows_where_it_goes_wrong(client, tmp_path):
+    """One lane per market, one segment per finding at its timecode span,
+    and the hover card carries the triggering frame and the infraction."""
+    test_client, store, run, _ = client
+    frame = tmp_path / "kf.png"
+    frame.write_bytes(b"\x89PNG fake")
+    store.add_observations(run.id, [Observation(
+        id="obs_shot_0_000", shot_id="shot_0", t_start=0.0, t_end=7.0,
+        dimension="alcohol_tobacco_drugs", statement="Wine on the table.",
+        evidence_frame=str(frame), confidence=0.9,
+    )])
+
+    page = test_client.get(f"/runs/{run.id}/timeline")
+    assert page.status_code == 200
+    assert 'class="seg ' in page.text                      # a drawn segment
+    assert "FR-ALC-01" in page.text                        # naming its rule
+    assert f"/runs/{run.id}/evidence/obs_shot_0_000" in page.text  # the frame
+    assert "wine glasses" in page.text                     # the rationale
+    # both markets get a lane, findings or not
+    assert 'data-lane="FR"' in page.text and 'data-lane="SA"' in page.text
+
+    assert test_client.get("/runs/nope/timeline").status_code == 404

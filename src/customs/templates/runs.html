@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}All runs{% endblock %}
+{% block topbar_right %}<a href="/">New run</a>{% endblock %}
+{% block main %}
+
+<section class="hero" style="padding-bottom:24px">
+  <div class="rule-row"><span class="label">Campaign history</span></div>
+  <h1 class="headline" style="font-size:clamp(26px,3.4vw,38px)">All runs, newest first.</h1>
+  <p class="subline">Every clearance this instance has performed. Open one for its board, its timeline and its cutting room.</p>
+</section>
+
+<section style="border-top:none;padding-top:0">
+  {% if rows %}
+  <div class="runlist">
+    {% for item in rows %}
+    <a class="runrow" href="/runs/{{ item.run.id }}">
+      <span class="id">{{ item.run.id }}</span>
+      <span class="asset">{{ item.run.asset_path.split('/')[-1] }}</span>
+      <span class="when">{{ item.run.t0 | stamp }}</span>
+      <span class="flags">
+        {% for code, state in item.states.items() %}
+        {% set st = 'error' if state.errored else state.clearance %}
+        <span class="pill s-{{ st }}"><svg class="ic"><use href="#i-{{ st.replace('_', '-') }}"/></svg>{{ code }}</span>
+        {% endfor %}
+      </span>
+    </a>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <span class="big">No runs yet</span>
+    <p>Nothing has been cleared on this instance. Start one from the front door and it appears here.</p>
+  </div>
+  {% endif %}
+</section>
+
+{% endblock %}

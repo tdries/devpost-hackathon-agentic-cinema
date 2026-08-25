@@ -805,6 +805,52 @@ def launch_board(request: Request, run_id: str):
                  duration=asset_duration(run), published=published(run),
                  changes=len(store().changes(run.id)), screen="board")
 
+@app.get("/runs", response_class=HTMLResponse)
+def all_runs(request: Request):
+    """The archive: every run this store holds, newest first.
+
+    Home shows the last 12; this is the whole book. The 500 cap is a page
+    weight guard, not pagination -- at demo scale the store never gets there,
+    and when it someday does, this is the seam where real paging goes.
+    """
+    rows = [{"run": run, "states": market_states(run)}
+            for run in store().recent_runs(500)]
+    return _page(request, "runs.html", rows=rows)
+
+@app.get("/runs/{run_id}/timeline", response_class=HTMLResponse)
+def timeline(request: Request, run_id: str):
+    """Market x timecode: where the commercial goes wrong, per country.
+
+    One lane per market, one segment per finding drawn at its span on the
+    asset's own clock. Hovering a segment shows the evidence: the triggering
+    frame (when its file is still on disk), the rule, the class, the severity
+    and the rationale. Resolved findings stay on the chart in the cleared
+    colour: "was wrong here, fixed" is half the story this page tells.
+    """
+    run = _run_or_404(run_id)
+    duration = asset_duration(run) or MAX_DURATION_S
+    db = store()
+    observations = {o.id: o for o in db.observations(run.id)}
+    live = {oid for oid, o in observations.items()
+            if o.evidence_frame and Path(o.evidence_frame).is_file()}
+    states = market_states(run)
+    lanes = []
+    for market in run.markets:
+        segs = []
+        for f in sorted(db.findings(run.id, market), key=lambda f: f.t_start):
+            left = max(0.0, min(99.0, f.t_start / duration * 100))
+            width = max(0.9, min(100.0 - left, (f.t_end - f.t_start) / duration * 100))
+            segs.append({"finding": f,
+                         "left": round(left, 2), "width": round(width, 2),
+                         "flip": left > 55,
+                         "frame": f.observation_id in live})
+        lanes.append({"market": market, "tile": tile_state(states[market]),
+                      "segs": segs})
+    ticks = [{"t": t, "left": round(t / duration * 100, 2)}
+             for t in range(0, int(duration) + 1, 5)]
+    return _page(request, "timeline.html", run=run, lanes=lanes, ticks=ticks,
+                 duration=duration, screen="timeline")
+
 @app.get("/runs/{run_id}/status")
 def run_status(run_id: str):
     """The 2 second poll behind the tiles. Shape is the contract, keep it."""

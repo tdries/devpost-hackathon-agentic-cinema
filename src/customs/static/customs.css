@@ -852,3 +852,149 @@ html[data-theme="screening"] .theme-switch .tbtn.on { background: rgba(255, 166,
 .evidence .label .ic { width: 12px; height: 12px; vertical-align: -2.5px; margin-right: 5px; }
 html[data-theme="studio"] .guard h2 .ic,
 html[data-theme="studio"] .tile-stats .ic-human { color: #6a3fd0; }
+
+/* ---------- timeline ---------- */
+
+.tl { display: grid; gap: 10px; }
+.tl-row { display: grid; grid-template-columns: 110px 1fr; gap: 14px; align-items: center; }
+.tl-label { display: flex; align-items: center; gap: 9px; font-family: var(--mono); font-size: 14px; letter-spacing: 0.06em; }
+.tl-label a:hover { color: var(--signal); }
+.tl-label .ic { width: 13px; height: 13px; }
+.tl-ruler { position: relative; height: 20px; }
+.tick { position: absolute; top: 0; font-family: var(--mono); font-size: 9px; color: var(--ink-3); letter-spacing: 0.04em; transform: translateX(-50%); text-align: center; }
+.tick i { display: block; width: 1px; height: 5px; background: var(--line-2); margin: 0 auto 2px; }
+.tl-track { position: relative; height: 34px; background: var(--well); border: 1px solid var(--line); border-radius: 3px; }
+.tl-clean { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0.55; }
+.seg { position: absolute; top: 4px; bottom: 4px; border-radius: 2px; display: block; min-width: 7px; }
+.sc-legal { background: rgba(255, 77, 94, 0.72); }
+.sc-policy { background: rgba(255, 190, 61, 0.66); }
+.sc-offence { background: rgba(160, 120, 255, 0.66); }
+.sc-ok { background: rgba(47, 214, 127, 0.28); box-shadow: inset 0 0 0 1px rgba(47, 214, 127, 0.75); }
+.seg:hover { z-index: 40; box-shadow: 0 0 0 1px var(--ink); }
+.segcard {
+  display: none;
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 0;
+  width: 320px;
+  background: var(--panel);
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  padding: 12px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
+  cursor: default;
+}
+.segcard.flip { left: auto; right: 0; }
+.seg:hover .segcard { display: block; }
+.segcard img { display: block; width: 100%; border: 1px solid var(--line); border-radius: 2px; margin-bottom: 10px; }
+.segcard-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.segcard-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.segcard-why { display: block; margin-top: 8px; color: var(--ink-2); font-size: 12.5px; line-height: 1.45; }
+.tl-legend { display: flex; gap: 20px; margin-top: 18px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-3); }
+.tl-legend span { display: inline-flex; align-items: center; gap: 7px; }
+.tl-legend .sw { width: 14px; height: 8px; border-radius: 2px; display: inline-block; }
+html[data-theme="studio"] .segcard { box-shadow: 0 16px 40px rgba(23, 34, 44, 0.25); }
+
+@media (max-width: 900px) {
+  .tl-row { grid-template-columns: 64px 1fr; gap: 8px; }
+  .segcard { width: 260px; }
+}
+
+/* ---------- SPECTRUM ----------
+   The fourth house style: pure black, and the four Google brand colours
+   doing exactly the job they already mean in this product. Blue is the
+   signal (every accent, every focus ring), green is cleared, yellow is at
+   risk, red is blocked. Nothing is decorative: the palette IS the state
+   machine, which is why this mode reads instantly across a room. */
+
+html[data-theme="spectrum"] {
+  --ground:   #000000;
+  --ground-2: #070708;
+  --panel:    #0c0d0f;
+  --well:     #050506;
+  --line:     #191b1f;
+  --line-2:   #2b2f36;
+  --ink:      #ffffff;
+  --ink-2:    #b8bfc9;
+  --ink-3:    #767f8c;
+  --signal:   #4285f4;
+  --signal-d: #1a63d8;
+
+  --cleared:  #34a853;
+  --at_risk:  #fbbc05;
+  --blocked:  #ea4335;
+  --error:    #8b94a1;
+  --pending:  #3a4049;
+}
+html[data-theme="spectrum"] body {
+  background:
+    radial-gradient(760px 360px at 82% -12%, rgba(66, 133, 244, 0.10), transparent 68%),
+    radial-gradient(620px 320px at 6% 2%, rgba(52, 168, 83, 0.06), transparent 64%),
+    var(--ground);
+}
+html[data-theme="spectrum"] .topbar { background: rgba(0, 0, 0, 0.88); }
+html[data-theme="spectrum"] .brand-mark {
+  background: var(--signal);
+  box-shadow: 0 0 16px rgba(66, 133, 244, 0.6);
+}
+html[data-theme="spectrum"] .theme-switch .tbtn.on { background: rgba(66, 133, 244, 0.18); }
+html[data-theme="spectrum"] .btn.go { color: #ffffff; background: var(--signal); border-color: var(--signal); }
+html[data-theme="spectrum"] .btn.go:hover { background: #5a95f6; }
+html[data-theme="spectrum"] .chip.legal   { color: #ff8a80; border-color: rgba(234, 67, 53, 0.38); background: rgba(234, 67, 53, 0.10); }
+html[data-theme="spectrum"] .chip.policy  { color: var(--at_risk); border-color: rgba(251, 188, 5, 0.38); background: rgba(251, 188, 5, 0.10); }
+html[data-theme="spectrum"] .chip.offence { color: #a8c7fa; border-color: rgba(66, 133, 244, 0.42); background: rgba(66, 133, 244, 0.12); }
+html[data-theme="spectrum"] .chip.method  { color: var(--signal); border-color: rgba(66, 133, 244, 0.4); background: rgba(66, 133, 244, 0.10); }
+html[data-theme="spectrum"] .guard {
+  border-color: rgba(66, 133, 244, 0.45);
+  border-left-color: var(--signal);
+  background: linear-gradient(180deg, rgba(66, 133, 244, 0.12), rgba(66, 133, 244, 0.03) 55%);
+}
+html[data-theme="spectrum"] .guard-item { border-top-color: rgba(66, 133, 244, 0.24); }
+html[data-theme="spectrum"] .guard-item .reason,
+html[data-theme="spectrum"] .guard h2 .ic,
+html[data-theme="spectrum"] .tile-stats .ic-human { color: #a8c7fa; }
+html[data-theme="spectrum"] .a-pipeline      { color: #8b94a1 !important; }
+html[data-theme="spectrum"] .a-ingest        { color: var(--signal) !important; }
+html[data-theme="spectrum"] .a-transcription { color: #7fd0a3 !important; }
+html[data-theme="spectrum"] .a-analyst       { color: #a8c7fa !important; }
+html[data-theme="spectrum"] .a-adjudicator   { color: var(--at_risk) !important; }
+html[data-theme="spectrum"] .a-guard         { color: var(--signal) !important; }
+html[data-theme="spectrum"] .a-publisher     { color: var(--cleared) !important; }
+html[data-theme="spectrum"] .a-remediator    { color: var(--blocked) !important; }
+html[data-theme="spectrum"] .a-verifier      { color: var(--cleared) !important; }
+html[data-theme="spectrum"] .sc-legal   { background: rgba(234, 67, 53, 0.78); }
+html[data-theme="spectrum"] .sc-policy  { background: rgba(251, 188, 5, 0.72); }
+html[data-theme="spectrum"] .sc-offence { background: rgba(66, 133, 244, 0.72); }
+html[data-theme="spectrum"] .sc-ok      { background: rgba(52, 168, 83, 0.30); box-shadow: inset 0 0 0 1px rgba(52, 168, 83, 0.8); }
+/* The mark itself goes four-colour in this mode: the same quartered diamond
+   as docs/logo-spectrum.svg, drawn with a conic gradient so it stays one
+   11px element with no extra markup. */
+html[data-theme="spectrum"] .brand-mark {
+  background: conic-gradient(#4285f4 0 25%, #ea4335 0 50%, #fbbc05 0 75%, #34a853 0);
+}
+
+/* ---------- findings: detail and list ----------
+   One table, two densities. List keeps every column and the evidence
+   thumbnail (shrunk, inline) and drops the prose, so a market with fifteen
+   findings is one screen instead of five. */
+
+.view-switch { display: inline-flex; border: 1px solid var(--line-2); border-radius: var(--radius); overflow: hidden; }
+.view-switch .tbtn { font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em; text-transform: uppercase; padding: 5px 10px; border: none; background: transparent; color: var(--ink-3); cursor: pointer; }
+.view-switch .tbtn + .tbtn { border-left: 1px solid var(--line-2); }
+.view-switch .tbtn:hover { color: var(--ink); }
+.view-switch .tbtn.on { color: var(--ink); background: rgba(255, 157, 46, 0.12); }
+html[data-theme="studio"] .view-switch .tbtn.on { background: rgba(216, 111, 0, 0.12); }
+html[data-theme="spectrum"] .view-switch .tbtn.on { background: rgba(66, 133, 244, 0.18); }
+
+.as-list table.grid td { padding: 9px 14px; vertical-align: middle; }
+.as-list .rationale,
+.as-list td > div[style*="margin-top:8px"],
+.as-list .mono[style*="margin-top:8px"] { display: none; }
+.as-list .evidence {
+  display: inline-block;
+  width: 54px;
+  margin: 0 0 0 12px;
+  vertical-align: middle;
+}
+.as-list .evidence .label { display: none; }
+.as-list .rule-id { display: inline-block; vertical-align: middle; }

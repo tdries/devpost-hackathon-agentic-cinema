@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Timeline {{ run.id }}{% endblock %}
+{% block topbar_right %}<a href="/runs/{{ run.id }}">Launch board</a>{% endblock %}
+{% block nav %}{% include "_runnav.html" %}{% endblock %}
+{% block main %}
+
+<section class="hero" style="padding-bottom:22px">
+  <div class="rule-row"><span class="label">Timeline</span></div>
+  <h1 class="headline" style="font-size:clamp(26px,3.4vw,38px)">Where it goes wrong, second by second.</h1>
+  <p class="subline">One lane per market on the commercial's own clock. Hover a segment for the triggering frame and the infraction behind it; click through for the market room. Green segments were violations the crew fixed and the verifier confirmed.</p>
+</section>
+
+<section style="border-top:none;padding-top:0">
+  <div class="tl">
+    <div class="tl-row">
+      <span></span>
+      <div class="tl-ruler">
+        {% for tick in ticks %}
+        <span class="tick" style="left:{{ tick.left }}%"><i></i>{{ tick.t | timecode }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% for lane in lanes %}
+    <div class="tl-row" data-lane="{{ lane.market }}">
+      <span class="tl-label">
+        <a class="mono" href="/runs/{{ run.id }}/markets/{{ lane.market }}">{{ lane.market }}</a>
+        <svg class="ic s-{{ lane.tile }}" style="color:var(--{{ 'pending' if lane.tile == 'pending' else lane.tile }})"><use href="#i-{{ lane.tile.replace('_', '-') }}"/></svg>
+      </span>
+      <div class="tl-track">
+        {% for seg in lane.segs %}
+        {% set finding = seg.finding %}
+        {% set sc = 'ok' if finding.status == 'resolved' else finding.klass %}
+        <a class="seg sc-{{ sc }}" style="left:{{ seg.left }}%;width:{{ seg.width }}%" href="/runs/{{ run.id }}/markets/{{ lane.market }}">
+          <span class="segcard{{ ' flip' if seg.flip }}">
+            {% if seg.frame %}<img src="/runs/{{ run.id }}/evidence/{{ finding.observation_id }}" alt="Frame that triggered {{ finding.rule_id }}" loading="lazy">{% endif %}
+            <span class="segcard-head">
+              <span class="rule-id">{{ finding.rule_id }}</span>
+              <span class="mono" style="font-size:11px;color:var(--ink-3)">{{ finding.t_start | timecode }} to {{ finding.t_end | timecode }}</span>
+            </span>
+            <span class="segcard-chips">
+              <span class="chip {{ finding.klass }}"><svg class="ic"><use href="#i-{{ finding.klass }}"/></svg>{{ finding.klass }}</span>
+              <span class="chip">severity {{ finding.severity }}</span>
+              {% if finding.status == 'resolved' %}<span class="chip sourced"><svg class="ic"><use href="#i-cleared"/></svg>verified fixed</span>
+              {% elif finding.remediation_blocked %}<span class="chip offence"><svg class="ic"><use href="#i-human"/></svg>needs a human</span>{% endif %}
+            </span>
+            <span class="segcard-why">{{ finding.rationale }}</span>
+          </span>
+        </a>
+        {% endfor %}
+        {% if not lane.segs %}<span class="tl-clean label">nothing triggered</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="tl-legend">
+    <span><i class="sw sc-legal"></i>legal</span>
+    <span><i class="sw sc-policy"></i>policy</span>
+    <span><i class="sw sc-offence"></i>offence</span>
+    <span><i class="sw sc-ok"></i>fixed and verified</span>
+  </div>
+</section>
+
+{% endblock %}

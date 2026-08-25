@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="640" viewBox="0 0 640 640" role="img" aria-label="Customs Launch Control">
+  <rect width="640" height="640" rx="48" fill="#000000"/>
+  <!-- The customs diamond, quartered: one brand colour per clearance state.
+       Green cleared, yellow at risk, red blocked, blue the signal. Read
+       clockwise from the top, it is the product's own state machine. -->
+  <g transform="rotate(45 320 210)">
+    <rect x="240" y="130" width="80" height="80" fill="#4285F4"/>
+    <rect x="320" y="130" width="80" height="80" fill="#EA4335"/>
+    <rect x="240" y="210" width="80" height="80" fill="#34A853"/>
+    <rect x="320" y="210" width="80" height="80" fill="#FBBC05"/>
+    <rect x="280" y="170" width="80" height="80" fill="#000000"/>
+  </g>
+  <text x="320" y="452" text-anchor="middle" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="64" font-weight="700" letter-spacing="26" fill="#ffffff">CUSTOMS</text>
+  <text x="320" y="512" text-anchor="middle" font-family="ui-monospace, 'SF Mono', Menlo, Consolas, monospace" font-size="22" font-weight="500" letter-spacing="12" fill="#767f8c">LAUNCH CONTROL</text>
+</svg>

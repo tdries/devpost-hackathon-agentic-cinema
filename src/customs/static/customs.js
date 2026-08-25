@@ -270,3 +270,37 @@
 
     mark();
   })();
+
+  /* ---------- 6. the findings view switch ----------
+     Detail (the default) is the full row: rationale, citation, evidence
+     frame. List is the scannable one: same rows, same thumbnails, minus the
+     prose. The choice is per browser, like the style mode. */
+
+  (function () {
+    var KEY = "customs-findings-view";
+    var panel = document.getElementById("findings");
+    var buttons = document.querySelectorAll(".view-switch [data-set-view]");
+    if (!panel || !buttons.length) { return; }
+
+    var apply = function (view) {
+      panel.classList.toggle("as-list", view === "list");
+      buttons.forEach(function (b) {
+        b.classList.toggle("on", b.getAttribute("data-set-view") === view);
+      });
+    };
+
+    var saved = "";
+    try { saved = localStorage.getItem(KEY) || ""; } catch (e) { /* private mode */ }
+    apply(saved);
+
+    buttons.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var view = b.getAttribute("data-set-view");
+        try {
+          if (view) { localStorage.setItem(KEY, view); }
+          else { localStorage.removeItem(KEY); }
+        } catch (e) { /* private mode: the choice just does not persist */ }
+        apply(view);
+      });
+    });
+  })();
