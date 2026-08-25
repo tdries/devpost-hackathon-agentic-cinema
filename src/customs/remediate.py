@@ -339,15 +339,35 @@ def _refuse_if_blocked(finding: Finding) -> None:
 
 # --- model seams (faked wholesale in tests) ---
 
-def _edit_image(instruction: str, image_bytes: bytes, mime_type: str = "image/png") -> bytes:
+def _edit_image(instruction: str, image_bytes: bytes, mime_type: str = "image/png",
+                reference: bytes | None = None) -> bytes:
     """One image edit: the frame in, the edited frame out.
 
     Gemini-native editing (see the module docstring on Imagen): the frame is
     an input Part next to the instruction, and the response carries the
     edited frame as an inline_data part. Any text part the model also returns
     is ignored; only pixels matter here.
+
+    `reference` is a frame from the same shot that has already been edited.
+    A bridge edits two anchors, and editing them independently gives two
+    different answers to the same question -- a taller glass, a darker tea,
+    a different fill -- which Veo then has to morph between across the span.
+    Handing the second edit the first one's result is what keeps them the
+    same object. The parts are labelled because two bare images in one
+    request is an invitation to edit the wrong one.
     """
-    parts = [instruction, types.Part.from_bytes(data=image_bytes, mime_type=mime_type)]
+    parts: list = [instruction]
+    if reference is not None:
+        parts += [
+            "REFERENCE. This frame is from the same shot and has already been "
+            "corrected. Whatever replacement it shows, reproduce that exact "
+            "object: same kind, same colour, same material, same fill level, "
+            "same proportions. Do not edit this image.",
+            types.Part.from_bytes(data=reference, mime_type=mime_type),
+            "THE FRAME TO EDIT. Apply the instruction to this image only, and "
+            "return this image edited.",
+        ]
+    parts += [types.Part.from_bytes(data=image_bytes, mime_type=mime_type)]
     response = client().models.generate_content(
         model=settings.model_image,
         contents=parts,
@@ -475,12 +495,21 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
     subject = replacement or _DEFAULT_REPLACEMENT["prop_swap"].format(market_name=market_name)
     instruction = _EDIT_INSTRUCTIONS["prop_swap"].format(replacement=subject)
 
+    # The tail is edited against the head's result, not on its own. Two
+    # independent edits answer the same question twice and rarely identically,
+    # and Veo spends the span morphing one answer into the other -- which
+    # looks exactly like the artefact it is. Chained, both ends hold the same
+    # object and Veo only has to move it.
     anchors = []
+    first_edit: bytes | None = None
     for tag, when in (("head", finding.t_start), ("tail", max(finding.t_start, finding.t_end - 0.08))):
         span = Shot(shot_id=f"bridge_{tag}", t_start=when, t_end=when + 0.04)
         raw = media.extract_keyframes(base, span, workdir / "bridge", per_shot=1)[0]
+        edited_bytes = _edit_image(instruction, raw.read_bytes(), reference=first_edit)
+        if first_edit is None:
+            first_edit = edited_bytes
         edited_raw = workdir / f"bridge_{tag}_edited_raw.png"
-        edited_raw.write_bytes(_edit_image(instruction, raw.read_bytes()))
+        edited_raw.write_bytes(edited_bytes)
         anchors.append(media.fit_image(edited_raw, base, workdir / f"bridge_{tag}.png"))
 
     seconds = costs.bridge_seconds(finding.t_end - finding.t_start)
