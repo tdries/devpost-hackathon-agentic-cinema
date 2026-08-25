@@ -188,11 +188,23 @@ def view_url(view: str, run_id: str = "", market: str = "") -> tuple[str, str]:
 
 # --- a dashboard nobody wrote in advance ---------------------------------
 
+# What telemetry actually labels a finding with (see telemetry.push_finding):
+# app, asset, market, klass, rule_id. Everything else -- dimension, severity,
+# scope -- rides inside the JSON line, so grouping by it needs the line
+# parsed first. Getting this wrong is invisible: Loki answers a query for a
+# label nobody writes with no rows and no error, which is what "No data"
+# was.
+_STREAM_LABELS = {"market", "klass", "rule_id", "asset", "dimension"}
 _GROUPINGS = {
     "dimension": "dimension",
     "market": "market",
-    "class": "class",
+    "class": "klass",
+    "klass": "klass",
     "rule": "rule_id",
+    "rule_id": "rule_id",
+    "asset": "asset",
+    "severity": "severity",
+    "scope": "scope",
 }
 
 
@@ -206,7 +218,10 @@ def dashboard_spec(title: str, run_id: str, group_by: str) -> dict:
     the findings themselves.
     """
     label = _GROUPINGS.get(group_by, "dimension")
-    stream = '{job="customs"}' + (f' | run_id="{run_id}"' if run_id else "")
+    stream = '{app="customs"}'
+    # a JSON line parse is what makes the non-label fields groupable
+    parsed = stream if label in _STREAM_LABELS else f"{stream} | json"
+    counted = f"sum by ({label}) (count_over_time({parsed} [$__range]))"
     uid = f"customs-adhoc-{label}-{int(time.time())}"[:40]
     return {
         "uid": uid,
@@ -218,10 +233,7 @@ def dashboard_spec(title: str, run_id: str, group_by: str) -> dict:
                 "type": "barchart", "title": f"Findings by {label}",
                 "gridPos": {"h": 10, "w": 12, "x": 0, "y": 0},
                 "datasource": {"type": "loki", "uid": "grafanacloud-logs"},
-                "targets": [{
-                    "expr": f"sum by ({label}) (count_over_time({stream} [24h]))",
-                    "queryType": "instant", "refId": "A",
-                }],
+                "targets": [{"expr": counted, "queryType": "instant", "refId": "A"}],
                 "fieldConfig": {"defaults": {"color": {"mode": "fixed",
                                                        "fixedColor": "#4285F4"}}},
             },
@@ -229,10 +241,7 @@ def dashboard_spec(title: str, run_id: str, group_by: str) -> dict:
                 "type": "piechart", "title": f"Share by {label}",
                 "gridPos": {"h": 10, "w": 12, "x": 12, "y": 0},
                 "datasource": {"type": "loki", "uid": "grafanacloud-logs"},
-                "targets": [{
-                    "expr": f"sum by ({label}) (count_over_time({stream} [24h]))",
-                    "queryType": "instant", "refId": "A",
-                }],
+                "targets": [{"expr": counted, "queryType": "instant", "refId": "A"}],
             },
             {
                 "type": "logs", "title": "The findings themselves",

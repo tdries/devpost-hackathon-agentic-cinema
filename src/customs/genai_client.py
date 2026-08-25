@@ -17,8 +17,15 @@ def _generate(model, contents, config):
     return client().models.generate_content(model=model, contents=contents, config=config)
 
 def generate_json(model: str, parts: list, schema: dict) -> dict:
+    # temperature=0: a clearance verdict has to be reproducible. At the
+    # default sampling temperature the judge gave two near-identical modesty
+    # observations opposite verdicts in one run (shot_5 triggered ID-MOD-01,
+    # shot_6 did not), which reads as the system being arbitrary rather than
+    # strict. Greedy decoding does not make a subjective rule objective, but
+    # it does mean the same film gets the same answer twice.
     cfg = types.GenerateContentConfig(
-        response_mime_type="application/json", response_schema=schema)
+        response_mime_type="application/json", response_schema=schema,
+        temperature=0.0)
     r = _generate(model, parts, cfg)
     try:
         return json.loads(r.text)
