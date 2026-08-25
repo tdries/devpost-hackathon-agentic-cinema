@@ -29,6 +29,7 @@ import os
 import shutil
 import sqlite3
 import threading
+import time
 from pathlib import Path
 
 # The run's scratch tree is not worth mirroring -- extracted audio is large
@@ -105,17 +106,60 @@ def _snapshot_db(live: Path, dst: Path) -> bool:
         tmp.unlink(missing_ok=True)
 
 
-def _restore_db(src: Path, live: Path) -> bool:
+# The mount is shared, so the object under an open read handle can be
+# replaced while we are copying it: during a rollout the outgoing revision
+# snapshots while the incoming one restores. GCS FUSE surfaces that as
+# ESTALE mid-copy ("stale file handle... modified or deleted by another
+# process"). It happened on 2026-08-25 and cost a revision every one of its
+# runs, silently, because the failure was swallowed and an empty store is
+# indistinguishable from a first boot.
+_RESTORE_TRIES = 4
+_RESTORE_PAUSE_S = 1.5
+
+
+def _usable(db: Path) -> bool:
+    """Is this file actually a store, or the first half of one?
+
+    A copy interrupted partway leaves a plausible-looking file that SQLite
+    may open and report as empty, which is the worst possible outcome: the
+    service comes up healthy and says there are no runs. Reading the table
+    back is the only honest check.
+    """
+    try:
+        with sqlite3.connect(f"file:{db}?mode=ro", uri=True) as conn:
+            conn.execute("SELECT count(*) FROM runs").fetchone()
+        return True
+    except sqlite3.Error:
+        return False
+
+
+def _restore_db(src: Path, live: Path, on_note=None) -> bool:
     """Copy the bucket's store in. Plain bytes: the source is a finished
-    snapshot, and SQLite must never be opened over the mount."""
+    snapshot, and SQLite must never be opened over the mount.
+
+    Retried, because the copy can fail transiently, and verified, because it
+    can also *succeed* into a truncated file. A restore that cannot be
+    verified leaves nothing behind: a partial store on disk would look like
+    a live one to restore()'s own "kept local store" check and never be
+    retried on the next boot.
+    """
     if not src.is_file():
         return False
-    try:
-        live.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, live)
-        return True
-    except OSError:
-        return False
+    for attempt in range(1, _RESTORE_TRIES + 1):
+        try:
+            live.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, live)
+            if _usable(live):
+                return True
+            reason = "copied file did not read back as a store"
+        except OSError as exc:
+            reason = f"{type(exc).__name__}: {exc}"
+        live.unlink(missing_ok=True)
+        if on_note is not None:
+            on_note(f"restore attempt {attempt}/{_RESTORE_TRIES} failed: {reason}")
+        if attempt < _RESTORE_TRIES:
+            time.sleep(_RESTORE_PAUSE_S)
+    return False
 
 
 def restore(db_path) -> str:
@@ -136,8 +180,14 @@ def restore(db_path) -> str:
         files = _mirror_files(state, runs)
         if local_db.exists() and local_db.stat().st_size > 0:
             return f"kept local store, merged {files} artifact(s)"
-        ok = _restore_db(state / local_db.name, local_db)
-        return f"restored store={ok} artifacts={files}"
+        notes: list[str] = []
+        ok = _restore_db(state / local_db.name, local_db, on_note=notes.append)
+        detail = f"restored store={ok} artifacts={files}"
+        if notes:
+            # Loud on purpose. This used to fail silently and the service
+            # came up looking healthy with an empty board.
+            detail += " | " + "; ".join(notes)
+        return detail
 
 
 def snapshot(db_path) -> str:
