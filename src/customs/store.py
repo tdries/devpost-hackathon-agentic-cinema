@@ -338,6 +338,19 @@ class Store:
         return None
 
     @_locked
+    def latest_event(self, run_id: str) -> tuple | None:
+        """The newest event for this run, for the board's progress ticker.
+
+        A LIMIT 1 rather than reading the whole feed and taking the tail: the
+        board polls this every two seconds for the length of a run, and a
+        long run has hundreds of events.
+        """
+        row = self._conn.execute(
+            "SELECT id, agent, message FROM events WHERE run_id = ? "
+            "ORDER BY id DESC LIMIT 1", (run_id,)).fetchone()
+        return tuple(row) if row else None
+
+    @_locked
     def add_change(self, change: ChangeRecord) -> None:
         self._conn.execute(
             "INSERT INTO changes (id, run_id, data) VALUES (?, ?, ?)",
