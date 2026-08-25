@@ -44,6 +44,11 @@
         <span class="pill s-{{ tile.state }}" data-role="state"><svg class="ic"><use href="#i-{{ tile.state.replace('_', '-') }}"/></svg>{{ tile.state.replace('_', ' ') if tile.state != 'error' else 'not evaluated' }}</span>
       </span>
       <span class="tile-name">{{ tile.pack.name if tile.pack else tile.market }}</span>
+      {% if tile.pack and tile.pack.level == 'channel' %}
+      <span class="chan-mark" aria-hidden="true">{{ (tile.pack.name.split(' (')[0])[:6] }}</span>
+      {% else %}
+      <svg class="outline" aria-hidden="true"><use href="#c-{{ tile.market }}"/></svg>
+      {% endif %}
       <span class="tile-stats">
         <span><b data-role="findings">{{ tile.findings }}</b> findings</span>
         <span><svg class="ic ic-human"><use href="#i-human"/></svg><b data-role="blocked">{{ tile.blocked }}</b> need a human</span>

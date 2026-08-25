@@ -133,17 +133,17 @@
               "options": {
                 "0": {
                   "text": "CLEARED",
-                  "color": "green",
+                  "color": "#34A853",
                   "index": 0
                 },
                 "1": {
                   "text": "AT RISK",
-                  "color": "yellow",
+                  "color": "#FBBC05",
                   "index": 1
                 },
                 "2": {
                   "text": "BLOCKED",
-                  "color": "red",
+                  "color": "#EA4335",
                   "index": 2
                 }
               }
@@ -153,15 +153,15 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#34A853",
                 "value": null
               },
               {
-                "color": "yellow",
+                "color": "#FBBC05",
                 "value": 1
               },
               {
-                "color": "red",
+                "color": "#EA4335",
                 "value": 2
               }
             ]
@@ -235,11 +235,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#34A853",
                 "value": null
               },
               {
-                "color": "red",
+                "color": "#EA4335",
                 "value": 1
               }
             ]
@@ -307,11 +307,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "yellow",
+                "color": "#FBBC05",
                 "value": null
               },
               {
-                "color": "green",
+                "color": "#34A853",
                 "value": 1
               }
             ]
@@ -378,11 +378,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#34A853",
                 "value": null
               },
               {
-                "color": "red",
+                "color": "#EA4335",
                 "value": 1
               }
             ]
@@ -449,11 +449,11 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#34A853",
                 "value": null
               },
               {
-                "color": "orange",
+                "color": "#FBBC05",
                 "value": 1
               }
             ]

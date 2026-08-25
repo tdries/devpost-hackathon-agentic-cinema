@@ -165,19 +165,19 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#34A853",
                 "value": null
               },
               {
-                "color": "yellow",
+                "color": "#FBBC05",
                 "value": 40
               },
               {
-                "color": "orange",
+                "color": "#FBBC05",
                 "value": 60
               },
               {
-                "color": "red",
+                "color": "#EA4335",
                 "value": 70
               }
             ]
@@ -259,19 +259,19 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#34A853",
                 "value": null
               },
               {
-                "color": "yellow",
+                "color": "#FBBC05",
                 "value": 40
               },
               {
-                "color": "orange",
+                "color": "#FBBC05",
                 "value": 60
               },
               {
-                "color": "red",
+                "color": "#EA4335",
                 "value": 70
               }
             ]
@@ -330,7 +330,8 @@
       "fieldConfig": {
         "defaults": {
           "color": {
-            "mode": "palette-classic"
+            "mode": "fixed",
+            "fixedColor": "#4285F4"
           },
           "custom": {
             "axisBorderShow": false,
@@ -370,19 +371,19 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#34A853",
                 "value": null
               },
               {
-                "color": "yellow",
+                "color": "#FBBC05",
                 "value": 40
               },
               {
-                "color": "orange",
+                "color": "#FBBC05",
                 "value": 60
               },
               {
-                "color": "red",
+                "color": "#EA4335",
                 "value": 70
               }
             ]
