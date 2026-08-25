@@ -877,18 +877,34 @@ def test_a_finding_without_a_live_frame_shows_no_thumbnail_and_404s(client):
 
 # -- style modes --
 
-def test_every_page_offers_the_three_style_modes(client):
-    """The console ships three style modes: mission (default), studio and
-    screening. The switcher is in the top bar on every page, and the choice
-    is applied before first paint so a saved mode never flashes."""
+def test_every_page_offers_both_style_modes(client):
+    """The console ships two style modes: mission (default) and studio.
+
+    It shipped four. Screening and Spectrum were removed: nobody switched
+    between four house styles, and each one was another place every new
+    colour had to be defined or silently go missing.
+    """
     test_client, _, run, _ = client
     for path in ("/", f"/runs/{run.id}"):
         page = test_client.get(path)
         assert page.status_code == 200
+        assert 'data-set-theme=""' in page.text      # mission
         assert 'data-set-theme="studio"' in page.text
-        assert 'data-set-theme="screening"' in page.text
-        assert 'data-set-theme="spectrum"' in page.text
+        assert 'data-set-theme="screening"' not in page.text
+        assert 'data-set-theme="spectrum"' not in page.text
+        # applied before first paint, so a saved mode never flashes
         assert "customs-theme" in page.text
+
+
+def test_a_browser_holding_a_deleted_mode_falls_back_to_mission(client):
+    """A stored "spectrum" would otherwise set data-theme with no CSS behind
+    it, leaving that browser on a half-styled page nothing could undo: the
+    button that cleared it is gone. The boot script drops anything but
+    studio instead of trusting what it reads."""
+    test_client, _, _run, _ = client
+    head = test_client.get("/").text.split("</head>")[0]
+    assert 'localStorage.removeItem("customs-theme")' in head
+    assert '_t === "studio"' in head
 
 
 # -- the youtube way in --
