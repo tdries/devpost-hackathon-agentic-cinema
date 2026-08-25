@@ -63,6 +63,52 @@ def sparkline(points: list[tuple[float, float]], *, width: int = 260,
     )
 
 
+def statcard(points: list[tuple[float, float]], *, value: str, label: str,
+             colour: str | None = None, width: int = 260, height: int = 76) -> str:
+    """A Grafana stat panel, drawn here: the number, with its trend behind it.
+
+    The first version of this was a bare 30px line, and on a cleared
+    market every sample is zero -- so the path sat flush on the bottom
+    border with half its stroke clipped outside the viewBox, and the tile
+    looked empty. Most of a board is cleared, so most tiles showed
+    nothing at all.
+
+    A stat panel does not have that failure mode, because the NUMBER
+    carries the panel and the sparkline is context behind it. A market
+    with no findings reads "0" against a flat baseline, which is a
+    result rather than a blank.
+    """
+    peak = max((v for _, v in points), default=0.0)
+    colour = colour or colour_for_severity(peak)
+    ident = f"sc{abs(hash((value, label, round(peak, 2)))) % 100000}"
+    body = [
+        f'<svg class="statcard" viewBox="0 0 {width} {height}" '
+        f'preserveAspectRatio="none" aria-hidden="true">',
+        f'<defs><linearGradient id="{ident}" x1="0" x2="0" y1="0" y2="1">'
+        f'<stop offset="0" stop-color="{colour}" stop-opacity=".22"/>'
+        f'<stop offset="1" stop-color="{colour}" stop-opacity="0"/></linearGradient></defs>',
+    ]
+    if points:
+        # the trend occupies the lower two thirds, inset by the stroke so a
+        # flat zero line is drawn ON the floor rather than through it
+        top, floor_y = height * 0.34, height - 3.0
+        line, area = _path(points, width, floor_y - top, 0.0, max(100.0, peak))
+        shift = f'transform="translate(0,{top:.2f})"'
+        body.append(f'<path d="{area}" fill="url(#{ident})" {shift}/>')
+        body.append(f'<path d="{line}" fill="none" stroke="{colour}" stroke-width="2" '
+                    f'vector-effect="non-scaling-stroke" stroke-linejoin="round" {shift}/>')
+        body.append(f'<line x1="0" y1="{floor_y:.2f}" x2="{width}" y2="{floor_y:.2f}" '
+                    f'stroke="{colour}" stroke-opacity=".28" stroke-width="1" '
+                    f'vector-effect="non-scaling-stroke"/>')
+    body.append(f'<text x="10" y="{height * 0.42:.0f}" font-family="Helvetica Neue,Helvetica,Arial" '
+                f'font-size="{height * 0.42:.0f}" font-weight="700" fill="{colour}">{value}</text>')
+    body.append(f'<text x="{10 + len(value) * height * 0.26:.0f}" y="{height * 0.42:.0f}" '
+                f'font-family="ui-monospace,Menlo,monospace" font-size="{height * 0.145:.0f}" '
+                f'letter-spacing="1.6" fill="{colour}" fill-opacity=".72">{label}</text>')
+    body.append("</svg>")
+    return "".join(body)
+
+
 def bars(values: list[tuple[str, float]], *, width: int = 260, height: int = 40,
          palette: dict[str, str] | None = None) -> str:
     """A tiny categorical bar row: dimensions, markets, whatever is counted."""

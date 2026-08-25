@@ -1522,3 +1522,34 @@ def test_finding_queries_cannot_be_inflated_by_observation_lines():
     expr = spec["panels"][0]["targets"][0]["expr"]
     assert 'kind!="observation"' in expr, "the ad-hoc builder must scope too"
     assert 'kind="finding"' not in expr, "that selector misses all of the history"
+
+
+def test_a_cleared_market_still_shows_something(client):
+    """The first version drew nothing on most of the board.
+
+    A bare sparkline of an all-zero series puts every point at the floor
+    of the viewBox, so the path sat ON the bottom border with half its
+    stroke clipped outside it. Cleared markets are most of a board, so
+    most tiles looked empty -- which is what they looked like.
+
+    A stat card cannot fail that way: the NUMBER carries it and the trend
+    is context behind. "0 findings" is a result; a blank tile is a bug.
+    """
+    import re
+    from customs import spark, state
+    flat = [(i, 0.0) for i in range(20)]
+    svg = spark.statcard(flat, value="0", label="FINDINGS",
+                         colour=state.CLEARED, width=260, height=76)
+    assert ">0</text>" in svg and "FINDINGS" in svg, "the number must be drawn"
+    ys = [float(y) for _, y in re.findall(r"[ML](\d+\.\d+),(\d+\.\d+)", svg)]
+    shift = float(re.search(r"translate\(0,([\d.]+)\)", svg).group(1))
+    assert max(ys) + shift <= 76 - 2, "the flat line must clear the bottom edge"
+    assert state.CLEARED in svg
+
+    # and a market with findings reads differently, in its own colour
+    hot = [(i, 0.0 if i < 6 else 85.0) for i in range(20)]
+    loud = spark.statcard(hot, value="85", label="PEAK SEVERITY",
+                          colour=state.BLOCKED, width=260, height=76)
+    assert state.BLOCKED in loud and ">85</text>" in loud
+    hot_ys = [float(y) for _, y in re.findall(r"[ML](\d+\.\d+),(\d+\.\d+)", loud)]
+    assert max(hot_ys) - min(hot_ys) > 20, "a real profile must actually move"
