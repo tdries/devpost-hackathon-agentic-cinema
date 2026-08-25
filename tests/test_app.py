@@ -1251,3 +1251,36 @@ def test_the_generated_seconds_are_downloadable(client, tmp_path):
         f"/runs/{run.id}/changes/chg_ffffff/generated.mp4").status_code == 404
     assert test_client.get(
         f"/runs/{run.id}/changes/not-an-id/generated.mp4").status_code == 404
+
+
+def test_the_board_ticker_carries_the_newest_thing_an_agent_said(console):
+    """Under the bar, what is happening right now.
+
+    The percentage barely moves while the analyst reads one shot, so the bar
+    alone reads as a hang. The ticker is what says the run is alive.
+    """
+    client, store, _launched, _jobs = console
+    run = store.create_run(asset_path="/x/ad.mp4", markets=["FR"])
+    store.emit(run.id, "ingest", "watching the film end to end, hunting for the cuts")
+    store.emit(run.id, "analyst", "reading shot_3 the way a regulator would")
+
+    body = client.get(f"/runs/{run.id}/status").json()
+    assert body["ticker"]["agent"] == "analyst"
+    assert body["ticker"]["message"] == "reading shot_3 the way a regulator would"
+
+    # the id is what the page compares against, so it must move with the feed
+    first = body["ticker"]["id"]
+    store.emit(run.id, "adjudicator", "FR clearance -> blocked")
+    assert client.get(f"/runs/{run.id}/status").json()["ticker"]["id"] > first
+
+    # a run nobody has said anything about tickers nothing, rather than 500ing
+    quiet = store.create_run(asset_path="/x/b.mp4", markets=["FR"])
+    assert client.get(f"/runs/{quiet.id}/status").json()["ticker"] is None
+
+
+def test_agent_messages_are_escaped_before_they_reach_the_ticker(client):
+    """Event text is model-written and carries file paths. It is data."""
+    test_client, _, _run, _ = client
+    js = test_client.get("/static/customs.js").text
+    assert "escapeHtml(data.ticker.message)" in js
+    assert "d.textContent = text" in js  # escapeHtml goes through textContent

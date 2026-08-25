@@ -166,11 +166,21 @@ class IngestAgent(_Stage):
     at all). Each shot's transcription is its own retry-wrapped unit.
     """
     async def _run_async_impl(self, ctx: InvocationContext) -> AsyncGenerator[Event, None]:
+        # The board's ticker reads the newest event, and shot detection is a
+        # single ffmpeg pass with nothing to say for most of a minute. These
+        # lines exist so the page is visibly alive while it runs: they are
+        # about the work, not decoration.
         self.emit("pipeline", "ingest -> detecting shots")
+        self.emit("ingest", "watching the film end to end, hunting for the cuts")
         raw_shots, shots, duration = await asyncio.to_thread(self._detect)
         self.state.shots = shots
         self.state.duration = duration
+        merged = len(raw_shots) - len(shots)
+        self.emit("ingest", f"found {len(raw_shots)} cut(s) in {duration:.1f}s of film")
+        if merged > 0:
+            self.emit("ingest", f"{merged} of them lasted a blink; folded into their neighbours")
         self.emit("pipeline", f"ingest -> {len(raw_shots)} raw shot(s) merged to {len(shots)}")
+        self.emit("ingest", f"{len(shots)} shot(s) to read, one at a time, no skimming")
 
         await asyncio.to_thread(self._transcribe_all)
         await asyncio.to_thread(self._detect_flashes)
@@ -210,7 +220,11 @@ class IngestAgent(_Stage):
             self.emit("ingest", f"flash detector -> {obs.statement}")
 
     def _transcribe_all(self) -> None:
-        for shot in self.state.shots:
+        total = len(self.state.shots)
+        for n, shot in enumerate(self.state.shots, 1):
+            self.emit("transcription",
+                      f"listening to {shot.shot_id} ({n}/{total}), "
+                      f"{shot.t_end - shot.t_start:.1f}s of audio")
             ok, result = pipeline._call_with_retries(
                 lambda shot=shot: pipeline._transcribe_shot(
                     self.state.asset_path, shot, self.workdir
@@ -218,9 +232,23 @@ class IngestAgent(_Stage):
             )
             if ok:
                 self.state.transcripts[shot.shot_id] = result
-                self.emit("transcription", f"{shot.shot_id} -> {len(result)} char(s)")
+                said = "said nothing at all" if not result.strip() else f"{len(result)} char(s)"
+                self.emit("transcription", f"{shot.shot_id} -> {said}")
             else:
                 self.emit("transcription", f"stage_error: {shot.shot_id}: {result!r}")
+
+# What the analyst says while it reads a shot. Rotated by shot index, not
+# chosen at random: a run has to be reproducible, and the same film should
+# narrate itself the same way twice. One line repeated twelve times stops
+# being a sign of life by the third shot, which is the whole point of these.
+_LOOKING = (
+    "looking at {shot} ({n}/{total}) with no idea which country will object",
+    "reading {shot} ({n}/{total}) the way a regulator would, ruleless for now",
+    "describing {shot} ({n}/{total}) in plain words, no verdicts yet",
+    "{shot} ({n}/{total}): what is on screen, not what it means",
+    "watching {shot} ({n}/{total}) for the thing eleven markets disagree about",
+    "taking {shot} ({n}/{total}) apart, one observation at a time",
+)
 
 class AnalystAgent(_Stage):
     """One neutral observation pass per shot, then persist them.
@@ -248,7 +276,12 @@ class AnalystAgent(_Stage):
 
     def _observe_all(self) -> list[Observation]:
         observations: list[Observation] = []
-        for shot in self.state.shots:
+        total = len(self.state.shots)
+        for n, shot in enumerate(self.state.shots, 1):
+            # The analyst is most of the wall clock. Without a line per shot
+            # the board sits on one percentage for minutes.
+            self.emit("analyst", _LOOKING[(n - 1) % len(_LOOKING)].format(
+                shot=shot.shot_id, n=n, total=total))
             ok, result = pipeline._call_with_retries(
                 lambda shot=shot: pipeline.observe_shot(
                     self.state.asset_path, shot, self.workdir,
@@ -257,6 +290,11 @@ class AnalystAgent(_Stage):
             )
             if ok:
                 observations.extend(result)
+                if result:
+                    self.emit("analyst", f"{shot.shot_id} -> noted "
+                                         f"{len(result)} thing(s) worth writing down")
+                else:
+                    self.emit("analyst", f"{shot.shot_id} -> nothing in it that any rule names")
             else:
                 self.emit("analyst", f"stage_error: {shot.shot_id}: {result!r}")
         return observations

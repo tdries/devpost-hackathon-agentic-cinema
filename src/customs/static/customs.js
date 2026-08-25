@@ -61,6 +61,14 @@
     });
   }
 
+  /* An agent's message is data, not markup: it carries model-written text
+     and file paths, so it is escaped before it reaches innerHTML. */
+  function escapeHtml(text) {
+    var d = document.createElement("div");
+    d.textContent = text == null ? "" : String(text);
+    return d.innerHTML;
+  }
+
   /* ---------- 2. the launch board ---------- */
 
   var board = document.getElementById("board");
@@ -106,6 +114,21 @@
         if (fill) { fill.style.width = data.progress.pct + "%"; }
         if (pct) { pct.textContent = data.progress.pct + "%"; }
         if (stage) { stage.textContent = data.progress.stage; }
+
+        /* The newest thing an agent said, under the bar. The bar can sit on
+           one percentage for a minute while the analyst reads a shot, so
+           this is what tells the operator the run is alive. Re-triggering
+           the animation needs the reflow: without it the class is removed
+           and re-added inside one frame and nothing plays. */
+        var tick = document.getElementById("progress-tick");
+        if (tick && data.ticker && String(data.ticker.id) !== tick.dataset.eventId) {
+          tick.dataset.eventId = String(data.ticker.id);
+          tick.innerHTML = '<span class="a-' + data.ticker.agent + '">' +
+            data.ticker.agent + "</span> " + escapeHtml(data.ticker.message);
+          tick.classList.remove("flash");
+          void tick.offsetWidth;
+          tick.classList.add("flash");
+        }
         if (data.done) { progress.remove(); }
       }
 

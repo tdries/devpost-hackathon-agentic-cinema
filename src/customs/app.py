@@ -1281,6 +1281,19 @@ def frame_board(request: Request, run_id: str):
                  screen="frames")
 
 
+def _ticker(run) -> dict | None:
+    """The newest thing an agent said, for the line under the progress bar.
+
+    The bar answers "how far", which on a four minute run barely moves for
+    a minute at a time. This answers "what, right now", so the page is
+    visibly alive between percentage points.
+    """
+    latest = store().latest_event(run.id)
+    if latest is None:
+        return None
+    event_id, agent, message = latest
+    return {"id": event_id, "agent": agent, "message": message}
+
 @app.get("/runs/{run_id}/status")
 def run_status(run_id: str):
     """The 2 second poll behind the tiles. Shape is the contract, keep it."""
@@ -1292,6 +1305,7 @@ def run_status(run_id: str):
         "status": run.status,
         "overall": overall(states),
         "progress": run_progress(run, states),
+        "ticker": _ticker(run),
         "markets": states,
     }
 
