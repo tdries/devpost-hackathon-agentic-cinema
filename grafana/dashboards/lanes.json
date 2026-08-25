@@ -64,7 +64,8 @@
           "datasource": {
             "type": "loki",
             "uid": "grafanacloud-logs"
-          }
+          },
+          "interval": "4s"
         }
       ],
       "options": {
@@ -126,7 +127,8 @@
         },
         "overrides": []
       },
-      "id": 1
+      "id": 1,
+      "interval": "4s"
     }
   ],
   "schemaVersion": 39,

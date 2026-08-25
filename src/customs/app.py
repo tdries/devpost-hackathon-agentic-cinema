@@ -1950,6 +1950,46 @@ def run_lanes(run_id: str, full: int = 0):
     return Response(content=cached.read_text(), media_type="image/svg+xml",
                     headers={"Cache-Control": "public, max-age=600"})
 
+@app.get("/runs/{run_id}/lanes.png")
+def run_lanes_grafana(run_id: str):
+    """The same lanes, drawn by Grafana itself rather than by us.
+
+    This is the real `customs-lanes` state timeline: one lane per dimension
+    over `max_over_time(... | unwrap max_severity)`, coloured by the
+    thresholds in state.py, rendered inside Grafana with its own service
+    account. Same data as the SVG, same palette, but the picture is
+    Grafana's -- and the "open in Grafana" chip beside it lands on the
+    identical panel.
+
+    The card strip stays app-drawn on purpose: Grafana Cloud's renderer
+    floors a panel at 1000x500, which is more than twice the height a
+    card gives it. At board width there is no such problem.
+
+    A dead renderer falls back to the SVG rather than to nothing, so a
+    Grafana outage costs the chart its provenance, not its existence.
+    """
+    run = _run_or_404(run_id)
+    cached = run_dir(run) / "lanes.png"
+    fresh = cached.is_file() and (time.time() - cached.stat().st_mtime) < 600
+    if not fresh:
+        try:
+            from customs.grafana_ops import GrafanaOps
+            asset = Path(run.asset_path).stem or run.asset_path
+            duration = asset_duration(run) or MAX_DURATION_S
+            with GrafanaOps(settings) as ops:
+                png = ops.render_png("customs-lanes", 1, run, duration,
+                                     width=1200, height=420, theme="dark",
+                                     variables={"asset": asset, "run": run.id})
+        except Exception as exc:  # noqa: BLE001 -- the SVG has the same facts
+            log.warning("grafana lanes render failed for %s: %s", run.id, exc)
+            return RedirectResponse(f"/runs/{run.id}/lanes.svg?full=1",
+                                    status_code=302)
+        cached.parent.mkdir(parents=True, exist_ok=True)
+        cached.write_bytes(png)
+    return Response(content=cached.read_bytes(), media_type="image/png",
+                    headers={"Cache-Control": "public, max-age=600"})
+
+
 @app.get("/runs/{run_id}/evidence/{observation_id}/box")
 def evidence_box(run_id: str, observation_id: str):
     """Where in its frame this observation's subject is, 0-1000 normalised.

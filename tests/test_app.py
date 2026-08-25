@@ -1691,9 +1691,11 @@ def test_the_lane_chart_says_when_each_kind_of_problem_happens(console):
     run = _judged_run(store)
     body = test_client.get(f"/runs/{run.id}").text
 
-    assert "/lanes.svg" in body, "the board asks for the chart as its own URL"
+    assert "/lanes.png" in body, "the board asks for the chart as its own URL"
 
-    # and the chart itself, fetched, is a real lane chart
+    # and the chart itself, fetched, is a real lane chart. The board asks
+    # Grafana to draw it; with no Grafana reachable here that falls back to
+    # the SVG, which is the same query and the same palette.
     svg = test_client.get(f"/runs/{run.id}/lanes.svg?full=1")
     assert svg.status_code == 200 and svg.headers["content-type"] == "image/svg+xml"
     assert svg.text.count("lane-dot") > 1
@@ -1721,7 +1723,22 @@ def test_the_lane_chart_is_a_grafana_panel_served_as_an_image(console):
 
     body = client.get(f"/runs/{run.id}").text
     assert "<iframe" not in body, "this stack refuses to be framed"
-    assert "/lanes.svg" in body, "the chart is its own URL, fetched lazily"
+    assert "/lanes.png" in body, "the board asks Grafana for the picture"
+    assert "/d/customs-lanes" in body, "and links to the same panel in Grafana"
+
+    # The render is Grafana's. When Grafana cannot be reached -- as here --
+    # the route falls back to the app-drawn SVG rather than to a broken
+    # image: an outage should cost the chart its provenance, not the chart.
+    shot = client.get(f"/runs/{run.id}/lanes.png", follow_redirects=False)
+    assert shot.status_code in (200, 302)
+    if shot.status_code == 302:
+        assert shot.headers["location"].endswith("/lanes.svg?full=1")
+    else:
+        assert shot.headers["content-type"] == "image/png"
+
+    # The card strip stays app-drawn: Grafana Cloud's renderer floors a
+    # panel at 1000x500, twice the height a card gives it.
+    assert "/lanes.svg" in client.get("/runs").text, "cards keep the strip"
 
     dash = json.loads(pathlib.Path("grafana/dashboards/lanes.json").read_text())
     panel = dash["panels"][0]
@@ -1731,6 +1748,10 @@ def test_the_lane_chart_is_a_grafana_panel_served_as_an_image(console):
     from customs import state
     steps = panel["fieldConfig"]["defaults"]["thresholds"]["steps"]
     assert [x["color"] for x in steps] == [state.CLEARED, state.AT_RISK, state.BLOCKED]
+    # $__interval over a film's eighty seconds is milliseconds wide, which
+    # painted every observation as an invisible hairline. A film is watched
+    # in shots, so the bucket has a floor.
+    assert panel["targets"][0]["interval"] == "4s"
 
 
 def test_recent_runs_opens_on_a_banner_made_of_the_products_own_icons(client):
