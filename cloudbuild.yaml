@@ -1,0 +1,34 @@
+# Build with layer caching. `gcloud run deploy --source` starts every build
+# from nothing, so each deploy re-ran apt (ffmpeg), re-downloaded deno and
+# mcp-grafana, and re-resolved the whole pip tree -- about ninety seconds of
+# work whose inputs had not changed since the last deploy.
+#
+# --cache-from lets Docker reuse the layers of the previously pushed image.
+# The Dockerfile is already ordered so that only the COPY src/ layer and
+# below are invalidated by an ordinary code change, so a source-only edit
+# should rebuild almost nothing.
+steps:
+  # Pull the last image so its layers are local and available to --cache-from.
+  # `|| true`: the very first build has nothing to pull and must not fail.
+  - name: gcr.io/cloud-builders/docker
+    id: warm-cache
+    entrypoint: bash
+    args: ["-c", "docker pull ${_IMAGE}:latest || true"]
+
+  - name: gcr.io/cloud-builders/docker
+    id: build
+    args:
+      - build
+      - --cache-from=${_IMAGE}:latest
+      - --tag=${_IMAGE}:${SHORT_SHA}
+      - --tag=${_IMAGE}:latest
+      - .
+
+  - name: gcr.io/cloud-builders/docker
+    id: push
+    args: ["push", "--all-tags", "${_IMAGE}"]
+
+images: ["${_IMAGE}:${SHORT_SHA}", "${_IMAGE}:latest"]
+options:
+  machineType: E2_HIGHCPU_8      # the pip resolve is the CPU-bound part
+  logging: CLOUD_LOGGING_ONLY
