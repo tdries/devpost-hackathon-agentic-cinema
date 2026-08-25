@@ -88,7 +88,7 @@
   <div class="panel as-list" id="findings"><div class="panel-body" style="padding:18px 4px 4px">
     <table class="grid">
       <thead><tr>
-        <th>Rule</th><th>Class</th><th>Severity</th><th>Window</th><th>Source</th><th>Status</th><th></th>
+        <th>Rule</th><th>Evidence</th><th>Class</th><th>Severity</th><th>Window</th><th>Source</th><th>Status</th><th></th>
       </tr></thead>
       <tbody>
       {% for finding in findings %}
@@ -101,8 +101,10 @@
           {% elif finding.citation_ref %}
           <div class="mono" style="margin-top:8px;font-size:12px;color:var(--ink-3)">{{ finding.citation_ref }}</div>
           {% endif %}
+        </td>
+        <td class="ev-cell">
           {% if finding.observation_id in evidence %}
-          <a class="evidence" href="/runs/{{ run.id }}/evidence/{{ finding.observation_id }}" target="_blank" title="Open the frame that triggered this finding">
+          <a class="evidence big" href="/runs/{{ run.id }}/evidence/{{ finding.observation_id }}" target="_blank" title="Open the frame that triggered this finding">
             <img src="/runs/{{ run.id }}/evidence/{{ finding.observation_id }}" alt="Frame that triggered {{ finding.rule_id }}" loading="lazy">
             <span class="label"><svg class="ic"><use href="#i-frame"/></svg>triggering frame</span>
           </a>

@@ -38,8 +38,9 @@ _EURO_PER_IMAGE_EDIT = 0.04
 
 # The whole system's Veo allowance for one day. Spent, it stays spent until
 # midnight UTC: a twenty second cigarette scene is exactly the thing this
-# stops someone from regenerating on a whim.
-DAILY_BUDGET_EUR = 5.0
+# stops someone from regenerating on a whim. Raised from 5 to 10 EUR on
+# 2026-08-25 at the operator's request.
+DAILY_BUDGET_EUR = 10.0
 
 
 @dataclass(frozen=True)

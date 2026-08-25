@@ -378,6 +378,35 @@ def push_timeline(
     if data_points:
         _otlp_push({"customs_risk": data_points})
 
+def extend_timeline(run: RunRecord, findings: list[Finding], duration: float,
+                    markets: list[str]) -> None:
+    """customs_risk for markets judged after the run's clock was mapped.
+
+    push_timeline may not be called twice: it re-picks t0 from time.time()
+    and overwrites the stored one, stranding every sample the first call
+    wrote on an orphaned clock. A market added later still needs its row on
+    the heatmap and its share of the dimension panels, so this writes the
+    same per-second samples for just those markets onto the EXISTING t0,
+    and never touches it.
+    """
+    if run.t0 is None:
+        raise ValueError(f"run {run.id!r} has no t0 -- push_timeline first")
+    asset = _asset_label(run)
+    data_points = []
+    for market in sorted(markets):
+        market_findings = [f for f in findings if f.market == market]
+        for n in range(math.ceil(duration)):
+            covering = [f for f in market_findings if f.t_start < n + 1 and f.t_end > n]
+            if covering:
+                best = max(covering, key=lambda f: f.severity)
+                value, dimension = float(best.severity), _dimension_for(best.market, best.rule_id)
+            else:
+                value, dimension = 0.0, "none"
+            data_points.append(_data_point(
+                value, run.t0 + n, {"asset": asset, "market": market, "dimension": dimension}))
+    if data_points:
+        _otlp_push({"customs_risk": data_points})
+
 def push_status(
     run: RunRecord, market: str, clearance: str, findings: list[Finding]
 ) -> None:

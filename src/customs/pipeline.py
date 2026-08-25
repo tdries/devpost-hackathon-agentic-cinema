@@ -213,3 +213,78 @@ def run(asset_path, markets: list[str], store: Store, workdir) -> RunRecord:
     from customs import crew  # local import: crew.py imports this module
 
     return crew.run_clearance(asset_path, markets, store, workdir)
+
+
+def judge_more(store: Store, run: RunRecord, markets: list[str],
+               duration: float, on_event=None) -> dict[str, str]:
+    """Clear an already-observed asset against markets it was not run for.
+
+    The expensive half of a run is market-independent. Shot detection,
+    keyframe extraction, transcription and the analyst's observations
+    describe what is on screen, in a fixed taxonomy (packs.taxonomy) that no
+    market chooses, and adjudicate.candidates() joins those observations to
+    a market's rules purely on dimension. So a second market does not need
+    the film opened again: it needs its own rules held against the same
+    observations, which is one judge() call per market and nothing else.
+
+    That is the whole point of observing once and judging many times, and
+    until now the console had no way to ask for it -- a Belgian clearance
+    followed by a French one meant downloading, cutting and re-observing an
+    asset the store had already described.
+
+    Findings are appended, never replacing what other markets found. Grafana
+    gets the new markets' status and log lines, plus their risk samples on
+    the run's existing mapped clock via telemetry.extend_timeline: t0 is
+    already fixed and re-picking it would strand every sample the first pass
+    wrote.
+    """
+    from customs import telemetry
+
+    def emit(agent: str, message: str) -> None:
+        store.emit(run.id, agent, message)
+        if on_event is not None:
+            on_event(agent, message)
+
+    observations = store.observations(run.id)
+    if not observations:
+        raise ValueError(f"run {run.id} has no observations to judge against")
+
+    packs = load_packs()
+    emit("pipeline", f"add analysis -> {len(observations)} stored observation(s), "
+                     f"no re-ingest, judging {', '.join(markets)}")
+
+    fresh: list[Finding] = []
+    clearances: dict[str, str] = {}
+    for market in markets:
+        pack = packs.get(market)
+        if pack is None:
+            emit("adjudicator", f"stage_error: market={market}: no market pack loaded")
+            continue
+        ok, judged = _call_with_retries(
+            lambda: judge(run.id, observations, pack, on_event=emit))
+        if not ok:
+            emit("adjudicator", f"stage_error: market={market}: {judged!r}")
+            continue
+        findings = apply_guard(judged, pack)
+        status = clearance(findings)
+        clearances[market] = status
+        fresh.extend(findings)
+        emit("adjudicator", f"{market} clearance -> {status} ({len(findings)} finding(s))")
+
+    if fresh:
+        store.add_findings(fresh)
+
+    # Telemetry is best effort, exactly as it is for a first pass: a dead
+    # Grafana must not lose findings that are already in SQLite.
+    try:
+        run = store.get_run(run.id)
+        everything = store.findings(run.id)
+        telemetry.extend_timeline(run, everything, duration, list(clearances))
+        for market, status in clearances.items():
+            telemetry.push_status(run, market, status, everything)
+        for finding in fresh:
+            telemetry.push_log(run, finding)
+    except Exception as exc:  # noqa: BLE001
+        emit("publisher", f"stage_error: publisher: add analysis: {exc!r}")
+
+    return clearances

@@ -1491,3 +1491,24 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   .runnav .wrap.screens .tab { font-size: 13.5px; padding: 15px 12px 13px; gap: 9px; }
   .runnav .wrap.screens .tab .ic { width: 21px; height: 21px; }
 }
+
+/* "Add analysis": the market picker again, on a run that already has
+   observations. Same controls as the front door, folded away by default. */
+.addmore > summary { display: inline-flex; align-items: center; gap: 8px; }
+.addmore .levels { margin-top: 12px; }
+.addmore .fix-foot { margin-top: 12px; }
+
+/* The triggering frame is the evidence, so it gets a column of its own
+   rather than being tucked under the rationale at thumbnail size: the
+   reasoning reads down the left, the picture it is about sits beside it. */
+.grid td.ev-cell { width: 34%; min-width: 260px; vertical-align: top; padding-top: 14px; }
+.grid td.ev-cell .evidence.big { display: block; margin: 0; }
+.grid td.ev-cell .evidence.big img {
+  width: 100%; max-width: 460px; height: auto; border-radius: 6px; display: block;
+}
+.grid td:first-child { width: 34%; }
+@media (max-width: 900px) {
+  /* stacked on a phone: the frame goes back under its reasoning */
+  .grid td.ev-cell, .grid td:first-child { width: auto; min-width: 0; }
+  .grid td.ev-cell .evidence.big img { max-width: 100%; }
+}

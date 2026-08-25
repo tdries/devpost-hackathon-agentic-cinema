@@ -466,3 +466,58 @@ def test_run_flash_detection_failure_is_a_stage_error_not_a_dead_run(monkeypatch
     assert run.status == "done"
     messages = [m for (_i, _t, _a, m) in store.events_since(run.id, 0)]
     assert any("stage_error: flash detection" in m for m in messages), messages
+
+
+# --- judge_more: a second market over observations that already exist ----
+
+def test_a_second_market_reuses_the_observations_and_never_reopens_the_asset(
+        tmp_path, monkeypatch):
+    """BE first, then FR, without touching the film again.
+
+    The expensive half of a run describes what is on screen and no market
+    chooses it, so a second jurisdiction is a judging pass. This asserts the
+    saving is real: nothing that opens, cuts or looks at the asset may run.
+    """
+    store = Store(tmp_path / "s.db")
+    run = store.create_run(asset_path=str(tmp_path / "ad.mp4"), markets=["BE"])
+    store.set_run_t0(run.id, 1_700_000_000.0)
+    store.add_observations(run.id, [Observation(
+        id="obs_shot_0_000", shot_id="shot_0", t_start=0.0, t_end=2.0,
+        dimension="alcohol_tobacco_drugs", statement="A glass of red wine.",
+        evidence_frame="", confidence=0.9)])
+
+    for name in ("detect_shots", "extract_keyframes", "extract_audio_span"):
+        monkeypatch.setattr(f"customs.media.{name}", _boom(name), raising=False)
+    monkeypatch.setattr(pipeline, "observe_shot", _boom("observe_shot"))
+    monkeypatch.setattr("customs.telemetry.extend_timeline", lambda *a, **k: None)
+    monkeypatch.setattr("customs.telemetry.push_status", lambda *a, **k: None)
+    monkeypatch.setattr("customs.telemetry.push_log", lambda *a, **k: None)
+
+    seen = {}
+    def fake_judge(run_id, observations, pack, on_event=None):
+        seen[pack.market] = [o.id for o in observations]
+        return []
+    monkeypatch.setattr(pipeline, "judge", fake_judge)
+
+    fresh = store.add_run_markets(run.id, ["FR", "BE"])
+    assert fresh == ["FR"]  # BE was already judged; it is not judged twice
+    clearances = pipeline.judge_more(store, store.get_run(run.id), fresh, 2.0)
+
+    # the French judge saw the Belgian run's observations, unchanged
+    assert seen == {"FR": ["obs_shot_0_000"]}
+    assert clearances == {"FR": "cleared"}
+    assert store.get_run(run.id).markets == ["BE", "FR"]
+
+
+def _boom(name):
+    def explode(*a, **k):
+        raise AssertionError(f"{name} ran: a second market must not re-ingest")
+    return explode
+
+
+def test_judge_more_refuses_a_run_it_cannot_reuse(tmp_path):
+    """No observations means there is nothing to save; say so, do not guess."""
+    store = Store(tmp_path / "s.db")
+    run = store.create_run(asset_path=str(tmp_path / "ad.mp4"), markets=["BE"])
+    with pytest.raises(ValueError, match="no observations"):
+        pipeline.judge_more(store, run, ["FR"], 2.0)

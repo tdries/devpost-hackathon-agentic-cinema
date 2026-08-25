@@ -194,6 +194,25 @@ class Store:
         self._write_run(run)
 
     @_locked
+    def add_run_markets(self, run_id: str, markets: list[str]) -> list[str]:
+        """Add markets to an existing run; return only the ones that are new.
+
+        A second clearance against the same asset is a judging pass over
+        observations that already exist, so the run record grows rather than
+        a new run being created. Returning the difference is what lets the
+        caller judge only what has not been judged, and re-adding a market
+        already on the run is a no-op rather than a duplicate row.
+        """
+        run = self.get_run(run_id)
+        if run is None:
+            raise ValueError(f"unknown run: {run_id}")
+        fresh = [m for m in markets if m not in run.markets]
+        if fresh:
+            run.markets = list(run.markets) + fresh
+            self._write_run(run)
+        return fresh
+
+    @_locked
     def set_run_t0(self, run_id: str, t0: float) -> None:
         run = self.get_run(run_id)
         if run is None:

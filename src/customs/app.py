@@ -1033,6 +1033,47 @@ def _clearance_job(run_id: str, asset_path: str, markets: list[str]) -> None:
         except ValueError:
             pass
 
+def _add_analysis_job(run_id: str, markets: list[str], duration: float) -> None:
+    """Thread body for a second clearance pass. Mirrors _clearance_job."""
+    db = store()
+    try:
+        run = db.get_run(run_id)
+        pipeline.judge_more(db, run, markets, duration)
+        db.emit(run_id, "pipeline", persist.snapshot(settings.db_path))
+    except Exception as exc:  # noqa: BLE001 -- a thread has nobody to raise to
+        log.exception("add analysis on %s failed", run_id)
+        db.emit(run_id, "pipeline", f"stage_error: add analysis: {exc!r}")
+
+@app.post("/runs/{run_id}/analysis")
+def add_analysis(run_id: str, markets: list[str] = Form(default=[])):
+    """Clear an existing run against more markets, reusing its observations.
+
+    The screenshots, the transcript and the analyst's reading of them are
+    already in the store and describe the film, not a jurisdiction. So this
+    starts at the adjudicator: no download, no shot detection, no keyframes,
+    no vision calls. See pipeline.judge_more.
+    """
+    run = _run_or_404(run_id)
+    if not store().observations(run.id):
+        return PlainTextResponse(
+            "This run has no stored observations to judge against. It has to "
+            "be run from the asset.", status_code=409)
+    known = set(market_packs())
+    chosen = [m for m in markets if m]
+    unknown = [m for m in chosen if m not in known]
+    if unknown:
+        return PlainTextResponse(f"No market pack for: {', '.join(unknown)}.",
+                                 status_code=400)
+    fresh = store().add_run_markets(run.id, chosen)
+    if not fresh:
+        # everything asked for was already judged: say so rather than
+        # spending a model call to reach the same verdict twice
+        return RedirectResponse(f"/runs/{run.id}", status_code=303)
+    duration = asset_duration(run) or MAX_DURATION_S
+    threading.Thread(target=_add_analysis_job, args=(run.id, fresh, duration),
+                     name=f"analysis-{run.id}", daemon=True).start()
+    return RedirectResponse(f"/runs/{run.id}", status_code=303)
+
 # -- the launch board --
 
 @app.get("/runs/{run_id}", response_class=HTMLResponse)
@@ -1042,7 +1083,22 @@ def launch_board(request: Request, run_id: str):
     tiles = [{"market": m, "state": tile_state(s), **s,
               "pack": market_packs().get(m)} for m, s in states.items()]
     tiles.sort(key=lambda t: (TILE_ORDER.get(t["state"], 9), t["market"]))
+    # The picker again, minus what this run has already been judged against:
+    # a second pass exists to add jurisdictions, not to re-judge one.
+    covered = set(run.markets)
+    more = []
+    for group in pack_groups():
+        families = []
+        for fam in group["families"]:
+            left = [pk for pk in fam["packs"] if pk.market not in covered]
+            if left:
+                families.append(dict(fam, packs=left))
+        if families:
+            more.append(dict(group, families=families,
+                             count=sum(len(f["packs"]) for f in families)))
     return _page(request, "launch_board.html", run=run, tiles=tiles,
+                 more=more,
+                 can_add=bool(store().observations(run.id)),
                  overall=overall(states), progress=run_progress(run, states),
                  embeds=embeds(run),
                  duration=asset_duration(run), published=published(run),
