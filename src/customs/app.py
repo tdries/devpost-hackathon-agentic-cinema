@@ -74,6 +74,7 @@ import time
 import uuid
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import (BackgroundTasks, FastAPI, File, Form, HTTPException,
                      Request, UploadFile)
@@ -772,15 +773,25 @@ def embeds(run) -> dict[str, str]:
                                   timecode and nothing else.
     """
     overview = f"{settings.grafana_public_overview}?from=now-6h&to=now"
+    # The lane panel is not one of the two public pages, so this one lands on
+    # the stack itself and asks the operator to be logged in. It was a
+    # host-relative /d/customs-lanes before, which is a path on THIS app --
+    # a chip that could only ever 404. Its variables are filled in from the
+    # run so the panel opens showing exactly the picture on the board.
+    asset = Path(run.asset_path).stem or run.asset_path
+    lanes = (f"{settings.grafana_url.rstrip('/')}/d/customs-lanes/customs"
+             f"?var-asset={quote(asset)}&var-run={quote(run.id)}")
     if run.t0 is None:
         return {"overview": overview,
-                "timeline": f"{settings.grafana_public_timeline}?from=now-3h&to=now"}
+                "timeline": f"{settings.grafana_public_timeline}?from=now-3h&to=now",
+                "lanes": lanes}
     duration = asset_duration(run)
     start_ms = int((run.t0 - 5) * 1000)
     end_ms = int((run.t0 + duration + 5) * 1000)
     return {
         "overview": overview,
         "timeline": f"{settings.grafana_public_timeline}?from={start_ms}&to={end_ms}",
+        "lanes": f"{lanes}&from={start_ms}&to={end_ms}",
     }
 
 # --- the instrument panel ------------------------------------------------

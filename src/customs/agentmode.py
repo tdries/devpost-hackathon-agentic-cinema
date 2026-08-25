@@ -390,6 +390,20 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
                                           "only way to ask what is universally "
                                           "safe or which markets are permissive",
                     },
+                    '{app="customs", kind="verdict"}': {
+                        "one line per": "market x observation pairing the "
+                                        "adjudicator was asked about -- the "
+                                        "acquittals as well as the objections",
+                        "labels": ["asset", "market", "dimension",
+                                   "verdict (triggered|cleared|unreturned)"],
+                        "body fields (use | json)": [
+                            "observation_id", "rule_id", "severity", "run_id"],
+                        "why it matters": "'cleared' is a market that looked "
+                                          "and said no, and 'unreturned' is a "
+                                          "pairing the judge never answered "
+                                          "on. Findings alone cannot tell "
+                                          "those two apart from never asked.",
+                    },
                 },
             },
             "mimir": {
@@ -399,8 +413,12 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
                         "max finding severity per market per video second, on "
                         "the run's mapped clock; dimension is 'none' for a "
                         "second nothing covered",
-                    "customs_market_status{asset,market,clearance}": "current verdict",
-                    "customs_blocking{asset,market}": "1 when a market blocks",
+                    "customs_market_status{asset,market}":
+                        "current verdict as the VALUE, not a label: "
+                        "0 cleared, 1 at risk, 2 blocked",
+                    "customs_blocking{asset,market,rule_id}":
+                        "one series per blocking rule; the value is the "
+                        "finding's severity, not 1",
                     "customs_stage_error{asset,stage}": "stage failures",
                 },
             },
@@ -409,7 +427,9 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
                 "sum by (dimension) (count_over_time({...} [$__range]))",
                 "A body field needs | json before it can be grouped on.",
                 "customs_risk lives on each run's mapped clock, not wall "
-                "time, so range queries need that run's own window.",
+                "time, so range queries need that run's own window. "
+                "customs_market_status, customs_blocking and "
+                "customs_stage_error are stamped at wall time instead.",
             ],
         }, indent=1)
 
