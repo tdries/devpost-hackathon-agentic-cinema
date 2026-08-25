@@ -25,14 +25,30 @@
     </div>
     <div>
       <div class="rule-row"><span class="label">Markets</span></div>
-      <div class="markets">
-        {% for pack in packs %}
-        <label class="market-pick">
-          <input type="checkbox" name="markets" value="{{ pack.market }}" checked>
-          <span class="code">{{ pack.market }}</span>
-          <span class="name">{{ pack.name }}</span>
-          <span class="regime chip">{{ pack.pre_clearance }}</span>
-        </label>
+      <div class="levels">
+        {% for group in groups %}
+        <details class="level" {% if group.level == 'national' %}open{% endif %}>
+          <summary>
+            <span class="lv-name">{{ group.level }}</span>
+            <span class="lv-blurb">{{ group.blurb }}</span>
+            <span class="lv-count mono">{{ group.count }}</span>
+          </summary>
+          {% for family in group.families %}
+          {% if family.parent and group.level == 'channel' %}
+          <div class="fam label">{{ family.parent_name or family.parent }}</div>
+          {% endif %}
+          <div class="markets">
+            {% for pack in family.packs %}
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="{{ pack.market }}">
+              <span class="code">{{ pack.market }}</span>
+              <span class="name">{{ pack.name }}</span>
+              <span class="regime chip">{{ pack.rules | length }} rules</span>
+            </label>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </details>
         {% else %}
         <p class="subline">No market packs loaded. Check the markets/ directory.</p>
         {% endfor %}

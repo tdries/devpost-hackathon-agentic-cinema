@@ -1,0 +1,110 @@
+# The channel layer of the knowledge base.
+#
+# One entry per broadcaster, grouped by the national pack it hangs under.
+# Every entry becomes a selectable jurisdiction node that inherits its
+# country's rules (and through it, the continental and global ones), so a
+# channel is analysable the day its name is added here.
+#
+# A channel with rules of its own gets a real pack file instead
+# (markets/BE-VRT.yaml is the worked example) and that file wins: this
+# registry only supplies the nodes nobody has written rules for yet.
+#
+# ponytail: names-only is the honest state of this table. Adding a rule to a
+# channel means writing its pack file, not editing this list.
+channels:
+  BE:
+    - {id: BE-VRT, name: VRT}
+    - {id: BE-VTM, name: VTM}
+    - {id: BE-PLAY, name: Play}
+    - {id: BE-RTBF, name: RTBF}
+    - {id: BE-RTL, name: RTL TVI}
+  FR:
+    - {id: FR-TF1, name: TF1}
+    - {id: FR-F2, name: France 2}
+    - {id: FR-M6, name: M6}
+    - {id: FR-CANAL, name: Canal+}
+    - {id: FR-ARTE, name: Arte}
+  DE:
+    - {id: DE-ARD, name: ARD Das Erste}
+    - {id: DE-ZDF, name: ZDF}
+    - {id: DE-RTL, name: RTL}
+    - {id: DE-SAT1, name: Sat.1}
+    - {id: DE-PRO7, name: ProSieben}
+  UK:
+    - {id: UK-BBC1, name: BBC One}
+    - {id: UK-ITV1, name: ITV1}
+    - {id: UK-C4, name: Channel 4}
+    - {id: UK-C5, name: Channel 5}
+    - {id: UK-SKY, name: Sky Max}
+  US:
+    - {id: US-NBC, name: NBC}
+    - {id: US-ABC, name: ABC}
+    - {id: US-CBS, name: CBS}
+    - {id: US-FOX, name: Fox}
+    - {id: US-CW, name: The CW}
+  CA-QC:
+    - {id: CAQC-RC, name: Radio-Canada}
+    - {id: CAQC-TVA, name: TVA}
+    - {id: CAQC-NOOVO, name: Noovo}
+    - {id: CAQC-TELEQ, name: Tele-Quebec}
+    - {id: CAQC-RDS, name: RDS}
+  BR:
+    - {id: BR-GLOBO, name: TV Globo}
+    - {id: BR-SBT, name: SBT}
+    - {id: BR-RECORD, name: Record TV}
+    - {id: BR-BAND, name: Band}
+    - {id: BR-REDETV, name: RedeTV!}
+  SA:
+    - {id: SA-MBC1, name: MBC 1}
+    - {id: SA-SAUDITV, name: Saudi TV 1}
+    - {id: SA-ROTANA, name: Rotana Khalijia}
+    - {id: SA-SSC, name: SSC Sports}
+    - {id: SA-ALARABIYA, name: Al Arabiya}
+  AE:
+    - {id: AE-DUBAITV, name: Dubai TV}
+    - {id: AE-ABUDHABI, name: Abu Dhabi TV}
+    - {id: AE-MBC4, name: MBC 4}
+    - {id: AE-SHARJAH, name: Sharjah TV}
+    - {id: AE-SAMA, name: Sama Dubai}
+  TR:
+    - {id: TR-ATV, name: ATV}
+    - {id: TR-KANALD, name: Kanal D}
+    - {id: TR-SHOWTV, name: Show TV}
+    - {id: TR-STAR, name: Star TV}
+    - {id: TR-TRT1, name: TRT 1}
+  IN:
+    - {id: IN-STARPLUS, name: Star Plus}
+    - {id: IN-ZEETV, name: Zee TV}
+    - {id: IN-SONY, name: Sony Entertainment}
+    - {id: IN-COLORS, name: Colors}
+    - {id: IN-DD, name: DD National}
+  CN:
+    - {id: CN-CCTV1, name: CCTV-1}
+    - {id: CN-CCTV3, name: CCTV-3}
+    - {id: CN-HUNAN, name: Hunan TV}
+    - {id: CN-ZHEJIANG, name: Zhejiang TV}
+    - {id: CN-JIANGSU, name: Jiangsu TV}
+  ID:
+    - {id: ID-RCTI, name: RCTI}
+    - {id: ID-SCTV, name: SCTV}
+    - {id: ID-INDOSIAR, name: Indosiar}
+    - {id: ID-TRANSTV, name: Trans TV}
+    - {id: ID-ANTV, name: ANTV}
+  JP:
+    - {id: JP-NHK, name: NHK General}
+    - {id: JP-NTV, name: Nippon TV}
+    - {id: JP-TVASAHI, name: TV Asahi}
+    - {id: JP-TBS, name: TBS}
+    - {id: JP-FUJI, name: Fuji TV}
+  TH:
+    - {id: TH-CH3, name: Channel 3}
+    - {id: TH-CH7, name: Channel 7}
+    - {id: TH-ONE31, name: One 31}
+    - {id: TH-WORKPOINT, name: Workpoint TV}
+    - {id: TH-THAIPBS, name: Thai PBS}
+  NG:
+    - {id: NG-NTA, name: NTA}
+    - {id: NG-CHANNELS, name: Channels TV}
+    - {id: NG-AIT, name: AIT}
+    - {id: NG-ARISE, name: Arise News}
+    - {id: NG-TVC, name: TVC News}

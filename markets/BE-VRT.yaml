@@ -1,0 +1,24 @@
+# VRT, the Flemish public broadcaster. Public-service charter is stricter
+# than the national floor: no commercial breaks inside children's content,
+# tighter rules on sponsorship and product placement.
+market: BE-VRT
+name: VRT (Belgium, Flanders)
+level: channel
+parent: BE
+regulators: [VRT, VRM]
+pre_clearance: mandatory
+rules:
+  - id: BE-VRT-KIDS-01
+    dimension: children_and_minors
+    class: policy
+    severity: 85
+    trigger: "Commercial communication placed in or around children's programming"
+    basis: "VRT beheersovereenkomst, restrictions on advertising around youth content"
+    source_hint: "vrt.be beheersovereenkomst reclame jeugd"
+  - id: BE-VRT-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: policy
+    severity: 85
+    trigger: "Any alcohol advertising on the public broadcaster's television channels"
+    basis: "VRT beheersovereenkomst, public-service restrictions on alcohol advertising"
+    source_hint: "vrt.be beheersovereenkomst alcohol"

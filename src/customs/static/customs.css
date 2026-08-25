@@ -1003,3 +1003,19 @@ html[data-theme="spectrum"] .view-switch .tbtn.on { background: rgba(66, 133, 24
    for the mark but still styles nothing else, so it stays harmless. */
 .brand-logo { height: 24px; width: auto; display: block; align-self: center; }
 html[data-theme="studio"] .brand-logo { filter: none; }
+
+/* ---------- the jurisdiction picker ----------
+   Global, continental, national, channel. Nothing is preselected: choosing
+   where an ad has to clear is the operator's decision, not a default. */
+
+.levels { display: grid; gap: 8px; }
+.level { border: 1px solid var(--line); border-radius: var(--radius); background: var(--well); }
+.level > summary { display: flex; align-items: baseline; gap: 12px; padding: 11px 14px; cursor: pointer; list-style: none; }
+.level > summary::-webkit-details-marker { display: none; }
+.level > summary::before { content: "+"; font-family: var(--mono); color: var(--ink-3); }
+.level[open] > summary::before { content: "-"; }
+.lv-name { font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink); }
+.lv-blurb { font-size: 12.5px; color: var(--ink-3); }
+.lv-count { margin-left: auto; font-size: 11px; color: var(--ink-3); }
+.level .markets { padding: 0 12px 12px; }
+.level .fam { padding: 10px 14px 4px; }

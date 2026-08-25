@@ -1,12 +1,18 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import yaml
 
 _DEFAULT_MARKETS_DIR = Path("markets")
 _TAXONOMY_FILENAME = "_taxonomy.yaml"
+_CHANNELS_FILENAME = "_channels.yaml"
 _VALID_KLASSES = {"legal", "policy", "offence"}
 _VALID_PRE_CLEARANCE = {"none", "advisory", "mandatory"}
+# The jurisdiction ladder. A pack names its level and its parent, and load()
+# resolves each pack's rule list to its own rules plus every ancestor's, so
+# everything downstream (adjudicate, guard, telemetry) keeps seeing one flat
+# rule list per market and needs no idea that a hierarchy exists.
+_LEVELS = ("global", "continental", "regional", "national", "subnational", "channel")
 
 class PackError(Exception):
     """Raised when a market pack file fails validation. Message names the file and rule."""
@@ -29,7 +35,14 @@ class MarketPack:
     name: str
     regulators: list[str]
     pre_clearance: str
-    rules: list[MarketRule]
+    rules: list[MarketRule]          # own + inherited, resolved by load()
+    level: str = "national"
+    parent: str = ""
+    own_rules: list[MarketRule] = field(default_factory=list)
+
+    @property
+    def inherited(self) -> int:
+        return len(self.rules) - len(self.own_rules)
 
 def _read_yaml(path: Path) -> dict:
     try:
@@ -105,6 +118,10 @@ def _load_pack(path: Path, dims: set[str], seen_rule_ids: dict[str, str]) -> Mar
             f"must be one of {sorted(_VALID_PRE_CLEARANCE)}"
         )
 
+    level = data.get("level", "national")
+    if level not in _LEVELS:
+        raise PackError(f"{path.name}: level {level!r} must be one of {list(_LEVELS)}")
+
     rules = [_build_rule(path, raw, dims, seen_rule_ids) for raw in (data.get("rules") or [])]
 
     return MarketPack(
@@ -112,7 +129,10 @@ def _load_pack(path: Path, dims: set[str], seen_rule_ids: dict[str, str]) -> Mar
         name=data.get("name", market),
         regulators=data.get("regulators") or [],
         pre_clearance=pre_clearance,
-        rules=rules,
+        rules=list(rules),
+        level=level,
+        parent=data.get("parent", "") or "",
+        own_rules=list(rules),
     )
 
 def load(markets_dir: Path = _DEFAULT_MARKETS_DIR) -> dict[str, MarketPack]:
@@ -139,4 +159,53 @@ def load(markets_dir: Path = _DEFAULT_MARKETS_DIR) -> dict[str, MarketPack]:
             )
         seen_markets[pack.market] = path.name
         packs[pack.market] = pack
+    _add_registry_channels(markets_dir, packs)
+    return _resolve(packs)
+
+
+def _add_registry_channels(markets_dir: Path, packs: dict[str, MarketPack]) -> None:
+    """Turn markets/_channels.yaml into selectable nodes with no rules of
+    their own. A channel that has its own pack file keeps it; this only fills
+    in the ones nobody has written rules for yet, so every listed broadcaster
+    is analysable against its country's rules from the moment it is named."""
+    path = markets_dir / _CHANNELS_FILENAME
+    if not path.is_file():
+        return
+    for country, entries in (_read_yaml(path).get("channels") or {}).items():
+        if country not in packs:
+            raise PackError(f"{path.name}: channels listed for unknown market {country!r}")
+        for entry in entries or []:
+            cid = entry.get("id")
+            if not cid:
+                raise PackError(f"{path.name}: a channel under {country} has no id")
+            if cid in packs:
+                continue
+            packs[cid] = MarketPack(
+                market=cid, name=entry.get("name", cid),
+                regulators=list(packs[country].regulators),
+                pre_clearance=packs[country].pre_clearance,
+                rules=[], level="channel", parent=country, own_rules=[])
+
+
+def _resolve(packs: dict[str, MarketPack]) -> dict[str, MarketPack]:
+    """Give every pack its ancestors' rules, outermost first.
+
+    A channel is judged against its own rules AND its country's AND its
+    continent's AND the global baseline, which is what "analyse at channel
+    level" has to mean. Resolved here rather than at judging time so that a
+    market is still one flat rule list everywhere else in the system.
+    """
+    for pack in packs.values():
+        chain, seen, node = [], {pack.market}, pack
+        while node.parent:
+            if node.parent not in packs:
+                raise PackError(
+                    f"{node.market}: parent {node.parent!r} is not a known pack")
+            if node.parent in seen:
+                raise PackError(f"{node.market}: parent cycle via {node.parent!r}")
+            seen.add(node.parent)
+            node = packs[node.parent]
+            chain.append(node)
+        inherited = [r for ancestor in reversed(chain) for r in ancestor.own_rules]
+        pack.rules = inherited + pack.own_rules
     return packs

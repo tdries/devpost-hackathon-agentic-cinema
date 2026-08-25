@@ -1,0 +1,30 @@
+# The European layer: what the Audiovisual Media Services Directive puts on
+# top of the global baseline for every EU member state.
+market: EU
+name: European Union
+level: continental
+parent: GLOBAL
+regulators: [European Commission, ERGA]
+pre_clearance: none
+rules:
+  - id: EU-TOB-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 95
+    trigger: "Any depiction or promotion of tobacco or electronic cigarettes in an audiovisual commercial communication"
+    basis: "Directive 2010/13/EU (AVMSD) art. 9(1)(d), tobacco advertising prohibited"
+    source_hint: "eur-lex AVMSD article 9 tobacco"
+  - id: EU-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: legal
+    severity: 75
+    trigger: "Alcohol advertising aimed at minors or linking alcohol to enhanced performance, social or sexual success"
+    basis: "Directive 2010/13/EU (AVMSD) art. 9(1)(e) and art. 22"
+    source_hint: "eur-lex AVMSD article 22 alcohol"
+  - id: EU-MINOR-01
+    dimension: children_and_minors
+    class: legal
+    severity: 80
+    trigger: "Commercial communication that causes physical, mental or moral detriment to minors, or directly exhorts minors to buy"
+    basis: "Directive 2010/13/EU (AVMSD) art. 9(1)(g)"
+    source_hint: "eur-lex AVMSD article 9 minors"

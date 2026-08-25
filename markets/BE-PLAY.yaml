@@ -1,0 +1,15 @@
+# Play (SBS Belgium), the third Flemish commercial family.
+market: BE-PLAY
+name: Play (Belgium, Flanders)
+level: channel
+parent: BE
+regulators: [Play Media, VRM]
+pre_clearance: advisory
+rules:
+  - id: BE-PLAY-FLASH-01
+    dimension: photosensitivity_sensory
+    class: policy
+    severity: 70
+    trigger: "Rapid flashing or strobing imagery delivered without broadcaster sign-off"
+    basis: "Play Media advertising acceptance standards, flashing imagery"
+    source_hint: "play media reclame voorwaarden"

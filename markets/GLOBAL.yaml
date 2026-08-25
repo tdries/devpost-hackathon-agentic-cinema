@@ -1,0 +1,29 @@
+# The global baseline. Every other pack inherits these, because they are the
+# rules a brand carries into every market it ships into.
+market: GLOBAL
+name: Global baseline
+level: global
+regulators: [ICC]
+pre_clearance: none
+rules:
+  - id: GL-MISLEAD-01
+    dimension: comparative_claims
+    class: policy
+    severity: 70
+    trigger: "A performance, superiority or comparative claim presented without qualification"
+    basis: "ICC Advertising and Marketing Communications Code, art. 5 (substantiation)"
+    source_hint: "iccwbo.org ICC advertising code article 5"
+  - id: GL-CHILD-01
+    dimension: children_and_minors
+    class: policy
+    severity: 65
+    trigger: "Advertising that exploits the inexperience or credulity of children"
+    basis: "ICC Advertising and Marketing Communications Code, art. 18 (children and teens)"
+    source_hint: "iccwbo.org ICC advertising code article 18"
+  - id: GL-HEALTH-01
+    dimension: health_claims_pharma
+    class: policy
+    severity: 70
+    trigger: "A health, nutrition or medicinal benefit claimed for a product"
+    basis: "ICC Framework for Responsible Food and Beverage Marketing Communications"
+    source_hint: "iccwbo.org ICC food and beverage marketing framework"

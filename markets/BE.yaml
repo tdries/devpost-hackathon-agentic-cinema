@@ -1,0 +1,39 @@
+# Belgium, national level. The JEP (Jury voor Ethische Praktijken inzake
+# reclame / Jury d'Ethique Publicitaire) is the self-regulator whose codes
+# every Belgian broadcaster applies; the alcohol convenant is the binding
+# sector agreement on alcohol advertising.
+market: BE
+name: Belgium
+level: national
+parent: EU
+regulators: [JEP, VRM, CSA]
+pre_clearance: advisory
+rules:
+  - id: BE-ALC-01
+    dimension: alcohol_tobacco_drugs
+    class: policy
+    severity: 75
+    trigger: "Alcohol advertising without the mandatory responsible-consumption slogan, or associating alcohol with success, driving or sport"
+    basis: "Convenant inzake reclame voor en marketing van alcoholhoudende dranken (JEP alcohol convention)"
+    source_hint: "jep.be convenant alcohol reclame"
+  - id: BE-CHILD-01
+    dimension: children_and_minors
+    class: policy
+    severity: 70
+    trigger: "Advertising directed at children that creates pressure to buy or shows children in unsafe situations"
+    basis: "JEP code, regels inzake reclame gericht op kinderen"
+    source_hint: "jep.be codes-regels kinderen"
+  - id: BE-LANG-01
+    dimension: text_legibility
+    class: legal
+    severity: 55
+    trigger: "On-screen commercial text not provided in the language of the broadcast region (Dutch in Flanders, French in Wallonia)"
+    basis: "Vlaams Mediadecreet and the Decret sur les services de medias audiovisuels, language of commercial communication"
+    source_hint: "vlaamse regulator media taal reclame"
+  - id: BE-GENDER-01
+    dimension: gender_portrayal
+    class: policy
+    severity: 60
+    trigger: "Portrayal that reduces a person to a stereotype or an object on the basis of sex"
+    basis: "JEP code, regels inzake de afbeelding van de mens"
+    source_hint: "jep.be codes-regels afbeelding van de mens"

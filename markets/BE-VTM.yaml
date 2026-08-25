@@ -1,0 +1,15 @@
+# VTM (DPG Media), Flanders' main commercial broadcaster.
+market: BE-VTM
+name: VTM (Belgium, Flanders)
+level: channel
+parent: BE
+regulators: [DPG Media, VRM]
+pre_clearance: advisory
+rules:
+  - id: BE-VTM-CLEAR-01
+    dimension: comparative_claims
+    class: policy
+    severity: 60
+    trigger: "A comparative or superiority claim broadcast without substantiation lodged with the broadcaster"
+    basis: "DPG Media advertising acceptance policy, substantiation of claims"
+    source_hint: "dpgmedia.be advertising terms claims"

@@ -358,6 +358,46 @@ def _judged_markets(db, run_id: str) -> set[str]:
             seen.add(message.split(" ", 1)[0])
     return seen
 
+_LEVEL_ORDER = ("global", "continental", "national", "subnational", "channel")
+_LEVEL_BLURB = {
+    "global": "the baseline every market inherits",
+    "continental": "what a continent adds on top",
+    "national": "one country's law and self-regulation",
+    "subnational": "a region with its own regime",
+    "channel": "a broadcaster's own acceptance rules, on top of its country's",
+}
+
+
+def pack_groups() -> list[dict]:
+    """The picker's shape: the jurisdiction ladder, channels under their country.
+
+    Selecting a node means judging against that node's resolved rules, which
+    packs.load has already flattened to own plus every ancestor's. So picking
+    VRT judges against VRT, Belgium, the EU and the global baseline at once.
+    """
+    packs = market_packs()
+    groups = []
+    for level in _LEVEL_ORDER:
+        members = sorted((p for p in packs.values() if p.level == level),
+                         key=lambda p: (p.parent, p.market))
+        if not members:
+            continue
+        by_parent: dict[str, list] = {}
+        for pack in members:
+            by_parent.setdefault(pack.parent, []).append(pack)
+        groups.append({
+            "level": level,
+            "blurb": _LEVEL_BLURB.get(level, ""),
+            "count": len(members),
+            "families": [
+                {"parent": parent, "parent_name": packs[parent].name if parent in packs else "",
+                 "packs": items}
+                for parent, items in sorted(by_parent.items())
+            ],
+        })
+    return groups
+
+
 def market_states(run) -> dict[str, dict]:
     """Per market: {clearance, findings, blocked, errored} for one run.
 
@@ -628,7 +668,7 @@ def home(request: Request):
     for run in db.recent_runs(12):
         recent.append({"run": run, "states": market_states(run)})
     return _page(request, "home.html",
-                 packs=sorted(market_packs().values(), key=lambda p: p.market),
+                 groups=pack_groups(),
                  recent=recent)
 
 @app.post("/runs")
