@@ -31,9 +31,13 @@ import sqlite3
 import threading
 from pathlib import Path
 
-# Scratch frames and audio: regenerable, large, and never read after a run
-# finishes. Mirroring them would triple the copy for nothing.
+# The run's scratch tree is not worth mirroring -- extracted audio is large
+# and nothing reads it once the run is over -- with one exception that is not
+# scratch at all: the keyframes. Every observation points at one as its
+# evidence, and the market room and the timeline draw it, so a restored run
+# without them comes back with its findings intact and its proof missing.
 _SKIP = {"work"}
+_KEEP_INSIDE_SKIP = "frames"
 
 _lock = threading.Lock()
 
@@ -58,7 +62,7 @@ def _mirror_files(src: Path, dst: Path) -> int:
         if item.is_dir() or item.suffix in (".db", ".db-wal", ".db-shm", ".tmp"):
             continue
         rel = item.relative_to(src)
-        if rel.parts and rel.parts[0] in _SKIP:
+        if rel.parts and rel.parts[0] in _SKIP and _KEEP_INSIDE_SKIP not in rel.parts:
             continue
         target = dst / item.relative_to(src)
         try:

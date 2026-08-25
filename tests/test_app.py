@@ -989,8 +989,10 @@ def test_state_is_mirrored_out_and_restored_into_a_fresh_container(tmp_path, mon
     run = store_a.create_run(asset_path=str(old.parent / "ad.mp4"), markets=["FR"])
     (old.parent / "uploads").mkdir()
     (old.parent / "uploads" / "ad.mp4").write_bytes(b"master")
-    (old.parent / "work").mkdir()
-    (old.parent / "work" / "scratch.png").write_bytes(b"regenerable")
+    (old.parent / "work" / "audio").mkdir(parents=True)
+    (old.parent / "work" / "audio" / "shot_0.wav").write_bytes(b"regenerable")
+    (old.parent / "work" / "frames").mkdir(parents=True)
+    (old.parent / "work" / "frames" / "shot_0_kf0.png").write_bytes(b"evidence")
     assert "store=True" in persist.snapshot(old)
 
     fresh = tmp_path / "fresh" / "customs.db"
@@ -998,7 +1000,10 @@ def test_state_is_mirrored_out_and_restored_into_a_fresh_container(tmp_path, mon
     assert "restored store=True" in persist.restore(fresh)
     assert Store(fresh).get_run(run.id) is not None
     assert (fresh.parent / "uploads" / "ad.mp4").read_bytes() == b"master"
-    assert not (fresh.parent / "work").exists()   # scratch is not mirrored
+    # scratch audio is not worth mirroring, but the evidence frames every
+    # finding points at are: a restored run keeps its proof
+    assert not (fresh.parent / "work" / "audio").exists()
+    assert (fresh.parent / "work" / "frames" / "shot_0_kf0.png").read_bytes() == b"evidence"
 
 
 def test_restore_never_overwrites_a_container_that_already_has_runs(tmp_path, monkeypatch):
