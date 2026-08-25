@@ -520,3 +520,95 @@ def test_the_operators_choice_reaches_a_bridge(monkeypatch, tmp_path):
     remediate._bridge_span(tmp_path / "b.mp4", finding, None, tmp_path,
                            tmp_path / "out.mp4", intent="remedy:0")
     assert "long-sleeved blouse" in seen["instruction"]
+
+
+# -- the safety gate: look before you spend --
+
+def _bridge_fixture(monkeypatch, tmp_path, verdicts):
+    """A bridge with the image edit and the checker stubbed. Returns what ran."""
+    from customs import remediate
+    from customs.schema import Finding
+    ran = {"edits": 0, "veo": 0, "charged": 0, "events": []}
+
+    monkeypatch.setattr(remediate, "_edit_image",
+                        lambda *a, **k: ran.__setitem__("edits", ran["edits"] + 1) or b"png")
+    monkeypatch.setattr(remediate, "_anchor_check",
+                        lambda *a, **k: verdicts.pop(0))
+    monkeypatch.setattr(remediate.media, "extract_keyframes",
+                        lambda *a, **k: [tmp_path / "kf.png"])
+    monkeypatch.setattr(remediate.media, "fit_image", lambda a, b, c: pathlib.Path(c))
+    monkeypatch.setattr(remediate.media, "splice_clip", lambda *a, **k: None)
+    def veo(**kw):
+        ran["veo"] += 1
+        return kw["out_path"]
+    monkeypatch.setattr(remediate, "generate_bridge", veo)
+    (tmp_path / "kf.png").write_bytes(b"raw")
+
+    finding = Finding(id="f", run_id="r", observation_id="o", market="SA",
+                      rule_id="SA-MOD-01", klass="legal", severity=80,
+                      t_start=1.0, t_end=5.0, rationale="", citation_ref="",
+                      citation_url="", sourced=True, remediable=True,
+                      remediation_blocked=False, blocked_reason="")
+    return remediate, finding, ran
+
+
+def test_an_unfixed_anchor_never_reaches_veo_and_is_never_charged(monkeypatch, tmp_path):
+    """The whole point: a wasted bridge costs EUR 1.88, a check costs cents.
+
+    A modesty finding once came back as a green drinking can -- four
+    generated seconds, fully charged, for a frame whose sleeves were never
+    touched. Nothing looked at the anchor before Veo was paid to move it.
+    """
+    bad = {"fixed": False, "still_visible": "bare shoulders", "added": "a green can"}
+    remediate, finding, ran = _bridge_fixture(
+        monkeypatch, tmp_path, [dict(bad), dict(bad)])   # fails, retries, fails
+
+    with pytest.raises(remediate.RemediationError, match="still does not satisfy"):
+        remediate._bridge_span(tmp_path / "b.mp4", finding, None, tmp_path,
+                               tmp_path / "out.mp4",
+                               spend=lambda: ran.__setitem__("charged", ran["charged"] + 1),
+                               on_event=lambda a, m: ran["events"].append(m))
+
+    assert ran["edits"] == 2, "one retry, told what was wrong"
+    assert ran["veo"] == 0, "Veo must not be called"
+    assert ran["charged"] == 0, "and nothing charged"
+    assert any("rejected" in m for m in ran["events"])
+
+
+def test_a_retry_that_works_goes_through_and_pays(monkeypatch, tmp_path):
+    """The first edit missed, the second landed. That is worth generating."""
+    remediate, finding, ran = _bridge_fixture(monkeypatch, tmp_path, [
+        {"fixed": False, "still_visible": "bare shoulders", "added": ""},
+        {"fixed": True, "still_visible": "", "added": ""},   # head, second try
+        {"fixed": True, "still_visible": "", "added": ""},   # tail, first try
+    ])
+    remediate._bridge_span(tmp_path / "b.mp4", finding, None, tmp_path,
+                           tmp_path / "out.mp4",
+                           spend=lambda: ran.__setitem__("charged", ran["charged"] + 1),
+                           on_event=lambda a, m: ran["events"].append(m))
+    assert ran["edits"] == 3 and ran["veo"] == 1
+    assert ran["charged"] == 1, "charged once, at the point Veo was called"
+
+
+def test_an_edit_that_smuggles_in_a_new_object_is_rejected(monkeypatch, tmp_path):
+    """Fixed but with something added is not fixed. That is the green can."""
+    remediate, finding, ran = _bridge_fixture(monkeypatch, tmp_path, [
+        {"fixed": True, "still_visible": "", "added": "a green drinking can"},
+        {"fixed": True, "still_visible": "", "added": "a green drinking can"},
+    ])
+    with pytest.raises(remediate.RemediationError, match="green drinking can"):
+        remediate._bridge_span(tmp_path / "b.mp4", finding, None, tmp_path,
+                               tmp_path / "out.mp4", spend=lambda: None)
+    assert ran["veo"] == 0
+
+
+def test_a_broken_checker_does_not_block_a_fix(monkeypatch, tmp_path):
+    """A checker that errors must not become a new way for remediation to fail."""
+    remediate, finding, ran = _bridge_fixture(
+        monkeypatch, tmp_path, [{"unchecked": True}, {"unchecked": True}])
+    remediate._bridge_span(tmp_path / "b.mp4", finding, None, tmp_path,
+                           tmp_path / "out.mp4",
+                           spend=lambda: ran.__setitem__("charged", 1),
+                           on_event=lambda a, m: ran["events"].append(m))
+    assert ran["veo"] == 1 and ran["charged"] == 1
+    assert any("could not be checked" in m for m in ran["events"])

@@ -48,7 +48,8 @@ from google.genai import types
 
 from customs import costs, media
 from customs.config import settings
-from customs.genai_client import client, generate_bridge, generate_json
+from customs.genai_client import (client, generate_bridge, generate_json,
+                                  generate_json_image)
 from customs.media import Shot
 from customs.packs import load as load_packs
 from customs.schema import ChangeRecord, Finding, Observation
@@ -206,10 +207,16 @@ _BRIDGE_PROMPT = (
 _DEFAULT_REPLACEMENT = {
     "relettering": "the same sentence translated into the language of {market_name}",
     "prop_swap": (
-        "Replace each alcoholic drink, bottle and glass that is already "
-        "visible with a non-alcoholic drink that suits {market_name}, for "
-        "example tea in the same style of glass, keeping the same number of "
-        "items in the same places and adding none."
+        # One dimension covers alcohol, tobacco AND drugs, so this default
+        # cannot name only alcohol: a Parliament cigarette pack was being
+        # sent "replace each alcoholic drink, bottle and glass", the same
+        # category collapse that put a green can into a modesty shot.
+        "Replace each alcoholic drink, bottle, glass, cigarette, cigar, "
+        "tobacco pack or ashtray that is already visible with a permitted "
+        "equivalent for {market_name} -- tea in the same style of glass in "
+        "place of a drink, a pen or nothing at all in place of a cigarette, "
+        "a closed box with no branding in place of a pack -- keeping the "
+        "same number of items in the same places and adding none."
     ),
 }
 
@@ -532,11 +539,66 @@ def _frame_instruction(finding: Finding, replacement: str | None,
         market_name=market_name)
 
 
+_CHECK_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "fixed": {"type": "boolean"},
+        "still_visible": {"type": "string"},
+        "added": {"type": "string"},
+    },
+    "required": ["fixed", "still_visible", "added"],
+}
+
+_CHECK_PROMPT = (
+    "You are checking one frame of a television commercial that has just been "
+    "edited to satisfy a broadcast rule.\n\n"
+    "THE RULE: {trigger}\n"
+    "WHAT WAS ORIGINALLY OBSERVED IN THIS FRAME: {statement}\n"
+    "WHAT THE EDIT WAS ASKED TO DO: {directive}\n\n"
+    "fixed: true only if the frame as it now stands no longer breaks that "
+    "rule. Judge the picture in front of you, not the instruction: an edit "
+    "that changed something else, or changed nothing, is not fixed.\n"
+    "still_visible: if it is not fixed, name what still breaks the rule, in "
+    "a few words. Empty string if it is fixed.\n"
+    "added: name anything present that the description does not account for "
+    "and that has no reason to be in this scene -- a drink, a prop, an "
+    "object that does not belong. Empty string if nothing was added."
+)
+
+
+def _note(on_event, message: str) -> None:
+    if on_event is not None:
+        on_event("remediator", message)
+
+
+def _anchor_check(image_bytes: bytes, finding: Finding, statement: str,
+                  directive: str) -> dict:
+    """Ask a cheap model whether the edited frame actually complies.
+
+    A Veo bridge costs about EUR 1.88 and takes minutes; this is one image
+    call. Sending an anchor to Veo without looking at it is how a modesty
+    finding came back as a green drinking can, four generated seconds and a
+    charge, for a frame that never had its sleeves changed.
+    """
+    rule = _rule_for(finding)
+    prompt = _CHECK_PROMPT.format(
+        trigger=(rule.trigger if rule else finding.rationale) or "the market's rule",
+        statement=statement or "(not recorded)",
+        directive=directive,
+    )
+    try:
+        return generate_json_image(prompt, image_bytes, _CHECK_SCHEMA)
+    except Exception:  # noqa: BLE001 -- a checker that breaks must not block a fix
+        return {"fixed": True, "still_visible": "", "added": "",
+                "unchecked": True}
+
+
 def _bridge_span(base: Path, finding: Finding, replacement: str | None,
                  workdir: Path, out_path: Path,
                  keep_dir: Path | None = None,
                  intent: str | None = None,
-                 change_id: str = "") -> tuple[Path, str]:
+                 change_id: str = "", statement: str = "",
+                 spend=None, on_event=None) -> tuple[Path, str]:
     """Edit both ends of the span and let Veo generate the motion between.
 
     The only method that can follow genuine 3D motion, and the only one that
@@ -558,12 +620,45 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
     for tag, when in (("head", finding.t_start), ("tail", max(finding.t_start, finding.t_end - 0.08))):
         span = Shot(shot_id=f"bridge_{tag}", t_start=when, t_end=when + 0.04)
         raw = media.extract_keyframes(base, span, workdir / "bridge", per_shot=1)[0]
-        edited_bytes = _edit_image(instruction, raw.read_bytes(), reference=first_edit)
+
+        # Check the anchor before it is worth anything. Veo costs about
+        # EUR 1.88 and several minutes; this is one image call. One retry,
+        # told what went wrong, then give up rather than generate four
+        # seconds of motion between two frames that never got fixed.
+        attempt_instruction = instruction
+        for attempt in (1, 2):
+            edited_bytes = _edit_image(attempt_instruction, raw.read_bytes(),
+                                       reference=first_edit)
+            verdict = _anchor_check(edited_bytes, finding, statement, instruction)
+            if verdict.get("unchecked"):
+                _note(on_event, f"bridge {tag}: could not be checked, proceeding")
+                break
+            if verdict.get("fixed") and not (verdict.get("added") or "").strip():
+                _note(on_event, f"bridge {tag}: checked, compliant")
+                break
+            problem = ", ".join(x for x in (verdict.get("still_visible"),
+                                            verdict.get("added")) if x)
+            if attempt == 2:
+                raise RemediationError(
+                    f"the edited {tag} frame still does not satisfy "
+                    f"{finding.rule_id}: {problem or 'unchanged'}. Nothing was "
+                    f"generated, so nothing was charged.")
+            _note(on_event, f"bridge {tag}: rejected ({problem}), retrying")
+            attempt_instruction = (
+                f"{instruction} A previous attempt failed because: {problem}. "
+                f"Fix that specifically, and do not add anything to the scene.")
+
         if first_edit is None:
             first_edit = edited_bytes
         edited_raw = workdir / f"bridge_{tag}_edited_raw.png"
         edited_raw.write_bytes(edited_bytes)
         anchors.append(media.fit_image(edited_raw, base, workdir / f"bridge_{tag}.png"))
+
+    # Only now is anything actually spent: both anchors are compliant, so
+    # the generation is worth paying for. Written down before the call
+    # rather than after, because a bridge that dies halfway still consumed it.
+    if spend is not None:
+        spend()
 
     seconds = costs.bridge_seconds(finding.t_end - finding.t_start)
     # _BRIDGE_PROMPT, not `instruction`: the anchors already carry the swap,
@@ -596,7 +691,8 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
 
 
 def apply(run, finding: Finding, method: str, workdir, store, *,
-          replacement: str | None = None, intent: str | None = None) -> ChangeRecord:
+          replacement: str | None = None, intent: str | None = None,
+          statement: str = "", spend=None, on_event=None) -> ChangeRecord:
     """Apply one remediation to this market's localized master.
 
     Args:
@@ -637,11 +733,14 @@ def apply(run, finding: Finding, method: str, workdir, store, *,
     changes_dir.mkdir(parents=True, exist_ok=True)
 
     with market_lock(run.id, finding.market):
-        return _apply_locked(run, finding, method, workdir, store, intent, replacement, changes_dir)
+        return _apply_locked(run, finding, method, workdir, store, intent,
+                             replacement, changes_dir, statement=statement,
+                             spend=spend, on_event=on_event)
 
 def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
                   intent: str | None,
-                  replacement: str | None, changes_dir: Path) -> ChangeRecord:
+                  replacement: str | None, changes_dir: Path,
+                  statement: str = "", spend=None, on_event=None) -> ChangeRecord:
     """apply()'s body, with this market's master already locked."""
     master = localized_master(run, finding.market, store)
     base = master if master.exists() else Path(run.asset_path)
@@ -656,7 +755,8 @@ def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
 
     try:
         edit = _run_method(run, finding, method, replacement, intent, base, before,
-                           workdir, staged, store, changes_dir, change_id)
+                           workdir, staged, store, changes_dir, change_id,
+                           statement=statement, spend=spend, on_event=on_event)
     except Exception:
         # A half-done remediation must never look like a done one. The finding
         # goes straight back to open, so clearance() counts it again and the
@@ -686,7 +786,8 @@ def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
 def _run_method(run, finding: Finding, method: str, replacement: str | None,
                 intent: str | None,
                 base: Path, before: Path, workdir: Path, staged: Path, store,
-                changes_dir: Path | None = None, change_id: str = "") -> str:
+                changes_dir: Path | None = None, change_id: str = "",
+                statement: str = "", spend=None, on_event=None) -> str:
     """Produce the edited video at `staged` and return the change description.
 
     Split out of apply() so every failure mode of every method funnels through
@@ -723,7 +824,8 @@ def _run_method(run, finding: Finding, method: str, replacement: str | None,
         _edited, instruction = _bridge_span(base, finding, replacement,
                                             Path(workdir), staged,
                                             keep_dir=changes_dir, intent=intent,
-                                            change_id=change_id)
+                                            change_id=change_id, statement=statement,
+                                            spend=spend, on_event=on_event)
         return (f"regenerated {costs.bridge_seconds(finding.t_end - finding.t_start):.0f}s "
                 f"of motion between two edited anchor frames")
     media.crop_span(base, finding.t_start, finding.t_end, staged)

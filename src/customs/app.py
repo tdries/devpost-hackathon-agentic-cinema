@@ -215,8 +215,18 @@ def _remediate_and_verify(run_id: str, finding_id: str, market: str,
                         f"running {chosen} anyway: {why}")
             db.emit(run_id, "remediator",
                     f"{finding.rule_id} ({market}) -> planned {chosen}")
-            change = remediate.apply(run, finding, chosen, workdir, db,
-                                     replacement=replacement, intent=intent)
+            span = max(0.0, finding.t_end - finding.t_start)
+
+            def _charge(_db=db, _run=run_id, _fid=finding.id, _span=span) -> None:
+                _db.record_spend("bridge", costs.estimate("bridge", _span),
+                                 _run, _fid)
+
+            change = remediate.apply(
+                run, finding, chosen, workdir, db,
+                replacement=replacement, intent=intent,
+                statement=observation.statement if observation else "",
+                spend=_charge if chosen == "bridge" else None,
+                on_event=lambda agent, message: db.emit(run_id, agent, message))
             return verify.confirm(run, market, [change], db, workdir)
     except Exception as exc:  # noqa: BLE001 -- a background task has nobody to raise to
         log.exception("remediation of %s failed", finding_id)
@@ -1492,11 +1502,12 @@ def remediate_now(run_id: str, finding_id: str, background: BackgroundTasks,
         if not ok:
             raise HTTPException(status_code=409, detail=why)
     price = 0.0 if choice == "auto" else costs.estimate(choice, span)
-    if choice == "bridge":
-        # Written down before the work starts: a bridge that dies halfway
-        # still consumed the generation, and a budget that only counts
-        # successes is not a budget.
-        store().record_spend("bridge", price, run.id, finding.id)
+    # The charge is NOT made here. A bridge edits both anchor frames and
+    # checks them first, and if the edit did not actually fix the finding it
+    # never calls Veo, so there is nothing to charge for. remediate_and_verify
+    # records it at the moment Veo is called -- still before the generation
+    # returns, because a bridge that dies halfway consumed it, and a budget
+    # that only counts successes is not a budget.
 
     store().emit(run.id, "remediator",
                  f"console requested remediation: {finding.rule_id} "
