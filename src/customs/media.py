@@ -415,18 +415,41 @@ def replace_audio_span(path, wav, t_start: float, t_end: float, out_path) -> Pat
 
 
 def splice_clip(path, clip, t_start: float, t_end: float, out_path) -> Path:
-    """Replace [t_start, t_end) of `path` with the first (t_end - t_start)
-    seconds of `clip`, keeping the original audio across the whole file.
+    """Replace [t_start, t_end) of `path` with ALL of `clip`, retimed to fit,
+    keeping the original audio across the whole file.
 
     Used by the Veo bridge: the generated motion carries the picture for the
     span and nothing else, so the performance either side is the brand's own
-    footage, untouched, and the soundtrack never breaks. Veo will not emit a
-    clip shorter than four seconds, so the clip is trimmed here rather than
-    asked for at span length.
+    footage, untouched, and the soundtrack never breaks.
+
+    Retimed, not trimmed. Veo will not emit less than four seconds, so a
+    1.6 second span comes back as a four second clip. This used to keep the
+    first 1.6 seconds of it and throw the rest away, which is wrong twice
+    over: the motion played at 40% speed against untouched audio, and the
+    last frame -- the corrected anchor Veo was explicitly conditioned to
+    land on -- never reached the screen, so the patch jump-cut back to the
+    original at the out point. Measured on this instance's own four
+    bridges: 18%, 21%, 40% and 99% of the generated footage was shown, and
+    the landing frame in none of them.
+
+    Rescaling instead restores the real speed rather than creating fast
+    motion: the two anchors are the true endpoints of a real span, so Veo
+    rendered that displacement in slow motion to fill its minimum duration.
+    The factor comes from probing the returned file, never from
+    costs.bridge_seconds -- what Veo was asked for and what it emits are
+    two different numbers.
     """
     duration = probe_duration(path)
     span = max(t_end - t_start, 0.04)
     width, height = probe_resolution(path)
+    try:
+        generated = probe_duration(clip)
+    except Exception:  # noqa: BLE001 -- an unprobeable clip still gets spliced
+        generated = 0.0
+    # >0.01: a clip already the right length needs no rescale, and a failed
+    # probe (0.0) must not divide.
+    retime = (f"setpts=PTS*{span / generated:.6f},"
+              if generated > 0.01 and abs(generated - span) > 0.01 else "")
     # setpts does BOTH jobs here, and it has to: PTS-STARTPTS normalises the
     # trimmed patch to zero, and +t_start/TB then places it at the moment it
     # is meant to cover. The first version paired PTS-STARTPTS with an
@@ -437,7 +460,7 @@ def splice_clip(path, clip, t_start: float, t_end: float, out_path) -> Path:
     # like the input, which is the worst kind of failure -- one that reports
     # success. tests/test_media.py measures the pixels now.
     filt = (
-        f"[1:v]trim=0:{span:.3f},setpts=PTS-STARTPTS+{t_start:.3f}/TB,"
+        f"[1:v]{retime}trim=0:{span:.3f},setpts=PTS-STARTPTS+{t_start:.3f}/TB,"
         f"scale={width}:{height},setsar=1[patch];"
         f"[0:v][patch]overlay=enable='between(t,{t_start:.3f},{t_end:.3f})':"
         f"eof_action=pass[v]"
