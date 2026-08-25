@@ -336,7 +336,7 @@ def _upload(client, payload=b"\x00\x01fake mp4 bytes", markets=MARKETS, name="ad
 
 # -- the front door --
 
-def test_home_offers_every_market_pack_and_says_when_there_are_no_runs(console):
+def test_home_offers_every_market_pack_and_leaves_history_to_its_own_tab(console):
     client, _store, _launched, _jobs = console
 
     body = client.get("/").text
@@ -344,7 +344,15 @@ def test_home_offers_every_market_pack_and_says_when_there_are_no_runs(console):
     assert client.get("/").status_code == 200
     for market in MARKETS:
         assert f'value="{market}"' in body, market
-    assert "no runs yet" in body.lower()
+    # Starting a clearance and reading the ones already done are different
+    # jobs. The form used to carry the last twelve runs underneath it, which
+    # put the history a scroll below a form nobody was filling in.
+    assert "no runs yet" not in body.lower()
+    assert 'href="/runs"' in body  # ...but the tab that has it is one click away
+
+    history = client.get("/runs")
+    assert history.status_code == 200
+    assert "no runs yet" in history.text.lower()
 
 
 def test_upload_creates_a_run_starts_the_crew_and_redirects_to_the_board(console):

@@ -1,0 +1,12 @@
+{# Console-level navigation: the top-level screens that are not inside a
+   run. Starting a clearance and reading the ones already done are
+   different jobs, so they are different tabs rather than two halves of
+   one scrolling page. Agent is not here on purpose: it is the other side
+   of the mode switch in the topbar, not a fourth screen of this one. #}
+<nav class="runnav">
+  <div class="wrap screens">
+    <a class="tab {% if screen == 'home' %}on{% endif %}" href="/"><svg class="ic"><use href="#n-new"/></svg>New clearance run</a>
+    <a class="tab {% if screen == 'runs' %}on{% endif %}" href="/runs"><svg class="ic"><use href="#n-board"/></svg>Recent runs</a>
+    <a class="tab {% if screen == 'library' %}on{% endif %}" href="/library"><svg class="ic"><use href="#n-library"/></svg>Library</a>
+  </div>
+</nav>

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Library{% endblock %}
-{% block topbar_right %}<a href="/">New run</a>{% endblock %}
 {% macro severity(value) %}<span class="sev"><span class="sev-track"><span class="sev-fill{{ ' hot' if value >= 70 else '' }}" style="width:{{ value }}%"></span></span><span class="sev-num">{{ value }}</span></span>{% endmacro %}
+{% block nav %}{% include "_topnav.html" %}{% endblock %}
 {% block main %}
 
 <section class="hero" style="padding-bottom:22px">
