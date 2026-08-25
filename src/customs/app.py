@@ -1076,6 +1076,38 @@ def timeline(request: Request, run_id: str):
     return _page(request, "timeline.html", run=run, lanes=lanes, ticks=ticks,
                  duration=duration, screen="timeline")
 
+@app.get("/runs/{run_id}/frames", response_class=HTMLResponse)
+def frame_board(request: Request, run_id: str):
+    """Every frame the crew looked at, beside what it made of it.
+
+    The analyst's evidence already carries all of this: the still it read,
+    the neutral sentence it wrote, the dimension it filed it under, and the
+    findings each market's adjudicator then hung off that sentence. Laid out
+    in timecode order it is the clearest answer to "why did it say that",
+    which is the question a brand asks first.
+    """
+    run = _run_or_404(run_id)
+    db = store()
+    findings = db.findings(run.id)
+    by_observation: dict[str, list] = {}
+    for finding in findings:
+        by_observation.setdefault(finding.observation_id, []).append(finding)
+
+    rows = []
+    for obs in sorted(db.observations(run.id), key=lambda o: (o.t_start, o.id)):
+        hits = sorted(by_observation.get(obs.id, []),
+                      key=lambda f: (-f.severity, f.market))
+        rows.append({
+            "obs": obs,
+            "frame": bool(obs.evidence_frame and Path(obs.evidence_frame).is_file()),
+            "findings": hits,
+            "markets": sorted({f.market for f in hits}),
+        })
+    return _page(request, "frame_board.html", run=run, rows=rows,
+                 total=len(rows), flagged=sum(1 for r in rows if r["findings"]),
+                 screen="frames")
+
+
 @app.get("/runs/{run_id}/status")
 def run_status(run_id: str):
     """The 2 second poll behind the tiles. Shape is the contract, keep it."""

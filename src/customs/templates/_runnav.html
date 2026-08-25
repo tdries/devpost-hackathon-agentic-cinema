@@ -3,6 +3,7 @@
   <div class="wrap screens">
     <a class="tab {% if screen == 'board' %}on{% endif %}" href="/runs/{{ run.id }}"><svg class="ic"><use href="#n-board"/></svg>Launch board</a>
     <a class="tab {% if screen == 'mission' %}on{% endif %}" href="/runs/{{ run.id }}/mission"><svg class="ic"><use href="#n-feed"/></svg>Mission feed</a>
+    <a class="tab {% if screen == 'frames' %}on{% endif %}" href="/runs/{{ run.id }}/frames"><svg class="ic"><use href="#i-frame"/></svg>Frame board</a>
     <a class="tab {% if screen == 'timeline' %}on{% endif %}" href="/runs/{{ run.id }}/timeline"><svg class="ic"><use href="#n-timeline"/></svg>Timeline</a>
     <a class="tab {% if screen == 'cutting' %}on{% endif %}" href="/runs/{{ run.id }}/cutting"><svg class="ic"><use href="#n-cut"/></svg>Cutting room</a>
   </div>
