@@ -125,6 +125,8 @@ class _RunState:
     shots: list = field(default_factory=list)
     transcripts: dict[str, str] = field(default_factory=dict)
     observations: list[Observation] = field(default_factory=list)
+    # one per (observation, rule) pairing per market, including the noes
+    verdicts: list = field(default_factory=list)
     judged: dict[str, list[Finding]] = field(default_factory=dict)
     findings: list[Finding] = field(default_factory=list)
     clearances: dict[str, str] = field(default_factory=dict)
@@ -322,9 +324,13 @@ class AdjudicatorAgent(_Stage):
             self.emit("adjudicator", f"stage_error: market={self.market}: no market pack loaded")
             return f"{self.market}: no market pack loaded"
 
+        # every answer, not only the objections: state.verdicts is what
+        # lets Grafana be asked which markets are permissive
+        collected: list = []
         ok, result = pipeline._call_with_retries(
             lambda: pipeline.judge(
-                self.state.run_id, self.state.observations, pack, on_event=self.emit
+                self.state.run_id, self.state.observations, pack,
+                on_event=self.emit, on_verdict=collected.extend,
             )
         )
         if not ok:
@@ -333,6 +339,7 @@ class AdjudicatorAgent(_Stage):
 
         with self.state.lock:
             self.state.judged[self.market] = result
+            self.state.verdicts.extend(collected)
         return f"{self.market}: {len(result)} raw finding(s)"
 
 class GuardAgent(_Stage):
@@ -560,6 +567,13 @@ def _push_run_telemetry(store: Store, state: _RunState, emit) -> dict:
     # Every observation, not only the ones a market objected to. What the
     # analyst saw and NOBODY flagged is the half that says which markets
     # are permissive, and it used to exist only in SQLite.
+    if state.verdicts:
+        n = telemetry.push_verdicts(run, state.verdicts)
+        cleared = sum(1 for v in state.verdicts if v.verdict == "cleared")
+        store.emit(state.run_id, "publisher",
+                   f"push_verdicts -> {n} verdict(s), {cleared} of them a market "
+                   f"looking and saying no")
+
     observations = store.observations(state.run_id)
     pushed = telemetry.push_observations(run, observations, findings)
     emit_obs = f"push_observations -> {pushed} observation(s) to Loki"

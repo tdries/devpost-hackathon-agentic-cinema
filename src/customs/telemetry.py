@@ -611,6 +611,41 @@ def push_observations(run: RunRecord, observations, findings: list[Finding]) -> 
     return len(streams)
 
 
+def push_verdicts(run: RunRecord, verdicts) -> int:
+    """Every market's answer about every observation, including the noes.
+
+    This is the record that makes "which markets are permissive" a
+    question with an answer. A finding says France objected; only a
+    verdict says Germany looked at the same frame and did not.
+
+    `verdict` is a label because it is exactly three values and it is the
+    thing every query groups by. market and dimension are labels for the
+    same reason. Everything else -- the rationale, the observation, the
+    severity adjustment -- goes in the body.
+
+    unreturned is deliberately its own value rather than folded into
+    cleared: a model that failed to answer for a pairing has not cleared
+    it, and counting silence as approval is the one error that would make
+    this whole record lie in the safe direction.
+    """
+    streams = []
+    for v in verdicts or []:
+        streams.append({
+            "stream": {
+                "app": "customs", "kind": "verdict",
+                "asset": _asset_label(run),
+                "market": v.market,
+                "dimension": v.dimension or "none",
+                "verdict": v.verdict,
+            },
+            "values": [[str(int(_mapped_unix_seconds(run, v.t_start) * 1_000_000_000)),
+                        json.dumps(v.to_json())]],
+        })
+    if streams:
+        _loki_push(streams)
+    return len(streams)
+
+
 def push_stage_error(run: RunRecord, stage: str) -> None:
     """Increment and push the current-clock customs_stage_error{asset,stage}
     gauge (a hand-rolled counter, not an OTLP Sum -- see the module-level

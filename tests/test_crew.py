@@ -100,7 +100,7 @@ def _stub_stages(monkeypatch, judge=None):
     monkeypatch.setattr(pipeline, "observe_shot", _fake_observe_shot)
     monkeypatch.setattr(
         pipeline, "judge",
-        judge or (lambda run_id, observations, pack, on_event=None:
+        judge or (lambda run_id, observations, pack, on_event=None, on_verdict=None:
                   [_canned_finding(pack.market, run_id=run_id)]),
     )
 
@@ -182,7 +182,7 @@ def test_run_clearance_runs_the_adjudicators_in_parallel(monkeypatch, clip, tmp_
     # rather than passing slowly.
     barrier = threading.Barrier(2, timeout=20)
 
-    def judge_at_the_barrier(run_id, observations, pack, on_event=None):
+    def judge_at_the_barrier(run_id, observations, pack, on_event=None, on_verdict=None):
         barrier.wait()
         return [_canned_finding(pack.market, run_id=run_id)]
 
@@ -195,7 +195,7 @@ def test_run_clearance_runs_the_adjudicators_in_parallel(monkeypatch, clip, tmp_
 
 def test_run_clearance_keeps_the_guard_wired(monkeypatch, clip, tmp_path):
     # SA-LGBT-01 is a real markets/SA.yaml rule with protected_basis: true.
-    _stub_stages(monkeypatch, judge=lambda run_id, observations, pack, on_event=None: [
+    _stub_stages(monkeypatch, judge=lambda run_id, observations, pack, on_event=None, on_verdict=None: [
         _canned_finding(pack.market, rule_id="SA-LGBT-01", run_id=run_id)
     ])
     store = Store(tmp_path / "t.db")
@@ -206,7 +206,7 @@ def test_run_clearance_keeps_the_guard_wired(monkeypatch, clip, tmp_path):
     assert finding.status == "open"
 
 def test_run_clearance_market_stage_error_never_takes_down_the_run(monkeypatch, clip, tmp_path):
-    def flaky_judge(run_id, observations, pack, on_event=None):
+    def flaky_judge(run_id, observations, pack, on_event=None, on_verdict=None):
         if pack.market == "SA":
             raise RuntimeError("simulated 5xx")
         return [_canned_finding(pack.market, run_id=run_id)]

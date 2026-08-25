@@ -429,3 +429,72 @@ def test_judge_live_fr_alcohol_finding_is_sourced(tmp_path):
     alc = [f for f in findings if f.rule_id == "FR-ALC-01"]
     assert alc, f"expected a FR-ALC-01 finding, got rule_ids: {[f.rule_id for f in findings]}"
     assert alc[0].sourced is True, f"FR-ALC-01 finding was not sourced: {alc[0]}"
+
+
+# --- verdicts: the acquittals that used to be thrown away ---
+
+def test_every_pairing_gets_a_verdict_including_the_noes(monkeypatch):
+    """A finding only exists where a market objected.
+
+    So findings alone record every complaint and no acquittals, and
+    "which markets are permissive" has no answer anywhere -- the judge
+    decided it and the answer was dropped at `if not triggers: continue`.
+
+    Keeping it is free: generate_grounded, the only call that costs
+    money, runs after that line and only for a finding.
+    """
+    pack = _pack([_rule("FR-ALC-01", "alcohol_tobacco_drugs"),
+                  _rule("FR-MOD-01", "modesty_dress_body")], market="FR")
+    observations = [
+        _obs("obs_a", "alcohol_tobacco_drugs"),
+        _obs("obs_b", "modesty_dress_body"),
+    ]
+    # one objection, one acquittal
+    monkeypatch.setattr(adjudicate, "generate_json", lambda *a, **k: [
+        {"observation_id": "obs_a", "rule_id": "FR-ALC-01", "triggers": True,
+         "severity_adjust": 0, "rationale": "a glass of wine", "scope": "frame",
+         "substitutable": True},
+        {"observation_id": "obs_b", "rule_id": "FR-MOD-01", "triggers": False,
+         "severity_adjust": 0, "rationale": "an ordinary coat", "scope": "frame",
+         "substitutable": True},
+    ])
+    monkeypatch.setattr(adjudicate, "generate_grounded", lambda *a, **k: ("ok", []))
+
+    collected = []
+    findings = adjudicate.judge("run_1", observations, pack, on_verdict=collected.extend)
+
+    assert len(findings) == 1, "only the objection becomes a finding"
+    by_rule = {v.rule_id: v for v in collected}
+    assert by_rule["FR-ALC-01"].verdict == "triggered"
+    assert by_rule["FR-MOD-01"].verdict == "cleared"
+    assert by_rule["FR-MOD-01"].rationale == "an ordinary coat", \
+        "the reason a market said no is worth as much as the reason it said yes"
+
+
+def test_a_pairing_the_model_never_answered_is_not_clearance(monkeypatch):
+    """Silence is not approval, and this is the error that would matter.
+
+    The verdict set is seeded from candidates() rather than built from
+    the response, so a pairing the model omits stays 'unreturned'. Folding
+    that into 'cleared' would make the record lie in the safe direction --
+    it would report a market as having looked and approved when it never
+    answered at all.
+    """
+    pack = _pack([_rule("FR-ALC-01", "alcohol_tobacco_drugs"),
+                  _rule("FR-MOD-01", "modesty_dress_body")], market="FR")
+    observations = [
+        _obs("obs_a", "alcohol_tobacco_drugs"),
+        _obs("obs_b", "modesty_dress_body"),
+    ]
+    # the model answers about one pairing and silently ignores the other
+    monkeypatch.setattr(adjudicate, "generate_json", lambda *a, **k: [
+        {"observation_id": "obs_a", "rule_id": "FR-ALC-01", "triggers": False,
+         "severity_adjust": 0, "rationale": "water", "scope": "frame",
+         "substitutable": True},
+    ])
+    collected = []
+    adjudicate.judge("run_1", observations, pack, on_verdict=collected.extend)
+
+    by_rule = {v.rule_id: v.verdict for v in collected}
+    assert by_rule == {"FR-ALC-01": "cleared", "FR-MOD-01": "unreturned"}
+    assert "unreturned" in by_rule.values(), "an omission must be visible as one"

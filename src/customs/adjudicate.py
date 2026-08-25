@@ -3,7 +3,7 @@ import json
 from customs.config import settings
 from customs.genai_client import generate_grounded, generate_json
 from customs.packs import MarketPack, MarketRule
-from customs.schema import Finding, Observation
+from customs.schema import Finding, Observation, Verdict
 
 # Bounds the judge model may adjust a rule's base severity by. A candidate can
 # only be judged less severe than the rule's default, never more; enforced in
@@ -137,7 +137,8 @@ def _clamp_severity_adjust(value: int) -> int:
     """
     return max(SEVERITY_ADJUST_MIN, min(SEVERITY_ADJUST_MAX, int(value)))
 
-def judge(run_id: str, observations: list[Observation], pack: MarketPack, on_event=None) -> list[Finding]:
+def judge(run_id: str, observations: list[Observation], pack: MarketPack,
+          on_event=None, on_verdict=None) -> list[Finding]:
     """Judge every dimension-matched candidate for one market, cite each trigger.
 
     One batched generate_json call decides, for every candidate pairing in
@@ -166,6 +167,19 @@ def judge(run_id: str, observations: list[Observation], pack: MarketPack, on_eve
     obs_by_id = {obs.id: obs for obs, _ in cands}
     rule_by_id = {rule.id: rule for _, rule in cands}
     valid_pairs = {(obs.id, rule.id) for obs, rule in cands}
+
+    # Seeded from the candidates, not from the response. A pairing the
+    # model silently omits would otherwise disappear, and an omission
+    # counted as clearance is exactly the error that would corrupt the
+    # question this record exists to answer.
+    verdicts: dict[tuple[str, str], Verdict] = {
+        (obs.id, rule.id): Verdict(
+            id=f"vrd_{pack.market}_{rule.id}_{obs.id}", run_id=run_id,
+            observation_id=obs.id, market=pack.market, rule_id=rule.id,
+            dimension=rule.dimension, klass=rule.klass, verdict="unreturned",
+            t_start=obs.t_start, t_end=obs.t_end)
+        for obs, rule in cands
+    }
 
     payload = [
         {
@@ -222,6 +236,28 @@ def judge(run_id: str, observations: list[Observation], pack: MarketPack, on_eve
                 f"pair {pair!r} is not one of this market's candidates",
             )
             continue
+
+        # Recorded before the trigger test, and before the one call that
+        # costs money: generate_grounded runs only for a finding, so an
+        # acquittal is free to keep.
+        # A severity_adjust that will not coerce costs the FINDING (the
+        # existing guard below drops it with a warning) but must not cost
+        # the verdict: "France said no to this" is still true and still
+        # worth recording whatever nonsense came back in another field.
+        try:
+            _verdict_adjust = _clamp_severity_adjust(item.get("severity_adjust") or 0)
+        except (TypeError, ValueError):
+            _verdict_adjust = 0
+        _verdict_rationale = item.get("rationale")
+        verdicts[pair] = Verdict(
+            id=f"vrd_{pack.market}_{pair[1]}_{pair[0]}", run_id=run_id,
+            observation_id=pair[0], market=pack.market, rule_id=pair[1],
+            dimension=rule_by_id[pair[1]].dimension,
+            klass=rule_by_id[pair[1]].klass,
+            verdict="triggered" if item.get("triggers") else "cleared",
+            severity_adjust=_verdict_adjust,
+            rationale=_verdict_rationale if isinstance(_verdict_rationale, str) else "",
+            t_start=obs_by_id[pair[0]].t_start, t_end=obs_by_id[pair[0]].t_end)
 
         if not item.get("triggers"):
             continue
@@ -289,6 +325,8 @@ def judge(run_id: str, observations: list[Observation], pack: MarketPack, on_eve
             remedies=_remedies(item.get("remedies")),
         ))
 
+    if on_verdict is not None:
+        on_verdict(list(verdicts.values()))
     return findings
 
 def clearance(findings: list[Finding]) -> str:

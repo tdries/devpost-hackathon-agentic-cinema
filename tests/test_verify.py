@@ -90,7 +90,7 @@ def no_real_sleep(monkeypatch):
     monkeypatch.setattr(pipeline.time, "sleep", lambda seconds: None)
 
 def _fake_judge_returning(findings):
-    def fake_judge(run_id, observations, pack, on_event=None):
+    def fake_judge(run_id, observations, pack, on_event=None, on_verdict=None):
         return list(findings)
     return fake_judge
 
@@ -140,7 +140,7 @@ def test_confirm_persists_a_new_violation_the_edit_surfaced(
     other = _finding(id="fnd_other", run_id=run.id, rule_id="FR-ALC-01",
                      observation_id="obs_shot_0_000", status="open")
     monkeypatch.setattr(pipeline, "judge",
-                        lambda run_id, observations, pack, on_event=None: [
+                        lambda run_id, observations, pack, on_event=None, on_verdict=None: [
                             replace(other, observation_id=observations[0].id,
                                     id=f"fnd_FR_FR-ALC-01_{observations[0].id}")])
 
@@ -170,7 +170,7 @@ def test_confirm_does_not_re_record_a_violation_the_market_already_holds_open(
     store.add_findings([already])
     monkeypatch.setattr(pipeline, "observe_shot", lambda *a, **k: [_observation()])
     monkeypatch.setattr(pipeline, "judge",
-                        lambda run_id, observations, pack, on_event=None: [
+                        lambda run_id, observations, pack, on_event=None, on_verdict=None: [
                             replace(already, id="fnd_alc_fresh",
                                     observation_id=observations[0].id)])
 
@@ -195,7 +195,7 @@ def test_confirm_guards_a_new_protected_basis_finding_it_surfaces(
                              after_frame="")
     monkeypatch.setattr(pipeline, "observe_shot", lambda *a, **k: [_observation()])
     monkeypatch.setattr(pipeline, "judge",
-                        lambda run_id, observations, pack, on_event=None: [
+                        lambda run_id, observations, pack, on_event=None, on_verdict=None: [
                             _finding(id="fnd_lgbt_fresh", run_id=run_id, market="SA",
                                      rule_id="SA-LGBT-01", klass="legal",
                                      observation_id=observations[0].id, status="open")])
