@@ -96,7 +96,9 @@ def available(method: str, span: float, spent_today: float) -> tuple[bool, str]:
     if method != "bridge":
         return False, f"Unknown method {method}."
     if span > MAX_BRIDGE_S:
-        return False, (f"{span:.0f}s is longer than Veo will generate in one piece "
+        # .1f, not .0f: an 8.1s span rounded to "8s is longer than Veo will
+        # generate in one piece (8s)", which reads as a bug rather than a limit.
+        return False, (f"{span:.1f}s is longer than Veo will generate in one piece "
                        f"({MAX_BRIDGE_S:.0f}s). Cut the finding's span, or send it to an editor.")
     price = estimate("bridge", span)
     if spent_today + price > DAILY_BUDGET_EUR:
