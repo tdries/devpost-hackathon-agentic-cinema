@@ -1565,3 +1565,25 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 }
 .fb-boxtoggle input { accent-color: #34A853; cursor: pointer; }
 .fb-boxtoggle .box-note { color: var(--ink-3); font-size: 9.5px; }
+
+/* Card view: a card is a block, not a stretched column.
+
+   The grid makes every card in a row as tall as the tallest, and a run
+   cleared for forty channels carries forty pills. That pushed the id,
+   filename and date of its neighbours to the far corners of an empty
+   card. The content now sits at the top and the pill list is capped and
+   scrolls inside the card instead of setting the row's height. */
+.runlist:not(.as-rows) .runrow {
+  align-content: start;
+  grid-template-rows: auto auto auto auto 1fr;
+}
+.runlist:not(.as-rows) .runrow .flags {
+  max-height: 132px; overflow: hidden; align-content: flex-start;
+  -webkit-mask-image: linear-gradient(to bottom, #000 96px, transparent);
+  mask-image: linear-gradient(to bottom, #000 96px, transparent);
+}
+.runlist:not(.as-rows) .runrow .id { order: 2; }
+.runlist:not(.as-rows) .runrow .asset { order: 3; font-size: 15px; }
+.runlist:not(.as-rows) .runrow .when { order: 4; }
+.runlist:not(.as-rows) .runrow .flags { order: 5; margin-top: 2px; }
+.runlist:not(.as-rows) .runthumb { order: 1; }
