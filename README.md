@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/logo.png" alt="Customs Launch Control logo" width="220">
+  <img src="docs/logo.png" alt="The Media Customs logo" width="220">
 </p>
 
 <h1 align="center">Customs</h1>

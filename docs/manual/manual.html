@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Customs Operator Manual</title>
+<title>The Media Customs Operator Manual</title>
 <style>
 @page { size: A4 portrait; margin: 0; }
 :root {
@@ -79,7 +79,7 @@ ul.plain li::before { content: "◆"; position: absolute; left: 0; top: 0.2mm; c
 }
 .closing { page-break-after: auto; }
 .cover .bar, .closing .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 4mm; background: linear-gradient(90deg, var(--signal), #B96B13); }
-.diamond { width: 26mm; height: 26mm; margin-bottom: 14mm; }
+.diamond { width: 52mm; height: auto; margin-bottom: 12mm; display: block; }
 .cover h1 { font-family: var(--mono); font-size: 40pt; letter-spacing: 0.14em; color: #fff; margin: 0 0 4mm; }
 .cover .sub { font-size: 15pt; color: #9DAFBE; max-width: 140mm; line-height: 1.5; }
 .cover .meta { position: absolute; bottom: 18mm; left: 24mm; right: 24mm; font-family: var(--mono); font-size: 9pt; color: #63768A; display: flex; justify-content: space-between; border-top: 1px solid #2A343E; padding-top: 5mm; }
@@ -97,8 +97,8 @@ ul.plain li::before { content: "◆"; position: absolute; left: 0; top: 0.2mm; c
 
 <!-- COVER -->
 <section class="cover">
-  <svg class="diamond" viewBox="0 0 100 100"><rect x="25" y="25" width="50" height="50" fill="#FF9D2E" transform="rotate(45 50 50)"/><rect x="35" y="35" width="30" height="30" fill="#0A0D10" transform="rotate(45 50 50)"/><rect x="42.5" y="42.5" width="15" height="15" fill="#FF9D2E" transform="rotate(45 50 50)"/></svg>
-  <h1>CUSTOMS</h1>
+  <img class="diamond" src="../../src/customs/static/logo.png" alt="">
+  <h1>THE MEDIA CUSTOMS</h1>
   <div class="sub">Operator manual. An agentic launch command center that clears your commercial for fifteen markets, cites the statute behind every finding, and re-renders what fails.</div>
   <div class="meta">
     <span>v1.0 / AUGUST 2026</span>
@@ -113,7 +113,7 @@ ul.plain li::before { content: "◆"; position: absolute; left: 0; top: 0.2mm; c
   <div class="eyebrow">Contents</div>
   <h1>What is in this manual</h1>
   <div class="toc-row"><span class="ch">01</span><span class="t">The problem</span><span class="d">one spot, dozens of markets, the public as QA</span><span class="pg">3</span></div>
-  <div class="toc-row"><span class="ch">02</span><span class="t">What Customs does</span><span class="d">decision plus localized master, by the numbers</span><span class="pg">4</span></div>
+  <div class="toc-row"><span class="ch">02</span><span class="t">What it does</span><span class="d">decision plus localized master, by the numbers</span><span class="pg">4</span></div>
   <div class="toc-row"><span class="ch">03</span><span class="t">Architecture</span><span class="d">observe once, judge per market; the seven-agent crew</span><span class="pg">5</span></div>
   <div class="toc-row"><span class="ch">04</span><span class="t">Components</span><span class="d">every module, its role, and where it lives</span><span class="pg">6</span></div>
   <div class="toc-row"><span class="ch">05</span><span class="t">Launch Board</span><span class="d">market tiles, verdict, embedded instrument panel</span><span class="pg">7</span></div>
@@ -125,7 +125,7 @@ ul.plain li::before { content: "◆"; position: absolute; left: 0; top: 0.2mm; c
   <div class="toc-row"><span class="ch">11</span><span class="t">Market packs</span><span class="d">the rule format and how to add market sixteen</span><span class="pg">13</span></div>
   <div class="toc-row"><span class="ch">12</span><span class="t">Setup and deployment</span><span class="d">cold clone to running instance, local and Cloud Run</span><span class="pg">14</span></div>
   <div class="toc-row"><span class="ch">13</span><span class="t">Limits and resources</span><span class="d">honest limits, links, repository layout</span><span class="pg">15</span></div>
-  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>02</span></div>
+  <div class="footer"><span>THE MEDIA CUSTOMS OPERATOR MANUAL</span><span>02</span></div>
 </div>
 
 <!-- 01 PROBLEM -->
@@ -144,13 +144,13 @@ ul.plain li::before { content: "◆"; position: absolute; left: 0; top: 0.2mm; c
     <tr><td>The fix</td><td>Re-edit by an agency</td><td>Re-letter, re-prop, re-voice; verified by re-observation</td></tr>
     <tr><td>The hard cases</td><td>Silently "fixed"</td><td>Refused, cited, routed to a human</td></tr>
   </table>
-  <div class="pull">Pilots get a pre-flight checklist and an instrument panel. Ad launches get luck. Nobody has an instrument for this. Customs is the instrument.</div>
-  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>03</span></div>
+  <div class="pull">Pilots get a pre-flight checklist and an instrument panel. Ad launches get luck. Nobody has an instrument for this. The Media Customs is the instrument.</div>
+  <div class="footer"><span>THE MEDIA CUSTOMS OPERATOR MANUAL</span><span>03</span></div>
 </div>
 
 <!-- 02 WHAT IT DOES -->
 <div class="page">
-  <div class="eyebrow">02 / What Customs does</div>
+  <div class="eyebrow">02 / What it does</div>
   <h1>A decision, and the version that can ship</h1>
   <p class="lead">You load a commercial and a target market list, and you watch it clear customs in real time. The output is two things: a decision (can this air here, and on what evidence) and a localized master (the version that can).</p>
   <div class="cards">
@@ -167,7 +167,7 @@ ul.plain li::before { content: "◆"; position: absolute; left: 0; top: 0.2mm; c
   <p>The test commercial was generated with Veo and deliberately loaded with eight documented landmines: a wine toast, an English-only handwritten tagline, beach swimwear, a strobe transition, a comparative claim, a same-sex couple holding hands, and two clean control shots. The ground truth lives in <code>docs/samples/landmines.yaml</code>. Google's own tools made the ad, and then failed it.</p>
   <h2>What it deliberately does not do</h2>
   <p>When a rule's basis targets a protected characteristic (sexual orientation, gender identity, religion, race, ethnicity, disability, caste), the Guard takes auto-remediation off the table, states the reason, and renders the finding as a human decision. Customs will tell you that you cannot ship into a market without censoring who appears in your ad, and it will not do that for you.</p>
-  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>04</span></div>
+  <div class="footer"><span>THE MEDIA CUSTOMS OPERATOR MANUAL</span><span>04</span></div>
 </div>
 
 <!-- 03 ARCHITECTURE -->
@@ -195,7 +195,7 @@ Grafana alert ──> webhook ──> REMEDIATOR ──> VERIFIER ──> metric
   <p>The Verifier closing back onto the Analyst is what makes this a crew rather than a pipeline: remediation is not trusted until the same instrument that found the problem agrees it is gone. Unsourced citations cap a finding at severity 40 and never trigger remediation or block a market.</p>
   <h2>Vendor rule, enforced</h2>
   <p>No Anthropic, OpenAI, AWS or Microsoft model, agent framework or AI API appears at runtime or in the dependency tree; the contest rule is enforced by <code>tests/test_no_forbidden_vendors.py</code>. Models are Gemini 3.x (vision, text, grounding), Gemini image editing, Gemini TTS and Veo, all via Vertex AI. Agents are coded agents on Google ADK.</p>
-  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>05</span></div>
+  <div class="footer"><span>THE MEDIA CUSTOMS OPERATOR MANUAL</span><span>05</span></div>
 </div>
 
 <!-- 04 COMPONENTS -->
@@ -221,7 +221,7 @@ Grafana alert ──> webhook ──> REMEDIATOR ──> VERIFIER ──> metric
     <tr><td>Test ad generator</td><td>Veo commercial with documented landmines</td><td><code>scripts/make_test_ad.py</code></td></tr>
     <tr><td>Deployment</td><td>Cloud Run, single instance, Secret Manager</td><td><code>Dockerfile</code>, <code>scripts/deploy.sh</code></td></tr>
   </table>
-  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>06</span></div>
+  <div class="footer"><span>THE MEDIA CUSTOMS OPERATOR MANUAL</span><span>06</span></div>
 </div>
 
 <!-- 05 LAUNCH BOARD -->
@@ -236,7 +236,7 @@ Grafana alert ──> webhook ──> REMEDIATOR ──> VERIFIER ──> metric
     <li><strong>Market tiles.</strong> Pending, cleared, at risk or blocked, flipping live as each adjudicator returns. Each tile counts findings and how many need a human.</li>
     <li><strong>Instrument panel.</strong> The embedded Grafana panels underneath (market clearance status, risk-by-timecode heatmap) are the ones the Publisher built during this very run.</li>
   </ul>
-  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>07</span></div>
+  <div class="footer"><span>THE MEDIA CUSTOMS OPERATOR MANUAL</span><span>07</span></div>
 </div>
 
 <!-- 06 MISSION FEED -->
@@ -250,7 +250,7 @@ Grafana alert ──> webhook ──> REMEDIATOR ──> VERIFIER ──> metric
     <li><strong>Real tool calls.</strong> <code>mcp update_dashboard('customs-overview')</code> and <code>push_run_telemetry</code> are the actual operations, not decoration.</li>
     <li><strong>Stage errors surface here too.</strong> A clearance tool that silently skips a shot is worse than one that admits it; failed stages are published as <code>customs_stage_error</code> and rendered, never swallowed.</li>
   </ul>
-  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>08</span></div>
+  <div class="footer"><span>THE MEDIA CUSTOMS OPERATOR MANUAL</span><span>08</span></div>
 </div>
 
 <!-- 07 MARKET ROOM -->
@@ -264,7 +264,7 @@ Grafana alert ──> webhook ──> REMEDIATOR ──> VERIFIER ──> metric
     <li><strong>Human decision required.</strong> SA-LGBT-01 fires on a same-sex couple holding hands. The rule's basis targets a protected characteristic, so the Guard blocks auto-remediation and offers three honest actions: remediate anyway (a human choice), send to legal review, accept the risk.</li>
     <li><strong>Every finding cites.</strong> Class, severity, timecode window, sourced flag, and the underlined citation resolved through Google Search grounding at adjudication time.</li>
   </ul>
-  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>09</span></div>
+  <div class="footer"><span>THE MEDIA CUSTOMS OPERATOR MANUAL</span><span>09</span></div>
 </div>
 
 <!-- 08 CUTTING ROOM -->
@@ -278,7 +278,7 @@ Grafana alert ──> webhook ──> REMEDIATOR ──> VERIFIER ──> metric
     <li><strong>Nothing is edited silently.</strong> Every edit produces a change record with the source finding, the method, the frames touched, and before and after stills.</li>
     <li><strong>Play both together</strong> locks the two players so an operator can eyeball that only the offending element moved.</li>
   </ul>
-  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>10</span></div>
+  <div class="footer"><span>THE MEDIA CUSTOMS OPERATOR MANUAL</span><span>10</span></div>
 </div>
 
 <!-- 09 REMEDIATION LOOP -->
@@ -303,7 +303,7 @@ Grafana alert ──> webhook ──> REMEDIATOR ──> VERIFIER ──> metric
     <div class="step"><div class="num"></div><div class="body"><strong>The Verifier re-observes.</strong><span>The same Analyst and Adjudicator run again on the changed shots only. If the rule no longer fires, the finding resolves; anything new the edit surfaced is recorded and guarded like any other finding.</span></div></div>
     <div class="step"><div class="num"></div><div class="body"><strong>Grafana closes its own alert.</strong><span>The metric drops, the alert resolves, and the resolving annotation lands on the run's timeline. The loop is closed by evidence.</span></div></div>
   </div>
-  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>11</span></div>
+  <div class="footer"><span>THE MEDIA CUSTOMS OPERATOR MANUAL</span><span>11</span></div>
 </div>
 
 <!-- 10 GRAFANA -->
@@ -328,7 +328,7 @@ Grafana alert ──> webhook ──> REMEDIATOR ──> VERIFIER ──> metric
   <h2>The timecode trick</h2>
   <p>Prometheus rejects backdated samples, so each run maps its timecode onto the wall clock at run start: video second <code>n</code> is written at <code>t0 + n</code>, and every panel is pinned to the run's window. The x-axis reads as the timecode because it is the timecode, offset by a constant. The run's <code>t0</code> rides on the run record and on every Loki line so panels and drill-downs agree.</p>
   <p>Embeds use Grafana public dashboards (tokenised <code>d-solo</code> URLs) with a server-side image-render fallback behind one interface, because an iframe cannot carry a bearer token.</p>
-  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>12</span></div>
+  <div class="footer"><span>THE MEDIA CUSTOMS OPERATOR MANUAL</span><span>12</span></div>
 </div>
 
 <!-- 11 MARKET PACKS -->
@@ -357,7 +357,7 @@ rules:
     <div class="step"><div class="num"></div><div class="body"><strong>Drop it in.</strong><span>The loader validates on startup; the market appears in the console on the next run. The pack test suite enforces unique ids, minimum rule counts, and that at least 40 percent of all rules are legal-class with a statute.</span></div></div>
   </div>
   <p>The launch pack spans distinct regimes rather than the largest economies: US, UK, France, Germany, Quebec, Brazil, Saudi Arabia, UAE, Turkey, India, China, Indonesia, Japan, Thailand, Nigeria.</p>
-  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>13</span></div>
+  <div class="footer"><span>THE MEDIA CUSTOMS OPERATOR MANUAL</span><span>13</span></div>
 </div>
 
 <!-- 12 SETUP -->
@@ -387,7 +387,7 @@ PYTHONPATH=src .venv/bin/uvicorn customs.app:app --reload
   <h2>Cloud Run</h2>
   <pre>scripts/deploy.sh             <span class="c"># idempotent: APIs, secrets, IAM, deploy, webhook wiring</span></pre>
   <p>The deploy script enables the required GCP APIs, stores the two Grafana tokens in Secret Manager (piped on stdin, never in shell history), grants the runtime service account only <code>aiplatform.user</code> plus accessor on those two secrets, deploys a single instance (SQLite and in-process locks are a stated demo-grade tradeoff), and repoints the Grafana webhook contact point at the new service URL. It prints the service URL as its last line.</p>
-  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>14</span></div>
+  <div class="footer"><span>THE MEDIA CUSTOMS OPERATOR MANUAL</span><span>14</span></div>
 </div>
 
 <!-- 13 LIMITS + RESOURCES -->
@@ -418,12 +418,12 @@ PYTHONPATH=src .venv/bin/uvicorn customs.app:app --reload
   <pre>src/customs/     agents, console, telemetry, store   markets/    15 packs + taxonomy
 grafana/         dashboard definitions               scripts/    pipeline, provision, deploy
 tests/           339 offline + live suite            docs/       spec, plan, screenshots, manual</pre>
-  <div class="footer"><span>CUSTOMS OPERATOR MANUAL</span><span>15</span></div>
+  <div class="footer"><span>THE MEDIA CUSTOMS OPERATOR MANUAL</span><span>15</span></div>
 </div>
 
 <!-- CLOSING -->
 <section class="closing">
-  <svg class="diamond" viewBox="0 0 100 100"><rect x="25" y="25" width="50" height="50" fill="#FF9D2E" transform="rotate(45 50 50)"/><rect x="35" y="35" width="30" height="30" fill="#0A0D10" transform="rotate(45 50 50)"/><rect x="42.5" y="42.5" width="15" height="15" fill="#FF9D2E" transform="rotate(45 50 50)"/></svg>
+  <img class="diamond" src="../../src/customs/static/logo.png" alt="">
   <div class="tagline">A statute behind every finding.<br>A master that can actually ship.</div>
   <div class="links">
     <strong>github.com/tdries/td-devpost-agentic-cinema</strong><br>

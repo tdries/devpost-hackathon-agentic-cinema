@@ -998,3 +998,8 @@ html[data-theme="spectrum"] .view-switch .tbtn.on { background: rgba(66, 133, 24
 }
 .as-list .evidence .label { display: none; }
 .as-list .rule-id { display: inline-block; vertical-align: middle; }
+
+/* ponytail: logo replaces the CSS diamond; conic-gradient rule above is dead
+   for the mark but still styles nothing else, so it stays harmless. */
+.brand-logo { height: 24px; width: auto; display: block; align-self: center; }
+html[data-theme="studio"] .brand-logo { filter: none; }

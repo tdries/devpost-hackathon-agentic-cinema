@@ -32,7 +32,7 @@ The loop actually closes: a Grafana alert wakes the Remediator, the edit lands, 
 
 Facts and judgments want different agents: separating the Analyst (what is in the film) from the Adjudicators (what each market says about it) made findings cheap, parallel and defensible, because "is this fact wrong" and "is this rule wrong" became separable questions. Grounded citations need a failure mode: findings whose citation cannot be resolved to a live source get capped severity and never trigger remediation, which turned hallucination from a risk into a rendered, visible quality signal. And guardrails belong in rule layers, not prompts: anything a prompt grants, a prompt can take away.
 
-### What's next for Customs
+### What is next for The Media Customs
 
 More markets: a market is a YAML file, not code, and the pack format is the extension point. Veo shot regeneration as the heaviest remediation tier, on top of re-lettering, prop substitution and re-voicing. Campaign memory across assets, so the crew can answer "has this brand tripped this rule before" from its own Grafana history. And a legal-review workflow for the Guard's human decisions, with the statute attached.
 
