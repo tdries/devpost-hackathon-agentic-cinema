@@ -111,4 +111,63 @@
   </div>
 </section>
 
+{% if can_add and more %}
+<section>
+  <div class="rule-row">
+    <span class="label">Add analysis</span>
+    <span class="right label">observations already stored &middot; no re-ingest</span>
+  </div>
+  <details class="fixer addmore">
+    <summary class="btn"><svg class="ic"><use href="#n-market"/></svg>Clear this asset for another market</summary>
+    <p class="subline" style="max-width:88ch;font-size:13.5px">
+      The screenshots, the transcript and the analyst's reading of them describe the film,
+      not a jurisdiction, so a second market does not need the asset opened again. Picking
+      one here starts at the adjudicator: its rules are held against the observations this
+      run already has, and only the judging and the citations cost anything.
+    </p>
+    <form method="post" action="/runs/{{ run.id }}/analysis">
+      <div class="levels">
+        {% for group in more %}
+        <details class="level">
+          <summary>
+            <span class="lv-name">{{ group.level }}</span>
+            <span class="lv-blurb">{{ group.blurb }}</span>
+            <span class="lv-count mono">{{ group.count }}</span>
+          </summary>
+          {% for family in group.families %}
+          {% if family.parent and group.level == 'channel' %}
+          <div class="fam label">{{ family.parent_name or family.parent }}</div>
+          {% endif %}
+          <div class="markets">
+            {% for pack in family.packs %}
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="{{ pack.market }}">
+              {% if pack.level == 'channel' %}
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              {% elif pack.level == 'global' %}
+              <svg class="ic lvl"><use href="#d-national_symbols_politics"/></svg>
+              {% elif pack.level == 'continental' %}
+              <svg class="ic lvl"><use href="#n-market"/></svg>
+              {% else %}
+              <svg class="ic lvl country"><use href="#c-{{ pack.market }}"/></svg>
+              {% endif %}
+              <span class="code">{{ pack.market }}</span>
+              <span class="name">{{ pack.name }}</span>
+              <span class="regime chip">{{ pack.rules | length }} rules</span>
+            </label>
+            {% endfor %}
+          </div>
+          {% endfor %}
+        </details>
+        {% endfor %}
+      </div>
+      <div class="fix-foot">
+        <span class="label">Judged against the {{ run.markets | length }} market{{ '' if run.markets | length == 1 else 's' }} already on this run</span>
+        <button class="btn go" type="submit">Run the analysis</button>
+      </div>
+    </form>
+  </details>
+</section>
+{% endif %}
+
 {% endblock %}
