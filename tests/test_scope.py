@@ -38,18 +38,31 @@ def test_scene_scope_only_ever_comes_from_the_judge():
     assert scope.merge("scene", "segment") == "scene"
 
 
-def test_scope_closes_methods_that_cannot_reach_it():
+def test_scope_advises_but_never_closes_a_method():
+    """Scope says what fits. It does not decide what the operator may run.
+
+    It used to: at concept scope every method was refused, which walled off
+    the findings people most wanted to try something on. The judgement was
+    often right and still not the gate's to make -- the verifier decides
+    whether an edit cleared, and it is better at that than a rule of thumb.
+    """
     assert scope.allows("frame", "overlay")[0]
-    ok, why = scope.allows("scene", "overlay")
-    assert not ok and "whole shot" in why
-    # a premise whose element cannot be swapped offers nothing at all
-    ok, why = scope.allows("concept", "bridge", substitutable=False)
-    assert not ok and "premise" in why
-    assert all(not o["available"]
-               for o in costs.options(3.0, 0.0, "concept", False))
-    # a shot-level one offers only regeneration
+    # allows() still reports the mismatch, and the reason still reads well
+    fits, why = scope.allows("scene", "overlay")
+    assert not fits and "whole shot" in why
+    fits, why = scope.allows("concept", "bridge", substitutable=False)
+    assert not fits and "premise" in why
+
+    # ...but nothing it says takes an option away
+    hopeless = {o["key"]: o for o in costs.options(3.0, 0.0, "concept", False)}
+    assert hopeless["overlay"]["available"]
+    assert hopeless["bridge"]["available"]
+    # the mismatch travels as a caveat the picker shows beside the option
+    assert "premise" in hopeless["overlay"]["caveat"]
+
     scene = {o["key"]: o["available"] for o in costs.options(6.0, 0.0, "scene")}
-    assert scene == {"overlay": False, "track": False, "bridge": True}
+    # only track is off, and only because nobody has built it
+    assert scene == {"overlay": True, "track": False, "bridge": True}
 
 
 def test_a_premise_can_still_be_fixable_when_the_element_is_swappable():
@@ -58,8 +71,11 @@ def test_a_premise_can_still_be_fixable_when_the_element_is_swappable():
     rather than impossible."""
     ok, why = scope.allows("concept", "bridge", substitutable=True)
     assert ok
-    ok, why = scope.allows("concept", "overlay", substitutable=True)
-    assert not ok and "regenerated" in why
+    fits, why = scope.allows("concept", "overlay", substitutable=True)
+    assert not fits and "regenerated" in why
+    # a poor fit is still offered, at its own price
+    assert {o["key"] for o in costs.options(6.0, 0.0, "concept", True)
+            if o["available"]} == {"overlay", "bridge"}
     assert "still works" in scope.verdict("concept", True)
 
     # an advertisement for alcohol is not an advertisement for alcohol with
@@ -68,11 +84,12 @@ def test_a_premise_can_still_be_fixable_when_the_element_is_swappable():
     assert "different film" in scope.verdict("concept", False)
 
 
-def test_the_console_prices_a_recast_and_refuses_the_patches(monkeypatch):
+def test_the_console_prices_a_recast_and_still_offers_the_patches(monkeypatch):
     from customs import costs
     opts = {o["key"]: o for o in costs.options(6.0, 0.0, "concept", True)}
     assert opts["bridge"]["available"] and opts["bridge"]["eur"] > 1.0
-    assert not opts["overlay"]["available"]
-    # and the day's budget still governs it
+    # the patch is a poor fit at this scope and is offered anyway, flagged
+    assert opts["overlay"]["available"] and opts["overlay"]["caveat"]
+    # what still governs is money and physics, not shape
     broke = {o["key"]: o for o in costs.options(6.0, costs.DAILY_BUDGET_EUR, "concept", True)}
     assert not broke["bridge"]["available"] and "budget" in broke["bridge"]["why_not"]
