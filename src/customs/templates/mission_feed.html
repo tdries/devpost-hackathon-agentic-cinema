@@ -10,6 +10,13 @@
 </section>
 
 <section style="padding-top:0;border-top:none">
+  <div class="rule-row" style="margin-bottom:14px">
+    <span class="mtabs" role="tablist">
+      <button type="button" class="tbtn on" data-mtab="live"><svg class="ic"><use href="#n-feed"/></svg>Happening now</button>
+      <button type="button" class="tbtn" data-mtab="made"><svg class="ic"><use href="#i-remediator"/></svg>Generated content{% if made %} <span class="mono">{{ made | length }}</span>{% endif %}</button>
+    </span>
+  </div>
+  <div id="mtab-live">
   <div class="feedbar">
     <span class="label">Stream</span>
     <span class="pill s-cleared" id="live"><span class="dot"></span><span id="live-text">connecting</span></span>
@@ -44,6 +51,77 @@
       <p>Nothing has been recorded for this run yet. The first line lands the moment the ingest agent opens the file.</p>
     </div>
     {% endfor %}
+  </div>
+  </div>
+
+  <div id="mtab-made" hidden>
+    {% if made %}
+    <p class="subline" style="max-width:92ch;font-size:13.5px;margin-bottom:16px">
+      Everything a model produced for this run, newest first. For a Veo bridge the two
+      anchor frames are here as well: those two frames are the entire brief Veo was given,
+      so they are the only way to tell whether it invented something or was handed it.
+    </p>
+    <div class="changes">
+      {% for item in made %}
+      <div class="change">
+        <div class="change-head">
+          <span class="chip method"><svg class="ic"><use href="#i-remediator"/></svg>{{ item.change.method }}</span>
+          {% if item.market %}<span class="chip on">{{ item.market }}</span>{% endif %}
+          {% if item.finding %}<span class="rule-id">{{ item.finding.rule_id }}</span>{% endif %}
+          {% if item.finding %}<span class="mono" style="font-size:12px;color:var(--ink-3)">{{ item.finding.t_start | timecode }} to {{ item.finding.t_end | timecode }}</span>{% endif %}
+          {% if item.generated %}<a class="chip on" href="/runs/{{ run.id }}/changes/{{ item.change.id }}/generated.mp4" target="_blank"><svg class="ic"><use href="#n-cut"/></svg>the generated seconds</a>{% endif %}
+          <span class="runid" style="margin-left:auto">{{ item.change.id }}</span>
+        </div>
+
+        {% if item.anchors %}
+        <div class="anchors">
+          <span class="label">The two frames handed to Veo</span>
+          <div class="change-body">
+            {% for a in item.anchors %}
+            <div class="frame">
+              <span class="label">{{ 'first frame' if a.tag == 'head' else 'last frame' }}</span>
+              <a href="/runs/{{ run.id }}/stills/{{ a.file }}" target="_blank">
+                <img src="/runs/{{ run.id }}/stills/{{ a.file }}" alt="Veo anchor frame, {{ a.tag }}" loading="lazy">
+              </a>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        {% if item.generated %}
+        <div class="genclip">
+          <span class="label">What Veo generated between them</span>
+          <video src="/runs/{{ run.id }}/changes/{{ item.change.id }}/generated.mp4" controls preload="metadata" playsinline muted></video>
+        </div>
+        {% endif %}
+
+        {% if item.before or item.after %}
+        <div class="change-body">
+          <div class="frame">
+            <span class="label">Before</span>
+            {% if item.before %}<img src="/runs/{{ run.id }}/stills/{{ item.before }}" alt="frame before the edit" loading="lazy">{% else %}<p class="subline">still not on disk</p>{% endif %}
+          </div>
+          <div class="frame">
+            <span class="label">After</span>
+            {% if item.after %}<img src="/runs/{{ run.id }}/stills/{{ item.after }}" alt="frame after the edit" loading="lazy">{% else %}<p class="subline">still not on disk</p>{% endif %}
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="change-why">
+          {% if item.finding %}{{ item.finding.rationale }}{% endif %}
+          <div class="instruction">{{ item.change.description }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty">
+      <span class="big">Nothing generated yet</span>
+      <p>No model has produced anything for this run. A remediation writes its stills here, and a Veo bridge adds the two anchor frames it was given and the seconds it generated between them.</p>
+    </div>
+    {% endif %}
   </div>
 </section>
 

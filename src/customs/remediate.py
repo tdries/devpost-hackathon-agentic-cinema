@@ -652,7 +652,20 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
             first_edit = edited_bytes
         edited_raw = workdir / f"bridge_{tag}_edited_raw.png"
         edited_raw.write_bytes(edited_bytes)
-        anchors.append(media.fit_image(edited_raw, base, workdir / f"bridge_{tag}.png"))
+        fitted = media.fit_image(edited_raw, base, workdir / f"bridge_{tag}.png")
+        anchors.append(fitted)
+        # Kept beside the change record, not left in the scratch workdir,
+        # which is never mirrored. These two frames ARE the brief Veo was
+        # given: everything in the generated seconds is supposed to trace
+        # back to them, so they are the only way to judge whether Veo
+        # invented something or was handed it.
+        if keep_dir is not None and change_id:
+            keep_dir.mkdir(parents=True, exist_ok=True)
+            try:
+                (keep_dir / f"{change_id}_anchor_{tag}.png").write_bytes(
+                    fitted.read_bytes())
+            except OSError:
+                pass
 
     # Only now is anything actually spent: both anchors are compliant, so
     # the generation is worth paying for. Written down before the call

@@ -1520,3 +1520,25 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   }
   .runnav .wrap.screens .tab.on:last-child { border-bottom: none; }
 }
+
+/* The mission feed's two tabs: what is happening, and what came out of it.
+   Same control as the theme/view switches so the console has one idiom. */
+.mtabs { display: inline-flex; border: 1px solid var(--line-2); border-radius: var(--radius); overflow: hidden; }
+.mtabs .tbtn {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.13em;
+  text-transform: uppercase; padding: 9px 14px; border: none;
+  background: transparent; color: var(--ink-3); cursor: pointer;
+}
+.mtabs .tbtn + .tbtn { border-left: 1px solid var(--line-2); }
+.mtabs .tbtn:hover { color: var(--ink); }
+.mtabs .tbtn.on { color: var(--ink); background: rgba(66, 133, 244, 0.14); }
+.mtabs .tbtn .ic { width: 15px; height: 15px; }
+
+/* The two frames Veo was handed, and the seconds it made between them. */
+.anchors { padding: 14px 0 2px; }
+.anchors > .label { display: block; margin-bottom: 8px; }
+.anchors .frame img { border-color: var(--signal); }
+.genclip { padding: 14px 0 2px; }
+.genclip > .label { display: block; margin-bottom: 8px; }
+.genclip video { width: 100%; max-width: 640px; border-radius: 6px; display: block; background: #000; }
