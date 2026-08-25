@@ -1301,10 +1301,13 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   .brand-sub { display: none; }
   .theme-switch .tbtn, .mode-switch a, .view-switch .tbtn { padding: 9px 11px; }
 
-  /* nav rows scroll sideways on their own, the page never does */
+  /* Market rows scroll sideways on their own, the page never does: there
+     can be dozens of market codes and stacking those would be a screen of
+     nav before any content. */
   .runnav .wrap { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .runnav .wrap::-webkit-scrollbar { display: none; }
   .tab { white-space: nowrap; padding: 13px 11px; }
+
 
   .headline { font-size: clamp(24px, 8vw, 34px); }
   .specs { grid-template-columns: 1fr 1fr; }
@@ -1489,3 +1492,31 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   to   { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) { .progress-tick.flash { animation: none; } }
+
+/* ---------- the main tabs on a phone ----------
+   Last in the file on purpose: an earlier max-width:720px block re-sets
+   .screens padding and min-height, and at equal specificity the later rule
+   is the one that applies. Sideways-scrolling nav hid the last tabs off the
+   edge of the screen, where nobody found them, so on a phone the screen
+   tabs stack: one per row, full width, nothing to scroll. The market rows
+   keep scrolling -- there can be dozens of codes, and stacking those would
+   be a screen of navigation before any content. */
+@media (max-width: 720px) {
+  .runnav .wrap.screens {
+    flex-direction: column; align-items: stretch;
+    overflow-x: visible; gap: 0; min-height: 0;
+    padding-top: 4px; padding-bottom: 4px;
+  }
+  .runnav .wrap.screens .tab {
+    width: 100%; justify-content: flex-start;
+    padding: 14px 4px; border-bottom: 1px solid var(--line);
+  }
+  .runnav .wrap.screens .tab:last-child { border-bottom: none; }
+  /* marked down the side, not underneath: "underneath" is now the next tab */
+  .runnav .wrap.screens .tab.on {
+    border-bottom-color: var(--line);
+    box-shadow: inset 3px 0 0 var(--signal);
+    padding-left: 12px;
+  }
+  .runnav .wrap.screens .tab.on:last-child { border-bottom: none; }
+}
