@@ -1467,3 +1467,24 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   .lvl-tag { width: auto; padding-right: 6px; }
 }
 .agent-shot { display: block; width: 100%; height: auto; }
+
+/* ---------- the screen tabs read as navigation, not as fine print ----------
+   The five screens are the main thing an operator moves between, so their
+   row is sized like a heading. The market rows underneath stay small: there
+   can be thirty of them and they are a filter, not a destination. */
+
+.runnav .wrap.screens { min-height: 62px; gap: 6px; }
+.runnav .wrap.screens .tab {
+  font-size: 15px;
+  letter-spacing: 0.10em;
+  padding: 19px 16px 17px;
+  gap: 11px;
+}
+.runnav .wrap.screens .tab .ic { width: 26px; height: 26px; }
+.runnav .wrap.screens .tab.on { border-bottom-width: 3px; }
+
+@media (max-width: 720px) {
+  .runnav .wrap.screens { min-height: 54px; }
+  .runnav .wrap.screens .tab { font-size: 13.5px; padding: 15px 12px 13px; gap: 9px; }
+  .runnav .wrap.screens .tab .ic { width: 21px; height: 21px; }
+}
