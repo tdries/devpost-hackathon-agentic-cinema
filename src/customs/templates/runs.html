@@ -20,6 +20,11 @@
     {% for item in rows %}
     <a class="runrow" href="/runs/{{ item.run.id }}">
       <img class="runthumb" src="/runs/{{ item.run.id }}/poster.jpg" alt="" loading="lazy" onerror="this.remove()">
+      {# Grafana's numbers, drawn in our own hex. Its own URL so the list
+         paints immediately and one slow Grafana cannot hold up the
+         archive; it removes itself when a run has no series. #}
+      <img class="runspark" src="/runs/{{ item.run.id }}/spark.svg" alt="Severity across this run"
+           loading="lazy" onerror="this.remove()">
       <span class="id">{{ item.run.id }}</span>
       <span class="asset">{{ item.run.asset_path.split('/')[-1] }}</span>
       <span class="when">{{ item.run.t0 | stamp }}</span>

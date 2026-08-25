@@ -1422,3 +1422,57 @@ def test_studio_mode_lands_on_recent_runs(client):
         switch = body.split('class="mode-switch"')[1].split("</span>")[0]
         assert 'href="/runs"' in switch, path
         assert 'href="/agent"' in switch, path
+
+
+def test_the_agent_can_discover_the_schema_and_query_it(client):
+    """It must be able to answer a question nobody wrote a grouping for.
+
+    The old surface was a fixed menu: group findings by one of five
+    labels. Anything else -- "what do we see that nobody objects to",
+    "which dimension has the highest flag rate" -- was unanswerable.
+
+    The guardrail against a model inventing metrics is not hope, it is
+    data_schema: the label set and body fields are described, and query
+    reports back when an expression returns nothing so the agent can fix
+    it rather than assert an empty answer.
+    """
+    from customs import agentmode
+    import inspect
+    src = inspect.getsource(agentmode)
+    assert "def data_schema()" in src and "def query(" in src
+    assert "data_schema, query, build_dashboard" in src, "both must be registered"
+    # the schema has to name the observation stream, which is the new half
+    assert 'kind="observation"' in src
+    assert "flagged" in src and "no rows" in src
+
+
+def test_a_run_card_charts_grafanas_numbers_without_an_iframe(client):
+    """Grafana Cloud sends frame-ancestors 'none', so a card cannot embed it.
+
+    A rendered PNG is also wrong for something card-sized: fixed width,
+    fixed theme, second round trip. The numbers come from Mimir, the
+    drawing happens here, and the result is inline SVG in the product's
+    own hex that follows whichever style mode is on.
+    """
+    test_client, _, run, _ = client
+    body = test_client.get("/runs").text
+    assert 'class="runspark"' in body
+    assert "/spark.svg" in body
+    assert "onerror=\"this.remove()\"" in body, "a run with no series just has no chart"
+    # and nothing anywhere tries to iframe Grafana
+    assert "<iframe" not in body
+
+
+def test_one_palette_governs_the_app_and_grafana(client):
+    """A threshold cannot mean amber here and red in a panel."""
+    from customs import state
+    assert state.BLOCKED == "#EA4335" and state.CLEARED == "#34A853"
+    assert state.AT_RISK == "#FBBC05" and state.SIGNAL == "#4285F4"
+    steps = state.grafana_thresholds()["steps"]
+    assert [s["color"] for s in steps] == [state.CLEARED, state.AT_RISK, state.BLOCKED]
+    # the display bands must not contradict the adjudicator's blocking line
+    from customs import adjudicate
+    assert state.SEVERITY_BLOCKS == adjudicate.CLEARANCE_SEVERITY_THRESHOLD
+    assert state.colour_for_severity(95) == state.BLOCKED
+    assert state.colour_for_severity(50) == state.AT_RISK
+    assert state.colour_for_severity(10) == state.CLEARED

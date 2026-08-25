@@ -965,6 +965,91 @@ class GrafanaOps:
                     f"?from={from_ms}&to={to_ms}&viewPanel={panel_id}")
         return f"{base}/d-solo/{uid}?panelId={panel_id}&from={from_ms}&to={to_ms}"
 
+    # --- Grafana as a data source for the app's own UI ----------------
+    #
+    # An iframe is not available: Grafana Cloud answers with
+    # frame-ancestors 'none'. A server-rendered PNG works and is what the
+    # big panels use, but it is an image -- it cannot be small, sharp,
+    # theme-aware and instant, which is exactly what a chart INSIDE a card
+    # has to be.
+    #
+    # So the third way: the numbers come from Grafana, the drawing happens
+    # here. Mimir and Loki stay the source of truth and the MCP agent
+    # queries the same series, while the card renders inline SVG in the
+    # product's own hex. Nothing to embed, nothing to theme-match, no
+    # second round trip from the browser.
+
+    def prom_range(self, query: str, seconds: int = 86400, step: int = 60
+                   ) -> list[dict]:
+        """A range query against Mimir, as [{labels, points:[(ts, value)]}]."""
+        now = time.time()
+        answer = self._api_json(
+            "GET", "/api/datasources/proxy/uid/" + PROM_UID + "/api/v1/query_range",
+            params={"query": query, "start": str(int(now - seconds)),
+                    "end": str(int(now)), "step": str(step)})
+        out = []
+        for row in (answer.get("data") or {}).get("result") or []:
+            pts = []
+            for ts, val in row.get("values") or []:
+                try:
+                    pts.append((float(ts), float(val)))
+                except (TypeError, ValueError):
+                    continue
+            out.append({"labels": row.get("metric") or {}, "points": pts})
+        return out
+
+    def prom_window(self, query: str, start: float, end: float,
+                    points: int = 48) -> list[dict]:
+        """A range query over an EXPLICIT window, as [{labels, points}].
+
+        customs_risk lives on each run's mapped clock -- a twenty second
+        window somewhere in the afternoon, not wall time -- so a card's
+        sparkline has to ask for that run's own span or it gets one point.
+        """
+        step = max(1, int((end - start) / max(points, 1)))
+        answer = self._api_json(
+            "GET", "/api/datasources/proxy/uid/" + PROM_UID + "/api/v1/query_range",
+            params={"query": query, "start": str(int(start)),
+                    "end": str(int(end)), "step": str(step)})
+        out = []
+        for row in (answer.get("data") or {}).get("result") or []:
+            pts = []
+            for ts, val in row.get("values") or []:
+                try:
+                    pts.append((float(ts), float(val)))
+                except (TypeError, ValueError):
+                    continue
+            out.append({"labels": row.get("metric") or {}, "points": pts})
+        return out
+
+    def prom_instant(self, query: str) -> list[dict]:
+        """An instant query against Mimir, as [{labels, value}]."""
+        answer = self._api_json(
+            "GET", "/api/datasources/proxy/uid/" + PROM_UID + "/api/v1/query",
+            params={"query": query, "time": str(int(time.time()))})
+        out = []
+        for row in (answer.get("data") or {}).get("result") or []:
+            try:
+                out.append({"labels": row.get("metric") or {},
+                            "value": float((row.get("value") or [0, "0"])[1])})
+            except (TypeError, ValueError):
+                continue
+        return out
+
+    def loki_instant(self, query: str) -> list[dict]:
+        """An instant LogQL metric query, as [{labels, value}]."""
+        answer = self._api_json(
+            "GET", "/api/datasources/proxy/uid/" + LOKI_UID + "/loki/api/v1/query",
+            params={"query": query, "time": str(int(time.time() * 1e9))})
+        out = []
+        for row in (answer.get("data") or {}).get("result") or []:
+            try:
+                out.append({"labels": row.get("metric") or {},
+                            "value": float((row.get("value") or [0, "0"])[1])})
+            except (TypeError, ValueError):
+                continue
+        return out
+
     def render_png(self, uid: str, panel_id, run, duration=None, *,
                    width=1000, height=500, variables=None, theme="dark",
                    window_ms: tuple[int, int] | None = None) -> bytes:

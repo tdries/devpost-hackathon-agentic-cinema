@@ -353,6 +353,89 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
         turn.calls.append({"tool": "show", "view": view, "url": url})
         return f"showing {label} at {url}"
 
+    def data_schema() -> str:
+        """What is queryable in Grafana, and how. Call this before analysing.
+
+        The agent cannot invent a metric that does not exist if it is told
+        exactly what does. This is the whole guardrail: a described schema
+        plus a validated query, rather than hoping a model remembers the
+        label set.
+        """
+        turn.calls.append({"tool": "data_schema"})
+        return json.dumps({
+            "loki": {
+                "datasource": "grafanacloud-logs",
+                "streams": {
+                    '{app="customs", kind="finding"}': {
+                        "one line per": "finding (a market objected)",
+                        "labels": ["asset", "market", "klass", "rule_id", "dimension"],
+                        "body fields (use | json)": [
+                            "severity", "status", "scope", "substitutable",
+                            "sourced", "remediable", "rationale", "citation_ref",
+                            "t_start", "t_end", "observation_id", "run_id"],
+                    },
+                    '{app="customs", kind="observation"}': {
+                        "one line per": "observation (what the analyst saw, "
+                                        "flagged or not)",
+                        "labels": ["asset", "dimension", "flagged (yes|no)"],
+                        "body fields (use | json)": [
+                            "statement", "confidence", "shot_id", "findings",
+                            "markets", "max_severity", "rules", "t_start",
+                            "t_end", "run_id", "has_frame", "has_box"],
+                        "why it matters": "flagged=no is everything seen that "
+                                          "NO market objected to, which is the "
+                                          "only way to ask what is universally "
+                                          "safe or which markets are permissive",
+                    },
+                },
+            },
+            "mimir": {
+                "datasource": "grafanacloud-prom",
+                "metrics": {
+                    "customs_risk{asset,market,dimension}":
+                        "max finding severity per market per video second, on "
+                        "the run's mapped clock; dimension is 'none' for a "
+                        "second nothing covered",
+                    "customs_market_status{asset,market,clearance}": "current verdict",
+                    "customs_blocking{asset,market}": "1 when a market blocks",
+                    "customs_stage_error{asset,stage}": "stage failures",
+                },
+            },
+            "notes": [
+                "Loki metric queries need an aggregation, e.g. "
+                "sum by (dimension) (count_over_time({...} [$__range]))",
+                "A body field needs | json before it can be grouped on.",
+                "customs_risk lives on each run's mapped clock, not wall "
+                "time, so range queries need that run's own window.",
+            ],
+        }, indent=1)
+
+    def query(source: str, expr: str, window_hours: int = 24) -> str:
+        """Run a LogQL or PromQL query and return the rows.
+
+        source is 'loki' or 'mimir'. This is what lets the agent answer a
+        question nobody anticipated, instead of picking from a menu of
+        pre-written groupings. Call data_schema first so the expression
+        refers to labels that exist.
+        """
+        from customs.grafana_ops import GrafanaOps
+        turn.calls.append({"tool": "query", "source": source, "expr": expr[:160]})
+        expr = expr.replace("$__range", f"{int(window_hours)}h")
+        try:
+            with GrafanaOps(settings) as ops:
+                rows = (ops.loki_instant(expr) if source.lower().startswith("l")
+                        else ops.prom_instant(expr))
+        except Exception as exc:  # noqa: BLE001 -- the agent reports the failure
+            return (f"query failed: {exc}. Check the labels against "
+                    f"data_schema; a metric or label that does not exist "
+                    f"returns nothing rather than an error.")
+        if not rows:
+            return ("no rows. Either nothing matches, or the expression is "
+                    "missing an aggregation, or a body field was grouped on "
+                    "without | json. Check data_schema.")
+        out = sorted(rows, key=lambda r: -r["value"])[:40]
+        return json.dumps([{"labels": r["labels"], "value": r["value"]} for r in out])
+
     def build_dashboard(group_by: str = "dimension", title: str = "",
                         run: str = "") -> str:
         """Compose a Grafana dashboard from this run's own labels and open it.
@@ -381,7 +464,7 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
         instruction=SYSTEM_PROMPT,
         tools=[FunctionTool(f) for f in (list_runs, markets, findings,
                                          fix_options, library, show,
-                                         build_dashboard)],
+                                         data_schema, query, build_dashboard)],
     )
 
 
