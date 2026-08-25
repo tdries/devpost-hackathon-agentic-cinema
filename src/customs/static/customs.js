@@ -142,7 +142,12 @@
      cannot tell you which observation you are pointing at. */
 
   (function () {
-    var wrap = document.querySelector(".lanes-wrap");
+    /* One board has one chart; the archive has one per card. Bind them
+       all, or only the first run in the list would answer a hover. */
+    document.querySelectorAll(".lanes-wrap").forEach(bindLanes);
+  })();
+
+  function bindLanes(wrap) {
     if (!wrap) { return; }
     var peek = wrap.querySelector(".lane-peek");
     var img = peek.querySelector("img");
@@ -171,10 +176,11 @@
     wrap.addEventListener("click", function (e) {
       var dot = e.target.closest(".lane-dot");
       if (dot && dot.getAttribute("data-obs")) {
+        e.preventDefault();
         window.location = "/runs/" + run + "/frames#" + dot.getAttribute("data-obs");
       }
     });
-  })();
+  }
 
   /* ---------- 2. the launch board ---------- */
 

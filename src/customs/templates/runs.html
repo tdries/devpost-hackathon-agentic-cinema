@@ -9,6 +9,13 @@
     <span class="swarm-row"><svg class="ic"><use href="#i-cleared"/></svg><svg class="ic"><use href="#d-modesty_dress_body"/></svg><svg class="ic"><use href="#n-board"/></svg><svg class="ic"><use href="#d-gender_portrayal"/></svg><svg class="ic"><use href="#i-error"/></svg><svg class="ic"><use href="#d-national_symbols_politics"/></svg><svg class="ic"><use href="#n-cut"/></svg><svg class="ic"><use href="#d-violence_and_weapons"/></svg><svg class="ic"><use href="#i-offence"/></svg><svg class="ic"><use href="#d-superstition_number_colour"/></svg><svg class="ic"><use href="#d-text_legibility"/></svg><svg class="ic"><use href="#i-frame"/></svg><svg class="ic"><use href="#i-pipeline"/></svg><svg class="ic"><use href="#i-analyst"/></svg><svg class="ic"><use href="#i-publisher"/></svg><svg class="ic"><use href="#i-noted"/></svg></span>
     <span class="swarm-row"><svg class="ic"><use href="#d-religious_symbols_practices"/></svg><svg class="ic"><use href="#i-blocked"/></svg><svg class="ic"><use href="#d-food_and_animals"/></svg><svg class="ic"><use href="#n-feed"/></svg><svg class="ic"><use href="#d-children_and_minors"/></svg><svg class="ic"><use href="#i-legal"/></svg><svg class="ic"><use href="#d-gambling_and_finance"/></svg><svg class="ic"><use href="#n-library"/></svg><svg class="ic"><use href="#d-humour_irony_satire"/></svg><svg class="ic"><use href="#i-sourced"/></svg><svg class="ic"><use href="#i-unsourced"/></svg><svg class="ic"><use href="#i-human"/></svg><svg class="ic"><use href="#i-ingest"/></svg><svg class="ic"><use href="#i-adjudicator"/></svg><svg class="ic"><use href="#i-remediator"/></svg></span>
   </div>
+  {# The mark, large, on the right. The swarm drifts behind it and the
+     radial mask hollows the left third, so the wordmark sits in the busy
+     side and the reading sits in the quiet one. #}
+  <div class="runhero-mark" aria-hidden="true">
+    <img src="/static/logo.png?v={{ static_v }}" alt="">
+    <span class="runhero-word">THE MEDIA<br>CUSTOMS</span>
+  </div>
   <div class="runhero-front">
     <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
     <h1 class="headline">All runs, newest first.</h1>
@@ -38,6 +45,18 @@
          archive; it removes itself when a run has no series. #}
       <img class="runspark" src="/runs/{{ item.run.id }}/spark.svg" alt="Severity across this run"
            loading="lazy" onerror="this.remove()">
+      {# What was found and WHEN, a lane per category. Inline rather than an
+         image so a dot can still show the frame it came from -- the same
+         reason the full version on the launch board is inline. #}
+      {% if item.lanes %}
+      <div class="lanes-wrap card-lanes" data-run="{{ item.run.id }}">
+        {{ item.lanes | safe }}
+        <div class="lane-peek" hidden>
+          <img alt="">
+          <div class="lane-peek-meta"><span class="mono when"></span><span class="what"></span></div>
+        </div>
+      </div>
+      {% endif %}
       <span class="id">{{ item.run.id }}</span>
       <span class="asset">{{ item.run.asset_path.split('/')[-1] }}</span>
       <span class="when">{{ item.run.t0 | stamp }}</span>

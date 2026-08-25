@@ -1036,6 +1036,34 @@ class GrafanaOps:
                 continue
         return out
 
+    def loki_lines(self, query: str, days: int = 30, limit: int = 2000
+                   ) -> list[dict]:
+        """Raw log lines from Loki, with the JSON body already parsed.
+
+        loki_instant answers a metric query -- counts, sums. This answers
+        a stream query, which is what a chart of individual events needs:
+        one row per line, carrying its labels and whatever the body
+        parsed to.
+        """
+        now = time.time()
+        answer = self._api_json(
+            "GET", "/api/datasources/proxy/uid/" + LOKI_UID + "/loki/api/v1/query_range",
+            params={"query": query,
+                    "start": str(int((now - days * 86400) * 1e9)),
+                    "end": str(int(now * 1e9)),
+                    "limit": limit, "direction": "backward"})
+        out = []
+        for stream in (answer.get("data") or {}).get("result") or []:
+            labels = stream.get("stream") or {}
+            for ts, line in stream.get("values") or []:
+                try:
+                    parsed = json.loads(line)
+                except (TypeError, ValueError):
+                    parsed = {}
+                out.append({"ts_ns": ts, "labels": labels, "line": line,
+                            "parsed": parsed})
+        return out
+
     def loki_instant(self, query: str) -> list[dict]:
         """An instant LogQL metric query, as [{labels, value}]."""
         answer = self._api_json(

@@ -1757,3 +1757,61 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   .swarm-row .ic { width: 24px; height: 24px; }
   .runhero .swarm { gap: 18px; }
 }
+
+/* The mark, big, on the right of the archive banner.
+
+   The swarm's radial mask already hollows the LEFT third for the
+   headline, which leaves the right side busy -- exactly where a large
+   mark wants to sit, because it has enough weight to own that noise
+   rather than be lost in it. */
+.runhero { display: flex; align-items: center; gap: 40px; }
+.runhero-front { flex: 1 1 auto; }
+.runhero-mark {
+  position: relative; z-index: 1; flex: 0 0 auto; order: 2;
+  display: flex; align-items: center; gap: 20px; padding-right: 8px;
+}
+.runhero-mark img {
+  width: 132px; height: auto; display: block;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, .16));
+}
+.runhero-word {
+  font-family: var(--mono); font-size: 30px; line-height: 1.12;
+  letter-spacing: .17em; font-weight: 700; color: var(--ink);
+  white-space: nowrap;
+}
+@media (max-width: 1080px) {
+  .runhero-mark img { width: 96px; }
+  .runhero-word { font-size: 22px; }
+}
+@media (max-width: 860px) {
+  .runhero { display: block; }
+  .runhero-mark {
+    justify-content: flex-start; margin-bottom: 20px; padding-right: 0;
+  }
+  .runhero-mark img { width: 62px; }
+  .runhero-word { font-size: 19px; }
+}
+
+/* The same lane chart, card sized. Six lanes, no ruler, smaller dots:
+   in a card the SHAPE is the point -- one bad moment or trouble all the
+   way through -- not the exact second, which the board is for. */
+.card-lanes { margin: 6px 0 4px; overflow: hidden; }
+.card-lanes .lanes { min-width: 0; width: 100%; height: auto; }
+.runlist.as-rows .card-lanes { display: none; }
+
+/* Mission feed: the agent icons at twice the size.
+
+   The feed is read as a column of WHO did what, and at 15px the eight
+   agent marks were indistinguishable -- the eye fell to the text and the
+   icon became a bullet point. At 30px each agent is recognisable on its
+   own, which is the point of giving them distinct marks at all.
+
+   The summary grid's first column has to grow with them or the icon
+   overflows its cell and the agent name shifts. */
+.grp > summary { grid-template-columns: 34px 118px 1fr auto auto; }
+.grp > summary > .ic { width: 30px; height: 30px; }
+.feed .ev .ic, .feed .line .ic { width: 22px; height: 22px; }
+@media (max-width: 720px) {
+  .grp > summary { grid-template-columns: 28px 1fr auto; }
+  .grp > summary > .ic { width: 26px; height: 26px; }
+}
