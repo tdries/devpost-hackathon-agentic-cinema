@@ -966,7 +966,8 @@ class GrafanaOps:
         return f"{base}/d-solo/{uid}?panelId={panel_id}&from={from_ms}&to={to_ms}"
 
     def render_png(self, uid: str, panel_id, run, duration=None, *,
-                   width=1000, height=500, variables=None, theme="dark") -> bytes:
+                   width=1000, height=500, variables=None, theme="dark",
+                   window_ms: tuple[int, int] | None = None) -> bytes:
         """Server-side render of a panel (or the whole dashboard when
         `panel_id` is None) over the run's mapped window, as PNG bytes.
 
@@ -976,7 +977,11 @@ class GrafanaOps:
         `get_panel_image` when available (it returns base64 image content),
         otherwise the `/render` endpoint directly.
         """
-        from_ms, to_ms = self._window_ms(run, duration)
+        # A run's panels sit on its mapped clock, which is a handful of
+        # seconds wide. A dashboard composed from wall-clock log labels does
+        # not: rendering it over the run's window shows twenty seconds of an
+        # empty afternoon, which is exactly what "No data" looked like.
+        from_ms, to_ms = window_ms if window_ms else self._window_ms(run, duration)
         if self.transport_for("render_png") == "mcp":
             args = {
                 "dashboardUid": uid,

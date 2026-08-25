@@ -441,7 +441,7 @@ def push_status(
 
 def push_log(run: RunRecord, finding: Finding) -> None:
     """Write one Loki line for `finding`. Labels {app="customs", asset,
-    market, klass, rule_id}; body is the finding's own to_json(), so every
+    market, klass, rule_id, dimension}; body is the finding's own to_json(), so every
     field (rationale, citation, severity, t_start/t_end, ...) is queryable
     from the log line itself without a join back to sqlite.
 
@@ -458,6 +458,7 @@ def push_log(run: RunRecord, finding: Finding) -> None:
             "market": finding.market,
             "klass": finding.klass,
             "rule_id": finding.rule_id,
+            "dimension": _dimension_for(finding.market, finding.rule_id),
         },
         "values": [[ts_ns, json.dumps(finding.to_json())]],
     }

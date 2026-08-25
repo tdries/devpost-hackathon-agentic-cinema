@@ -243,6 +243,10 @@ def test_push_log_labels_and_body(posts, monkeypatch):
     assert stream["stream"] == {
         "app": "customs", "asset": "test_ad", "market": "FR",
         "klass": "legal", "rule_id": "FR-ALC-01",
+        # resolved through the pack, the same rule_id -> dimension join
+        # customs_risk uses: without it "findings by dimension" has nothing
+        # to group on, because a Finding carries the rule, not the dimension.
+        "dimension": "alcohol_tobacco_drugs",
     }
     [[ts_ns, line]] = stream["values"]
     assert ts_ns == str(int((1_700_000_000.0 + finding.t_start) * 1_000_000_000))

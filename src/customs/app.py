@@ -756,12 +756,12 @@ def grafana_png(uid: str, run: str = ""):
     """
     if not re.fullmatch(r"[A-Za-z0-9_-]{1,60}", uid):
         raise HTTPException(status_code=404, detail="no such dashboard")
-    record = store().get_run(run) if run else None
+    now_ms = int(time.time() * 1000)
     try:
         from customs.grafana_ops import GrafanaOps  # local: pulls the MCP client
         with GrafanaOps(settings) as ops:
-            png = ops.render_png(uid, None, record, asset_duration(record) if record else None,
-                                 width=1200, height=700)
+            png = ops.render_png(uid, None, None, None, width=1200, height=700,
+                                 window_ms=(now_ms - 24 * 3600 * 1000, now_ms))
     except Exception as exc:  # noqa: BLE001 -- a dead renderer is not a 500 here
         log.warning("dashboard render failed for %s: %s", uid, exc)
         raise HTTPException(status_code=502,
