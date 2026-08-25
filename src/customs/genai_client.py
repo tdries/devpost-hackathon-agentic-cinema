@@ -33,6 +33,17 @@ def generate_json(model: str, parts: list, schema: dict) -> dict:
         r2 = _generate(model, parts, cfg)
         return json.loads(r2.text)
 
+def generate_json_image(prompt: str, image_bytes: bytes, schema: dict,
+                        mime_type: str = "image/png") -> dict:
+    """A structured verdict about one image. Used to check an edited frame
+    before anything expensive is spent on it."""
+    parts = [prompt, types.Part.from_bytes(data=image_bytes, mime_type=mime_type)]
+    cfg = types.GenerateContentConfig(
+        response_mime_type="application/json", response_schema=schema,
+        temperature=0.0)
+    r = _generate(settings.model_text, parts, cfg)
+    return json.loads(r.text)
+
 def generate_grounded(model: str, prompt: str) -> tuple[str, list[dict]]:
     cfg = types.GenerateContentConfig(tools=[types.Tool(google_search=types.GoogleSearch())])
     r = _generate(model, [prompt], cfg)
