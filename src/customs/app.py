@@ -1771,8 +1771,19 @@ def market_spark(run_id: str, market: str):
         except Exception as exc:  # noqa: BLE001
             log.warning("market spark failed for %s/%s: %s", run.id, market, exc)
             series = []
-        svg = spark.sparkline(series[0]["points"] if series else [],
-                              width=240, height=30)
+        points = series[0]["points"] if series else []
+        # A stat card, not a bare line. The number is what carries the
+        # panel: a cleared market draws "0" against a flat baseline, which
+        # reads as a result. The line alone drew nothing on those tiles.
+        hits = [f for f in store().findings(run.id, market)]
+        peak = int(max((f.severity for f in hits), default=0))
+        if peak:
+            value, label = str(peak), "PEAK SEVERITY"
+        else:
+            value, label = str(len(hits)), "FINDINGS"
+        svg = spark.statcard(points, value=value, label=label,
+                             colour=state_mod.colour_for_severity(peak),
+                             width=260, height=76)
         if not svg:
             raise HTTPException(status_code=404, detail="no series for this market")
         cached.parent.mkdir(parents=True, exist_ok=True)
