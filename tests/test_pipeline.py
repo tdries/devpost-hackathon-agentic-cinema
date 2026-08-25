@@ -163,7 +163,7 @@ def test_run_persists_observations_and_findings_and_ends_done(monkeypatch, clip,
     monkeypatch.setattr(pipeline, "generate_json", _fake_generate_json_transcribe)
     monkeypatch.setattr(pipeline, "observe_shot", _fake_observe_shot)
 
-    def fake_judge(run_id, observations, pack, on_event=None):
+    def fake_judge(run_id, observations, pack, on_event=None, on_verdict=None):
         if on_event:
             on_event("adjudicator", f"judge -> {pack.market} ({len(observations)} candidates)")
         return [_canned_finding(pack.market, run_id=run_id)]
@@ -200,7 +200,7 @@ def test_run_applies_guard_protected_rule_blocks_remediation(monkeypatch, clip, 
     monkeypatch.setattr(pipeline, "observe_shot", _fake_observe_shot)
     monkeypatch.setattr(
         pipeline, "judge",
-        lambda run_id, observations, pack, on_event=None: [
+        lambda run_id, observations, pack, on_event=None, on_verdict=None: [
             _canned_finding(pack.market, rule_id="SA-LGBT-01", run_id=run_id)
         ],
     )
@@ -237,7 +237,7 @@ def test_run_threads_transcripts_from_generate_json_into_observe_shot(monkeypatc
 def test_run_emits_mission_events_at_each_stage(monkeypatch, clip, tmp_path):
     monkeypatch.setattr(pipeline, "generate_json", _fake_generate_json_transcribe)
     monkeypatch.setattr(pipeline, "observe_shot", _fake_observe_shot)
-    monkeypatch.setattr(pipeline, "judge", lambda run_id, observations, pack, on_event=None: [_canned_finding(pack.market)])
+    monkeypatch.setattr(pipeline, "judge", lambda run_id, observations, pack, on_event=None, on_verdict=None: [_canned_finding(pack.market)])
 
     store = Store(tmp_path / "t.db")
     run = pipeline.run(str(clip), ["FR"], store, tmp_path / "work")
@@ -257,7 +257,7 @@ def test_run_stage_error_one_market_fails_others_still_complete(monkeypatch, cli
     monkeypatch.setattr(pipeline, "observe_shot", _fake_observe_shot)
 
     judge_calls = {"FR": 0, "SA": 0, "US": 0}
-    def flaky_judge(run_id, observations, pack, on_event=None):
+    def flaky_judge(run_id, observations, pack, on_event=None, on_verdict=None):
         judge_calls[pack.market] += 1
         if pack.market == "SA":
             raise RuntimeError("simulated 5xx")
@@ -332,7 +332,7 @@ def test_errored_markets_includes_market_whose_judge_exhausts_retries(monkeypatc
     monkeypatch.setattr(pipeline, "generate_json", _fake_generate_json_transcribe)
     monkeypatch.setattr(pipeline, "observe_shot", _fake_observe_shot)
 
-    def flaky_judge(run_id, observations, pack, on_event=None):
+    def flaky_judge(run_id, observations, pack, on_event=None, on_verdict=None):
         if pack.market == "SA":
             raise RuntimeError("simulated 5xx")
         return [_canned_finding(pack.market, run_id=run_id)]
@@ -351,7 +351,7 @@ def test_errored_markets_excludes_a_market_evaluated_clean(monkeypatch, clip, tm
     # cases with no way to tell them apart.
     monkeypatch.setattr(pipeline, "generate_json", _fake_generate_json_transcribe)
     monkeypatch.setattr(pipeline, "observe_shot", _fake_observe_shot)
-    monkeypatch.setattr(pipeline, "judge", lambda run_id, observations, pack, on_event=None: [])
+    monkeypatch.setattr(pipeline, "judge", lambda run_id, observations, pack, on_event=None, on_verdict=None: [])
 
     store = Store(tmp_path / "t.db")
     run = pipeline.run(str(clip), ["US"], store, tmp_path / "work")
@@ -368,7 +368,7 @@ def test_errored_markets_ignores_shot_level_stage_errors(monkeypatch, clip, tmp_
     monkeypatch.setattr(pipeline, "generate_json", lambda model, parts, schema: (_ for _ in ()).throw(
         RuntimeError("simulated transcription failure")))
     monkeypatch.setattr(pipeline, "observe_shot", _fake_observe_shot)
-    monkeypatch.setattr(pipeline, "judge", lambda run_id, observations, pack, on_event=None: [])
+    monkeypatch.setattr(pipeline, "judge", lambda run_id, observations, pack, on_event=None, on_verdict=None: [])
 
     store = Store(tmp_path / "t.db")
     run = pipeline.run(str(clip), ["FR"], store, tmp_path / "work")
@@ -434,7 +434,7 @@ def test_run_persists_the_measured_flash_observation(monkeypatch, strobe_clip, t
     monkeypatch.setattr(pipeline, "observe_shot", _fake_observe_shot)
     judged = []
 
-    def fake_judge(run_id, observations, pack, on_event=None):
+    def fake_judge(run_id, observations, pack, on_event=None, on_verdict=None):
         judged.append([o.dimension for o in observations])
         return []
     monkeypatch.setattr(pipeline, "judge", fake_judge)
@@ -494,7 +494,7 @@ def test_a_second_market_reuses_the_observations_and_never_reopens_the_asset(
     monkeypatch.setattr("customs.telemetry.push_log", lambda *a, **k: None)
 
     seen = {}
-    def fake_judge(run_id, observations, pack, on_event=None):
+    def fake_judge(run_id, observations, pack, on_event=None, on_verdict=None):
         seen[pack.market] = [o.id for o in observations]
         return []
     monkeypatch.setattr(pipeline, "judge", fake_judge)

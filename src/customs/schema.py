@@ -67,6 +67,36 @@ class Finding(_JsonMixin):
             raise ValueError(f"invalid finding status: {self.status!r}")
 
 @dataclass
+class Verdict(_JsonMixin):
+    """One market's answer about one observation, including "no".
+
+    A Finding only exists where a market objected, so findings alone
+    record every complaint and no acquittals. That makes "which markets
+    are permissive" unanswerable -- the judge decided it, and the answer
+    was dropped on the floor.
+
+    verdict is one of:
+      triggered  -- the rule fired; there is a Finding for this pairing
+      cleared    -- the market looked and said no
+      unreturned -- the model did not answer for this pairing at all,
+                    which is NOT the same as clearance and must never be
+                    counted as one
+    """
+    id: str
+    run_id: str
+    observation_id: str
+    market: str
+    rule_id: str
+    dimension: str
+    klass: str
+    verdict: str
+    severity_adjust: int = 0
+    rationale: str = ""
+    t_start: float = 0.0
+    t_end: float = 0.0
+
+
+@dataclass
 class ChangeRecord(_JsonMixin):
     id: str
     run_id: str
