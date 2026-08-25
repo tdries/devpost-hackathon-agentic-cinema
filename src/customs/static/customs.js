@@ -308,8 +308,10 @@
         if (mode) { root.setAttribute("data-theme", mode); }
         else { root.removeAttribute("data-theme"); }
         try {
-          if (mode) { localStorage.setItem(KEY, mode); }
-          else { localStorage.removeItem(KEY); }
+          /* Mission is stored as "mission", not as a missing key. On a phone
+             the absence of a key means "default to studio", so removing it
+             here would throw the choice away on the next page load. */
+          localStorage.setItem(KEY, mode || "mission");
         } catch (e) { /* private mode: the choice just does not persist */ }
         mark();
       });
