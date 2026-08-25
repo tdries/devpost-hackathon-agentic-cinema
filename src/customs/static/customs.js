@@ -408,3 +408,106 @@
       });
     });
   })();
+
+  /* ---------- 9. agent mode ----------
+     The operator types on the left, the agent answers and opens whatever it
+     opened on the right. One turn per submit; the session id keeps the
+     conversation together across turns without a login. */
+
+  (function () {
+    var form = document.getElementById("agent-ask");
+    if (!form) { return; }
+    var log = document.getElementById("agent-log");
+    var input = document.getElementById("agent-input");
+    var canvas = document.getElementById("agent-canvas");
+    var viewLabel = document.getElementById("view-label");
+    var viewOpen = document.getElementById("view-open");
+    var runId = document.querySelector(".agent").getAttribute("data-run") || "";
+    var session = "s" + Math.random().toString(36).slice(2, 10);
+    var busy = false;
+
+    var bubble = function (who, text, icon) {
+      var el = document.createElement("div");
+      el.className = "ag-msg ag-" + who;
+      el.innerHTML = '<svg class="ic"><use href="#i-' + icon + '"/></svg>' +
+                     '<div class="ag-body"></div>';
+      var body = el.querySelector(".ag-body");
+      String(text).split("\n").forEach(function (line) {
+        if (!line.trim()) { return; }
+        var p = document.createElement("p");
+        p.textContent = line;
+        body.appendChild(p);
+      });
+      log.appendChild(el);
+      log.scrollTop = log.scrollHeight;
+      return el;
+    };
+
+    var open = function (url, label) {
+      if (!url) { return; }
+      canvas.innerHTML = "";
+      var frame = document.createElement("iframe");
+      frame.src = url;
+      frame.setAttribute("title", label || "view");
+      canvas.appendChild(frame);
+      if (viewLabel) {
+        viewLabel.innerHTML = '<svg class="ic"><use href="#n-board"/></svg>' +
+                              (label || "view");
+      }
+      if (viewOpen) { viewOpen.href = url; viewOpen.style.display = ""; }
+    };
+
+    var ask = function (text) {
+      if (busy || !text.trim()) { return; }
+      busy = true;
+      bubble("you", text, "human");
+      input.value = "";
+      var thinking = bubble("agent", "", "pending");
+      thinking.querySelector(".ag-body").innerHTML =
+        '<span class="ag-think"><span class="spin"></span>working</span>';
+
+      var body = new FormData();
+      body.append("message", text);
+      body.append("session", session);
+      body.append("run", runId);
+
+      fetch("/agent/ask", { method: "POST", body: body })
+        .then(function (r) { return r.json().catch(function () { return null; }); })
+        .then(function (data) {
+          thinking.remove();
+          if (!data) { bubble("agent", "That turn failed to come back.", "error"); return; }
+          if (data.error) {
+            var failed = bubble("agent", data.error, "error");
+            failed.querySelector(".ag-body").classList.add("ag-err");
+          }
+          if (data.reply) { bubble("agent", data.reply, "adjudicator"); }
+          if (data.calls && data.calls.length) {
+            var last = log.lastElementChild.querySelector(".ag-body") || log.lastElementChild;
+            var calls = document.createElement("div");
+            calls.className = "ag-calls";
+            data.calls.forEach(function (c) {
+              var chip = document.createElement("span");
+              chip.className = "ag-call";
+              chip.textContent = c.tool;
+              calls.appendChild(chip);
+            });
+            last.appendChild(calls);
+          }
+          open(data.view, data.view_label);
+          log.scrollTop = log.scrollHeight;
+        })
+        .catch(function () {
+          thinking.remove();
+          bubble("agent", "That turn could not be sent.", "error");
+        })
+        .then(function () { busy = false; });
+    };
+
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      ask(input.value);
+    });
+    Array.prototype.forEach.call(document.querySelectorAll(".sugg"), function (b) {
+      b.addEventListener("click", function () { ask(b.getAttribute("data-say")); });
+    });
+  })();

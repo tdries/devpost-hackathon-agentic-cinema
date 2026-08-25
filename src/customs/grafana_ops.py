@@ -872,6 +872,38 @@ class GrafanaOps:
         self.public_tokens[uid] = token
         return self.public_url(token)
 
+    def create_adhoc_dashboard(self, dashboard: dict) -> dict:
+        """Push a dashboard nobody wrote in advance.
+
+        The provisioned six live in grafana/dashboards/ and answer questions
+        we knew about. This one is composed at request time from the labels a
+        run already pushed, which is the only way "show me the errors by
+        dimension" can be answered without someone having anticipated the
+        question. Same folder, same overwrite semantics, same transport
+        choice as ensure_dashboards; the difference is where the JSON came
+        from, not how it lands.
+        """
+        self.ensure_folder()
+        body = {
+            "dashboard": dashboard,
+            "folderUid": self.folder_uid,
+            "overwrite": True,
+            "message": "customs agent, composed on request",
+        }
+        if self.transport_for("ensure_dashboards") == "mcp":
+            try:
+                self._mcp_call("update_dashboard", {"dashboard": dashboard,
+                                                    "folderUid": self.folder_uid,
+                                                    "overwrite": True})
+            except Exception:  # noqa: BLE001 -- REST is the documented fallback
+                self._api_json("POST", "/api/dashboards/db", json_body=body)
+        else:
+            self._api_json("POST", "/api/dashboards/db", json_body=body)
+        uid = dashboard["uid"]
+        return {"uid": uid,
+                "url": self._url(f"/d/{uid}"),
+                "title": dashboard.get("title", uid)}
+
     def public_url(self, token: str) -> str:
         return f"{self.settings.grafana_url.rstrip('/')}/public-dashboards/{token}"
 

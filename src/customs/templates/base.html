@@ -70,6 +70,10 @@ try { var _t = localStorage.getItem("customs-theme"); if (_t) { document.documen
       <span class="brand-sub">LAUNCH CONTROL</span>
     </a>
     <div class="topbar-right">
+      <span class="mode-switch" role="group" aria-label="Mode">
+        <a class="{{ 'on' if screen == 'agent' }}" href="/agent"><svg class="ic"><use href="#i-adjudicator"/></svg>Agent</a>
+        <a class="{{ 'on' if screen != 'agent' }}" href="/"><svg class="ic"><use href="#n-board"/></svg>Studio</a>
+      </span>
       <a class="tab" href="/library"><svg class="ic"><use href="#n-library"/></svg>Library</a>
       {% block topbar_right %}<span>AGENTIC AD CLEARANCE</span>{% endblock %}
       <span class="theme-switch" role="group" aria-label="Style mode">

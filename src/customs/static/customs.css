@@ -1304,3 +1304,152 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 .fb-clean { display: flex; align-items: center; gap: 8px; opacity: 0.75; }
 
 @media (max-width: 900px) { .fb-row { grid-template-columns: 1fr; } }
+
+/* ---------- agent mode ----------
+   The operator types on the left; whatever the agent opens fills the right.
+   Two panes, one screen height, nothing scrolls the page itself. */
+
+.agent {
+  display: grid; grid-template-columns: minmax(360px, 460px) 1fr;
+  gap: 14px; height: calc(100vh - 132px); margin: 18px 0 22px;
+}
+.agent-side, .agent-view {
+  display: flex; flex-direction: column; min-height: 0;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel); overflow: hidden;
+}
+.agent-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 11px 14px; border-bottom: 1px solid var(--line); background: var(--ground-2);
+}
+.agent-head .label { display: inline-flex; align-items: center; gap: 8px; }
+
+.agent-log { flex: 1; overflow-y: auto; padding: 14px; display: grid; gap: 12px; align-content: start; }
+.ag-msg { display: grid; grid-template-columns: 18px 1fr; gap: 11px; align-items: start; }
+.ag-msg .ic { margin-top: 2px; }
+.ag-body { min-width: 0; }
+.ag-body p { margin: 0 0 8px; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+.ag-body p:last-child { margin-bottom: 0; }
+.ag-you .ag-body p { color: var(--ink); }
+.ag-agent .ag-body p { color: var(--ink-2); }
+.ag-calls { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; }
+.ag-call {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em;
+  text-transform: uppercase; padding: 3px 7px; border-radius: 2px;
+  border: 1px solid var(--line-2); color: var(--ink-3);
+}
+.ag-err { color: var(--g-red) !important; }
+.ag-think { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-3); font-size: 13px; }
+
+.agent-suggest { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 12px; }
+.sugg {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 11.5px; padding: 6px 10px; cursor: pointer;
+  border: 1px solid var(--line-2); border-radius: 999px;
+  background: var(--well); color: var(--ink-2);
+}
+.sugg:hover { border-color: var(--g-blue); color: var(--ink); }
+.sugg .ic { width: 13px; height: 13px; }
+
+.agent-ask { display: flex; gap: 8px; padding: 12px 14px; border-top: 1px solid var(--line); }
+.agent-ask .urlin { flex: 1; }
+.agent-ask .btn { flex: none; }
+
+.agent-canvas { flex: 1; min-height: 0; background: var(--well); }
+.agent-canvas iframe { width: 100%; height: 100%; border: 0; display: block; background: var(--well); }
+
+@media (max-width: 1100px) {
+  .agent { grid-template-columns: 1fr; height: auto; }
+  .agent-canvas { height: 70vh; }
+}
+
+/* the mode switch, next to the style modes */
+.mode-switch { display: inline-flex; border: 1px solid var(--line-2); border-radius: var(--radius); overflow: hidden; }
+.mode-switch a {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.14em;
+  text-transform: uppercase; padding: 5px 10px; color: var(--ink-3);
+}
+.mode-switch a + a { border-left: 1px solid var(--line-2); }
+.mode-switch a:hover { color: var(--ink); }
+.mode-switch a.on { color: var(--ink); background: rgba(66, 133, 244, 0.18); }
+.mode-switch .ic { width: 12px; height: 12px; }
+
+/* ---------- phones ----------
+   Everything above is built for a desk. On a phone the same screens have to
+   work one-handed: nothing horizontally scrolls the page, the tables become
+   rows, the two-pane agent becomes one pane with the answer under the ask,
+   and every control clears 44px. */
+
+@media (max-width: 720px) {
+  .wrap { padding: 0 14px; }
+  body { font-size: 14.5px; }
+
+  /* the top bar wraps instead of squeezing */
+  .topbar .wrap { height: auto; padding-top: 10px; padding-bottom: 10px;
+                  flex-wrap: wrap; gap: 10px; }
+  .topbar-right { margin-left: 0; width: 100%; gap: 10px; flex-wrap: wrap; }
+  .brand-sub { display: none; }
+  .theme-switch .tbtn, .mode-switch a, .view-switch .tbtn { padding: 9px 11px; }
+
+  /* nav rows scroll sideways on their own, the page never does */
+  .runnav .wrap { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .runnav .wrap::-webkit-scrollbar { display: none; }
+  .tab { white-space: nowrap; padding: 13px 11px; }
+
+  .headline { font-size: clamp(24px, 8vw, 34px); }
+  .specs { grid-template-columns: 1fr 1fr; }
+  .tiles { grid-template-columns: 1fr; }
+  .tile-stats { padding-right: 62px; }
+
+  /* findings: a table is a column of rows */
+  table.grid, table.grid tbody, table.grid tr, table.grid td { display: block; width: 100%; }
+  table.grid thead { display: none; }
+  table.grid tr { border-bottom: 1px solid var(--line); padding: 12px 0; }
+  table.grid td { border: none; padding: 4px 12px; }
+  .as-list .evidence { width: 100%; margin: 8px 0 0; }
+  .as-list .rationale, .as-list td > div[style*="margin-top:8px"] { display: block; }
+
+  /* the fix picker is a sheet, not a dropdown */
+  .fixer { position: static; }
+  .fixer form { position: static; width: 100%; max-width: none; max-height: none;
+                margin-top: 10px; box-shadow: none; }
+  .fix-opt { align-items: flex-start; }
+  .fix-cost { margin-left: 0; text-align: left; }
+  .btn, .sugg, .market-pick { min-height: 44px; }
+
+  /* timeline lanes stay readable */
+  .tl-row { grid-template-columns: 52px 1fr; gap: 8px; }
+  .segcard { width: min(84vw, 320px); }
+
+  /* frame board stacks */
+  .fb-row { grid-template-columns: 1fr; }
+  .fb-frame img { max-width: 320px; }
+
+  /* mission feed: no fixed columns */
+  .grp > summary { grid-template-columns: 1fr auto; gap: 8px 12px; }
+  .grp > summary .gm { grid-column: 1 / -1; white-space: normal; }
+  .grp .gt { display: none; }
+  .glines { padding-left: 20px; }
+  .feed { height: auto; max-height: 70vh; }
+
+  /* agent mode: ask on top, answer underneath */
+  .agent { grid-template-columns: 1fr; height: auto; gap: 10px; }
+  .agent-log { max-height: 46vh; }
+  .agent-canvas { height: 62vh; }
+  .agent-ask { position: sticky; bottom: 0; background: var(--panel); }
+
+  /* archive rows */
+  .runlist.as-rows .runrow { grid-template-columns: 1fr; gap: 8px; }
+  .runrow .flags { justify-content: flex-start; }
+
+  /* cutting room and embeds */
+  .pair, .change-body, .embed-grid, .launcher { grid-template-columns: 1fr; }
+  .levels .markets { padding: 0 8px 10px; }
+  .lv-blurb { display: none; }
+}
+
+@media (max-width: 420px) {
+  .specs { grid-template-columns: 1fr; }
+  .fix-cost b { font-size: 12px; }
+}

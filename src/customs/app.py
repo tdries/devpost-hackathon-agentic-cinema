@@ -82,7 +82,8 @@ from fastapi.responses import (FileResponse, HTMLResponse, PlainTextResponse,
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from customs import adjudicate, costs, packs, persist, pipeline, remediate, scope as scope_mod, verify
+from customs import (adjudicate, agentmode, costs, packs, persist, pipeline,
+                     remediate, scope as scope_mod, verify)
 from customs.fetch import FetchError, fetch_youtube
 from customs.config import settings
 from customs.media import MediaError, probe_duration
@@ -995,6 +996,46 @@ _DIMENSION_BLURB = {
     "text_legibility": "on-screen text, language and readability",
     "comparative_claims": "superiority, firsts and head-to-heads",
 }
+
+
+@app.get("/agent", response_class=HTMLResponse)
+def agent_mode(request: Request, run: str = ""):
+    """Agent mode: the operator types on the left, the console answers on
+    the right.
+
+    Same system, different front door. Studio mode is the one you click
+    through; this one hands the wheel to a Vertex AI agent whose tools are
+    the console's own reads and actions, so anything it says can be checked
+    by looking at what it opened beside it.
+    """
+    recent = store().recent_runs(8)
+    current = run or (recent[0].id if recent else "")
+    return _page(request, "agent.html", runs=recent, run_id=current,
+                 budget_left=max(0.0, costs.DAILY_BUDGET_EUR - store().spent_today()),
+                 screen="agent")
+
+
+@app.post("/agent/ask")
+async def agent_ask(message: str = Form(...), session: str = Form("default"),
+                    run: str = Form("")):
+    """One turn with the console's agent.
+
+    Answers with what it said and what it opened, never with a rendered
+    page: the browser decides where to put the view, and a failed turn is
+    reported rather than swallowed, because an agent that silently answers
+    nothing is worse than one that says it could not.
+    """
+    text = (message or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="say something")
+    if len(text) > 2000:
+        raise HTTPException(status_code=400, detail="that is too long for one turn")
+    turn = await agentmode.ask(store(), text, session_id=session, run_id=run)
+    return {
+        "reply": turn.reply or ("" if not turn.error else ""),
+        "view": turn.view, "view_label": turn.view_label,
+        "calls": turn.calls, "error": turn.error,
+    }
 
 
 @app.get("/library", response_class=HTMLResponse)
