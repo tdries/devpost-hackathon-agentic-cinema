@@ -1697,3 +1697,63 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 }
 .lane-peek-meta .when { color: var(--ink-2); }
 .lane-peek-meta .what { text-transform: lowercase; overflow-wrap: anywhere; }
+
+/* The archive's front door.
+
+   Every symbol the product owns, drifting behind the headline: the eight
+   agents, the eighteen things they watch for, the verdicts, the screens.
+   It is the one place in the console that is allowed to be a picture of
+   itself, and it earns that by being made of the same glyphs everything
+   else is labelled with -- so it reads as this product's front page and
+   could not be any other product's.
+
+   The rows drift at different speeds and directions, which is what stops
+   47 icons reading as wallpaper. */
+.runhero {
+  position: relative; overflow: hidden; border-radius: 14px;
+  border: 1px solid var(--line); background: var(--ground-2);
+  padding: 46px 40px 42px; margin: 4px 0 0; isolation: isolate;
+}
+.runhero .swarm {
+  position: absolute; inset: -18px -60px; display: flex;
+  flex-direction: column; justify-content: center; gap: 26px; z-index: 0;
+  /* faded at the edges and hollowed in the middle, so the headline has
+     air without a slab of flat colour behind it */
+  -webkit-mask-image:
+    radial-gradient(58% 78% at 26% 50%, transparent 24%, #000 78%),
+    linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image:
+    radial-gradient(58% 78% at 26% 50%, transparent 24%, #000 78%),
+    linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  -webkit-mask-composite: source-in; mask-composite: intersect;
+}
+.swarm-row {
+  display: flex; gap: 30px; align-items: center; white-space: nowrap;
+  opacity: .5; will-change: transform;
+}
+.swarm-row .ic { width: 30px; height: 30px; flex: none; }
+.swarm-row:nth-child(1) { animation: drift-l 96s linear infinite; }
+.swarm-row:nth-child(2) { animation: drift-r 132s linear infinite; opacity: .34; }
+.swarm-row:nth-child(3) { animation: drift-l 116s linear infinite; opacity: .42; }
+@keyframes drift-l { from { transform: translateX(0); } to { transform: translateX(-33%); } }
+@keyframes drift-r { from { transform: translateX(-33%); } to { transform: translateX(0); } }
+@media (prefers-reduced-motion: reduce) { .swarm-row { animation: none; } }
+
+.runhero-front { position: relative; z-index: 1; max-width: 62ch; }
+.runhero-front .headline { margin: 14px 0 10px; }
+.runhero-front .subline { margin: 0; }
+.runhero .bars { display: flex; gap: 7px; }
+.runhero .bars i { width: 46px; height: 6px; border-radius: 3px; display: block; }
+.runhero .bars i:nth-child(1) { background: #4285F4; }
+.runhero .bars i:nth-child(2) { background: #EA4335; }
+.runhero .bars i:nth-child(3) { background: #FBBC05; }
+.runhero .bars i:nth-child(4) { background: #34A853; }
+.runhero-stats {
+  display: inline-block; margin-top: 18px; font-size: 11px;
+  letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3);
+}
+@media (max-width: 720px) {
+  .runhero { padding: 30px 22px 28px; }
+  .swarm-row .ic { width: 24px; height: 24px; }
+  .runhero .swarm { gap: 18px; }
+}

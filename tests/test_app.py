@@ -1715,3 +1715,31 @@ def test_a_lane_chart_needs_no_iframe_and_no_rendered_image(console):
     # the dots are elements in our own DOM, so they can carry a link back
     assert "data-obs=" in body and "/evidence/" in client.get(
         "/static/customs.js").text
+
+
+def test_recent_runs_opens_on_a_banner_made_of_the_products_own_icons(client):
+    """The archive is the page people land on, and it opened on a bare
+    headline. The banner is the one place in the console allowed to be a
+    picture of itself -- and it earns that by being built from the same
+    glyphs everything else is labelled with, so it reads as THIS
+    product's front page and could not be any other product's.
+    """
+    import re, pathlib
+    test_client, _, _run, _ = client
+    body = test_client.get("/runs").text
+
+    assert 'class="runhero"' in body
+    assert body.count('class="swarm-row"') == 3, "three rows drifting at different speeds"
+    # every symbol the product owns should be in there, not a chosen few
+    sprite = pathlib.Path("src/customs/templates/base.html").read_text()
+    owned = set(re.findall(r'id="([idn]-[a-z_0-9]+)"', sprite))
+    used = set(re.findall(r'<use href="#([idn]-[a-z_0-9]+)"/>', body))
+    assert len(used & owned) >= 40, f"only {len(used & owned)} of {len(owned)} icons used"
+    # and nothing referenced that does not exist, which would render blank
+    assert used <= owned, f"banner asks for icons that are not in the sprite: {used - owned}"
+
+    assert 'class="bars"' in body, "the four brand colours anchor it"
+    assert "runhero-stats" in body
+
+    css = test_client.get("/static/customs.css").text
+    assert "prefers-reduced-motion" in css, "the drift must be stoppable"

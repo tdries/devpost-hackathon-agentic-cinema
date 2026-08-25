@@ -3,16 +3,29 @@
 {% block nav %}{% include "_topnav.html" %}{% endblock %}
 {% block main %}
 
-<section class="hero" style="padding-bottom:24px">
-  <div class="rule-row"><span class="label">Campaign history</span>
-    <span class="right view-switch" role="group" aria-label="Runs view">
-      <button type="button" class="tbtn" data-set-runs="cards">Cards</button>
-      <button type="button" class="tbtn" data-set-runs="list">List</button>
-    </span>
+<section class="runhero">
+  <div class="swarm" aria-hidden="true">
+    <span class="swarm-row"><svg class="ic"><use href="#d-alcohol_tobacco_drugs"/></svg><svg class="ic"><use href="#n-new"/></svg><svg class="ic"><use href="#d-gesture_body_language"/></svg><svg class="ic"><use href="#i-pending"/></svg><svg class="ic"><use href="#d-sexual_orientation_gender_id"/></svg><svg class="ic"><use href="#n-timeline"/></svg><svg class="ic"><use href="#d-health_claims_pharma"/></svg><svg class="ic"><use href="#i-policy"/></svg><svg class="ic"><use href="#d-language_profanity_idiom"/></svg><svg class="ic"><use href="#n-market"/></svg><svg class="ic"><use href="#d-photosensitivity_sensory"/></svg><svg class="ic"><use href="#d-comparative_claims"/></svg><svg class="ic"><use href="#i-alert"/></svg><svg class="ic"><use href="#i-transcription"/></svg><svg class="ic"><use href="#i-guard"/></svg><svg class="ic"><use href="#i-verifier"/></svg></span>
+    <span class="swarm-row"><svg class="ic"><use href="#i-cleared"/></svg><svg class="ic"><use href="#d-modesty_dress_body"/></svg><svg class="ic"><use href="#n-board"/></svg><svg class="ic"><use href="#d-gender_portrayal"/></svg><svg class="ic"><use href="#i-error"/></svg><svg class="ic"><use href="#d-national_symbols_politics"/></svg><svg class="ic"><use href="#n-cut"/></svg><svg class="ic"><use href="#d-violence_and_weapons"/></svg><svg class="ic"><use href="#i-offence"/></svg><svg class="ic"><use href="#d-superstition_number_colour"/></svg><svg class="ic"><use href="#d-text_legibility"/></svg><svg class="ic"><use href="#i-frame"/></svg><svg class="ic"><use href="#i-pipeline"/></svg><svg class="ic"><use href="#i-analyst"/></svg><svg class="ic"><use href="#i-publisher"/></svg><svg class="ic"><use href="#i-noted"/></svg></span>
+    <span class="swarm-row"><svg class="ic"><use href="#d-religious_symbols_practices"/></svg><svg class="ic"><use href="#i-blocked"/></svg><svg class="ic"><use href="#d-food_and_animals"/></svg><svg class="ic"><use href="#n-feed"/></svg><svg class="ic"><use href="#d-children_and_minors"/></svg><svg class="ic"><use href="#i-legal"/></svg><svg class="ic"><use href="#d-gambling_and_finance"/></svg><svg class="ic"><use href="#n-library"/></svg><svg class="ic"><use href="#d-humour_irony_satire"/></svg><svg class="ic"><use href="#i-sourced"/></svg><svg class="ic"><use href="#i-unsourced"/></svg><svg class="ic"><use href="#i-human"/></svg><svg class="ic"><use href="#i-ingest"/></svg><svg class="ic"><use href="#i-adjudicator"/></svg><svg class="ic"><use href="#i-remediator"/></svg></span>
   </div>
-  <h1 class="headline" style="font-size:clamp(26px,3.4vw,38px)">All runs, newest first.</h1>
-  <p class="subline">Every clearance this instance has performed. Open one for its board, its timeline and its cutting room.</p>
+  <div class="runhero-front">
+    <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+    <h1 class="headline">All runs, newest first.</h1>
+    <p class="subline">Every clearance this instance has performed. Open one for its board,
+      its timeline and its cutting room.</p>
+    <span class="runhero-stats mono">{{ rows | length }} run{{ '' if rows | length == 1 else 's' }}
+      &middot; {{ packs_total }} market packs &middot; {{ dims_total }} things watched for</span>
+  </div>
 </section>
+
+<div class="rule-row" style="margin:22px 0 14px">
+  <span class="label">Campaign history</span>
+  <span class="right view-switch" role="group" aria-label="Runs view">
+    <button type="button" class="tbtn" data-set-runs="cards">Cards</button>
+    <button type="button" class="tbtn" data-set-runs="list">List</button>
+  </span>
+</div>
 
 <section style="border-top:none;padding-top:0">
   {% if rows %}
