@@ -292,3 +292,54 @@ def test_splice_clip_actually_replaces_the_span(tmp_path):
     assert inside[2] > inside[0], f"the span was not replaced: {inside}"   # blue
     assert before[0] > before[2], f"before the span changed: {before}"     # red
     assert after[0] > after[2], f"after the span changed: {after}"         # red
+
+
+def test_splice_retimes_the_clip_so_the_landing_frame_arrives(tmp_path):
+    """The last frame Veo was conditioned to reach must reach the screen.
+
+    Veo will not emit less than four seconds, so a short span comes back
+    over-long. splice_clip used to keep the first `span` seconds and drop
+    the rest: the motion played in slow motion against untouched audio, and
+    the corrected tail anchor never appeared, so the patch jump-cut back to
+    the original at the out point. Measured on this instance's own bridges:
+    18%, 21%, 40% and 99% shown, and the landing frame in none of them.
+
+    A green->blue clip spliced into a 1s hole must therefore end BLUE.
+    Trimming the first second of a 4s clip would leave it green.
+    """
+    base = tmp_path / "base.mp4"
+    subprocess.run([
+        "ffmpeg", "-y", "-f", "lavfi", "-i", "color=red:s=160x120:d=4",
+        "-pix_fmt", "yuv420p", str(base)], check=True, capture_output=True, timeout=60)
+
+    # 4 seconds: green for the first three, blue for the last one
+    clip = tmp_path / "clip.mp4"
+    subprocess.run([
+        "ffmpeg", "-y",
+        "-f", "lavfi", "-i", "color=green:s=160x120:d=3",
+        "-f", "lavfi", "-i", "color=blue:s=160x120:d=1",
+        "-filter_complex", "[0:v][1:v]concat=n=2:v=1[v]", "-map", "[v]",
+        "-pix_fmt", "yuv420p", str(clip)], check=True, capture_output=True, timeout=60)
+
+    out = tmp_path / "out.mp4"
+    media.splice_clip(base, clip, 1.0, 2.0, out)   # a 1s hole for a 4s clip
+
+    def rgb_at(when):
+        png = tmp_path / f"f{when}.png"
+        subprocess.run(["ffmpeg", "-y", "-ss", str(when), "-i", str(out),
+                        "-frames:v", "1", str(png)], check=True,
+                       capture_output=True, timeout=60)
+        raw = subprocess.run(["ffmpeg", "-v", "error", "-i", str(png), "-f",
+                              "rawvideo", "-pix_fmt", "rgb24", "-"],
+                             check=True, capture_output=True, timeout=60).stdout
+        mid = (len(raw) // 3 // 2) * 3
+        return raw[mid], raw[mid + 1], raw[mid + 2]
+
+    r, g, b = rgb_at(1.9)          # near the end of the patched span
+    assert b > 120 and r < 90, f"landing frame never arrived: rgb={(r, g, b)}"
+
+    r, g, b = rgb_at(1.1)          # the start of the span is still the clip
+    assert g > 90, f"the patch did not start on the clip: rgb={(r, g, b)}"
+
+    r, g, b = rgb_at(3.0)          # outside the span: the brand's own footage
+    assert r > 120 and b < 90, f"original footage was disturbed: rgb={(r, g, b)}"

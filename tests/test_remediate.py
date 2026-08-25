@@ -340,11 +340,22 @@ def test_veo_is_told_to_interpolate_not_to_repeat_the_edit():
 
     It used to. Veo was handed "Replace every alcoholic drink, bottle and
     glass with a non-alcoholic drink... for example tea" -- an instruction
-    written for an image editor working on one frame. Veo generates video,
-    so it read that as a description of the scene and furnished the set with
-    tea: the SA-ROTANA bridge came back with a glass beside a piano player
-    who had never held a drink. Both anchors were already correct before Veo
-    was called; the edit was finished, and repeating it invented props.
+    written for an image editor working on one frame, not a brief for a
+    video model.
+
+    Be careful about WHY that is wrong, because the obvious story is not
+    established. The green can was NOT a Veo failure: _bridge_span had
+    hardcoded the alcohol substitution for a modesty finding, so the Gemini
+    image editor put the can into BOTH anchors and Veo reproduced what it
+    was given, correctly. The only evidence that a Veo prompt's words
+    become pixels is the SA-ROTANA tea glass, and nobody checked those
+    anchors for a glass before blaming the prompt -- Veo held the edit
+    instruction at the same time, so the two channels were never isolated.
+
+    The prompt is still kept task-free, because an instruction a video
+    model must satisfy that its two frames do not already entail is a
+    plausible way to get content nobody asked for, and the cost of avoiding
+    it is nothing. That is a precaution, not a demonstrated law.
     """
     from customs import remediate
     prompt = remediate._BRIDGE_PROMPT
@@ -612,3 +623,51 @@ def test_a_broken_checker_does_not_block_a_fix(monkeypatch, tmp_path):
                            on_event=lambda a, m: ran["events"].append(m))
     assert ran["veo"] == 1 and ran["charged"] == 1
     assert any("could not be checked" in m for m in ran["events"])
+
+
+def test_nothing_from_the_run_can_leak_into_the_veo_prompt(monkeypatch, tmp_path):
+    """The real guardrail: assert the value AT THE CALL SITE, not the constant.
+
+    The other prompt tests assert on remediate._BRIDGE_PROMPT. That checks
+    the constant is well written, not that it is what gets sent -- today
+    `prompt=_BRIDGE_PROMPT + statement` would ship with those tests green.
+
+    Veo must receive one of a finite set of strings. Nothing derived from
+    the run may reach it: the observation describes the PRE-EDIT pixels, so
+    a finding about wine would argue for wine against anchors that now show
+    tea.
+    """
+    from customs import remediate
+    from customs.schema import Finding
+
+    sent = {}
+    monkeypatch.setattr(remediate, "_edit_image", lambda *a, **k: b"png")
+    monkeypatch.setattr(remediate, "_anchor_check",
+                        lambda *a, **k: {"fixed": True, "still_visible": "", "added": ""})
+    monkeypatch.setattr(remediate.media, "extract_keyframes",
+                        lambda *a, **k: [tmp_path / "kf.png"])
+    monkeypatch.setattr(remediate.media, "fit_image", lambda a, b, c: pathlib.Path(c))
+    monkeypatch.setattr(remediate.media, "splice_clip", lambda *a, **k: None)
+    def veo(**kw):
+        sent["prompt"] = kw["prompt"]
+        return kw["out_path"]
+    monkeypatch.setattr(remediate, "generate_bridge", veo)
+    (tmp_path / "kf.png").write_bytes(b"raw")
+
+    secret = "a woman in a sleeveless halter top holding a glass of red wine"
+    finding = Finding(id="f", run_id="r", observation_id="o", market="SA",
+                      rule_id="SA-MOD-01", klass="legal", severity=80,
+                      t_start=1.0, t_end=5.0,
+                      rationale=secret, citation_ref=secret, citation_url="",
+                      sourced=True, remediable=True, remediation_blocked=False,
+                      blocked_reason="",
+                      remedies=[{"label": "x", "directive": secret}])
+
+    remediate._bridge_span(tmp_path / "b.mp4", finding, secret, tmp_path,
+                           tmp_path / "out.mp4", intent="remedy:0",
+                           statement=secret, spend=lambda: None)
+
+    assert sent["prompt"] in {remediate._BRIDGE_PROMPT}, \
+        "Veo's prompt must be one of a finite set, not built per finding"
+    for leaked in ("wine", "halter", "sleeveless", "woman", "SA-MOD-01"):
+        assert leaked not in sent["prompt"], f"{leaked!r} reached Veo"
