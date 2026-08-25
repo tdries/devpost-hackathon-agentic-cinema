@@ -260,3 +260,35 @@ def test_long_takes_are_sampled_more_densely_than_short_cuts(clip, tmp_path):
     assert len(media.extract_keyframes(clip, long_take, tmp_path / "b")) > 2
     # an explicit count still wins: remediation edits exactly one frame
     assert len(media.extract_keyframes(clip, long_take, tmp_path / "c", per_shot=1)) == 1
+
+
+def test_splice_clip_actually_replaces_the_span(tmp_path):
+    """The bridge's whole point is that the generated seconds land. The first
+    version normalised the patch's timestamps and also offset the input,
+    which cancelled out: the patch ended before the overlay window opened and
+    the original passed through, so a master cost a Veo generation and came
+    back identical. Measured in pixels, not trusted from a log line."""
+    base = tmp_path / "base.mp4"
+    patch = tmp_path / "patch.mp4"
+    out = tmp_path / "out.mp4"
+    subprocess.run(["ffmpeg", "-y", "-f", "lavfi", "-i", "color=red:s=320x240:d=4",
+                    "-pix_fmt", "yuv420p", str(base)], check=True, capture_output=True)
+    subprocess.run(["ffmpeg", "-y", "-f", "lavfi", "-i", "color=blue:s=320x240:d=4",
+                    "-pix_fmt", "yuv420p", str(patch)], check=True, capture_output=True)
+
+    media.splice_clip(base, patch, 1.0, 2.0, out)
+    assert out.exists() and out.stat().st_size > 0
+
+    def channel_at(second):
+        frame = tmp_path / f"f{second}.png"
+        subprocess.run(["ffmpeg", "-y", "-ss", str(second), "-i", str(out),
+                        "-frames:v", "1", str(frame)], check=True, capture_output=True)
+        from PIL import Image
+        return Image.open(frame).convert("RGB").getpixel((160, 120))
+
+    inside = channel_at(1.5)
+    before = channel_at(0.4)
+    after = channel_at(3.0)
+    assert inside[2] > inside[0], f"the span was not replaced: {inside}"   # blue
+    assert before[0] > before[2], f"before the span changed: {before}"     # red
+    assert after[0] > after[2], f"after the span changed: {after}"         # red

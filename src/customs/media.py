@@ -411,8 +411,17 @@ def splice_clip(path, clip, t_start: float, t_end: float, out_path) -> Path:
     duration = probe_duration(path)
     span = max(t_end - t_start, 0.04)
     width, height = probe_resolution(path)
+    # setpts does BOTH jobs here, and it has to: PTS-STARTPTS normalises the
+    # trimmed patch to zero, and +t_start/TB then places it at the moment it
+    # is meant to cover. The first version paired PTS-STARTPTS with an
+    # input-level -itsoffset, which is the same instruction twice and cancels
+    # out: the patch played from t=0, ended long before the overlay window
+    # opened, and eof_action=pass then let the original through untouched.
+    # The result was a master that cost a Veo generation and looked exactly
+    # like the input, which is the worst kind of failure -- one that reports
+    # success. tests/test_media.py measures the pixels now.
     filt = (
-        f"[1:v]trim=0:{span:.3f},setpts=PTS-STARTPTS,"
+        f"[1:v]trim=0:{span:.3f},setpts=PTS-STARTPTS+{t_start:.3f}/TB,"
         f"scale={width}:{height},setsar=1[patch];"
         f"[0:v][patch]overlay=enable='between(t,{t_start:.3f},{t_end:.3f})':"
         f"eof_action=pass[v]"
@@ -420,7 +429,7 @@ def splice_clip(path, clip, t_start: float, t_end: float, out_path) -> Path:
     args = [
         "ffmpeg", "-y",
         "-i", str(path),
-        "-itsoffset", f"{t_start:.3f}", "-i", str(clip),
+        "-i", str(clip),
         "-filter_complex", filt,
         "-map", "[v]", "-map", "0:a?",
         "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "copy",
