@@ -1610,3 +1610,54 @@ def test_a_tile_says_what_kind_of_problem_not_only_how_many(console):
     for kind in set(re.findall(r'href="#(d-[a-z_]+)"', body)):
         assert f'id="{kind}"' in sprite, f"{kind} is not in the icon set"
 
+
+
+def test_the_agent_answer_is_rendered_in_the_consoles_own_language():
+    """A reply naming a market, a rule and a timecode used to arrive as
+    one grey line, while three feet away those same three things are a
+    country chip, a legal chip and a mono timecode.
+
+    The formatter recognises them and renders them as the interface
+    already does, so a sentence and a tile speak one dialect.
+    """
+    from customs import replyfmt, state
+    sample = (
+        "Two markets are currently blocked:\n\n"
+        "* **AE-ABUDHABI** is blocked by rule `AE-MOD-01` at 4.2 - 5.1s "
+        "for modesty_dress_body, severity 85.\n"
+        "* **ID** is blocked by `ID-MOD-01` at 00:04.2.\n"
+    )
+    out = replyfmt.render(sample, markets={"AE-ABUDHABI", "ID"},
+                          rules={"AE-MOD-01": "legal", "ID-MOD-01": "legal"})
+    assert "<ul>" in out and out.count("<li>") == 2, "the list becomes a list"
+    assert "<strong>" in out
+    assert 'class="chip inl rule"' in out, "a rule id carries its class icon"
+    assert 'class="chip inl mkt"' in out, "a market carries its own icon"
+    assert 'class="chip inl dim"' in out and "d-modesty_dress_body" in out
+    assert 'class="tc-inl mono"' in out, "a timecode is set in mono"
+    assert state.BLOCKED in out, "severity 85 is coloured by the shared threshold"
+    assert "<code><span" not in out, "a chip must not nest inside a code span"
+
+
+def test_nothing_the_model_writes_can_become_markup():
+    """The reply is escaped BEFORE any markup is inserted, and the entity
+    pass only ever runs over already-escaped text. A model can have its
+    words recognised as one of our chips; it can never inject an element.
+    """
+    from customs import replyfmt
+    hostile = (
+        "<img src=x onerror=alert(1)>\n"
+        "* <script>alert(2)</script> and **<b>bold</b>**\n"
+        "[a link](javascript:alert(3))\n"
+    )
+    out = replyfmt.render(hostile, markets=set(), rules={})
+    # The words survive -- they are shown as text -- but never as an
+    # element or an attribute. That distinction is the whole point: the
+    # danger is a tag opening, not the letters "onerror".
+    for opener in ("<img", "<script", "<b>", "<a "):
+        assert opener not in out, f"{opener!r} became real markup"
+    assert "&lt;img src=x onerror=alert(1)&gt;" in out, "shown as inert text"
+    assert "&lt;script&gt;" in out
+    assert "href=" not in out, "a markdown link must not become an anchor"
+    # our own markup is still produced around it
+    assert "<strong>" in out and "<li>" in out

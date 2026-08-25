@@ -523,18 +523,28 @@
     var session = "s" + Math.random().toString(36).slice(2, 10);
     var busy = false;
 
-    var bubble = function (who, text, icon) {
+    /* `html` is the server's own rendering of the same sentence: it has
+       the market and rule tables, so it can turn a rule id into its class
+       chip and a market into its country chip, and it escapes before it
+       marks up. Anything the model wrote can only be RECOGNISED as one of
+       ours, never injected as markup. Without it we fall back to text
+       nodes, which is what every message used to be. */
+    var bubble = function (who, text, icon, html) {
       var el = document.createElement("div");
       el.className = "ag-msg ag-" + who;
       el.innerHTML = '<svg class="ic"><use href="#i-' + icon + '"/></svg>' +
                      '<div class="ag-body"></div>';
       var body = el.querySelector(".ag-body");
-      String(text).split("\n").forEach(function (line) {
-        if (!line.trim()) { return; }
-        var p = document.createElement("p");
-        p.textContent = line;
-        body.appendChild(p);
-      });
+      if (html) {
+        body.innerHTML = html;
+      } else {
+        String(text).split("\n").forEach(function (line) {
+          if (!line.trim()) { return; }
+          var p = document.createElement("p");
+          p.textContent = line;
+          body.appendChild(p);
+        });
+      }
       log.appendChild(el);
       log.scrollTop = log.scrollHeight;
       return el;
@@ -587,7 +597,7 @@
             var failed = bubble("agent", data.error, "error");
             failed.querySelector(".ag-body").classList.add("ag-err");
           }
-          if (data.reply) { bubble("agent", data.reply, "adjudicator"); }
+          if (data.reply) { bubble("agent", data.reply, "adjudicator", data.reply_html); }
           if (data.calls && data.calls.length) {
             var last = log.lastElementChild.querySelector(".ag-body") || log.lastElementChild;
             var calls = document.createElement("div");
