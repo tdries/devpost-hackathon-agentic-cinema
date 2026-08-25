@@ -233,12 +233,19 @@ def dashboard_spec(title: str, run_id: str, group_by: str) -> dict:
                    f'customs_risk{{dimension!="none"}}[$__range]))')
         source = {"type": "prometheus", "uid": "grafanacloud-prom"}
         unit = "market-seconds at risk"
+        # Prometheus spells "one value now" as instant/range, not queryType:
+        # left as a range query the barchart draws a series over time instead
+        # of one bar per dimension.
+        target = {"expr": counted, "instant": True, "range": False,
+                  "legendFormat": f"{{{{{label}}}}}", "refId": "A"}
     else:
         # a JSON line parse is what makes the non-label fields groupable
         parsed = stream if label in _STREAM_LABELS else f"{stream} | json"
         counted = f"sum by ({label}) (count_over_time({parsed} [$__range]))"
         source = {"type": "loki", "uid": "grafanacloud-logs"}
         unit = "findings"
+        target = {"expr": counted, "queryType": "instant",
+                  "legendFormat": f"{{{{{label}}}}}", "refId": "A"}
     uid = f"customs-adhoc-{label}-{int(time.time())}"[:40]
     return {
         "uid": uid,
@@ -250,15 +257,15 @@ def dashboard_spec(title: str, run_id: str, group_by: str) -> dict:
                 "type": "barchart", "title": f"{unit.capitalize()} by {label}",
                 "gridPos": {"h": 10, "w": 12, "x": 0, "y": 0},
                 "datasource": source,
-                "targets": [{"expr": counted, "queryType": "instant", "refId": "A"}],
-                "fieldConfig": {"defaults": {"color": {"mode": "fixed",
-                                                       "fixedColor": "#4285F4"}}},
+                "targets": [target],
+                # one Google hue per bar, not eight identical blue ones
+                "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}},
             },
             {
                 "type": "piechart", "title": f"Share by {label}",
                 "gridPos": {"h": 10, "w": 12, "x": 12, "y": 0},
                 "datasource": source,
-                "targets": [{"expr": counted, "queryType": "instant", "refId": "A"}],
+                "targets": [target],
             },
             {
                 "type": "logs", "title": "The findings themselves",
