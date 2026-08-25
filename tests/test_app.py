@@ -317,6 +317,20 @@ def _judged_run(store):
     """A finished run holding the fixture's findings and stage error."""
     run = store.create_run(asset_path=ASSET, markets=list(MARKETS))
     store.set_run_t0(run.id, time.time())
+    # observations as well as findings: a finding says a market objected,
+    # an observation says what was seen and when, and the lane chart is
+    # built from both
+    store.add_observations(run.id, [
+        Observation(id="obs_shot_0_000", shot_id="shot_0", t_start=1.0, t_end=2.0,
+                    dimension="alcohol_tobacco_drugs", statement="A wine glass.",
+                    evidence_frame="/x/a.png", confidence=0.9),
+        Observation(id="obs_shot_1_000", shot_id="shot_1", t_start=4.2, t_end=5.1,
+                    dimension="text_legibility", statement="English on a cup.",
+                    evidence_frame="/x/b.png", confidence=0.95),
+        Observation(id="obs_shot_2_000", shot_id="shot_2", t_start=7.5, t_end=8.0,
+                    dimension="gesture_body_language", statement="A thumbs up.",
+                    evidence_frame="/x/c.png", confidence=0.88),
+    ])
     store.add_findings(_console_findings(run.id))
     store.emit(run.id, "adjudicator", "FR clearance -> blocked (2 finding(s))")
     store.emit(run.id, "adjudicator", "stage_error: market=SA: simulated 5xx")
@@ -1661,3 +1675,43 @@ def test_nothing_the_model_writes_can_become_markup():
     assert "href=" not in out, "a markdown link must not become an anchor"
     # our own markup is still produced around it
     assert "<strong>" in out and "<li>" in out
+
+
+def test_the_lane_chart_says_when_each_kind_of_problem_happens(console):
+    """The board says which markets are unhappy; the frame board says what
+    the analyst saw. Neither said WHEN -- whether a run has one bad shot
+    or trouble all the way through.
+
+    A faint dot matters as much as a loud one: a lane thick with pale
+    dots and one red one says "we look at this constantly and it is
+    almost always fine", which is the negative space findings alone can
+    never show.
+    """
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    body = client.get(f"/runs/{run.id}").text
+
+    assert 'class="lanes"' in body, "the chart is inline, not an <img>"
+    assert body.count("lane-dot") > 1
+    assert 'href="#d-' in body, "each lane is labelled with its taxonomy icon"
+    assert 'class="lane-peek"' in body, "somewhere to show the frame on hover"
+    # a flagged dot must carry the observation, or hover has nothing to show
+    import re
+    hits = re.findall(r'class="lane-dot hit"[^>]*data-obs="([^"]+)"', body)
+    assert hits, "a flagged dot must name its observation"
+    # and that observation must be real
+    ids = {o.id for o in store.observations(run.id)}
+    assert set(hits) <= ids, "a dot points at an observation that does not exist"
+
+
+def test_a_lane_chart_needs_no_iframe_and_no_rendered_image(console):
+    """Grafana can hold an image, but a Grafana panel cannot show OUR
+    screenshot on hover: an iframe is refused outright and a rendered PNG
+    is static. Drawing it here is what makes the frame reachable.
+    """
+    client, store, _launched, _jobs = console
+    body = client.get(f"/runs/{_judged_run(store).id}").text
+    assert "<iframe" not in body
+    # the dots are elements in our own DOM, so they can carry a link back
+    assert "data-obs=" in body and "/evidence/" in client.get(
+        "/static/customs.js").text

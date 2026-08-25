@@ -1673,3 +1673,27 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 }
 .sev-inl { color: var(--sev); font-weight: 600; }
 .sev-inl b { color: var(--sev); }
+
+/* Where the problems are: a lane per category, the film's clock across.
+
+   Inline SVG rather than an <img>, because a dot has to be hoverable and
+   an image cannot be. That is also what lets a dot carry its observation
+   id, so the frame the analyst actually read can be shown next to it. */
+.lanes-wrap { position: relative; overflow-x: auto; padding: 4px 0 2px; }
+.lanes { color: var(--ink); display: block; min-width: 720px; }
+.lane-dot { cursor: pointer; transition: r .12s ease-out, fill-opacity .12s ease-out; }
+.lane-dot:hover { fill-opacity: 1 !important; }
+.lane-dot.hit:hover { r: 8; }
+
+.lane-peek {
+  position: absolute; z-index: 40; width: 260px; pointer-events: none;
+  background: var(--panel); border: 1px solid var(--line-2); border-radius: 8px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .28); padding: 7px; transform: translate(-50%, -100%);
+}
+.lane-peek img { display: block; width: 100%; border-radius: 4px; background: var(--well); }
+.lane-peek-meta {
+  display: flex; gap: 8px; align-items: baseline; margin-top: 6px;
+  font-size: 11px; color: var(--ink-3);
+}
+.lane-peek-meta .when { color: var(--ink-2); }
+.lane-peek-meta .what { text-transform: lowercase; overflow-wrap: anywhere; }

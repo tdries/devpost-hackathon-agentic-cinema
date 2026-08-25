@@ -111,6 +111,63 @@ def statcard(points: list[tuple[float, float]], *, value: str, label: str,
     return "".join(body)
 
 
+def lanes(rows: list[dict], duration: float, *, width: int = 1180,
+          row_h: int = 30, pad_left: int = 34) -> str:
+    """One lane per problem category, dots where it happens.
+
+    Inline, not an <img>: this one has to be hoverable, and an SVG loaded
+    through <img> is a picture -- no events reach it, no tooltip, no link
+    back to the frame. So it is written into the page, which also means
+    every dot can carry the observation it came from and the app can show
+    that frame on hover.
+
+    rows: [{dimension, events:[{t, flagged, severity, obs, market}]}]
+    """
+    if not rows or duration <= 0:
+        return ""
+    height = len(rows) * row_h + 26
+    inner = width - pad_left - 12
+    out = [f'<svg xmlns="http://www.w3.org/2000/svg" class="lanes" '
+           f'width="{width}" height="{height}" viewBox="0 0 {width} {height}">']
+
+    # the ruler: a mark every five seconds, and the ad's own clock on it
+    step = 5.0 if duration > 12 else 2.0
+    t = 0.0
+    while t <= duration + 0.01:
+        x = pad_left + (t / duration) * inner
+        out.append(f'<line x1="{x:.1f}" y1="16" x2="{x:.1f}" y2="{height - 8}" '
+                   f'stroke="currentColor" stroke-opacity=".10" stroke-width="1"/>')
+        out.append(f'<text x="{x:.1f}" y="11" text-anchor="middle" '
+                   f'font-family="ui-monospace,Menlo,monospace" font-size="9" '
+                   f'fill="currentColor" fill-opacity=".45">{int(t)}s</text>')
+        t += step
+
+    for i, row in enumerate(rows):
+        y = 26 + i * row_h
+        out.append(f'<line x1="{pad_left}" y1="{y:.1f}" x2="{width - 12}" y2="{y:.1f}" '
+                   f'stroke="currentColor" stroke-opacity=".13" stroke-width="1"/>')
+        out.append(f'<use href="#d-{row["dimension"]}" x="4" y="{y - 10:.1f}" '
+                   f'width="20" height="20"/>')
+        for ev in row["events"]:
+            x = pad_left + (min(ev["t"], duration) / duration) * inner
+            flagged = ev.get("flagged")
+            colour = colour_for_severity(ev.get("severity", 0)) if flagged else CLEARED
+            r = 5.5 if flagged else 3.0
+            out.append(
+                f'<circle class="lane-dot{" hit" if flagged else ""}" '
+                f'cx="{x:.1f}" cy="{y:.1f}" r="{r}" fill="{colour}" '
+                f'fill-opacity="{0.95 if flagged else 0.34}" '
+                f'stroke="{colour}" stroke-opacity=".9" stroke-width="1" '
+                f'data-obs="{ev.get("obs", "")}" data-t="{ev["t"]:.1f}" '
+                f'data-dim="{row["dimension"]}" '
+                f'data-markets="{ev.get("market", "")}" '
+                f'data-sev="{ev.get("severity", 0)}"><title>'
+                f'{row["dimension"].replace("_", " ")} at {ev["t"]:.1f}s'
+                f'</title></circle>')
+    out.append("</svg>")
+    return "".join(out)
+
+
 def bars(values: list[tuple[str, float]], *, width: int = 260, height: int = 40,
          palette: dict[str, str] | None = None) -> str:
     """A tiny categorical bar row: dimensions, markets, whatever is counted."""
