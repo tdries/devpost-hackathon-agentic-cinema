@@ -713,12 +713,13 @@ footer .label { color: #4b5c6c; }
 .evidence:hover .label { color: var(--signal); }
 
 /* ---------- style modes ----------
-   Three modes, switched by data-theme on <html> and persisted per browser:
-     (none)     MISSION    the dark launch-control room, the default
-     studio     STUDIO     light, for daylight desks, projectors and print
-     screening  SCREENING  near-black, for the grading suite
-   Every mode keeps the same four state colours; only ground, ink and the
-   signal's temperature move. */
+   Two modes, switched by data-theme on <html> and persisted per browser:
+     (none)   MISSION  the dark launch-control room, the default
+     studio   STUDIO   light, for daylight desks, projectors and print
+   Both keep the same four state colours; only ground, ink and the signal's
+   temperature move. Screening and Spectrum were removed on 2026-08-25:
+   four house styles is three more than anyone switches between, and each
+   one was a second place every new colour had to be defined. */
 
 .theme-switch {
   display: inline-flex;
@@ -790,27 +791,6 @@ html[data-theme="studio"] .a-guard         { color: #6a3fd0 !important; }
 html[data-theme="studio"] .a-remediator    { color: #c25412 !important; }
 html[data-theme="studio"] .a-verifier      { color: #0d8f6c !important; }
 html[data-theme="studio"] .pane video { background: #dde3e8; }
-
-html[data-theme="screening"] {
-  --ground:   #050607;
-  --ground-2: #07090b;
-  --panel:    #0a0c0f;
-  --well:     #060708;
-  --line:     #14181d;
-  --line-2:   #21262d;
-  --ink:      #f2f5f8;
-  --ink-2:    #a7b4c1;
-  --ink-3:    #596878;
-  --signal:   #ffa640;
-  --signal-d: #c47a1a;
-}
-html[data-theme="screening"] body {
-  background:
-    radial-gradient(1100px 480px at 50% -16%, rgba(255, 166, 64, 0.05), transparent 70%),
-    var(--ground);
-}
-html[data-theme="screening"] .topbar { background: rgba(5, 6, 7, 0.9); }
-html[data-theme="screening"] .theme-switch .tbtn.on { background: rgba(255, 166, 64, 0.14); }
 
 /* ---------- youtube link input ---------- */
 
@@ -897,79 +877,6 @@ html[data-theme="studio"] .segcard { box-shadow: 0 16px 40px rgba(23, 34, 44, 0.
   .segcard { width: 260px; }
 }
 
-/* ---------- SPECTRUM ----------
-   The fourth house style: pure black, and the four Google brand colours
-   doing exactly the job they already mean in this product. Blue is the
-   signal (every accent, every focus ring), green is cleared, yellow is at
-   risk, red is blocked. Nothing is decorative: the palette IS the state
-   machine, which is why this mode reads instantly across a room. */
-
-html[data-theme="spectrum"] {
-  --ground:   #000000;
-  --ground-2: #070708;
-  --panel:    #0c0d0f;
-  --well:     #050506;
-  --line:     #191b1f;
-  --line-2:   #2b2f36;
-  --ink:      #ffffff;
-  --ink-2:    #b8bfc9;
-  --ink-3:    #767f8c;
-  --signal:   #4285f4;
-  --signal-d: #1a63d8;
-
-  --cleared:  #34a853;
-  --at_risk:  #fbbc05;
-  --blocked:  #ea4335;
-  --error:    #8b94a1;
-  --pending:  #3a4049;
-}
-html[data-theme="spectrum"] body {
-  background:
-    radial-gradient(760px 360px at 82% -12%, rgba(66, 133, 244, 0.10), transparent 68%),
-    radial-gradient(620px 320px at 6% 2%, rgba(52, 168, 83, 0.06), transparent 64%),
-    var(--ground);
-}
-html[data-theme="spectrum"] .topbar { background: rgba(0, 0, 0, 0.88); }
-html[data-theme="spectrum"] .brand-mark {
-  background: var(--signal);
-  box-shadow: 0 0 16px rgba(66, 133, 244, 0.6);
-}
-html[data-theme="spectrum"] .theme-switch .tbtn.on { background: rgba(66, 133, 244, 0.18); }
-html[data-theme="spectrum"] .btn.go { color: #ffffff; background: var(--signal); border-color: var(--signal); }
-html[data-theme="spectrum"] .btn.go:hover { background: #5a95f6; }
-html[data-theme="spectrum"] .chip.legal   { color: #ff8a80; border-color: rgba(234, 67, 53, 0.38); background: rgba(234, 67, 53, 0.10); }
-html[data-theme="spectrum"] .chip.policy  { color: var(--at_risk); border-color: rgba(251, 188, 5, 0.38); background: rgba(251, 188, 5, 0.10); }
-html[data-theme="spectrum"] .chip.offence { color: #a8c7fa; border-color: rgba(66, 133, 244, 0.42); background: rgba(66, 133, 244, 0.12); }
-html[data-theme="spectrum"] .chip.method  { color: var(--signal); border-color: rgba(66, 133, 244, 0.4); background: rgba(66, 133, 244, 0.10); }
-html[data-theme="spectrum"] .guard {
-  border-color: rgba(66, 133, 244, 0.45);
-  border-left-color: var(--signal);
-  background: linear-gradient(180deg, rgba(66, 133, 244, 0.12), rgba(66, 133, 244, 0.03) 55%);
-}
-html[data-theme="spectrum"] .guard-item { border-top-color: rgba(66, 133, 244, 0.24); }
-html[data-theme="spectrum"] .guard-item .reason,
-html[data-theme="spectrum"] .guard h2 .ic,
-html[data-theme="spectrum"] .tile-stats .ic-human { color: #a8c7fa; }
-html[data-theme="spectrum"] .a-pipeline      { color: #8b94a1 !important; }
-html[data-theme="spectrum"] .a-ingest        { color: var(--signal) !important; }
-html[data-theme="spectrum"] .a-transcription { color: #7fd0a3 !important; }
-html[data-theme="spectrum"] .a-analyst       { color: #a8c7fa !important; }
-html[data-theme="spectrum"] .a-adjudicator   { color: var(--at_risk) !important; }
-html[data-theme="spectrum"] .a-guard         { color: var(--signal) !important; }
-html[data-theme="spectrum"] .a-publisher     { color: var(--cleared) !important; }
-html[data-theme="spectrum"] .a-remediator    { color: var(--blocked) !important; }
-html[data-theme="spectrum"] .a-verifier      { color: var(--cleared) !important; }
-html[data-theme="spectrum"] .sc-legal   { background: rgba(234, 67, 53, 0.78); }
-html[data-theme="spectrum"] .sc-policy  { background: rgba(251, 188, 5, 0.72); }
-html[data-theme="spectrum"] .sc-offence { background: rgba(66, 133, 244, 0.72); }
-html[data-theme="spectrum"] .sc-ok      { background: rgba(52, 168, 83, 0.30); box-shadow: inset 0 0 0 1px rgba(52, 168, 83, 0.8); }
-/* The mark itself goes four-colour in this mode: the same quartered diamond
-   as docs/logo-spectrum.svg, drawn with a conic gradient so it stays one
-   11px element with no extra markup. */
-html[data-theme="spectrum"] .brand-mark {
-  background: conic-gradient(#4285f4 0 25%, #ea4335 0 50%, #fbbc05 0 75%, #34a853 0);
-}
-
 /* ---------- findings: detail and list ----------
    One table, two densities. List keeps every column and the evidence
    thumbnail (shrunk, inline) and drops the prose, so a market with fifteen
@@ -981,7 +888,6 @@ html[data-theme="spectrum"] .brand-mark {
 .view-switch .tbtn:hover { color: var(--ink); }
 .view-switch .tbtn.on { color: var(--ink); background: rgba(255, 157, 46, 0.12); }
 html[data-theme="studio"] .view-switch .tbtn.on { background: rgba(216, 111, 0, 0.12); }
-html[data-theme="spectrum"] .view-switch .tbtn.on { background: rgba(66, 133, 244, 0.18); }
 
 .as-list table.grid td { padding: 9px 14px; vertical-align: middle; }
 .as-list .rationale,
@@ -1511,4 +1417,44 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   /* stacked on a phone: the frame goes back under its reasoning */
   .grid td.ev-cell, .grid td:first-child { width: auto; min-width: 0; }
   .grid td.ev-cell .evidence.big img { max-width: 100%; }
+}
+
+/* ---------- the icon hero ----------
+   The console already speaks in icons: a crew, a set of verdicts, and the
+   eighteen dimensions every market is judged on. Showing that vocabulary once,
+   up front, is the cheapest way to say what the thing actually does. It is a
+   legend, not decoration, so it stays quiet: one weight, one size, no colour
+   beyond what the icons carry themselves. */
+.iconhero { display: flex; flex-wrap: wrap; gap: 24px 44px; padding: 4px 0 2px; }
+.ih-group { display: flex; flex-direction: column; gap: 11px; min-width: 0; }
+.ih-title {
+  font-family: var(--mono); font-size: 10px; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--ink-3);
+}
+.ih-row { display: flex; flex-wrap: wrap; gap: 12px 10px; }
+.ih-item {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  width: 62px; opacity: 0.82; transition: opacity 0.14s ease;
+}
+.ih-item:hover { opacity: 1; }
+.ih-item .ic { width: 18px; height: 18px; }
+.ih-item span {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--ink-3);
+  text-align: center; line-height: 1.35;
+}
+/* the dimensions are the long tail, so they get to be denser */
+.ih-group.wide .ih-row { max-width: 760px; }
+
+/* the accordion carries the level's own mark next to the plus */
+.level > summary .ic.lvl { align-self: center; }
+
+/* agent mode: the empty canvas is the hero, and it disappears the moment the
+   agent opens something real in its place */
+.agent-hero { display: flex; flex-direction: column; gap: 13px; align-items: center; margin-top: 26px; }
+/* a fixed four-wide grid, so the last item never orphans onto a row of its own
+   the way a wrapping strip lets it */
+.agent-hero .ih-row {
+  display: grid; grid-template-columns: repeat(4, 66px);
+  justify-content: center; align-items: start; gap: 16px 12px;
 }
