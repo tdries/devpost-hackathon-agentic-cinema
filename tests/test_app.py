@@ -6,6 +6,8 @@ into work, and which are dropped. TestClient runs a BackgroundTask after the
 response has been returned, so a recorded call proves the task was really
 enqueued rather than just planned.
 """
+import sqlite3
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -1284,3 +1286,65 @@ def test_agent_messages_are_escaped_before_they_reach_the_ticker(client):
     js = test_client.get("/static/customs.js").text
     assert "escapeHtml(data.ticker.message)" in js
     assert "d.textContent = text" in js  # escapeHtml goes through textContent
+
+
+# -- restore has to fail loudly, or not at all --
+
+def test_a_torn_restore_leaves_nothing_rather_than_half_a_store(tmp_path, monkeypatch):
+    """A copy that dies partway must not become the live store.
+
+    Cloud Run mounts the bucket, so the object under an open read handle can
+    be replaced mid-copy: during a rollout the outgoing revision snapshots
+    while the incoming one restores, and GCS FUSE raises ESTALE. On
+    2026-08-25 that cost a revision all fourteen of its runs, silently,
+    because the error was swallowed and an empty store looks exactly like a
+    first boot.
+
+    A half-written file is the worse failure: restore() treats any non-empty
+    local database as a live store and would never try again.
+    """
+    from customs import persist
+    src, live = tmp_path / "bucket.db", tmp_path / "live.db"
+    Store(src).create_run(asset_path="/x/a.mp4", markets=["FR"])
+    with sqlite3.connect(src) as conn:
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+
+    calls = []
+    def torn(a, b, *args, **kwargs):
+        calls.append(1)
+        Path(b).write_bytes(Path(a).read_bytes()[:64])  # the first page and no more
+        return b
+    monkeypatch.setattr(persist.shutil, "copy2", torn)
+    monkeypatch.setattr(persist.time, "sleep", lambda s: None)
+
+    notes = []
+    assert persist._restore_db(src, live, on_note=notes.append) is False
+    assert not live.exists(), "a truncated store must not be left on disk"
+    assert len(calls) == persist._RESTORE_TRIES  # it really did retry
+    assert notes and "did not read back as a store" in notes[0]
+
+
+def test_a_restore_that_fails_the_first_time_still_gets_its_runs(tmp_path, monkeypatch):
+    """ESTALE is transient: the writer finishes and the next read is fine."""
+    from customs import persist
+    src, live = tmp_path / "bucket.db", tmp_path / "live.db"
+    Store(src).create_run(asset_path="/x/a.mp4", markets=["FR"])
+
+    # flush the WAL: the file on disk is the thing being copied, and until
+    # it is checkpointed it genuinely is not a complete store yet
+    with sqlite3.connect(src) as conn:
+        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+
+    real, attempts = persist.shutil.copy2, []
+    def flaky(a, b, *args, **kwargs):
+        attempts.append(1)
+        if len(attempts) == 1:
+            raise OSError(116, "Stale file handle")
+        return real(a, b)
+    monkeypatch.setattr(persist.shutil, "copy2", flaky)
+    monkeypatch.setattr(persist.time, "sleep", lambda s: None)
+
+    notes = []
+    assert persist._restore_db(src, live, on_note=notes.append) is True
+    assert len(Store(live).recent_runs(5)) == 1
+    assert "Stale file handle" in notes[0]  # and it said so
