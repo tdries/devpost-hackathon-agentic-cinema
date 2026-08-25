@@ -50,7 +50,8 @@ def sparkline(points: list[tuple[float, float]], *, width: int = 260,
     line, area = _path(points, width, height, 0.0, ceiling)
     ident = f"sg{abs(hash((len(points), round(peak, 2)))) % 100000}"
     return (
-        f'<svg class="spark" viewBox="0 0 {width} {height}" '
+        f'<svg xmlns="http://www.w3.org/2000/svg" class="spark" '
+        f'width="{width}" height="{height}" viewBox="0 0 {width} {height}" '
         f'preserveAspectRatio="none" aria-hidden="true">'
         f'<defs><linearGradient id="{ident}" x1="0" x2="0" y1="0" y2="1">'
         f'<stop offset="0" stop-color="{colour}" stop-opacity=".26"/>'
@@ -82,7 +83,8 @@ def statcard(points: list[tuple[float, float]], *, value: str, label: str,
     colour = colour or colour_for_severity(peak)
     ident = f"sc{abs(hash((value, label, round(peak, 2)))) % 100000}"
     body = [
-        f'<svg class="statcard" viewBox="0 0 {width} {height}" '
+        f'<svg xmlns="http://www.w3.org/2000/svg" class="statcard" '
+        f'width="{width}" height="{height}" viewBox="0 0 {width} {height}" '
         f'preserveAspectRatio="none" aria-hidden="true">',
         f'<defs><linearGradient id="{ident}" x1="0" x2="0" y1="0" y2="1">'
         f'<stop offset="0" stop-color="{colour}" stop-opacity=".22"/>'
@@ -124,7 +126,8 @@ def bars(values: list[tuple[str, float]], *, width: int = 260, height: int = 40,
         out.append(f'<rect x="{i * (bw + gap):.2f}" y="{height - h:.2f}" '
                    f'width="{bw:.2f}" height="{h:.2f}" rx="1.5" fill="{colour}">'
                    f'<title>{name}: {value:g}</title></rect>')
-    return (f'<svg class="spark" viewBox="0 0 {width} {height}" '
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" class="spark" '
+        f'width="{width}" height="{height}" viewBox="0 0 {width} {height}" '
             f'preserveAspectRatio="none" aria-hidden="true">{"".join(out)}</svg>')
 
 
