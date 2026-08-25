@@ -160,6 +160,22 @@ else
     echo "secret yt-cookies: not present, YouTube intake runs without cookies"
 fi
 
+# -- the state bucket. Cloud Run hands every revision a fresh filesystem, so
+# the run store and its artifacts are mirrored to this bucket and restored on
+# boot (see customs/persist.py). Created on first deploy, then reused. --
+STATE_BUCKET="${STATE_BUCKET:-${PROJECT_ID}-customs-state}"
+if ! gcloud storage buckets describe "gs://${STATE_BUCKET}" --project "$PROJECT_ID" >/dev/null 2>&1; then
+    gcloud storage buckets create "gs://${STATE_BUCKET}" \
+        --project "$PROJECT_ID" --location "$REGION" --uniform-bucket-level-access --quiet
+    echo "state bucket gs://${STATE_BUCKET}: created"
+else
+    echo "state bucket gs://${STATE_BUCKET}: present"
+fi
+gcloud storage buckets add-iam-policy-binding "gs://${STATE_BUCKET}" \
+    --project "$PROJECT_ID" --member "serviceAccount:${RUNTIME_SA}" \
+    --role roles/storage.objectAdmin --quiet >/dev/null
+echo "  roles/storage.objectAdmin on gs://${STATE_BUCKET}"
+
 echo "-- IAM: $RUNTIME_SA --"
 gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member "serviceAccount:${RUNTIME_SA}" \
@@ -182,6 +198,7 @@ env_pairs=(
     "GOOGLE_CLOUD_PROJECT=${PROJECT_ID}"
     "GOOGLE_CLOUD_LOCATION=${REGION}"
     "GOOGLE_GENAI_USE_VERTEXAI=true"
+    "CUSTOMS_STATE_DIR=/mnt/state"
     "GRAFANA_URL=${DEPLOY_GRAFANA_URL}"
     "GRAFANA_STACK_ID=${DEPLOY_GRAFANA_STACK_ID}"
     "OTLP_URL=${DEPLOY_OTLP_URL}"
@@ -210,6 +227,8 @@ gcloud run deploy "$SERVICE" \
     --timeout 900 \
     --set-env-vars "^;^${joined}" \
     --set-secrets "$SET_SECRETS" \
+    --add-volume "name=state,type=cloud-storage,bucket=${STATE_BUCKET}" \
+    --add-volume-mount "volume=state,mount-path=/mnt/state" \
     --quiet
 
 SERVICE_URL="$(gcloud run services describe "$SERVICE" \

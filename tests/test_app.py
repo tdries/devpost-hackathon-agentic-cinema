@@ -971,3 +971,53 @@ def test_the_timeline_shows_where_it_goes_wrong(client, tmp_path):
     assert 'data-lane="FR"' in page.text and 'data-lane="SA"' in page.text
 
     assert test_client.get("/runs/nope/timeline").status_code == 404
+
+
+# -- runs survive a deploy --
+
+def test_state_is_mirrored_out_and_restored_into_a_fresh_container(tmp_path, monkeypatch):
+    """A deploy replaces the container. What was in the bucket comes back."""
+    from customs import persist
+    from customs.store import Store
+
+    bucket = tmp_path / "bucket"
+    monkeypatch.setenv("CUSTOMS_STATE_DIR", str(bucket))
+
+    old = tmp_path / "old" / "customs.db"
+    old.parent.mkdir(parents=True)
+    store_a = Store(old)
+    run = store_a.create_run(asset_path=str(old.parent / "ad.mp4"), markets=["FR"])
+    (old.parent / "uploads").mkdir()
+    (old.parent / "uploads" / "ad.mp4").write_bytes(b"master")
+    (old.parent / "work").mkdir()
+    (old.parent / "work" / "scratch.png").write_bytes(b"regenerable")
+    assert "store=True" in persist.snapshot(old)
+
+    fresh = tmp_path / "fresh" / "customs.db"
+    fresh.parent.mkdir(parents=True)
+    assert "restored store=True" in persist.restore(fresh)
+    assert Store(fresh).get_run(run.id) is not None
+    assert (fresh.parent / "uploads" / "ad.mp4").read_bytes() == b"master"
+    assert not (fresh.parent / "work").exists()   # scratch is not mirrored
+
+
+def test_restore_never_overwrites_a_container_that_already_has_runs(tmp_path, monkeypatch):
+    from customs import persist
+    from customs.store import Store
+
+    monkeypatch.setenv("CUSTOMS_STATE_DIR", str(tmp_path / "bucket"))
+    old = tmp_path / "old" / "customs.db"; old.parent.mkdir(parents=True)
+    Store(old).create_run(asset_path="a.mp4", markets=["FR"])
+    persist.snapshot(old)
+
+    live = tmp_path / "live" / "customs.db"; live.parent.mkdir(parents=True)
+    keep = Store(live).create_run(asset_path="b.mp4", markets=["SA"])
+    assert "kept local store" in persist.restore(live)
+    assert Store(live).get_run(keep.id) is not None
+
+
+def test_without_a_bucket_persistence_is_a_no_op(tmp_path, monkeypatch):
+    from customs import persist
+    monkeypatch.delenv("CUSTOMS_STATE_DIR", raising=False)
+    assert persist.snapshot(tmp_path / "x.db") == "no state dir"
+    assert persist.restore(tmp_path / "x.db") == "no state dir"

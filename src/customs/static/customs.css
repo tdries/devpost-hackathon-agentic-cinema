@@ -836,15 +836,12 @@ html[data-theme="screening"] .theme-switch .tbtn.on { background: rgba(255, 166,
 .defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 .ic {
   width: 15px; height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 1.75;
-  stroke-linecap: square;
-  stroke-linejoin: miter;
   flex: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
-.pill .ic { width: 12.5px; height: 12.5px; stroke-width: 2; }
-.chip .ic { width: 11.5px; height: 11.5px; stroke-width: 2.1; vertical-align: -2px; margin-right: 5px; }
+.pill .ic { width: 13px; height: 13px; }
+.chip .ic { width: 12px; height: 12px; vertical-align: -2px; margin-right: 5px; }
 .line .a .ic { width: 13px; height: 13px; margin-right: 7px; vertical-align: -2.5px; }
 .line .a::before { content: none; }
 .guard h2 .ic { width: 20px; height: 20px; color: #c39bff; }
@@ -1033,23 +1030,8 @@ html[data-theme="studio"] .brand-logo { filter: none; }
   --g-green:  #34A853;
 }
 
-.ic { stroke: var(--g-blue); }
-
-.s-cleared .ic, .chip.sourced .ic, .sc-ok .ic,
-.a-publisher .ic, .a-verifier .ic, .a-transcription .ic { stroke: var(--g-green); }
-
-.s-at_risk .ic, .chip.policy .ic, .a-adjudicator .ic { stroke: var(--g-yellow); }
-
-.s-blocked .ic, .chip.legal .ic, .a-remediator .ic, .line.err .ic { stroke: var(--g-red); }
-
-.s-pending .ic, .s-error .ic, .chip.unsourced .ic,
-.chip.offence .ic, .chip.method .ic,
-.a-pipeline .ic, .a-ingest .ic, .a-analyst .ic, .a-guard .ic,
-.guard h2 .ic, .tile-stats .ic-human, .evidence .label .ic { stroke: var(--g-blue); }
-
-/* the frame mark's one filled dot follows its stroke */
-.ic circle[fill] { fill: currentColor; }
-.evidence .label .ic circle[fill], .ic circle[fill] { fill: var(--g-blue); }
+/* Icon colour lives in each symbol now (base.html): every mark is drawn
+   in the four brand codes directly, so nothing here tints them. */
 
 /* ---------- what a tile is of ----------
    A country tile carries its own outline, a channel tile its monogram.

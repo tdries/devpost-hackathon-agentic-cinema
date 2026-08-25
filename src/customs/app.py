@@ -82,7 +82,7 @@ from fastapi.responses import (FileResponse, HTMLResponse, PlainTextResponse,
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from customs import adjudicate, packs, pipeline, remediate, verify
+from customs import adjudicate, packs, persist, pipeline, remediate, verify
 from customs.fetch import FetchError, fetch_youtube
 from customs.config import settings
 from customs.media import MediaError, probe_duration
@@ -120,6 +120,12 @@ templates.env.globals["static_v"] = str(int(max(
 # on.
 WORKDIR = Path("runs/work")
 
+# Boot: pull the previous revision's runs back out of the mounted bucket
+# before the store is ever opened, so the first request already sees them.
+# Without CUSTOMS_STATE_DIR this is a no-op and the service behaves as it
+# always did (runs live and die with the container).
+log.info("persist.restore: %s", persist.restore(settings.db_path))
+
 _store_singleton: Store | None = None
 
 def store() -> Store:
@@ -131,6 +137,16 @@ def store() -> Store:
 
 def remediate_and_verify(run_id: str, finding_id: str, market: str,
                          workdir=None) -> bool:
+    try:
+        return _remediate_and_verify(run_id, finding_id, market, workdir)
+    finally:
+        # the edit, the change record and the verifier verdict all just
+        # landed in the store; put them somewhere a new revision can find
+        store().emit(run_id, "remediator", persist.snapshot(settings.db_path))
+
+
+def _remediate_and_verify(run_id: str, finding_id: str, market: str,
+                          workdir=None) -> bool:
     """plan -> apply -> confirm, for one finding. Runs off the request thread.
 
     Everything is re-read from the store here rather than carried over from
@@ -823,6 +839,7 @@ def _clearance_job(run_id: str, asset_path: str, markets: list[str]) -> None:
     db = store()
     try:
         launch_clearance(run_id, asset_path, markets, workdir=WORKDIR / run_id)
+        db.emit(run_id, "pipeline", persist.snapshot(settings.db_path))
     except Exception as exc:  # noqa: BLE001 -- a thread has nobody to raise to
         log.exception("clearance run %s failed", run_id)
         db.emit(run_id, "pipeline", f"stage_error: run: {exc!r}")
