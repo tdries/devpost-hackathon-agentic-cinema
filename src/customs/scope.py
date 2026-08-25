@@ -37,12 +37,16 @@ _RANK = {name: i for i, name in enumerate(SCOPES)}
 
 # A finding shorter than this is a moment, not an action.
 _FRAME_MAX_S = 1.2
-# A span this long is carrying a whole shot rather than a beat inside one.
-_SCENE_MIN_S = 5.0
+# One finding covering this much of the whole film is not a moment in it.
+_CONCEPT_SPAN_SHARE = 0.6
 # A rule covering this much of the running time is describing the film.
 _CONCEPT_COVERAGE = 0.45
-# ...as is a rule that keeps firing, shot after shot.
+# ...as is a rule that keeps firing shot after shot AND holds this much of
+# the film between those hits. Repetition alone is not a premise: a logo
+# glimpsed in four shots of a thirty second ad is still a detail, four
+# times over.
 _CONCEPT_HITS = 4
+_CONCEPT_HITS_COVERAGE = 0.2
 
 
 def structural(span: float, duration: float, rule_span_total: float,
@@ -54,13 +58,22 @@ def structural(span: float, duration: float, rule_span_total: float,
     what separates "a cigarette in one shot" from "a cigarette in every shot".
     """
     duration = max(duration, 0.001)
-    if rule_hits >= _CONCEPT_HITS or rule_span_total / duration >= _CONCEPT_COVERAGE:
+    coverage = rule_span_total / duration
+    if (coverage >= _CONCEPT_COVERAGE
+            or span / duration >= _CONCEPT_SPAN_SHARE
+            or (rule_hits >= _CONCEPT_HITS and coverage >= _CONCEPT_HITS_COVERAGE)):
         return "concept"
-    if span >= _SCENE_MIN_S or span / duration >= 0.6:
-        return "scene"
     if span <= _FRAME_MAX_S:
         return "frame"
     return "segment"
+
+# Note what this deliberately never returns: "scene". Arithmetic can see that
+# a rule owns the film, because that is a measurement. It cannot see that a
+# shot IS the violation rather than containing one: a wine glass on the table
+# through a seven second take is a detail in a long shot, and a baby slung
+# through the air for the same seven seconds is the shot itself. Only the
+# judge holding the rule can tell those apart, so "scene" arrives from the
+# adjudicator or not at all.
 
 
 def merge(judged: str | None, measured: str) -> str:

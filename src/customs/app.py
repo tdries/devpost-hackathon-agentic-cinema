@@ -192,10 +192,20 @@ def _remediate_and_verify(run_id: str, finding_id: str, market: str,
             # "bridge" is the operator's call, never the planner's: it is
             # the only method that regenerates footage. "overlay" means
             # "patch it, and let plan() pick which kind of patch".
-            if method == "bridge":
-                chosen = "bridge"
-            else:
-                chosen = remediate.plan(finding, observation)
+            # What the violation's shape allows, checked before anything
+            # runs. A centre crop over a baby suspended in the middle of the
+            # frame is not a fix, it is a re-encode that the verifier then
+            # has to reject: refusing here says so honestly and costs
+            # nobody a cycle. See customs/scope.py.
+            shape = scope_mod.classify(finding, db.findings(run_id),
+                                       asset_duration(run) or 120.0)
+            chosen = "bridge" if method == "bridge" else remediate.plan(finding, observation)
+            allowed, why = scope_mod.allows(shape, "bridge" if chosen == "bridge" else "overlay")
+            if not allowed:
+                db.emit(run_id, "remediator",
+                        f"{finding.rule_id} ({market}) -> not remediable at "
+                        f"{shape} scope: {why}")
+                return False
             db.emit(run_id, "remediator",
                     f"{finding.rule_id} ({market}) -> planned {chosen}")
             change = remediate.apply(run, finding, chosen, workdir, db,
