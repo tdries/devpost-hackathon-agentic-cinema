@@ -4,7 +4,7 @@ import json
 import pytest
 
 from customs import telemetry
-from customs.schema import ChangeRecord, Finding, RunRecord
+from customs.schema import ChangeRecord, Finding, RunRecord, Observation
 from customs.store import Store
 
 # --- fixtures / helpers ---
@@ -247,6 +247,9 @@ def test_push_log_labels_and_body(posts, monkeypatch):
         # customs_risk uses: without it "findings by dimension" has nothing
         # to group on, because a Finding carries the rule, not the dimension.
         "dimension": "alcohol_tobacco_drugs",
+        # so a query can ask for findings without also catching the
+        # observation lines that now share this stream's other labels
+        "kind": "finding",
     }
     [[ts_ns, line]] = stream["values"]
     assert ts_ns == str(int((1_700_000_000.0 + finding.t_start) * 1_000_000_000))
@@ -551,3 +554,59 @@ def test_push_timeline_live_customs_risk_queryable(tmp_path):
 
     assert resp.status_code == 200
     assert result, f"expected nonempty customs_risk result, got: {data}"
+
+
+# --- observations: the half Grafana could not see ---
+
+def test_observations_reach_loki_including_the_ones_nobody_flagged(posts, monkeypatch):
+    """A finding only exists where a market objected.
+
+    Pushing findings alone records every complaint and no context. What
+    the analyst saw and NOBODY objected to is the half that says which
+    markets are permissive, and it lived only in SQLite.
+    """
+    monkeypatch.setattr(telemetry, "settings", dataclasses.replace(
+        telemetry.settings, loki_user="u", grafana_cloud_token="t"))
+    run = _run(t0=1_700_000_000.0)
+    seen = Observation(id="obs_shot_1_000", shot_id="shot_1", t_start=2.0, t_end=4.0,
+                       dimension="modesty_dress_body", statement="A person in a coat.",
+                       evidence_frame="/x/f.png", confidence=0.9)
+    flagged = Observation(id="obs_shot_2_000", shot_id="shot_2", t_start=5.0, t_end=6.0,
+                          dimension="alcohol_tobacco_drugs", statement="A glass of wine.",
+                          evidence_frame="/x/g.png", confidence=0.95)
+    finding = _finding()
+    object.__setattr__(finding, "observation_id", "obs_shot_2_000") if False else None
+    finding.observation_id = "obs_shot_2_000"
+
+    n = telemetry.push_observations(run, [seen, flagged], [finding])
+    assert n == 2
+
+    streams = [c for c in posts if c[0] == telemetry.settings.loki_push_url][-1][1]["streams"]
+    by_flag = {s["stream"]["flagged"]: s for s in streams}
+    assert set(by_flag) == {"yes", "no"}, "both halves are pushed"
+
+    quiet = by_flag["no"]
+    assert quiet["stream"]["kind"] == "observation"
+    assert quiet["stream"]["dimension"] == "modesty_dress_body"
+    # the statement is in the BODY, never a label: free text would explode
+    # the cardinality of the stream index
+    assert "statement" not in quiet["stream"]
+    body = json.loads(quiet["values"][0][1])
+    assert body["statement"] == "A person in a coat."
+    assert body["findings"] == 0 and body["markets"] == []
+
+    hit = json.loads(by_flag["yes"]["values"][0][1])
+    assert hit["findings"] == 1 and hit["markets"] == ["FR"]
+    assert hit["max_severity"] == finding.severity
+
+    # stamped on the run's mapped clock, like every other line
+    assert quiet["values"][0][0] == str(int((1_700_000_000.0 + 2.0) * 1_000_000_000))
+
+
+def test_the_observation_label_set_cannot_explode():
+    """asset x dimension x flagged. Nothing per-observation may be a label."""
+    import inspect
+    src = inspect.getsource(telemetry.push_observations)
+    labels = src.split('"stream": {')[1].split("}")[0]
+    for forbidden in ("statement", "observation_id", "shot_id", "confidence", "run_id"):
+        assert f'"{forbidden}"' not in labels, f"{forbidden} must stay in the body"

@@ -557,6 +557,14 @@ def _push_run_telemetry(store: Store, state: _RunState, emit) -> dict:
     for finding in findings:
         telemetry.push_log(run, finding)
 
+    # Every observation, not only the ones a market objected to. What the
+    # analyst saw and NOBODY flagged is the half that says which markets
+    # are permissive, and it used to exist only in SQLite.
+    observations = store.observations(state.run_id)
+    pushed = telemetry.push_observations(run, observations, findings)
+    emit_obs = f"push_observations -> {pushed} observation(s) to Loki"
+    store.emit(state.run_id, "publisher", emit_obs)
+
     # One annotation query for the whole run, not one per finding: the
     # per-finding loop is what got rate limited in Task 12.
     existing = telemetry.existing_annotation_keys(run)

@@ -488,6 +488,9 @@ def push_log(run: RunRecord, finding: Finding) -> None:
             "klass": finding.klass,
             "rule_id": finding.rule_id,
             "dimension": _dimension_for(finding.market, finding.rule_id),
+            # so {kind="finding"} and {kind="observation"} can be asked for
+            # separately; without it every query catches both.
+            "kind": "finding",
         },
         "values": [[ts_ns, json.dumps(finding.to_json())]],
     }
@@ -511,6 +514,102 @@ def push_log(run: RunRecord, finding: Finding) -> None:
 # zero, which reads as a legitimate counter reset to any PromQL
 # rate()/increase() over it, the same as a real restarting process.
 _stage_error_counts: dict[tuple[str, str], int] = {}
+
+# --- observations: the half of the picture Grafana could not see --------
+#
+# A finding only exists where a market objected. Pushing findings alone
+# therefore records every complaint and none of the context: what the
+# analyst actually saw, how sure it was, and above all everything it saw
+# that NOBODY objected to. That negative space is the more interesting
+# half -- it is what tells an operator which markets are permissive and
+# which details are universally safe -- and it was dying in SQLite.
+#
+# Labels are chosen for cardinality, not convenience. asset (about a
+# dozen) x dimension (exactly 18) x flagged (2) is a few hundred streams
+# and will stay that way. shot_id, the statement, the confidence and the
+# box go in the body, where they are queryable with | json and cost
+# nothing. `kind` separates these lines from finding lines so a query can
+# ask for one without catching the other.
+_OBS_LABEL_KIND = "observation"
+
+
+def push_observation(run: RunRecord, obs, findings: list[Finding] | None = None) -> None:
+    """One Loki line per observation, on the run's mapped clock.
+
+    `findings` are the findings hung off this observation, so the line can
+    say how many markets objected without a join at query time.
+    """
+    hits = list(findings or [])
+    markets = sorted({f.market for f in hits})
+    body = {
+        "run_id": run.id,
+        "observation_id": obs.id,
+        "shot_id": obs.shot_id,
+        "t_start": obs.t_start,
+        "t_end": obs.t_end,
+        "dimension": obs.dimension,
+        "statement": obs.statement,
+        "confidence": obs.confidence,
+        "has_frame": bool(obs.evidence_frame),
+        "has_box": bool(getattr(obs, "box", None)),
+        "findings": len(hits),
+        "markets": markets,
+        "max_severity": max((f.severity for f in hits), default=0),
+        "rules": sorted({f.rule_id for f in hits}),
+    }
+    stream = {
+        "stream": {
+            "app": "customs",
+            "kind": _OBS_LABEL_KIND,
+            "asset": _asset_label(run),
+            "dimension": obs.dimension or "none",
+            "flagged": "yes" if hits else "no",
+        },
+        "values": [[str(int(_mapped_unix_seconds(run, obs.t_start) * 1_000_000_000)),
+                    json.dumps(body)]],
+    }
+    _loki_push([stream])
+
+
+def push_observations(run: RunRecord, observations, findings: list[Finding]) -> int:
+    """Every observation of a run, in one request rather than N.
+
+    Loki takes many streams per push, and a run has dozens of
+    observations; pushing them one at a time is how the annotation loop
+    got rate limited in Task 12.
+    """
+    by_obs: dict[str, list] = {}
+    for finding in findings or []:
+        by_obs.setdefault(finding.observation_id, []).append(finding)
+    streams = []
+    for obs in observations or []:
+        hits = by_obs.get(obs.id, [])
+        body = {
+            "run_id": run.id, "observation_id": obs.id, "shot_id": obs.shot_id,
+            "t_start": obs.t_start, "t_end": obs.t_end,
+            "dimension": obs.dimension, "statement": obs.statement,
+            "confidence": obs.confidence,
+            "has_frame": bool(obs.evidence_frame),
+            "has_box": bool(getattr(obs, "box", None)),
+            "findings": len(hits),
+            "markets": sorted({f.market for f in hits}),
+            "max_severity": max((f.severity for f in hits), default=0),
+            "rules": sorted({f.rule_id for f in hits}),
+        }
+        streams.append({
+            "stream": {
+                "app": "customs", "kind": _OBS_LABEL_KIND,
+                "asset": _asset_label(run),
+                "dimension": obs.dimension or "none",
+                "flagged": "yes" if hits else "no",
+            },
+            "values": [[str(int(_mapped_unix_seconds(run, obs.t_start) * 1_000_000_000)),
+                        json.dumps(body)]],
+        })
+    if streams:
+        _loki_push(streams)
+    return len(streams)
+
 
 def push_stage_error(run: RunRecord, stage: str) -> None:
     """Increment and push the current-clock customs_stage_error{asset,stage}

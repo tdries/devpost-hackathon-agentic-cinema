@@ -84,7 +84,8 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from customs import (adjudicate, agentmode, analyst, costs, media, packs,
-                     persist, pipeline, remediate, scope as scope_mod, verify)
+                     persist, pipeline, remediate, scope as scope_mod, spark,
+                     state as state_mod, verify)
 from customs.fetch import FetchError, fetch_youtube
 from customs.config import settings
 from customs.media import MediaError, probe_duration
@@ -1697,6 +1698,46 @@ def run_poster(run_id: str):
             raise HTTPException(status_code=404, detail="no poster") from exc
     return FileResponse(cached, media_type="image/jpeg",
                         headers={"Cache-Control": "public, max-age=86400"})
+
+@app.get("/runs/{run_id}/spark.svg")
+def run_spark(run_id: str):
+    """This run's severity profile, drawn from Grafana's own numbers.
+
+    The card cannot hold an iframe -- Grafana Cloud answers with
+    frame-ancestors 'none' -- and a rendered PNG is the wrong shape for
+    something this small: fixed size, fixed theme, and a second round
+    trip. So Mimir stays the source of truth and the drawing happens
+    here, in the product's own hex, as inline SVG.
+
+    Served as its own URL rather than inlined into the page so a list of
+    seventeen runs paints immediately and the charts arrive after, and so
+    one slow Grafana never holds up the archive.
+    """
+    run = _run_or_404(run_id)
+    if run.t0 is None:
+        raise HTTPException(status_code=404, detail="this run has no mapped clock")
+    cached = run_dir(run) / "spark.svg"
+    fresh = cached.is_file() and (time.time() - cached.stat().st_mtime) < 300
+    if not fresh:
+        duration = asset_duration(run) or MAX_DURATION_S
+        asset = Path(run.asset_path).stem or run.asset_path
+        try:
+            from customs.grafana_ops import GrafanaOps
+            with GrafanaOps(settings) as ops:
+                series = ops.prom_window(
+                    f'max(customs_risk{{asset="{asset}"}})',
+                    run.t0, run.t0 + duration, 56)
+        except Exception as exc:  # noqa: BLE001 -- a card without a chart is fine
+            log.warning("spark failed for %s: %s", run.id, exc)
+            series = []
+        points = series[0]["points"] if series else []
+        svg = spark.sparkline(points, width=280, height=44)
+        if not svg:
+            raise HTTPException(status_code=404, detail="no series for this run")
+        cached.parent.mkdir(parents=True, exist_ok=True)
+        cached.write_text(svg)
+    return Response(content=cached.read_text(), media_type="image/svg+xml",
+                    headers={"Cache-Control": "public, max-age=300"})
 
 @app.get("/runs/{run_id}/evidence/{observation_id}/box")
 def evidence_box(run_id: str, observation_id: str):
