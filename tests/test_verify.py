@@ -288,3 +288,64 @@ def test_confirm_reopens_the_finding_when_re_adjudication_fails(
 
     assert verify.confirm(run, "FR", [change], store, tmp_path / "work") is False
     assert store.findings(run.id, "FR")[0].status == "open"
+
+
+def test_confirm_rules_on_the_other_findings_in_a_shot_it_just_re_watched(
+        remediated, monkeypatch, no_telemetry, tmp_path):
+    """A shot routinely carries several findings, because findings inherit
+    their span from the shot. Measured on a real run: SA span 35.08-42.08
+    carries three -- SA-PHARMA-01, SA-MOD-01, SA-ALC-01 -- all open.
+
+    Remediating one of them used to leave the others open forever, even
+    though the edit that removed the bottle also removed the second
+    finding about the same bottle, and even though this pass has just
+    re-observed the whole shot against the whole market pack. The market
+    stayed blocked and the fix looked like it had failed.
+
+    It costs nothing to rule on them: the shot is being watched again
+    anyway.
+    """
+    store, run, finding, change, master = remediated
+    # a second open finding on the same shot, which nobody targeted
+    bystander = _finding(
+        id="fnd_FR_FR-ALC-01_obs_shot_0_000", run_id=run.id,
+        rule_id="FR-ALC-01", rationale="A glass of wine", status="open")
+    store.add_findings([bystander])
+
+    monkeypatch.setattr(pipeline, "observe_shot",
+                        lambda *a, **k: [_observation()])
+    # the re-judge finds nothing at all: both violations are gone
+    monkeypatch.setattr(pipeline, "judge", _fake_judge_returning([]))
+
+    assert verify.confirm(run, "FR", [change], store, tmp_path / "work") is True
+
+    by_id = {f.id: f for f in store.findings(run.id, "FR")}
+    assert by_id[finding.id].status == "resolved", "the target"
+    assert by_id[bystander.id].status == "resolved", \
+        "the finding the same edit incidentally cleared"
+
+
+def test_confirm_leaves_a_bystander_open_when_it_still_fires(
+        remediated, monkeypatch, no_telemetry, tmp_path):
+    """Ruling on the others must not mean forgiving them. A finding the
+    edit did not deal with stays open -- and it must not drag the target
+    down with it, because this pass was never asked to fix it."""
+    store, run, finding, change, master = remediated
+    bystander = _finding(
+        id="fnd_FR_FR-ALC-01_obs_shot_0_000", run_id=run.id,
+        rule_id="FR-ALC-01", rationale="A glass of wine", status="open")
+    store.add_findings([bystander])
+
+    monkeypatch.setattr(pipeline, "observe_shot", lambda *a, **k: [_observation()])
+    # the wine is still there; the on-screen text is not
+    still_there = _finding(id="fresh_alc", run_id=run.id, rule_id="FR-ALC-01",
+                           rationale="A glass of wine", status="open")
+    monkeypatch.setattr(pipeline, "judge", _fake_judge_returning([still_there]))
+
+    result = verify.confirm(run, "FR", [change], store, tmp_path / "work")
+
+    by_id = {f.id: f for f in store.findings(run.id, "FR")}
+    assert by_id[finding.id].status == "resolved", \
+        "the targeted fix worked and must be reported as working"
+    assert by_id[bystander.id].status == "open", "the untouched violation stands"
+    assert result is True, "a bystander that still fires is not a failure of this change"

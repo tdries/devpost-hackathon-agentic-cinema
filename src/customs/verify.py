@@ -123,6 +123,37 @@ def confirm(run, market: str, changes: list[ChangeRecord], store, workdir) -> bo
 
     targets = [finding for _c, finding in changed]
     shots = _touched_shots(store, run.id, targets)
+
+    # Everything else still open in the shots this pass is about to
+    # re-observe. It costs nothing extra to rule on them -- the shot is
+    # being watched again anyway, against the same market pack -- and not
+    # ruling on them is a real defect: findings inherit their span from the
+    # shot, so a shot routinely carries several, and an edit that removed
+    # the bottle also removed the second finding about the same bottle.
+    # That one stayed open forever, kept the market blocked, and made the
+    # fix look like it had failed.
+    # Matched by SHOT, not by span. A finding's own span is the shot's
+    # span at judging time, but a shot is resolved through its observation
+    # and the two can differ once anything has been re-observed -- so
+    # comparing spans quietly matches nothing, which is how the first
+    # version of this passed its own test by doing no work.
+    observations = {o.id: o for o in store.observations(run.id)}
+    touched_shot_ids = {s.shot_id for s in shots}
+    targeted = {f.id for f in targets}
+
+    def _shot_of(finding):
+        obs = observations.get(finding.observation_id)
+        return obs.shot_id if obs else getattr(finding, "shot_id", "") or None
+
+    bystanders = [
+        f for f in findings
+        if f.id not in targeted and f.status == "open"
+        and _shot_of(f) in touched_shot_ids
+    ]
+    if bystanders:
+        _emit(store, run.id,
+              f"verify -> also ruling on {len(bystanders)} other open finding(s) "
+              f"in the same shot(s): {', '.join(f.rule_id for f in bystanders)}")
     _emit(store, run.id,
           f"verify -> re-observing {len(shots)} touched shot(s) of {master.name}")
 
@@ -162,6 +193,27 @@ def confirm(run, market: str, changes: list[ChangeRecord], store, workdir) -> bo
     confirmed = []
     all_gone = True
     matched: set[int] = set()
+
+    # The bystanders first, so a finding the edit incidentally cleared is
+    # reported as cleared rather than left open by nobody having asked.
+    # These do not affect `all_gone`: this pass was not asked to fix them,
+    # so failing to is not a failure of the change that ran.
+    for finding in bystanders:
+        survivors = [
+            f for f in fresh if f.rule_id == finding.rule_id and _overlaps(f, finding)
+        ]
+        matched.update(id(f) for f in survivors)
+        if survivors:
+            _emit(store, run.id,
+                  f"still open: {finding.rule_id} continues to fire at "
+                  f"{finding.t_start:.2f}-{finding.t_end:.2f}s; {finding.id} untouched")
+        else:
+            store.update_finding_status(finding.id, "resolved", run_id=run.id)
+            _emit(store, run.id,
+                  f"incidentally fixed: {finding.rule_id} no longer fires at "
+                  f"{finding.t_start:.2f}-{finding.t_end:.2f}s; {finding.id} resolved "
+                  f"without having been the target")
+
     for change, finding in changed:
         survivors = [
             f for f in fresh if f.rule_id == finding.rule_id and _overlaps(f, finding)
