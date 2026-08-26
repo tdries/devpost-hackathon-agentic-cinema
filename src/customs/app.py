@@ -1844,7 +1844,10 @@ def remediate_now(run_id: str, finding_id: str, background: BackgroundTasks,
     choice = (method or "auto").strip()
     want = (replacement or "").strip() or None
     how = (intent or "").strip() or None
-    if choice not in ("auto", "overlay", "track", "bridge"):
+    # Derived from the priced methods rather than restated here, because a
+    # method the picker offers and the route rejects is a dead button, and
+    # this list has been out of date before.
+    if choice != "auto" and choice not in {m.key for m in costs.METHODS}:
         raise HTTPException(status_code=400, detail=f"unknown method: {choice}")
     if choice != "auto":
         # Scope is advice: the operator picked this knowing the caveat the
