@@ -53,10 +53,18 @@
       <span class="id">{{ item.run.id }}</span>
       <span class="asset">{{ item.run.asset_path.split('/')[-1] }}</span>
       <span class="when">{{ item.run.t0 | stamp }}</span>
+      {# Territories and broadcasters answer different questions, so they
+         are two labelled groups rather than one flat run of codes. #}
       <span class="flags">
-        {% for code, state in item.states.items() %}
-        {% set st = state.display %}
-        <span class="pill s-{{ st }}"><svg class="ic"><use href="#i-{{ st.replace('_', '-') }}"/></svg>{{ code }}</span>
+        {% for group in item.groups %}
+        <span class="flaggroup">
+          <span class="flaglabel label">{{ group.label }}</span>
+          <span class="flagpills">
+            {% for m in group.markets %}
+            <span class="pill s-{{ m.state }}"><svg class="ic"><use href="#i-{{ m.state.replace('_', '-') }}"/></svg>{{ m.code }}</span>
+            {% endfor %}
+          </span>
+        </span>
         {% endfor %}
       </span>
     </a>
