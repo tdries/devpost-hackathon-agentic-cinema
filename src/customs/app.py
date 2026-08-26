@@ -627,8 +627,15 @@ def problem_lanes(run, compact: bool = False) -> str:
         # without the card becoming a chart with a title, and they are the
         # six that matter because rows are already worst-first.
         rows = rows[:6]
+        # A card chart is drawn at 560 and displayed at about 330, so an
+        # icon is on screen at roughly six tenths of the size it is
+        # written at. At 20 that put the taxonomy glyphs at ~12px, which
+        # is smaller than the pills beside them and too small to tell a
+        # wine glass from a dress. Double, with the gutter widened to
+        # hold them.
         return spark.lanes(rows, asset_duration(run) or MAX_DURATION_S,
-                           width=560, row_h=17, pad_left=28, ruler=False,
+                           width=560, row_h=22, pad_left=50, ruler=False,
+                           icon=40,
                            defs=_sprite_defs(f"d-{r['dimension']}" for r in rows))
     return spark.lanes(rows, asset_duration(run) or MAX_DURATION_S,
                        defs=_sprite_defs(f"d-{r['dimension']}" for r in rows))
@@ -1081,7 +1088,56 @@ templates.env.globals["market_rows"] = market_rows
 
 # -- the front door --
 
+# Who came through the door. Nothing is gated on it yet -- it is written
+# so that when something is (a reserved generation budget, a read-only
+# mode), the console already knows which of the two it is talking to
+# rather than having to ask on the way past.
+ROLES = {
+    "judge": "Devpost judge",
+    "visitor": "Curious visitor",
+}
+
+
 @app.get("/", response_class=HTMLResponse)
+def landing(request: Request):
+    """The front door: what this is, before what it does.
+
+    Everything behind this page assumes you already know what ad
+    clearance is and why fifteen markets disagree about a glass of wine.
+    Someone arriving from a submission link does not, and the first thing
+    they used to meet was an upload form asking for a master they do not
+    have. So the form moved to /new and this says what the thing IS.
+    """
+    return _page(request, "landing.html", screen="landing",
+                 roles=ROLES,
+                 packs_total=len(market_packs()),
+                 rules_total=sum(len(p.own_rules) for p in market_packs().values()),
+                 dims_total=len(packs.taxonomy()),
+                 runs_total=len(store().recent_runs(500)))
+
+
+@app.get("/enter/{role}")
+def enter(role: str):
+    """Come in as one or the other, and be remembered for it.
+
+    Not authentication and not pretending to be: there is no secret, and
+    either door opens. It records which one you chose, which is the hook
+    a budget split or a read-only mode would hang off later.
+
+    A judge lands on the archive, because the work is already done and
+    the interesting thing is reading it. A visitor lands on the form,
+    because the interesting thing is watching it happen to their own ad.
+    """
+    if role not in ROLES:
+        raise HTTPException(status_code=404, detail=f"unknown door: {role}")
+    target = "/runs" if role == "judge" else "/new"
+    response = RedirectResponse(target, status_code=303)
+    response.set_cookie("customs-role", role, max_age=60 * 60 * 24 * 30,
+                        samesite="lax", httponly=False)
+    return response
+
+
+@app.get("/new", response_class=HTMLResponse)
 def home(request: Request):
     """The upload form. Nothing else.
 
@@ -1089,6 +1145,9 @@ def home(request: Request):
     unrelated jobs and the run list was a scroll away from a form nobody
     was filling in. Reading the history is now its own tab (/runs), which
     is also the one that has the card/list toggle.
+
+    It used to be at /, which is now the page that explains the product
+    to someone who has never seen it.
     """
     return _page(request, "home.html", groups=pack_groups(), screen="home")
 

@@ -1731,7 +1731,7 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   display: flex; gap: 30px; align-items: center; white-space: nowrap;
   opacity: .5; will-change: transform;
 }
-.swarm-row .ic { width: 30px; height: 30px; flex: none; }
+.swarm-row .ic { width: 60px; height: 60px; flex: none; }
 .swarm-row:nth-child(1) { animation: drift-l 96s linear infinite; }
 .swarm-row:nth-child(2) { animation: drift-r 132s linear infinite; opacity: .34; }
 .swarm-row:nth-child(3) { animation: drift-l 116s linear infinite; opacity: .42; }
@@ -1754,7 +1754,7 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 }
 @media (max-width: 720px) {
   .runhero { padding: 30px 22px 28px; }
-  .swarm-row .ic { width: 24px; height: 24px; }
+  .swarm-row .ic { width: 42px; height: 42px; }
   .runhero .swarm { gap: 18px; }
 }
 
@@ -1876,3 +1876,220 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
    the room -- it is the one part of a run card that says what the
    commercial actually IS. */
 .runlist:not(.as-rows) .runthumb { height: 124px; }
+
+/* ---------- the front door ---------- */
+/*
+   Everything behind this page assumes you know what ad clearance is and
+   why fifteen markets disagree about a glass of wine. Someone arriving
+   from a submission link does not, and the first thing they used to meet
+   was an upload form asking for a master they do not have.
+
+   It borrows the archive banner's swarm rather than inventing a second
+   hero language -- same drifting glyphs, same four bars -- but taller,
+   and with the mark on the right where the swarm is busiest. */
+.landhero {
+  position: relative; overflow: hidden; border-radius: 16px;
+  border: 1px solid var(--line); background: var(--ground-2);
+  padding: 60px 48px 54px; margin: 8px 0 0; isolation: isolate;
+  display: flex; align-items: center; gap: 48px;
+}
+.landhero .swarm {
+  position: absolute; inset: -18px -60px; display: flex;
+  flex-direction: column; justify-content: center; gap: 30px; z-index: 0;
+  -webkit-mask-image:
+    radial-gradient(64% 82% at 30% 50%, transparent 22%, #000 76%),
+    linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  mask-image:
+    radial-gradient(64% 82% at 30% 50%, transparent 22%, #000 76%),
+    linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+  -webkit-mask-composite: source-in; mask-composite: intersect;
+}
+.landhero-front { position: relative; z-index: 1; flex: 1 1 auto; max-width: 70ch; }
+.landhero-mark { position: relative; z-index: 1; flex: 0 0 auto; order: 2; }
+.landhero-mark img {
+  width: 200px; height: auto; display: block;
+  filter: drop-shadow(0 10px 30px rgba(0, 0, 0, .22));
+}
+.landhero .bars { display: flex; gap: 7px; }
+.landhero .bars i { width: 46px; height: 6px; border-radius: 3px; display: block; }
+.landhero .bars i:nth-child(1) { background: #4285F4; }
+.landhero .bars i:nth-child(2) { background: #EA4335; }
+.landhero .bars i:nth-child(3) { background: #FBBC05; }
+.landhero .bars i:nth-child(4) { background: #34A853; }
+.landhero-kicker {
+  display: block; margin: 18px 0 6px; font-size: 11px;
+  letter-spacing: .3em; text-transform: uppercase; color: var(--ink-3);
+}
+.landhero-title {
+  margin: 0 0 16px; font-size: clamp(34px, 5.2vw, 62px); line-height: 1.02;
+  letter-spacing: -0.025em; font-weight: 700; color: var(--ink);
+}
+.landhero-lede {
+  margin: 0; max-width: 58ch; font-size: 16.5px; line-height: 1.62;
+  color: var(--ink-2);
+}
+.landhero-lede strong { color: var(--ink); font-weight: 600; }
+
+/* The two doors. Neither is authentication and neither is pretending to
+   be -- there is no secret and both open -- so they are sized and
+   weighted as a choice of route, not as a login. */
+.doors { margin-top: 30px; }
+.doors-label { display: block; margin-bottom: 10px; }
+.doors-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 74ch; }
+.door {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center;
+  gap: 14px; padding: 16px 18px; border-radius: 12px;
+  border: 1px solid var(--line-2); background: var(--panel);
+  text-decoration: none; transition: border-color .16s, background .16s, transform .16s;
+}
+.door:hover { border-color: var(--signal); background: var(--ground-2); transform: translateY(-1px); }
+.door .ic { width: 26px; height: 26px; flex: none; }
+.door-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.door-title { font-size: 15px; font-weight: 600; color: var(--ink); }
+.door-sub { font-size: 12.5px; line-height: 1.45; color: var(--ink-3); }
+.door-go { font-size: 18px; color: var(--ink-3); transition: color .16s, transform .16s; }
+.door:hover .door-go { color: var(--signal); transform: translateX(3px); }
+
+/* The numbers, as a single band. They are the claim the rest of the page
+   spends its words on, so they get to be read in one glance. */
+.landstats {
+  display: flex; flex-wrap: wrap; gap: 34px; margin: 26px 0 0;
+  padding: 20px 24px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--panel);
+}
+.landstats span {
+  display: flex; align-items: baseline; gap: 9px;
+  font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+.landstats b {
+  font-family: var(--mono); font-size: 26px; letter-spacing: -0.02em;
+  color: var(--ink); font-weight: 700;
+}
+
+.landwhy, .landhow, .landgraf { margin-top: 34px; }
+.landwhy-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 26px; margin-top: 14px;
+}
+.landwhy-grid p { margin: 0; font-size: 14.5px; line-height: 1.66; color: var(--ink-2); }
+.landwhy-grid b { color: var(--ink); font-weight: 600; }
+
+/* Six steps, read as a strip rather than a numbered list, because the
+   order matters but the reading order does not have to be vertical. */
+.landsteps {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px; margin-top: 16px;
+}
+.landstep {
+  position: relative; padding: 18px 18px 16px; border-radius: 12px;
+  border: 1px solid var(--line); background: var(--panel);
+  display: flex; flex-direction: column; gap: 7px;
+}
+.landstep .ls-n {
+  position: absolute; top: 14px; right: 16px; font-size: 11px;
+  letter-spacing: .1em; color: var(--ink-3); opacity: .7;
+}
+.landstep .ic { width: 26px; height: 26px; }
+.landstep b { font-size: 14.5px; color: var(--ink); }
+.landstep span:last-child { font-size: 12.8px; line-height: 1.55; color: var(--ink-3); }
+
+.landgraf-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px; margin-top: 16px;
+}
+.landgraf-cell {
+  padding: 18px; border-radius: 12px; border: 1px solid var(--line);
+  background: var(--panel); display: flex; flex-direction: column; gap: 8px;
+  border-left: 3px solid var(--signal);
+}
+.landgraf-cell .lg-n {
+  font-size: 11px; letter-spacing: .18em; color: var(--signal);
+}
+.landgraf-cell b { font-size: 14.5px; color: var(--ink); }
+.landgraf-cell span:last-child { font-size: 12.8px; line-height: 1.55; color: var(--ink-3); }
+
+.landfoot { margin: 34px 0 8px; }
+
+@media (max-width: 1080px) {
+  .landhero-mark img { width: 140px; }
+}
+@media (max-width: 900px) {
+  .landhero { display: block; padding: 34px 24px 30px; }
+  .landhero-mark { margin-bottom: 22px; }
+  .landhero-mark img { width: 92px; }
+  .landhero-front { max-width: none; }
+  .doors-row { grid-template-columns: 1fr; }
+  .landwhy-grid { grid-template-columns: 1fr; gap: 16px; }
+  .landstats { gap: 20px 26px; padding: 16px 18px; }
+  .landstats b { font-size: 21px; }
+  .swarm-row .ic { width: 24px; height: 24px; }
+}
+
+/* ---------- findings: the rule and its citation are two columns ---------- */
+/*
+   They used to be one stacked cell. A statute title runs twenty words and
+   a rationale thirty, and both were sharing a column the browser had
+   squeezed to about 200px because six short columns to the right were
+   claiming their own width first. The result was a cell twelve lines deep
+   with Class, Severity and Window sitting in a column of blank space
+   beside it -- the row was as tall as its narrowest content.
+
+   The widths are declared on the HEADER row, not on the body cells:
+   table-layout:fixed reads the first row and ignores everything after it,
+   so widths hung off td classes are silently dropped and every column
+   comes out the same size. Which is what happened the first time. */
+.market-room table.grid { table-layout: fixed; }
+/* All eight proportional, summing to 100. Mixing percentages with fixed
+   pixels meant the declared total outran the table on a narrower panel
+   and the last column -- the one carrying the button -- was pushed
+   outside it. */
+.market-room table.grid th:nth-child(1) { width: 24%; }  /* rule + rationale */
+.market-room table.grid th:nth-child(2) { width: 16%; }  /* citation */
+.market-room table.grid th:nth-child(3) { width: 13%; }  /* evidence */
+.market-room table.grid th:nth-child(4) { width: 8%; }   /* class */
+.market-room table.grid th:nth-child(5) { width: 8%; }   /* severity */
+.market-room table.grid th:nth-child(6) { width: 11%; }  /* window */
+.market-room table.grid th:nth-child(7) { width: 8%; }   /* status */
+.market-room table.grid th:nth-child(8) { width: 12%; }  /* the fix */
+.market-room table.grid td { vertical-align: top; }
+.market-room table.grid td.tight { white-space: nowrap; }
+/* ...except the button, which would rather wrap than leave the panel.
+   It also has to be told it may be as narrow as its cell: a button sizes
+   to its label by default, so at 12% of a narrow table it simply drew
+   past the panel edge and got clipped. */
+.market-room table.grid td.tight:last-child { white-space: normal; }
+.market-room table.grid td:last-child .btn,
+.market-room table.grid td:last-child .fixer > summary {
+  width: 100%; box-sizing: border-box; text-align: center;
+}
+/* and a backstop, so a narrow window scrolls the table instead of
+   spilling it over the page */
+.market-room .panel-body { overflow-x: auto; }
+.market-room .rationale { max-width: none; line-height: 1.5; }
+
+/* The thumbnail has to live inside its column or it draws over Class.
+   168px was set for the old narrow layout and is now a floor, not a fit. */
+.market-room .grid td.ev-cell .evidence.big,
+.market-room .grid td.ev-cell .evidence.big img { width: 100%; max-width: 100%; }
+
+.cite-cell { vertical-align: top; }
+.cite-cell .cite, .cite-cell .cite-plain {
+  display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 6;
+  overflow: hidden; font-size: 12.5px; line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.cite-cell .cite-plain { font-family: var(--mono); color: var(--ink-3); }
+.cite-cell .cite-state { margin-top: 8px; }
+
+/* List view stays a list: the prose is what makes a row tall, so it goes.
+   The provenance chip stays, because "is this finding backed by a real
+   source" is exactly the kind of thing you scan a list for. */
+.as-list .cite-cell .cite,
+.as-list .cite-cell .cite-plain { display: none; }
+.as-list .cite-cell .cite-state { margin-top: 0; }
+.market-room .as-list table.grid { table-layout: auto; }
+
+@media (max-width: 900px) {
+  .market-room table.grid { table-layout: auto; }
+  .market-room table.grid th { width: auto !important; }
+}

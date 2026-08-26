@@ -355,9 +355,9 @@ def _upload(client, payload=b"\x00\x01fake mp4 bytes", markets=MARKETS, name="ad
 def test_home_offers_every_market_pack_and_leaves_history_to_its_own_tab(console):
     client, _store, _launched, _jobs = console
 
-    body = client.get("/").text
+    body = client.get("/new").text
 
-    assert client.get("/").status_code == 200
+    assert client.get("/new").status_code == 200
     for market in MARKETS:
         assert f'value="{market}"' in body, market
     # Starting a clearance and reading the ones already done are different
@@ -1839,3 +1839,59 @@ def test_a_lane_chart_served_as_a_file_carries_its_own_icons(console):
     assert used, "each lane is labelled with its taxonomy icon"
     assert used <= defined, f"icons referenced but never defined: {used - defined}"
     assert defined == used, f"carrying symbols nothing draws: {defined - used}"
+
+
+def test_the_front_door_says_what_this_is_before_what_it_does(console):
+    """/ used to be the upload form, which meant the first thing a judge
+    arriving from a submission link met was a file picker asking for a
+    master they do not have and a list of market codes meaning nothing.
+
+    The form is one click away at /new. This page is the argument for
+    why anyone should care, and it has to carry the claim honestly: the
+    numbers on it are counted from the packs, not typed in.
+    """
+    client, _store, _launched, _jobs = console
+    from customs import packs
+
+    body = client.get("/").text
+    assert client.get("/").status_code == 200
+
+    # the pitch
+    assert "One asset." in body and "Every market." in body
+    assert "Observe once, judge many" in body
+    assert "Grafana is a participant" in body
+
+    # counted, not asserted -- a stale number here is a lie to a judge
+    assert f">{len(packs.load())}<" in body, "jurisdiction count is live"
+    assert f">{len(packs.taxonomy())}<" in body, "dimension count is live"
+
+    # the console tabs belong behind the door, not on it
+    assert "New clearance run</a>" not in body
+
+
+def test_both_doors_open_and_remember_which_one_you_chose(console):
+    """Not authentication, and not pretending to be: there is no secret
+    and either door opens. It records the choice, which is the hook a
+    reserved budget or a read-only mode would hang off later.
+
+    They land in different places on purpose. A judge wants the work
+    already done; a visitor wants to watch it happen to their own ad.
+    """
+    client, _store, _launched, _jobs = console
+
+    body = client.get("/").text
+    assert 'href="/enter/judge"' in body
+    assert 'href="/enter/visitor"' in body
+
+    judge = client.get("/enter/judge", follow_redirects=False)
+    assert judge.status_code == 303
+    assert judge.headers["location"] == "/runs"
+    assert judge.cookies["customs-role"] == "judge"
+
+    visitor = client.get("/enter/visitor", follow_redirects=False)
+    assert visitor.status_code == 303
+    assert visitor.headers["location"] == "/new"
+    assert visitor.cookies["customs-role"] == "visitor"
+
+    # and a door nobody built is a 404, not a silent redirect somewhere
+    assert client.get("/enter/admin", follow_redirects=False).status_code == 404
