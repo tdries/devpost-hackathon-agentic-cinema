@@ -2030,3 +2030,23 @@ def test_a_lane_is_never_shorter_than_the_glyph_that_labels_it():
     # and the svg grew to hold them rather than clipping
     height = float(re.search(r'height="([0-9.]+)"', svg).group(1))
     assert height >= ys[-1] + 38
+
+
+def test_every_method_the_picker_offers_is_a_method_the_route_accepts():
+    """A method the console offers and the route rejects is a dead button.
+
+    The route used to restate the list, and it went stale the moment a
+    method was added -- per_frame was offered, priced, and then 400'd.
+    """
+    from customs import costs
+    import inspect
+    from customs import app as app_mod
+
+    source = inspect.getsource(app_mod.remediate_now)
+    assert "costs.METHODS" in source, \
+        "the route should derive its allow-list, not restate it"
+
+    for method in costs.METHODS:
+        # priced and gate-able: enough to prove it is a real, offerable method
+        assert costs.estimate(method.key, 4.0) >= 0
+        assert isinstance(costs.available(method.key, 4.0, 0.0), tuple)
