@@ -747,6 +747,54 @@ def splice_matte(base, clip, box, t_start: float, t_end: float, out_path,
     return Path(out_path)
 
 
+def extract_span_frames(path, t_start: float, t_end: float, out_dir,
+                        fps: float | None = None) -> list[Path]:
+    """Every frame of a span, as PNGs, in order.
+
+    For the per-frame path, which edits the film's own frames rather than
+    replacing them. `fps` under the source rate samples sparsely, which
+    halves the bill and is only safe on a slow shot.
+    """
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    span = max(t_end - t_start, 1e-3)
+    args = ["ffmpeg", "-y", "-v", "error", "-ss", f"{t_start:.3f}",
+            "-i", str(path), "-t", f"{span:.3f}"]
+    if fps:
+        args += ["-vf", f"fps={fps:g}"]
+    args += ["-start_number", "0", str(out_dir / "f%05d.png")]
+    _run(args, timeout=_encode_timeout(span))
+    return sorted(out_dir.glob("f*.png"))
+
+
+def paste_box(original_png, edited_png, box, out_png,
+              *, feather: int = MATTE_FEATHER_PX) -> Path:
+    """Composite only the box region of `edited` onto `original`.
+
+    The same contract as composite_matte, done at PNG level, which is
+    stricter: there is no encode between the two images, so every pixel
+    outside the feathered box is bit-identical to the original rather
+    than merely close.
+    """
+    from PIL import Image
+    base = Image.open(original_png).convert("RGB")
+    edit = Image.open(edited_png).convert("RGB").resize(base.size, Image.LANCZOS)
+    x, y, w, h = box_to_pixels(box, *base.size)
+
+    mask = Image.new("L", (w, h), 0)
+    px = mask.load()
+    ramp = max(1, int(feather))
+    for j in range(h):
+        for i in range(w):
+            d = min(i, w - 1 - i, j, h - 1 - j)
+            px[i, j] = 255 if d >= ramp else int(255 * d / ramp)
+
+    out = base.copy()
+    out.paste(edit.crop((x, y, x + w, y + h)), (x, y), mask)
+    out.save(out_png)
+    return Path(out_png)
+
+
 def relight_ratio(original_png, edited_png, box, out_png, *, floor: int = 8) -> Path:
     """The per-pixel ratio edited/original inside the box, as a PNG.
 
