@@ -112,7 +112,8 @@ def statcard(points: list[tuple[float, float]], *, value: str, label: str,
 
 
 def lanes(rows: list[dict], duration: float, *, width: int = 1180,
-          row_h: int = 30, pad_left: int = 34, ruler: bool = True) -> str:
+          row_h: int = 30, pad_left: int = 34, ruler: bool = True,
+          defs: str = "") -> str:
     """One lane per problem category, dots where it happens.
 
     Inline, not an <img>: this one has to be hoverable, and an SVG loaded
@@ -122,6 +123,15 @@ def lanes(rows: list[dict], duration: float, *, width: int = 1180,
     that frame on hover.
 
     rows: [{dimension, events:[{t, flagged, severity, obs, market}]}]
+
+    `defs` is the sprite this chart needs, inlined. Each lane is labelled
+    with `<use href="#d-dimension">`, and href resolves against the
+    document that owns the element -- so a chart written into the page
+    finds base.html's sprite, and the same chart served as its own file
+    finds nothing. It was drawing six references into a document with no
+    symbols, which is why the label gutter was empty and the lanes looked
+    like they started at a ragged left edge. The caller passes the symbols
+    it uses; nothing else travels.
     """
     if not rows or duration <= 0:
         return ""
@@ -129,6 +139,8 @@ def lanes(rows: list[dict], duration: float, *, width: int = 1180,
     inner = width - pad_left - 12
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" class="lanes" '
            f'width="{width}" height="{height}" viewBox="0 0 {width} {height}">']
+    if defs:
+        out.append(defs)
 
     # the ruler: a mark every five seconds, and the ad's own clock on it.
     # A card has no room for it and does not need it -- the shape is the

@@ -10,12 +10,13 @@
   {% for row in market_rows(run) %}
   <div class="wrap markets-row">
     <span class="lvl-tag label">{{ row.level }}</span>
-    {% for code in row.markets %}
-    <a class="tab {% if screen == 'market' and market == code %}on{% endif %}" href="/runs/{{ run.id }}/markets/{{ code }}">
+    {% for m in row.markets %}
+    <a class="tab mk-{{ m.state }} {% if screen == 'market' and market == m.code %}on{% endif %}"
+       href="/runs/{{ run.id }}/markets/{{ m.code }}" title="{{ m.code }}: {{ m.state.replace('_', ' ') }}">
       {% if row.level == 'channel' %}<svg class="ic"><use href="#n-cut"/></svg>
       {% elif row.level == 'global' %}<svg class="ic"><use href="#d-national_symbols_politics"/></svg>
       {% elif row.level == 'continental' %}<svg class="ic"><use href="#n-market"/></svg>
-      {% else %}<svg class="ic lvl country"><use href="#c-{{ code }}"/></svg>{% endif %}{{ code }}</a>
+      {% else %}<svg class="ic lvl country"><use href="#c-{{ m.code }}"/></svg>{% endif %}{{ m.code }}</a>
     {% endfor %}
     {% if loop.last %}
     <span class="runnav-right">

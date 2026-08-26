@@ -1817,3 +1817,54 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   .grp > summary { grid-template-columns: 28px 1fr auto; }
   .grp > summary > .ic { width: 26px; height: 26px; }
 }
+
+/* ---------- the market tabs carry the verdict ---------- */
+/*
+   The tab strip is what you steer a run by, and it was the one part of
+   the board that said nothing about the run. Six channel codes look
+   identical until you scroll past them to the tiles, which is backwards:
+   the answer to "which of these is holding the campaign" should be in
+   the thing you are already reading.
+
+   So the underline is the verdict. It stays the verdict on the active
+   tab too -- these selectors outrank `.tab.on`'s signal colour on
+   purpose -- and "you are here" is carried by the lit text and the
+   panel behind it instead, because losing the status of the tab you are
+   standing on is exactly the wrong trade. */
+.runnav .markets-row .tab { border-bottom-color: var(--pending); }
+.runnav .markets-row .tab.mk-cleared { border-bottom-color: var(--cleared); }
+.runnav .markets-row .tab.mk-noted   { border-bottom-color: var(--g-blue); }
+.runnav .markets-row .tab.mk-at_risk { border-bottom-color: var(--at_risk); }
+.runnav .markets-row .tab.mk-blocked { border-bottom-color: var(--blocked); }
+.runnav .markets-row .tab.mk-error   { border-bottom-color: var(--error); }
+.runnav .markets-row .tab.mk-pending { border-bottom-color: var(--pending); }
+
+/* A blocking market should be findable without reading every code. */
+.runnav .markets-row .tab.mk-blocked,
+.runnav .markets-row .tab.mk-at_risk { color: var(--ink-2); }
+.runnav .markets-row .tab.on {
+  background: var(--ground-2);
+  border-bottom-width: 3px;
+  padding-bottom: 9px;
+}
+
+/* ---------- a run card's markets, split by what they are ---------- */
+/*
+   `ID` and `CAQC-NOOVO` sat side by side in one flat run of codes with
+   nothing to say that one is a country and the other a broadcaster
+   inside a different one. Two labelled groups, stacked, because they
+   answer different questions: where may this run, and who will take it. */
+.runlist:not(.as-rows) .runrow .flags {
+  display: flex; flex-direction: column; gap: 8px; align-items: stretch;
+}
+.flaggroup { display: grid; grid-template-columns: 46px 1fr; gap: 8px; align-items: start; }
+.flaglabel { padding-top: 4px; font-size: 9px; letter-spacing: 0.16em; color: var(--ink-3); }
+.flagpills { display: flex; flex-wrap: wrap; gap: 6px; }
+.runlist.as-rows .flaggroup { grid-template-columns: 1fr; gap: 4px; }
+.runlist.as-rows .flaglabel { display: none; }
+
+/* More of the frame, less of the letterbox. At 92px a 16:9 still was
+   cropped to a band you could not read a scene from, and the card had
+   the room -- it is the one part of a run card that says what the
+   commercial actually IS. */
+.runlist:not(.as-rows) .runthumb { height: 124px; }

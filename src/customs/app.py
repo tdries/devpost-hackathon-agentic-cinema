@@ -575,6 +575,30 @@ def _lanes_from_store(run) -> dict[str, list]:
     return lanes
 
 
+@lru_cache(maxsize=1)
+def _sprite_symbols() -> dict[str, str]:
+    """Every <symbol> in base.html's sprite, by id.
+
+    Read once from the template rather than duplicated here, so an icon
+    redrawn in the sprite is redrawn everywhere it is used.
+    """
+    src = (_HERE / "templates" / "base.html").read_text()
+    return {m.group(1): m.group(0) for m in
+            re.finditer(r'<symbol id="([^"]+)".*?</symbol>', src, re.S)}
+
+
+def _sprite_defs(ids) -> str:
+    """A <defs> carrying exactly the symbols these ids name, and no more.
+
+    A chart served as its own file cannot reach the sprite in the page
+    that embeds it, so it has to carry what it uses. Shipping the whole
+    sprite would put fifty symbols in every card; a lane chart needs six.
+    """
+    have = _sprite_symbols()
+    wanted = [have[i] for i in dict.fromkeys(ids) if i in have]
+    return f"<defs>{''.join(wanted)}</defs>" if wanted else ""
+
+
 def problem_lanes(run, compact: bool = False) -> str:
     """Where in the film each KIND of problem happens, as one lane each.
 
@@ -604,8 +628,10 @@ def problem_lanes(run, compact: bool = False) -> str:
         # six that matter because rows are already worst-first.
         rows = rows[:6]
         return spark.lanes(rows, asset_duration(run) or MAX_DURATION_S,
-                           width=560, row_h=17, pad_left=24, ruler=False)
-    return spark.lanes(rows, asset_duration(run) or MAX_DURATION_S)
+                           width=560, row_h=17, pad_left=28, ruler=False,
+                           defs=_sprite_defs(f"d-{r['dimension']}" for r in rows))
+    return spark.lanes(rows, asset_duration(run) or MAX_DURATION_S,
+                       defs=_sprite_defs(f"d-{r['dimension']}" for r in rows))
 
 
 def _kinds_found(findings) -> list[str]:
@@ -1002,13 +1028,49 @@ def market_rows(run) -> list[dict]:
     are actually looking at.
     """
     all_packs = market_packs()
+    # The tabs carry the verdict as a coloured underline. Without it the
+    # only way to see that a channel is blocking was to scroll past the
+    # tiles, which is the wrong way round: the tab strip is what you steer
+    # by, and it was the one part of the board saying nothing.
+    states = market_states(run)
     rows = []
     for level in _LEVEL_ROWS:
         codes = [m for m in run.markets
                  if (all_packs[m].level if m in all_packs else "national") == level]
         if codes:
-            rows.append({"level": level, "markets": sorted(codes)})
+            rows.append({"level": level, "markets": [
+                {"code": c, "state": tile_state(states[c]) if c in states else "pending"}
+                for c in sorted(codes)]})
     return rows
+
+
+def pill_groups(run, states: dict) -> list[dict]:
+    """A run card's market pills, split into where and on what.
+
+    A card used to carry one flat run of codes, so `ID` sat next to
+    `CAQC-NOOVO` with nothing to say that one is a country and the other
+    is a broadcaster inside a different country. They answer different
+    questions -- which territories is this cleared for, and which
+    schedules will actually take it -- so they are two groups now.
+
+    Everything above a broadcaster is territory, however deep the ladder
+    goes, which is why this is a two-way split and not one row per level:
+    a card has room to say "geo" and "channel", not five words.
+    """
+    all_packs = market_packs()
+    geo, channel = [], []
+    for code, state in states.items():
+        level = all_packs[code].level if code in all_packs else "national"
+        (channel if level == "channel" else geo).append((code, state))
+    out = []
+    for label, items in (("geo", geo), ("channel", channel)):
+        if items:
+            # NOT "items": Jinja resolves group.items to dict.items, the
+            # bound method, and iterating that is a TypeError at render.
+            out.append({"label": label,
+                        "markets": [{"code": c, "state": tile_state(st)}
+                                    for c, st in sorted(items)]})
+    return out
 
 
 def _page(request: Request, name: str, **context):
@@ -1383,7 +1445,8 @@ def all_runs(request: Request):
     # twenty runs took the archive past a two minute timeout. The cards
     # request /lanes.svg themselves, so the page paints immediately and a
     # slow Grafana costs a chart rather than the page.
-    rows = [{"run": run, "states": market_states(run)}
+    rows = [{"run": run, "states": (st := market_states(run)),
+             "groups": pill_groups(run, st)}
             for run in store().recent_runs(500)]
     return _page(request, "runs.html", rows=rows, screen="runs",
                  packs_total=len(market_packs()), dims_total=len(packs.taxonomy()))

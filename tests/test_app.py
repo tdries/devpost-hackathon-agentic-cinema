@@ -1813,3 +1813,29 @@ def test_every_dashboard_is_painted_from_the_one_palette():
     assert set().union(*seen.values()) >= {state.BLOCKED.upper(),
                                            state.AT_RISK.upper(),
                                            state.CLEARED.upper()}
+
+
+def test_a_lane_chart_served_as_a_file_carries_its_own_icons(console):
+    """`<use href="#d-x">` resolves against the document that owns it.
+
+    Written into the page, it finds base.html's sprite. Served as its own
+    file through <img>, it finds nothing -- and an unresolved <use> draws
+    silently, so the chart was emitting six icon references into a
+    document with no symbols and the label gutter simply sat empty. It
+    looked like a chart with a ragged left edge rather than a bug.
+
+    So the file has to carry what it uses, and only what it uses: the
+    whole sprite is 48 symbols and a lane chart needs at most a handful.
+    """
+    import re
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    svg = client.get(f"/runs/{run.id}/lanes.svg?full=1")
+    assert svg.status_code == 200
+
+    used = set(re.findall(r'<use href="#([^"]+)"', svg.text))
+    defined = set(re.findall(r'<symbol id="([^"]+)"', svg.text))
+    assert used, "each lane is labelled with its taxonomy icon"
+    assert used <= defined, f"icons referenced but never defined: {used - defined}"
+    assert defined == used, f"carrying symbols nothing draws: {defined - used}"
