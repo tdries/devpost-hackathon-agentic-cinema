@@ -323,6 +323,11 @@ def judge(run_id: str, observations: list[Observation], pack: MarketPack,
             scope=scope_named,
             substitutable=bool(item.get("substitutable", True)),
             remedies=_remedies(item.get("remedies")),
+            # carried from the observation, because the executor needs to
+            # know WHERE before it is allowed to change anything, and the
+            # observation is the only thing that ever looked
+            box=list(obs.box or []),
+            shot_id=obs.shot_id,
         ))
 
     if on_verdict is not None:

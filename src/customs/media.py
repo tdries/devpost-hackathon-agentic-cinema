@@ -464,6 +464,97 @@ def overlay_image(path, png, t_start: float, t_end: float, out_path) -> Path:
     _run(args, timeout=_encode_timeout(duration))
     return Path(out_path)
 
+# The feathered edge of a matte, in pixels. A hard rectangle reads as a
+# sticker on anything with motion blur or a soft focus falloff; six pixels
+# of ramp is enough to hide the seam and small enough that it never
+# reaches material the finding did not point at.
+MATTE_FEATHER_PX = 6
+
+# How much room to leave around the analyst's box. A model asked to remove
+# a bottle will also want the shadow and the highlight it threw, and a box
+# drawn tight to the glass clips them off mid-edit.
+MATTE_PAD = 0.06
+
+
+def box_to_pixels(box, width: int, height: int, pad: float = MATTE_PAD) -> tuple[int, int, int, int]:
+    """[ymin, xmin, ymax, xmax] in 0-1000 -> (x, y, w, h) in pixels.
+
+    Padded outward, clamped to the frame, and rounded to even numbers
+    because libx264 will not accept an odd crop in yuv420p.
+    """
+    ymin, xmin, ymax, xmax = (max(0.0, min(1000.0, float(v))) for v in box)
+    if ymax <= ymin or xmax <= xmin:
+        raise MediaError(f"degenerate box: {box}")
+    dy, dx = (ymax - ymin) * pad, (xmax - xmin) * pad
+    ymin, xmin = max(0.0, ymin - dy), max(0.0, xmin - dx)
+    ymax, xmax = min(1000.0, ymax + dy), min(1000.0, xmax + dx)
+
+    x = int(xmin / 1000.0 * width) // 2 * 2
+    y = int(ymin / 1000.0 * height) // 2 * 2
+    w = max(2, int((xmax - xmin) / 1000.0 * width) // 2 * 2)
+    h = max(2, int((ymax - ymin) / 1000.0 * height) // 2 * 2)
+    w = min(w, width - x) // 2 * 2 or 2
+    h = min(h, height - y) // 2 * 2 or 2
+    return x, y, w, h
+
+
+def composite_matte(base, patch, box, t_start: float, t_end: float, out_path,
+                    *, feather: int = MATTE_FEATHER_PX, crf: int = 16) -> Path:
+    """Put ONLY the box region of `patch` over `base`, for this span.
+
+    This is the contract the whole remediation path is built on: every
+    pixel outside the matte is the base's own footage, so "the rest of the
+    scene is untouched" is arithmetic rather than a hope about how a model
+    behaved. Measured on a real edit, the difference outside the matte is
+    exactly zero.
+
+    It exists because an image model asked to change a bottle does not
+    change only the bottle. One real relettering edit moved 37.9% of the
+    frame's pixels to alter something that occupied 1.3% of it, and two
+    edits of the same source frame diverged everywhere, not just where they
+    were asked to. Cropping the answer back to the question makes that
+    divergence unreachable.
+
+    `patch` is a still image or a video. A video patch is held to the
+    span's length by the same enable window; a still is looped.
+
+    The edge is feathered rather than cut, because a hard rectangle reads
+    as a sticker against motion blur.
+    """
+    base, patch = Path(base), Path(patch)
+    width, height = probe_resolution(base)
+    duration = probe_duration(base)
+    x, y, w, h = box_to_pixels(box, width, height)
+
+    still = patch.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}
+    # A linear ramp inward from every edge of the crop: 0 at the boundary,
+    # opaque `feather` pixels in. Cheap, and it only ever runs over the
+    # crop, which is a fraction of the frame.
+    ramp = max(1, int(feather))
+    alpha = (f"clip(min(min(X,{w}-X),min(Y,{h}-Y))/{ramp}*255,0,255)")
+    filt = (
+        f"[1:v]scale={width}:{height},crop={w}:{h}:{x}:{y},"
+        f"format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='{alpha}'[patch];"
+        f"[0:v][patch]overlay={x}:{y}:enable='between(t,{t_start:.3f},{t_end:.3f})'[v]"
+    )
+    args = ["ffmpeg", "-y"]
+    args += ["-i", str(base)]
+    if still:
+        args += ["-loop", "1", "-i", str(patch)]
+    else:
+        args += ["-i", str(patch)]
+    args += [
+        "-filter_complex", filt,
+        "-map", "[v]", "-map", "0:a?",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", str(int(crf)),
+        "-pix_fmt", "yuv420p", "-c:a", "copy",
+        "-t", f"{duration:.3f}", "-shortest", "-movflags", "+faststart",
+        str(out_path),
+    ]
+    _run(args, timeout=_encode_timeout(duration))
+    return Path(out_path)
+
+
 def replace_audio_span(path, wav, t_start: float, t_end: float, out_path) -> Path:
     span = max(t_end - t_start, 0.0)
     delay_ms = max(int(round(t_start * 1000)), 0)
