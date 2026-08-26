@@ -1856,6 +1856,14 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
    answer different questions: where may this run, and who will take it. */
 .runlist:not(.as-rows) .runrow .flags {
   display: flex; flex-direction: column; gap: 8px; align-items: stretch;
+  /* The cap exists so a run cleared for forty channels does not set the
+     height of every card in its row. Two labelled groups need more room
+     than one flat run of pills did, and the fade has to start below the
+     first group's second line or it eats a label rather than trailing
+     off after one. */
+  max-height: 196px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 158px, transparent);
+  mask-image: linear-gradient(to bottom, #000 158px, transparent);
 }
 .flaggroup { display: grid; grid-template-columns: 46px 1fr; gap: 8px; align-items: start; }
 .flaglabel { padding-top: 4px; font-size: 9px; letter-spacing: 0.16em; color: var(--ink-3); }
