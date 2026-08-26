@@ -861,6 +861,33 @@ def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
                    f"{master.name} untouched, finding back to open")
         raise
 
+    # The craft gate. verify.confirm asks whether the RULE still fires; it
+    # has never asked whether the commercial survived. A measured
+    # remediation chain silently lost 15 frames of running length, which
+    # for a broadcast spot is a broken deliverable however good the picture
+    # looks. So the staged file is interrogated BEFORE it becomes the
+    # master, and a failure puts the finding back exactly like any other
+    # remediation failure: the master is untouched and the alert stays up.
+    craft = media.craft_check(base, staged,
+                              span=(finding.t_start, finding.t_end))
+    if craft["failures"]:
+        store.update_finding_status(finding.id, "open", run_id=run.id)
+        staged.unlink(missing_ok=True)
+        for failure in craft["failures"]:
+            store.emit(run.id, "remediator", f"craft gate: {failure}")
+        store.emit(run.id, "remediator",
+                   f"stage_error: remediate: {method} produced a master that is not "
+                   f"the same film; {master.name} untouched, {finding.id} back to open")
+        raise RemediationError(
+            f"{method} failed the craft gate: {'; '.join(craft['failures'])}")
+    store.emit(run.id, "remediator",
+               f"craft gate passed: length {craft['duration_after']:.3f}s, "
+               f"{craft['frames_after']} frames, "
+               f"{craft['psnr']:.1f} dB outside the edit"
+               if craft.get("psnr") is not None else
+               f"craft gate passed: length {craft['duration_after']:.3f}s, "
+               f"{craft['frames_after']} frames")
+
     staged.replace(master)
     after = _still(master, change_id, "after", finding, changes_dir)
 

@@ -212,6 +212,7 @@ def crop_span(path, t_start: float, t_end: float, out_path, factor: float = 0.8)
     enable='between(t,...)' composite the rest of this module uses.
     """
     duration = probe_duration(path)
+    frame_count = probe_frames(path)
     width, height = probe_resolution(path)
     crop_w = max(2, int(width * factor) // 2 * 2)
     crop_h = max(2, int(height * factor) // 2 * 2)
@@ -226,7 +227,12 @@ def crop_span(path, t_start: float, t_end: float, out_path, factor: float = 0.8)
         "-filter_complex", filt,
         "-map", "[v]", "-map", "0:a?",
         "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "copy",
-        "-t", f"{duration:.3f}", "-shortest", "-movflags", "+faststart",
+                # Bounded by FRAME COUNT, not by a float duration. -t rounds, and a
+        # file whose duration probes a hair short comes back missing the
+        # frames at the end of it -- which is how a remediated commercial
+        # silently lost 0.649s of running length across eleven edits. A
+        # spot's running time is contractual; this is what keeps it.
+        "-frames:v", str(frame_count), "-movflags", "+faststart",
         str(out_path),
     ]
     _run(args, timeout=_encode_timeout(duration))
@@ -310,6 +316,7 @@ def detect_shots(path) -> list[Shot]:
     threshold that finds noise costs a merge rather than a wrong answer.
     """
     duration = probe_duration(path)
+    frame_count = probe_frames(path)
     scores = _scene_scores(path)
 
     chosen: list[float] = []
@@ -421,6 +428,7 @@ def replace_segment_video(path, t_start: float, t_end: float, new_frames_dir, ou
     if not frames:
         raise MediaError(f"no PNG frames found in {new_frames_dir}")
     duration = probe_duration(path)
+    frame_count = probe_frames(path)
     span = max(t_end - t_start, 1e-3)
     fps = max(len(frames) / span, 1.0)
     filt = f"[0:v][1:v]overlay=enable='between(t,{t_start:.3f},{t_end:.3f})'[v]"
@@ -440,7 +448,12 @@ def replace_segment_video(path, t_start: float, t_end: float, new_frames_dir, ou
         # real EOF (e.g. audio, when present); with no audio track the only output
         # stream is [v], fed by an infinite -loop input, so it never ends on its
         # own. -t is an unconditional cap regardless of which streams are mapped.
-        "-t", f"{duration:.3f}", "-shortest", "-movflags", "+faststart",
+                # Bounded by FRAME COUNT, not by a float duration. -t rounds, and a
+        # file whose duration probes a hair short comes back missing the
+        # frames at the end of it -- which is how a remediated commercial
+        # silently lost 0.649s of running length across eleven edits. A
+        # spot's running time is contractual; this is what keeps it.
+        "-frames:v", str(frame_count), "-movflags", "+faststart",
         str(out_path),
     ]
     _run(args, timeout=_encode_timeout(duration))
@@ -448,6 +461,7 @@ def replace_segment_video(path, t_start: float, t_end: float, new_frames_dir, ou
 
 def overlay_image(path, png, t_start: float, t_end: float, out_path) -> Path:
     duration = probe_duration(path)
+    frame_count = probe_frames(path)
     filt = f"[0:v][1:v]overlay=enable='between(t,{t_start:.3f},{t_end:.3f})'[v]"
     args = [
         "ffmpeg", "-y",
@@ -458,7 +472,12 @@ def overlay_image(path, png, t_start: float, t_end: float, out_path) -> Path:
         "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "copy",
         # see replace_segment_video: -t is the unconditional bound, -shortest is
         # belt-and-suspenders for whenever a real audio stream is also mapped.
-        "-t", f"{duration:.3f}", "-shortest", "-movflags", "+faststart",
+                # Bounded by FRAME COUNT, not by a float duration. -t rounds, and a
+        # file whose duration probes a hair short comes back missing the
+        # frames at the end of it -- which is how a remediated commercial
+        # silently lost 0.649s of running length across eleven edits. A
+        # spot's running time is contractual; this is what keeps it.
+        "-frames:v", str(frame_count), "-movflags", "+faststart",
         str(out_path),
     ]
     _run(args, timeout=_encode_timeout(duration))
@@ -524,6 +543,7 @@ def composite_matte(base, patch, box, t_start: float, t_end: float, out_path,
     base, patch = Path(base), Path(patch)
     width, height = probe_resolution(base)
     duration = probe_duration(base)
+    frame_count = probe_frames(base)
     x, y, w, h = box_to_pixels(box, width, height)
 
     still = patch.suffix.lower() in {".png", ".jpg", ".jpeg", ".webp"}
@@ -548,11 +568,115 @@ def composite_matte(base, patch, box, t_start: float, t_end: float, out_path,
         "-map", "[v]", "-map", "0:a?",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", str(int(crf)),
         "-pix_fmt", "yuv420p", "-c:a", "copy",
-        "-t", f"{duration:.3f}", "-shortest", "-movflags", "+faststart",
+                # Bounded by FRAME COUNT, not by a float duration. -t rounds, and a
+        # file whose duration probes a hair short comes back missing the
+        # frames at the end of it -- which is how a remediated commercial
+        # silently lost 0.649s of running length across eleven edits. A
+        # spot's running time is contractual; this is what keeps it.
+        "-frames:v", str(frame_count), "-movflags", "+faststart",
         str(out_path),
     ]
     _run(args, timeout=_encode_timeout(duration))
     return Path(out_path)
+
+
+def probe_frames(path) -> int:
+    """How many video frames the file actually contains.
+
+    Counted, not derived from duration x fps, because that product is
+    exactly where a silently dropped frame hides.
+    """
+    out = _run([
+        "ffprobe", "-v", "error", "-select_streams", "v:0",
+        "-count_packets", "-show_entries", "stream=nb_read_packets",
+        "-of", "csv=p=0", str(path),
+    ]).stdout.strip().splitlines()
+    try:
+        return int(out[0])
+    except (IndexError, ValueError) as exc:
+        raise MediaError(f"could not count frames of {path}") from exc
+
+
+# A remediated master must still be the same COMMERCIAL. Running length is
+# contractual for a broadcast spot -- a 30 second slot is 30 seconds -- and
+# an edit that quietly returns 29.35 has broken the deliverable however
+# good the picture looks.
+QC_MAX_DRIFT_S = 0.04        # under one frame at 25fps
+QC_MIN_PSNR_DB = 38.0        # outside the edit, against the master it came from
+
+
+def _psnr(a, b, *, exclude: tuple[float, float] | None = None) -> float | None:
+    """PSNR of b against a in dB, optionally ignoring one time range.
+
+    `exclude` is the span the edit was ALLOWED to change; everything else
+    is what this is asking about. Without it a correct fix scores the same
+    as a wrecked one, because the fix is a difference too.
+    """
+    lavfi = "psnr"
+    if exclude:
+        t0, t1 = exclude
+        keep = (f"select='lt(t\\,{t0:.3f})+gt(t\\,{t1:.3f})',"
+                f"setpts=N/FRAME_RATE/TB")
+        lavfi = f"[0:v]{keep}[a];[1:v]{keep}[b];[a][b]psnr"
+    proc = _run([
+        "ffmpeg", "-nostdin", "-i", str(a), "-i", str(b),
+        "-lavfi", lavfi, "-f", "null", "-",
+    ], timeout=_encode_timeout(probe_duration(a)))
+    m = re.search(r"average:([0-9.]+|inf)", proc.stderr)
+    if not m:
+        return None
+    return float("inf") if m.group(1) == "inf" else float(m.group(1))
+
+
+def craft_check(before, after, *, span: tuple[float, float] | None = None) -> dict:
+    """Is the edited master still the same film as the one it came from?
+
+    verify.confirm only ever re-asks whether the RULE still fires. Nothing
+    asked whether the commercial survived the fix. These are the questions
+    an editor asks before accepting a delivery, and they are arithmetic on
+    two files that already exist:
+
+      length      a broadcast spot's running time is contractual
+      frames      a dropped frame is invisible in a duration comparison
+      resolution  a resample is a quality loss nobody asked for
+      psnr        how far the footage OUTSIDE the edit was disturbed
+
+    Returns {"ok", "failures", ...measurements}. It measures; the caller
+    decides.
+    """
+    before, after = Path(before), Path(after)
+    d_before, d_after = probe_duration(before), probe_duration(after)
+    f_before, f_after = probe_frames(before), probe_frames(after)
+    r_before, r_after = probe_resolution(before), probe_resolution(after)
+
+    failures = []
+    drift = abs(d_after - d_before)
+    if drift > QC_MAX_DRIFT_S:
+        failures.append(
+            f"running length moved by {drift:.3f}s "
+            f"({d_before:.3f} -> {d_after:.3f}); a spot's length is contractual")
+    if f_after != f_before:
+        failures.append(f"frame count changed: {f_before} -> {f_after}")
+    if r_after != r_before:
+        failures.append(f"resolution changed: {r_before[0]}x{r_before[1]} "
+                        f"-> {r_after[0]}x{r_after[1]}")
+
+    psnr = None
+    if r_after == r_before and f_after == f_before:
+        psnr = _psnr(before, after, exclude=span)
+        if psnr is not None and psnr < QC_MIN_PSNR_DB:
+            where = "outside the edited span" if span else "across the film"
+            failures.append(
+                f"footage the edit should not have touched was disturbed: "
+                f"{psnr:.2f} dB {where} (floor {QC_MIN_PSNR_DB:.0f})")
+
+    return {
+        "ok": not failures, "failures": failures,
+        "duration_before": d_before, "duration_after": d_after, "drift": drift,
+        "frames_before": f_before, "frames_after": f_after,
+        "resolution_before": r_before, "resolution_after": r_after,
+        "psnr": psnr,
+    }
 
 
 def relight_ratio(original_png, edited_png, box, out_png, *, floor: int = 8) -> Path:
@@ -615,6 +739,7 @@ def apply_relight(base, ratio_png, box, t_start: float, t_end: float, out_path,
     base = Path(base)
     width, height = probe_resolution(base)
     duration = probe_duration(base)
+    frame_count = probe_frames(base)
     x, y, w, h = box_to_pixels(box, width, height)
     ramp = max(1, int(feather))
     alpha = f"clip(min(min(X,{w}-X),min(Y,{h}-Y))/{ramp}*255,0,255)"
@@ -634,7 +759,12 @@ def apply_relight(base, ratio_png, box, t_start: float, t_end: float, out_path,
         "-map", "[v]", "-map", "0:a?",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", str(int(crf)),
         "-pix_fmt", "yuv420p", "-c:a", "copy",
-        "-t", f"{duration:.3f}", "-shortest", "-movflags", "+faststart",
+                # Bounded by FRAME COUNT, not by a float duration. -t rounds, and a
+        # file whose duration probes a hair short comes back missing the
+        # frames at the end of it -- which is how a remediated commercial
+        # silently lost 0.649s of running length across eleven edits. A
+        # spot's running time is contractual; this is what keeps it.
+        "-frames:v", str(frame_count), "-movflags", "+faststart",
         str(out_path),
     ]
     _run(args, timeout=_encode_timeout(duration))
@@ -690,6 +820,7 @@ def splice_clip(path, clip, t_start: float, t_end: float, out_path) -> Path:
     two different numbers.
     """
     duration = probe_duration(path)
+    frame_count = probe_frames(path)
     span = max(t_end - t_start, 0.04)
     width, height = probe_resolution(path)
     try:
@@ -722,7 +853,12 @@ def splice_clip(path, clip, t_start: float, t_end: float, out_path) -> Path:
         "-filter_complex", filt,
         "-map", "[v]", "-map", "0:a?",
         "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", "-c:a", "copy",
-        "-t", f"{duration:.3f}", "-shortest", "-movflags", "+faststart",
+                # Bounded by FRAME COUNT, not by a float duration. -t rounds, and a
+        # file whose duration probes a hair short comes back missing the
+        # frames at the end of it -- which is how a remediated commercial
+        # silently lost 0.649s of running length across eleven edits. A
+        # spot's running time is contractual; this is what keeps it.
+        "-frames:v", str(frame_count), "-movflags", "+faststart",
         str(out_path),
     ]
     _run(args, timeout=_encode_timeout(duration))

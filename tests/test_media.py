@@ -632,3 +632,76 @@ def test_relight_applies_only_inside_the_matte(tmp_path):
     cx, cy, cw, ch = media.box_to_pixels([0, 0, 20, 20], w, h)
     ImageDraw.Draw(diff).rectangle([cx - pad, cy - pad, cx + cw + pad, cy + ch + pad], fill=(0, 0, 0))
     assert diff.convert("L").getextrema()[1] == 0, "relight leaked outside its matte"
+
+
+def test_craft_check_passes_a_matte_edit_and_catches_a_shortened_film(tmp_path):
+    """The questions an editor asks before accepting a delivery, none of
+    which anything in this system asked before.
+
+    verify.confirm only ever re-asks whether the RULE still fires. It
+    never asked whether the commercial survived the fix -- and a measured
+    remediation chain silently lost 15 frames (0.649s) of running length,
+    which for a broadcast spot is a broken deliverable however good the
+    picture looks.
+    """
+    from PIL import Image
+    from customs import media
+
+    base = tmp_path / "base.mp4"
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-f", "lavfi",
+                    "-i", "testsrc2=s=320x240:d=4:r=25", str(base)], check=True)
+
+    # a real matte edit should pass every question
+    ratio = tmp_path / "ratio.png"
+    Image.new("RGB", (320, 240), (150, 128, 128)).save(ratio)
+    edited = tmp_path / "edited.mp4"
+    media.apply_relight(base, ratio, [300, 300, 700, 700], 1.0, 3.0, edited)
+
+    report = media.craft_check(base, edited)
+    assert report["failures"] == [], report["failures"]
+    assert report["frames_before"] == report["frames_after"]
+    assert report["resolution_before"] == report["resolution_after"]
+    assert report["drift"] <= media.QC_MAX_DRIFT_S
+
+    # a film that came back shorter is caught and named
+    short = tmp_path / "short.mp4"
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-i", str(base),
+                    "-t", "3.4", "-c", "copy", str(short)], check=True)
+    bad = media.craft_check(base, short)
+    assert not bad["ok"]
+    assert any("running length" in f for f in bad["failures"]), bad["failures"]
+
+
+def test_craft_check_catches_a_resample(tmp_path):
+    """A resolution change is a quality loss nobody asked for."""
+    from customs import media
+
+    base = tmp_path / "base.mp4"
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-f", "lavfi",
+                    "-i", "testsrc2=s=320x240:d=2:r=25", str(base)], check=True)
+    small = tmp_path / "small.mp4"
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-i", str(base),
+                    "-vf", "scale=160:120", str(small)], check=True)
+
+    report = media.craft_check(base, small)
+    assert not report["ok"]
+    assert any("resolution changed" in f for f in report["failures"]), report["failures"]
+
+
+def test_craft_check_notices_footage_that_was_disturbed(tmp_path):
+    """The whole point of the matte is that untouched footage stays
+    untouched. This is the measurement that would catch it not being so."""
+    from customs import media
+
+    base = tmp_path / "base.mp4"
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-f", "lavfi",
+                    "-i", "testsrc2=s=320x240:d=2:r=25", str(base)], check=True)
+    # a heavy full-frame change, the thing a matte exists to prevent
+    mangled = tmp_path / "mangled.mp4"
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-i", str(base),
+                    "-vf", "hue=h=120,eq=brightness=0.2", str(mangled)], check=True)
+
+    report = media.craft_check(base, mangled)
+    assert not report["ok"]
+    assert any("should not have touched" in f for f in report["failures"]), report["failures"]
+    assert report["psnr"] is not None and report["psnr"] < media.QC_MIN_PSNR_DB
