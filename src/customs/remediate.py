@@ -38,6 +38,7 @@ protected characteristic because a forged or stale alert asked it to, so
 "never remediate that" is enforced at the point of action too, not only at
 the point of judgement.
 """
+import logging
 import re
 import threading
 import uuid
@@ -53,6 +54,8 @@ from customs.genai_client import (VeoBlocked, client, generate_bridge,
 from customs.media import Shot
 from customs.packs import load as load_packs
 from customs.schema import ChangeRecord, Finding, Observation
+
+log = logging.getLogger(__name__)
 
 class RemediationBlocked(Exception):
     """Raised when a finding must never be auto-remediated (the guard's call)."""
@@ -447,9 +450,57 @@ def _still(video_path, change_id: str, tag: str, finding: Finding, out_dir: Path
     span = Shot(shot_id=f"{change_id}_{tag}", t_start=finding.t_start, t_end=finding.t_end)
     return media.extract_keyframes(video_path, span, out_dir, per_shot=1)[0]
 
+def _box_for(finding: Finding, before: Path, store=None) -> list:
+    """Where in the frame this finding is, or [] if nobody can say.
+
+    Three sources in order of cost: the finding (written at judging time),
+    the observation it came from, and one locate() call against the
+    evidence frame for findings that predate boxes entirely.
+    """
+    box = list(getattr(finding, "box", None) or [])
+    if box:
+        return box
+    if store is not None:
+        obs = next((o for o in store.observations(finding.run_id)
+                    if o.id == finding.observation_id), None)
+        if obs is not None and getattr(obs, "box", None):
+            return list(obs.box)
+    if before.is_file():
+        try:
+            from customs import analyst
+            return list(analyst.locate(before.read_bytes(), finding.rationale) or [])
+        except Exception as exc:  # noqa: BLE001 -- no box is a fallback, not a failure
+            log.warning("locate failed for %s: %s", finding.id, exc)
+    return []
+
+
+def _land_edit(base: Path, before: Path, edited: Path, finding: Finding,
+               workdir: Path, out_path: Path, box: list) -> str:
+    """Get an edited still onto the master, and say how it was done.
+
+    With a box, the edit is landed as a RELIGHT: the ratio edited/original
+    is computed inside the box and multiplied into every live frame of the
+    span. The span keeps its own motion, lighting and grain, and only the
+    object's surface changes -- for the price of the one image edit that
+    was already paid for.
+
+    Without a box there is nothing to constrain the edit to, so it falls
+    back to what this always did: hold the edited still over the span.
+    That is a freeze frame, and it is why a box is worth locating.
+    """
+    if box:
+        ratio = media.relight_ratio(before, edited, box,
+                                    workdir / f"{before.stem}_ratio.png")
+        media.apply_relight(base, ratio, box,
+                            finding.t_start, finding.t_end, out_path)
+        return "relight"
+    media.overlay_image(base, edited, finding.t_start, finding.t_end, out_path)
+    return "freeze"
+
+
 def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str | None,
                      before: Path, workdir: Path, out_path: Path,
-                     intent: str | None = None) -> tuple[Path, str]:
+                     intent: str | None = None, store=None) -> tuple[Path, str]:
     """relettering / prop_swap: edit the keyframe, fit it, composite the span."""
     market_name = _market_name(finding.market)
     directive = _directive_for(finding, intent)
@@ -465,7 +516,8 @@ def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str
         edited_raw.write_bytes(_edit_image(instruction, before.read_bytes()))
         edited = media.fit_image(edited_raw, base,
                                  before.with_name(f"{before.stem}_edited.png"))
-        media.overlay_image(base, edited, finding.t_start, finding.t_end, out_path)
+        _land_edit(base, before, edited, finding, workdir, out_path,
+                   _box_for(finding, before, store))
         return edited, instruction
     if replacement is None:
         subject = _DEFAULT_REPLACEMENT[method].format(market_name=market_name)
@@ -484,7 +536,8 @@ def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str
     # master's exact pixel size or the still would cover only part of it.
     edited = media.fit_image(edited_raw, base, before.with_name(f"{before.stem}_edited.png"))
 
-    media.overlay_image(base, edited, finding.t_start, finding.t_end, out_path)
+    _land_edit(base, before, edited, finding, workdir, out_path,
+               _box_for(finding, before, store))
     return edited, instruction
 
 _GENERIC_EDIT = (
@@ -835,7 +888,7 @@ def _run_method(run, finding: Finding, method: str, replacement: str | None,
     if method in ("relettering", "prop_swap"):
         _edited, instruction = _edit_frame_onto(
             base, finding, method, replacement, before, workdir, staged,
-            intent=intent)
+            intent=intent, store=store)
         # The full edit instruction goes in the run's event log, not in the
         # change description: the description is read on dashboards and in
         # Grafana annotations, where a paragraph of prompt is noise, but

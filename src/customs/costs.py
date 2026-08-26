@@ -56,9 +56,11 @@ METHODS = (
     Method("overlay", "Patch one frame",
            "Edits a single frame and holds it over the span.",
            "low", "a locked-off shot, where nothing moves"),
-    Method("track", "Track and propagate",
-           "Edits one clean frame and warps it across the span with optical flow.",
-           "medium", "a moving camera over a flat target: a pack, a sign, a label"),
+    Method("track", "Propagate the change",
+           "Edits one frame, divides its lighting out, and multiplies the "
+           "resulting colour change into every live frame of the span. The "
+           "shot keeps its own motion, light and grain.",
+           "low", "any shot where the thing to change holds still in frame"),
     Method("bridge", "Regenerate with Veo",
            "Edits both ends of the span and generates the motion between them.",
            "high", "genuine 3D motion, where a patch cannot hold"),
@@ -111,9 +113,12 @@ def available(method: str, span: float, spent_today: float) -> tuple[bool, str]:
     The reason is written to be shown to an operator, so it says what to do
     instead rather than naming a limit.
     """
-    if method == "track":
-        return False, "Not built yet: this is the right answer for a moving shot over a flat target."
-    if method == "overlay":
+    # `track` was a promise for most of this project's life. It is the
+    # relight propagation in media.relight_ratio / media.apply_relight: one
+    # edit, its lighting divided out, the remaining colour change applied
+    # to every live frame inside the finding's matte. One image edit for a
+    # whole span, and the span is still the brand's own footage.
+    if method in ("track", "overlay"):
         return True, ""
     if method != "bridge":
         return False, f"Unknown method {method}."
