@@ -48,8 +48,18 @@
     other screen has the picture somewhere -- the archive card, the frame
     board, the cutting room -- and this is the one people land on. #}
  {% if has_poster %}
- <a class="board-poster" href="/runs/{{ run.id }}/cutting" title="Open the cutting room">
-   <img src="/runs/{{ run.id }}/poster.jpg" alt="A frame from {{ run.asset_path.split('/')[-1] }}" loading="lazy">
+ <a class="board-poster{% if stills %} rotating{% endif %}" href="/runs/{{ run.id }}/cutting"
+    title="Open the cutting room" style="--frames:{{ stills | length or 1 }}">
+   <span class="board-poster-stack">
+     {% if stills %}
+       {% for at in stills %}
+       <img src="/runs/{{ run.id }}/poster.jpg?at={{ at }}" style="--i:{{ loop.index0 }}"
+            alt="{{ run.asset_path.split('/')[-1] }} at {{ at }}s" loading="lazy">
+       {% endfor %}
+     {% else %}
+       <img src="/runs/{{ run.id }}/poster.jpg" alt="A frame from {{ run.asset_path.split('/')[-1] }}" loading="lazy">
+     {% endif %}
+   </span>
    <span class="board-poster-cap">
      <svg class="ic"><use href="#n-cut"/></svg>{{ duration | timecode }}
    </span>

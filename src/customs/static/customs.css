@@ -2126,3 +2126,37 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   .board-hero { display: block; }
   .board-poster { width: 100%; max-width: 360px; margin-top: 20px; }
 }
+
+/* The board still rotates, because one still is a coin flip.
+
+   Commercials open on black, on a fade, or on a logo card, so the frame
+   at one second is quite often nothing at all -- and the board was then
+   showing a black rectangle as its only reference to the film. Five
+   stills from across the middle, crossfading.
+
+   Pure CSS: the images are stacked and each one's animation is delayed
+   by its index, so this works with JavaScript off and costs no script.
+   --frames is written by the template because the keyframe percentages
+   have to divide by however many there are. */
+.board-poster-stack { position: relative; display: block; line-height: 0; }
+.board-poster-stack img { display: block; width: 100%; height: auto; }
+.board-poster.rotating .board-poster-stack img {
+  position: absolute; inset: 0; opacity: 0;
+  animation: still-cycle calc(var(--frames) * 3.2s) linear infinite;
+  animation-delay: calc(var(--i) * 3.2s);
+}
+/* the first one also holds the box open, since the rest are absolute */
+.board-poster.rotating .board-poster-stack img:first-child { position: relative; }
+
+@keyframes still-cycle {
+  0%                      { opacity: 0; }
+  2%, 20%                 { opacity: 1; }
+  24%, 100%               { opacity: 0; }
+}
+
+/* A still that changes on its own is motion, and some people have asked
+   the system not to do that. */
+@media (prefers-reduced-motion: reduce) {
+  .board-poster.rotating .board-poster-stack img { animation: none; opacity: 0; }
+  .board-poster.rotating .board-poster-stack img:first-child { opacity: 1; }
+}
