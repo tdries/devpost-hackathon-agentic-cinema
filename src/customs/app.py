@@ -1376,7 +1376,7 @@ def launch_board(request: Request, run_id: str):
             more.append(dict(group, families=families,
                              count=sum(len(f["packs"]) for f in families)))
     return _page(request, "launch_board.html", run=run, tiles=tiles,
-                 more=more,
+                 more=more, has_poster=poster_available(run),
                  can_add=bool(store().observations(run.id)),
                  overall=overall(states), progress=run_progress(run, states),
                  embeds=embeds(run),
@@ -1946,6 +1946,23 @@ def evidence_frame(run_id: str, observation_id: str):
         raise HTTPException(status_code=404, detail="no evidence frame")
     media_type = "image/jpeg" if path.suffix.lower() in (".jpg", ".jpeg") else "image/png"
     return FileResponse(path, media_type=media_type)
+
+def poster_available(run) -> bool:
+    """Is there a still to show for this run, without making one to find out?
+
+    The poster route answers 404 when there is nothing, which is fine for
+    an <img> in a list that can quietly drop itself. The board puts the
+    still in its header, where a broken image is a hole in the page, so
+    it asks first. Three cheap checks in the order they are likely: the
+    cached file, the master, then a kept evidence frame.
+    """
+    if (run_dir(run) / "poster.jpg").is_file():
+        return True
+    if run.asset_path and Path(run.asset_path).is_file():
+        return True
+    return any(o.evidence_frame and Path(o.evidence_frame).is_file()
+               for o in store().observations(run.id))
+
 
 @app.get("/runs/{run_id}/poster.jpg")
 def run_poster(run_id: str):
