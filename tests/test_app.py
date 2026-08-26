@@ -1895,3 +1895,25 @@ def test_both_doors_open_and_remember_which_one_you_chose(console):
 
     # and a door nobody built is a 404, not a silent redirect somewhere
     assert client.get("/enter/admin", follow_redirects=False).status_code == 404
+
+
+def test_the_board_shows_the_thing_it_is_judging(console):
+    """The launch board discussed a commercial at length and never showed
+    one. Every other screen has the picture somewhere; this is the screen
+    people land on, so it was the one place you could read a verdict with
+    no idea what it was a verdict about.
+
+    It asks whether there is a still BEFORE rendering, because the poster
+    route answers 404 when there is nothing and a broken image in a page
+    header is a hole rather than a quiet absence.
+    """
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    body = client.get(f"/runs/{run.id}").text
+    assert 'class="board-poster"' in body
+    assert f'/runs/{run.id}/poster.jpg' in body
+    # and it goes where the footage actually plays
+    assert f'href="/runs/{run.id}/cutting"' in body
+    # no onerror escape hatch: this one is decided on the server
+    assert 'board-poster' in body and 'onerror' not in body.split('board-poster')[1][:400]

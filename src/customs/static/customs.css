@@ -2093,3 +2093,36 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   .market-room table.grid { table-layout: auto; }
   .market-room table.grid th { width: auto !important; }
 }
+
+/* ---------- the board shows what it is judging ---------- */
+/*
+   The launch board discussed a commercial at length without ever showing
+   one. Every other screen has the picture somewhere -- the archive card,
+   the frame board, the cutting room -- and this is the screen people
+   land on, so it was the one place you could read a verdict with no idea
+   what it was a verdict about.
+
+   It sits in the header's right, where the specs grid was leaving a
+   column of air, and it goes to the cutting room because that is where
+   the footage actually plays. */
+.board-hero { display: flex; align-items: flex-start; gap: 30px; }
+.board-hero-text { flex: 1 1 auto; min-width: 0; }
+.board-poster {
+  flex: 0 0 auto; width: 288px; display: block; text-decoration: none;
+  border-radius: 10px; overflow: hidden; border: 1px solid var(--line-2);
+  background: var(--well); transition: border-color .16s, transform .16s;
+}
+.board-poster:hover { border-color: var(--signal); transform: translateY(-1px); }
+.board-poster img { display: block; width: 100%; height: auto; }
+.board-poster-cap {
+  display: flex; align-items: center; gap: 7px; padding: 8px 11px;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-3); background: var(--panel);
+}
+.board-poster:hover .board-poster-cap { color: var(--signal); }
+.board-poster-cap .ic { width: 14px; height: 14px; }
+
+@media (max-width: 1000px) {
+  .board-hero { display: block; }
+  .board-poster { width: 100%; max-width: 360px; margin-top: 20px; }
+}

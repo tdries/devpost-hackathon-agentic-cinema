@@ -7,7 +7,8 @@
 {% set flag = {"go": "GO FOR LAUNCH", "no_go": "NO GO", "pending": "CLEARANCE IN PROGRESS"}[overall.state] %}
 {% set flag_state = {"go": "cleared", "no_go": "blocked", "pending": "pending"}[overall.state] %}
 
-<section class="hero" data-run="{{ run.id }}" id="board">
+<section class="hero board-hero" data-run="{{ run.id }}" id="board">
+ <div class="board-hero-text">
   <div class="rule-row">
     <span class="label">Launch verdict</span>
     <span class="pill s-{{ flag_state }}" id="flag"><span class="dot"></span>{{ flag }}</span>
@@ -42,6 +43,18 @@
     <div class="spec"><span class="label">Started</span><span class="value">{{ run.t0 | stamp }}</span></div>
     <div class="spec"><span class="label">Run</span><span class="value">{{ run.id }}</span></div>
   </div>
+ </div>
+ {# The board talked about a commercial without ever showing one. Every
+    other screen has the picture somewhere -- the archive card, the frame
+    board, the cutting room -- and this is the one people land on. #}
+ {% if has_poster %}
+ <a class="board-poster" href="/runs/{{ run.id }}/cutting" title="Open the cutting room">
+   <img src="/runs/{{ run.id }}/poster.jpg" alt="A frame from {{ run.asset_path.split('/')[-1] }}" loading="lazy">
+   <span class="board-poster-cap">
+     <svg class="ic"><use href="#n-cut"/></svg>{{ duration | timecode }}
+   </span>
+ </a>
+ {% endif %}
 </section>
 
 <section>
