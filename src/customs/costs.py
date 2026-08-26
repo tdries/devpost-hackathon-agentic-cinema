@@ -61,6 +61,13 @@ METHODS = (
            "resulting colour change into every live frame of the span. The "
            "shot keeps its own motion, light and grain.",
            "low", "any shot where the thing to change holds still in frame"),
+    Method("per_frame", "Repaint every frame",
+           "Edits the offending region on every frame of the span and "
+           "composites each one back through the finding's own matte. The "
+           "footage is the brand's throughout; only the object changes.",
+           "high", "a target that deforms or is occluded, where one edit "
+                   "cannot be propagated: a bottle travelling to a mouth, a "
+                   "garment on a moving body"),
     Method("bridge", "Regenerate with Veo",
            "Edits both ends of the span and generates the motion between them.",
            "high", "genuine 3D motion, where a patch cannot hold"),
@@ -96,10 +103,25 @@ def bridge_seconds(span: float) -> float:
     return float(MAX_BRIDGE_S)
 
 
+# How densely the per-frame path samples. Editing every frame of a 7s
+# span at 24fps is 168 model calls -- EUR 6.72 and, measured at 17.4s per
+# edit, 49 minutes serial. Half rate is transparent on a slow shot
+# (measured PSNR 47.1 dB, SSIM 0.997 at 12fps) and collapses on a fast one
+# (17.8 dB), so it is the default and not a promise.
+PER_FRAME_FPS = 12.0
+
+
+def per_frame_edits(span: float) -> int:
+    """How many image edits a per-frame fix of this span costs."""
+    return max(1, int(math.ceil(max(span, 0.0) * PER_FRAME_FPS)))
+
+
 def estimate(method: str, span: float) -> float:
     """Euro estimate for one fix, rounded up to the cent."""
     if method == "bridge":
         raw = 2 * _EURO_PER_IMAGE_EDIT + bridge_seconds(span) * _EURO_PER_VIDEO_SECOND
+    elif method == "per_frame":
+        raw = per_frame_edits(span) * _EURO_PER_IMAGE_EDIT
     elif method in ("overlay", "track"):
         raw = _EURO_PER_IMAGE_EDIT
     else:
@@ -119,6 +141,16 @@ def available(method: str, span: float, spent_today: float) -> tuple[bool, str]:
     # to every live frame inside the finding's matte. One image edit for a
     # whole span, and the span is still the brand's own footage.
     if method in ("track", "overlay"):
+        return True, ""
+    if method == "per_frame":
+        # Priced per frame, so it is the one patch method that can outrun
+        # the budget. It is also slow enough that the operator deserves to
+        # be told rather than left watching a spinner.
+        price = estimate("per_frame", span)
+        if spent_today + price > DAILY_BUDGET_EUR:
+            left = max(0.0, DAILY_BUDGET_EUR - spent_today)
+            return False, (f"Today's budget has {left:.2f} EUR left and repainting "
+                           f"{per_frame_edits(span)} frames costs {price:.2f} EUR.")
         return True, ""
     if method != "bridge":
         return False, f"Unknown method {method}."

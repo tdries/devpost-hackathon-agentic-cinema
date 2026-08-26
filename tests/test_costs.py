@@ -35,7 +35,7 @@ def test_the_day_s_budget_closes_the_expensive_option_and_leaves_the_cheap_one()
 
 def test_every_option_is_priced_and_says_what_it_is_for():
     opts = costs.options(3.0, spent_today=0.0)
-    assert [o["key"] for o in opts] == ["overlay", "track", "bridge"]
+    assert [o["key"] for o in opts] == ["overlay", "track", "per_frame", "bridge"]
     for o in opts:
         assert o["eur"] > 0 and o["length"] and o["complexity"] and o["best_for"]
     # track was a promise for most of this project's life and is now the
@@ -117,3 +117,26 @@ def test_we_only_ever_ask_veo_for_a_duration_it_accepts():
     assert costs.bridge_seconds(6.0) == 6.0
     assert costs.bridge_seconds(6.1) == 8.0
     assert costs.bridge_seconds(8.0) == 8.0
+
+
+def test_per_frame_is_priced_by_the_frame_and_can_outrun_the_budget():
+    """Repainting every frame is the only patch method whose price grows
+    with the span, so it is the only one that can be refused for cost.
+
+    Sampled at 12fps rather than 24: measured, half rate is transparent on
+    a slow shot (47.1 dB, SSIM 0.997) and collapses on a fast one (17.8
+    dB), so it is a default and not a promise.
+    """
+    from customs import costs
+
+    assert costs.per_frame_edits(2.0) == 24
+    assert costs.per_frame_edits(7.0) == 84
+    assert costs.estimate("per_frame", 7.0) == 3.36
+
+    # cheaper than regenerating the same span, and it keeps the footage
+    assert costs.estimate("per_frame", 7.0) < costs.estimate("bridge", 7.0)
+
+    # ...and unlike the other patch methods, it can be priced out
+    ok, why = costs.available("per_frame", 7.0, costs.DAILY_BUDGET_EUR - 1.0)
+    assert not ok and "84 frames" in why, why
+    assert costs.available("per_frame", 7.0, 0.0)[0]

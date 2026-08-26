@@ -66,7 +66,7 @@ class RemediationError(Exception):
 # "bridge" is never chosen by plan(): it regenerates pixels and costs real
 # money, so it only ever runs because an operator picked it in the console
 # and the day's budget allowed it.
-METHODS = ("relettering", "prop_swap", "revoice", "reframe", "bridge")
+METHODS = ("relettering", "prop_swap", "revoice", "reframe", "per_frame", "bridge")
 
 # --- the mapping table (task-14 contract) ---
 #
@@ -720,6 +720,67 @@ def _anchor_check(image_bytes: bytes, finding: Finding, statement: str,
                 "unchecked": True}
 
 
+def _per_frame_span(base: Path, finding: Finding, replacement: str | None,
+                    workdir: Path, out_path: Path,
+                    intent: str | None = None, store=None,
+                    spend=None, on_event=None) -> tuple[Path, str]:
+    """Repaint the offending region on every frame, keeping the frames.
+
+    The last resort before regeneration, and the only one that reaches a
+    target which deforms or is occluded -- a bottle travelling to a
+    performer's lips through her own hand, a garment on a moving body --
+    where one edit cannot be propagated because the thing does not hold
+    still to be propagated onto.
+
+    Every frame is the film's own. The model only ever sees, and only
+    ever returns, the frame it is editing; the composite then puts back
+    just the finding's box, at PNG level, so every pixel outside it is
+    bit-identical rather than merely close.
+
+    Each frame is edited with the PREVIOUS edited frame alongside it as a
+    labelled reference. Independent edits of consecutive frames diverge --
+    measured, two edits of a byte-identical frame differ by 16.6 MAD
+    inside the box -- and that divergence at 12fps is a flicker. Chaining
+    makes it serial, which is why this is slow and priced by the frame.
+    """
+    box = _box_for(finding, _still(base, "pf", "probe", finding, workdir), store)
+    if not box:
+        raise RemediationError(
+            "per-frame editing needs to know where in the frame to look, and "
+            "nothing could locate this finding")
+
+    frames_dir = workdir / f"pf_{finding.id}_src"
+    edited_dir = workdir / f"pf_{finding.id}_out"
+    edited_dir.mkdir(parents=True, exist_ok=True)
+    frames = media.extract_span_frames(base, finding.t_start, finding.t_end,
+                                       frames_dir, fps=costs.PER_FRAME_FPS)
+    if not frames:
+        raise RemediationError("no frames extracted for the span")
+
+    market_name = _market_name(finding.market)
+    instruction = _frame_instruction(finding, replacement, intent, market_name)
+    if spend is not None:
+        spend(costs.estimate("per_frame", finding.t_end - finding.t_start))
+
+    previous: bytes | None = None
+    for i, frame in enumerate(frames):
+        if on_event and i % 8 == 0:
+            on_event("remediator",
+                     f"repainting frame {i + 1} of {len(frames)}")
+        # _edit_image already labels a chained reference correctly, and it
+        # exists for exactly this reason on the bridge's two anchors: two
+        # independent edits of the same object are two different objects.
+        raw = edited_dir / f"raw_{frame.name}"
+        raw.write_bytes(_edit_image(instruction, frame.read_bytes(),
+                                    reference=previous))
+        previous = raw.read_bytes()
+        media.paste_box(frame, raw, box, edited_dir / frame.name)
+
+    media.replace_segment_video(base, finding.t_start, finding.t_end,
+                                edited_dir, out_path)
+    return frames[0], instruction
+
+
 def _bridge_span(base: Path, finding: Finding, replacement: str | None,
                  workdir: Path, out_path: Path,
                  keep_dir: Path | None = None,
@@ -1044,6 +1105,14 @@ def _run_method(run, finding: Finding, method: str, replacement: str | None,
         wav = _write_wav(pcm, rate, workdir / f"{staged.stem}.wav")
         media.replace_audio_span(base, wav, finding.t_start, finding.t_end, staged)
         return f'replaced the spoken line with "{line}"'
+    if method == "per_frame":
+        _edited, instruction = _per_frame_span(
+            base, finding, replacement, Path(workdir), staged,
+            intent=intent, store=store, spend=spend, on_event=on_event)
+        store.emit(run.id, "remediator", f"per_frame instruction: {instruction}")
+        span = finding.t_end - finding.t_start
+        return (f"repainted the offending region on "
+                f"{costs.per_frame_edits(span)} frames of the span")
     if method == "bridge":
         _edited, instruction = _bridge_span(base, finding, replacement,
                                             Path(workdir), staged,

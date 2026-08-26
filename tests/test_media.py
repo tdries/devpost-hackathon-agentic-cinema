@@ -792,3 +792,31 @@ def test_a_film_does_not_rot_while_you_work_on_it(tmp_path):
     assert report["psnr"] is not None and report["psnr"] >= media.QC_MIN_PSNR_DB, (
         f"the film decayed to {report['psnr']:.2f} dB over five edits "
         f"(floor {media.QC_MIN_PSNR_DB})")
+
+
+def test_pasting_a_box_leaves_the_rest_of_the_frame_bit_identical(tmp_path):
+    """At PNG level there is no encode between the two images, so the
+    matte's contract is exact rather than close: outside the feathered
+    box, the result IS the original."""
+    from PIL import Image, ImageChops
+    from customs import media
+
+    orig = tmp_path / "o.png"
+    edit = tmp_path / "e.png"
+    Image.new("RGB", (200, 160), (30, 90, 200)).save(orig)
+    Image.new("RGB", (200, 160), (240, 40, 40)).save(edit)
+
+    box = [300, 300, 700, 700]
+    out = media.paste_box(orig, edit, box, tmp_path / "out.png", feather=0)
+
+    a = Image.open(orig).convert("RGB")
+    b = Image.open(out).convert("RGB")
+    x, y, w, h = media.box_to_pixels(box, 200, 160)
+
+    diff = ImageChops.difference(a, b)
+    from PIL import ImageDraw
+    ImageDraw.Draw(diff).rectangle([x, y, x + w, y + h], fill=(0, 0, 0))
+    assert diff.getbbox() is None, "the paste reached outside its box"
+
+    # and it really landed inside
+    assert b.getpixel((x + w // 2, y + h // 2)) != a.getpixel((x + w // 2, y + h // 2))
