@@ -66,8 +66,26 @@ class VeoBlocked(RuntimeError):
     """
 
 
+def _seed_from(*paths) -> int:
+    """A stable seed for these exact anchor frames.
+
+    Same anchors, same footage. Different anchors, different footage. It
+    is derived rather than fixed so two unrelated bridges do not inherit
+    each other's motion, and it is stable rather than random so a bridge
+    can be reproduced instead of only re-rolled at 1.88-3.68 EUR a go.
+    """
+    import hashlib
+    from pathlib import Path as _P
+    digest = hashlib.sha256()
+    for path in paths:
+        digest.update(_P(path).read_bytes())
+    # Vertex takes a uint32.
+    return int.from_bytes(digest.digest()[:4], "big")
+
+
 def generate_bridge(prompt: str, first_frame, last_frame, seconds: float,
-                    out_path, poll_s: float = 10.0, timeout_s: float = 600.0):
+                    out_path, poll_s: float = 10.0, timeout_s: float = 600.0,
+                    seed: int | None = None):
     """Veo, anchored on two frames: generate the motion between them.
 
     The frames are the brand's own footage with the offending object already
@@ -86,6 +104,18 @@ def generate_bridge(prompt: str, first_frame, last_frame, seconds: float,
         number_of_videos=1,
         resolution="720p",
         generate_audio=False,
+        # Reproducible. Without a seed, pressing the button twice on the
+        # same finding buys two different pieces of footage at 1.88-3.68
+        # EUR each, so an editor with a near miss cannot iterate -- only
+        # re-roll. Derived from the anchors so the same span regenerates
+        # the same way, and a genuine retry can pass a different one.
+        seed=seed if seed is not None else _seed_from(first, last),
+        # Vertex will otherwise rewrite the prompt with its own model
+        # before generating. This prompt is the one input the bridge
+        # guards hardest -- deliberately task-free, so nothing about the
+        # violation can leak into the picture -- and handing it to a
+        # rewriter undoes that guarding silently.
+        enhance_prompt=False,
         # Commercials are made of people. Left unset this defaults to a
         # stricter policy and rejects perfectly ordinary advertising
         # footage; the anchors are the brand's own frames of adults.

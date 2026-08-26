@@ -679,6 +679,52 @@ def craft_check(before, after, *, span: tuple[float, float] | None = None) -> di
     }
 
 
+def splice_matte(base, clip, box, t_start: float, t_end: float, out_path,
+                 *, feather: int = MATTE_FEATHER_PX, crf: int = 16) -> Path:
+    """splice_clip, but only inside the box.
+
+    The generated clip is retimed onto the span exactly as splice_clip
+    does, and then only the finding's own region of it reaches the master.
+    Everything else in the span -- the performance, the background, the
+    light -- stays the brand's own footage.
+
+    This is the answer to a generated span reinterpreting things nobody
+    asked it to: a hammer that came back as a baseball bat was Veo
+    inventing the whole frame, and a matte makes most of the frame
+    unreachable.
+    """
+    base, clip = Path(base), Path(clip)
+    width, height = probe_resolution(base)
+    duration = probe_duration(base)
+    frame_count = probe_frames(base)
+    x, y, w, h = box_to_pixels(box, width, height)
+    span = max(t_end - t_start, 1e-3)
+    clip_len = max(probe_duration(clip), 1e-3)
+    # same retime as splice_clip: Veo will not emit less than four seconds,
+    # so the generated motion has to be played at the span's own rate
+    factor = span / clip_len
+    ramp = max(1, int(feather))
+    alpha = f"clip(min(min(X,{w}-X),min(Y,{h}-Y))/{ramp}*255,0,255)"
+    filt = (
+        f"[1:v]setpts={factor:.6f}*PTS,scale={width}:{height},"
+        f"crop={w}:{h}:{x}:{y},format=rgba,"
+        f"geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='{alpha}'[patch];"
+        f"[0:v][patch]overlay={x}:{y}:enable='between(t,{t_start:.3f},{t_end:.3f})'"
+        f":eof_action=pass[v]"
+    )
+    args = [
+        "ffmpeg", "-y", "-i", str(base), "-itsoffset", f"{t_start:.3f}", "-i", str(clip),
+        "-filter_complex", filt,
+        "-map", "[v]", "-map", "0:a?",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", str(int(crf)),
+        "-pix_fmt", "yuv420p", "-c:a", "copy",
+        "-frames:v", str(frame_count), "-movflags", "+faststart",
+        str(out_path),
+    ]
+    _run(args, timeout=_encode_timeout(duration))
+    return Path(out_path)
+
+
 def relight_ratio(original_png, edited_png, box, out_png, *, floor: int = 8) -> Path:
     """The per-pixel ratio edited/original inside the box, as a PNG.
 
