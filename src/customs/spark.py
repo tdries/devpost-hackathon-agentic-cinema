@@ -135,6 +135,12 @@ def lanes(rows: list[dict], duration: float, *, width: int = 1180,
     """
     if not rows or duration <= 0:
         return ""
+    # A lane is at least as tall as the glyph that labels it. The icon
+    # size and the row height were set independently, so doubling one
+    # silently overlapped every label with the one below it -- the chart
+    # was correct and unreadable. Tie them together instead of trusting
+    # two call sites to agree.
+    row_h = max(row_h, icon + 6)
     height = len(rows) * row_h + (26 if ruler else 10)
     inner = width - pad_left - 12
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" class="lanes" '

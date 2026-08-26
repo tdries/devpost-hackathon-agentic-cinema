@@ -634,8 +634,8 @@ def problem_lanes(run, compact: bool = False) -> str:
         # wine glass from a dress. Double, with the gutter widened to
         # hold them.
         return spark.lanes(rows, asset_duration(run) or MAX_DURATION_S,
-                           width=560, row_h=22, pad_left=50, ruler=False,
-                           icon=40,
+                           width=560, row_h=46, pad_left=54, ruler=False,
+                           icon=38,
                            defs=_sprite_defs(f"d-{r['dimension']}" for r in rows))
     return spark.lanes(rows, asset_duration(run) or MAX_DURATION_S,
                        defs=_sprite_defs(f"d-{r['dimension']}" for r in rows))
@@ -1098,6 +1098,27 @@ ROLES = {
 }
 
 
+# A visitor's own runs, kept in their browser rather than in the store.
+#
+# The alternative was a column on the runs table and a migration, for a
+# demo where "whose run is this" has no security meaning: nothing is
+# hidden, every run is still reachable by its URL, and the archive is a
+# reading convenience rather than a boundary. So the list of run ids
+# lives in the cookie that created them.
+MINE_COOKIE = "customs-mine"
+ROLE_COOKIE = "customs-role"
+MINE_MAX = 40
+
+
+def _role(request: Request) -> str:
+    return request.cookies.get(ROLE_COOKIE, "")
+
+
+def _mine(request: Request) -> list[str]:
+    raw = request.cookies.get(MINE_COOKIE, "")
+    return [r for r in (x.strip() for x in raw.split(",")) if r]
+
+
 @app.get("/", response_class=HTMLResponse)
 def landing(request: Request):
     """The front door: what this is, before what it does.
@@ -1152,7 +1173,8 @@ def home(request: Request):
     return _page(request, "home.html", groups=pack_groups(), screen="home")
 
 @app.post("/runs")
-async def create_run(asset: UploadFile | None = File(None),
+async def create_run(request: Request,
+                     asset: UploadFile | None = File(None),
                      youtube_url: str = Form(""),
                      markets: list[str] = Form(default=[])):
     """Accept an asset, create the run, start the crew, redirect to the board.
@@ -1262,7 +1284,13 @@ async def create_run(asset: UploadFile | None = File(None),
                  f"{', '.join(chosen)}")
     threading.Thread(target=_clearance_job, args=(run.id, str(target), chosen),
                      name=f"clearance-{run.id}", daemon=True).start()
-    return RedirectResponse(f"/runs/{run.id}", status_code=303)
+    response = RedirectResponse(f"/runs/{run.id}", status_code=303)
+    # Newest first, capped: a cookie is not a database and forty run ids
+    # is already more archive than anyone builds in a sitting.
+    remembered = [run.id] + [r for r in _mine(request) if r != run.id]
+    response.set_cookie(MINE_COOKIE, ",".join(remembered[:MINE_MAX]),
+                        max_age=60 * 60 * 24 * 30, samesite="lax")
+    return response
 
 def _discard(target: Path) -> None:
     """Undo a rejected upload: the file, then the directory it was alone in."""
@@ -1377,6 +1405,7 @@ def launch_board(request: Request, run_id: str):
                              count=sum(len(f["packs"]) for f in families)))
     return _page(request, "launch_board.html", run=run, tiles=tiles,
                  more=more, has_poster=poster_available(run),
+                 stills=board_stills(run, asset_duration(run)),
                  can_add=bool(store().observations(run.id)),
                  overall=overall(states), progress=run_progress(run, states),
                  embeds=embeds(run),
@@ -1504,10 +1533,26 @@ def all_runs(request: Request):
     # twenty runs took the archive past a two minute timeout. The cards
     # request /lanes.svg themselves, so the page paints immediately and a
     # slow Grafana costs a chart rather than the page.
+    #
+
+    # A judge came to read what this thing has already done, so they get
+    # the archive. Someone who just walked in came to watch it happen to
+    # their own ad, and twenty of someone else's runs is not a welcome --
+    # it is a wall between them and the one thing they wanted to try. So
+    # a visitor's archive holds their runs and nothing else, and fills up
+    # as they use it.
+    #
+    # Anyone who has not been through a door -- a direct link, a judge who
+    # bookmarked this page -- sees everything, which is the old behaviour.
+    runs = store().recent_runs(500)
+    mine = _mine(request)
+    scoped = _role(request) == "visitor"
+    if scoped:
+        runs = [r for r in runs if r.id in set(mine)]
     rows = [{"run": run, "states": (st := market_states(run)),
              "groups": pill_groups(run, st)}
-            for run in store().recent_runs(500)]
-    return _page(request, "runs.html", rows=rows, screen="runs",
+            for run in runs]
+    return _page(request, "runs.html", rows=rows, screen="runs", scoped=scoped,
                  packs_total=len(market_packs()), dims_total=len(packs.taxonomy()))
 
 @app.get("/runs/{run_id}/timeline", response_class=HTMLResponse)
@@ -1964,17 +2009,39 @@ def poster_available(run) -> bool:
                for o in store().observations(run.id))
 
 
-@app.get("/runs/{run_id}/poster.jpg")
-def run_poster(run_id: str):
-    """A small still of the asset, cached, for the run lists.
+def board_stills(run, duration: float | None) -> list[float]:
+    """Timecodes to sample the master at for the board's rotating still.
 
-    Written once per run and served from disk after that. It falls back to
-    an evidence frame when the upload is gone -- a pruned workdir keeps
-    work/**/frames, so a run whose master was cleaned up can still say what
-    it was a picture of.
+    One still is a coin flip. Commercials open on black, on a fade, on a
+    logo card -- so the frame at one second is quite often nothing at all,
+    and the board ends up showing a black rectangle as its only visual
+    reference to the film.
+
+    Five, spread across the middle, and the extremes deliberately left
+    alone: the first and last few percent of a commercial are exactly
+    where the black and the end card live.
+    """
+    if not duration or duration <= 0:
+        return []
+    if not (run.asset_path and Path(run.asset_path).is_file()):
+        return []   # a pruned master still gets the single fallback poster
+    return [round(duration * f, 2) for f in (0.08, 0.28, 0.48, 0.68, 0.88)]
+
+
+@app.get("/runs/{run_id}/poster.jpg")
+def run_poster(run_id: str, at: float = 1.0):
+    """A small still of the asset, cached, for the run lists and the board.
+
+    Written once per (run, timecode) and served from disk after that. It
+    falls back to an evidence frame when the upload is gone -- a pruned
+    workdir keeps work/**/frames, so a run whose master was cleaned up can
+    still say what it was a picture of.
     """
     run = _run_or_404(run_id)
-    cached = run_dir(run) / "poster.jpg"
+    # at=1.0 keeps the original filename, so every poster already on disk
+    # (and in the archive's browser caches) stays valid.
+    stem = "poster" if abs(at - 1.0) < 1e-6 else f"poster_{at:g}"
+    cached = run_dir(run) / f"{stem}.jpg"
     if not cached.is_file():
         source = Path(run.asset_path)
         if not source.is_file():
@@ -1984,7 +2051,7 @@ def run_poster(run_id: str):
                 raise HTTPException(status_code=404, detail="nothing to show for this run")
             source = frames[0]
         try:
-            media.poster(source, cached, at=1.0)
+            media.poster(source, cached, at=at)
         except Exception as exc:  # noqa: BLE001 -- a missing thumbnail is not a 500
             log.warning("poster failed for %s: %s", run.id, exc)
             raise HTTPException(status_code=404, detail="no poster") from exc

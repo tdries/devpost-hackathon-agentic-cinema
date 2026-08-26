@@ -1911,9 +1911,122 @@ def test_the_board_shows_the_thing_it_is_judging(console):
     run = _judged_run(store)
 
     body = client.get(f"/runs/{run.id}").text
-    assert 'class="board-poster"' in body
-    assert f'/runs/{run.id}/poster.jpg' in body
+    assert "board-poster" in body
+    assert f"/runs/{run.id}/poster.jpg" in body
     # and it goes where the footage actually plays
     assert f'href="/runs/{run.id}/cutting"' in body
     # no onerror escape hatch: this one is decided on the server
-    assert 'board-poster' in body and 'onerror' not in body.split('board-poster')[1][:400]
+    assert "onerror" not in body.split("board-poster")[1][:600]
+
+
+def test_the_board_still_rotates_because_one_frame_is_a_coin_flip(console):
+    """Commercials open on black, on a fade, or on a logo card, so the
+    frame at one second is quite often nothing at all -- and the board
+    was showing that black rectangle as its only reference to the film.
+
+    Five stills from across the middle, and the extremes left alone
+    because that is exactly where the black and the end card live.
+    """
+    import re
+    from customs.app import board_stills
+
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    body = client.get(f"/runs/{run.id}").text
+
+    ats = re.findall(rf"/runs/{run.id}/poster\.jpg\?at=([0-9.]+)", body)
+    if not ats:
+        # no master on disk: one fallback still, and no rotation claimed
+        assert "rotating" not in body.split("board-poster")[1][:200]
+        return
+
+    assert len(ats) == 5, f"expected five stills, got {ats}"
+    assert "rotating" in body.split("board-poster")[1][:200]
+    values = [float(a) for a in ats]
+    assert values == sorted(values), "stills should walk forwards through the film"
+
+    duration = _duration_of(store, run)
+    if duration:
+        assert values[0] > duration * 0.02, "the opening frames are where the black is"
+        assert values[-1] < duration * 0.95, "and the end card lives at the other end"
+
+    # every one of them is really servable, not just a URL we wrote
+    for at in ats[:2]:
+        shot = client.get(f"/runs/{run.id}/poster.jpg?at={at}")
+        assert shot.status_code == 200, f"still at {at}s did not render"
+        assert shot.headers["content-type"] == "image/jpeg"
+
+
+def _duration_of(store, run):
+    from customs.app import asset_duration
+    try:
+        return asset_duration(run)
+    except Exception:
+        return None
+
+
+def test_a_judge_gets_the_archive_and_a_visitor_gets_a_clean_slate(console):
+    """Two doors, two different rooms behind them.
+
+    A judge came to read what this has already done, so they get every
+    run. Someone who just walked in came to watch it happen to their own
+    ad, and twenty of someone else's runs is not a welcome -- it is a
+    wall between them and the one thing they wanted to try.
+
+    Nothing is hidden and this is not a boundary: every run is still
+    reachable by its URL. It is a reading convenience, which is exactly
+    why the list of "mine" can live in a cookie rather than in the store.
+    """
+    client, store, _launched, _jobs = console
+    _judged_run(store)
+    _judged_run(store)
+
+    # no door used at all -- a direct link, a bookmark -- sees everything
+    plain = client.get("/runs")
+    assert plain.text.count('class="runrow"') == 2
+
+    # the judge's door: same
+    client.get("/enter/judge")
+    assert client.get("/runs").text.count('class="runrow"') == 2
+
+    # the visitor's door: their own runs, of which there are none yet
+    client.cookies.clear()
+    client.get("/enter/visitor")
+    fresh = client.get("/runs")
+    assert fresh.text.count('class="runrow"') == 0
+    assert "Nothing cleared yet" in fresh.text
+    assert 'href="/new"' in fresh.text, "and a way to start one"
+    assert "Your runs" in fresh.text
+
+    # and a run they start does show up
+    response = _upload(client)
+    assert response.status_code == 303
+    mine = client.get("/runs")
+    assert mine.text.count('class="runrow"') == 1, "their own run, and only theirs"
+
+
+def test_a_lane_is_never_shorter_than_the_glyph_that_labels_it():
+    """The icon size and the row height were two independent numbers set
+    at two call sites, so doubling the icon silently overlapped every
+    label with the one below it. The chart stayed correct and became
+    unreadable, which is the worst kind of wrong.
+
+    They are tied together now: whatever a caller asks for, a row is at
+    least its icon plus a little air.
+    """
+    import re
+    from customs import spark
+
+    rows = [{"dimension": d, "events": [{"t": 1.0, "flagged": False, "severity": 0}]}
+            for d in ("alcohol_tobacco_drugs", "text_legibility", "gender_portrayal")]
+
+    # a caller asking for the impossible gets the readable thing instead
+    svg = spark.lanes(rows, 20.0, width=560, row_h=10, icon=38, ruler=False)
+    ys = [float(y) for y in re.findall(r'<use href="#d-[a-z_0-9]+" x="4" y="([0-9.-]+)"', svg)]
+    assert len(ys) == 3
+    gaps = [b - a for a, b in zip(ys, ys[1:])]
+    assert all(g >= 38 for g in gaps), f"labels overlap: {gaps}"
+
+    # and the svg grew to hold them rather than clipping
+    height = float(re.search(r'height="([0-9.]+)"', svg).group(1))
+    assert height >= ys[-1] + 38

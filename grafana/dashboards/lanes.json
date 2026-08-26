@@ -71,7 +71,7 @@
       "options": {
         "mergeValues": true,
         "showValue": "never",
-        "rowHeight": 0.85,
+        "rowHeight": 0.68,
         "alignValue": "center",
         "legend": {
           "displayMode": "list",

@@ -18,9 +18,10 @@
   </div>
   <div class="runhero-front">
     <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-    <h1 class="headline">All runs, newest first.</h1>
-    <p class="subline">Every clearance this instance has performed. Open one for its board,
-      its timeline and its cutting room.</p>
+    <h1 class="headline">{% if scoped %}Your runs, newest first.{% else %}All runs, newest first.{% endif %}</h1>
+    <p class="subline">{% if scoped %}The clearances you have started in this browser. Open one for
+      its board, its timeline and its cutting room.{% else %}Every clearance this instance has
+      performed. Open one for its board, its timeline and its cutting room.{% endif %}</p>
     <span class="runhero-stats mono">{{ rows | length }} run{{ '' if rows | length == 1 else 's' }}
       &middot; {{ packs_total }} market packs &middot; {{ dims_total }} things watched for</span>
   </div>
@@ -71,9 +72,20 @@
     {% endfor %}
   </div>
   {% else %}
+  {# An empty archive means two different things and needs two different
+     sentences. For a visitor it is the normal, expected start: they have
+     not run anything yet. For anyone else it means the instance itself
+     is empty, which is a much stranger thing to be looking at. #}
   <div class="empty">
+    {% if scoped %}
+    <span class="big">Nothing cleared yet</span>
+    <p>Runs you start appear here. Hand it a commercial or a YouTube link and
+      watch it clear customs, market by market.</p>
+    <p style="margin-top:16px"><a class="btn go" href="/new">Start a clearance</a></p>
+    {% else %}
     <span class="big">No runs yet</span>
     <p>Nothing has been cleared on this instance. Start one from the front door and it appears here.</p>
+    {% endif %}
   </div>
   {% endif %}
 </section>
