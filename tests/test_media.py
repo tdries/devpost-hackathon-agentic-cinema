@@ -429,3 +429,120 @@ def test_a_film_of_hard_cuts_still_stops_on_the_first_rung(tmp_path):
         shots = media.detect_shots(clip)
         # three colours, two cuts -- not two hundred
         assert len(shots) == 3, [(round(s.t_start, 2), round(s.t_end, 2)) for s in shots]
+
+
+def _frame_at(path, t, out_png):
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-ss", f"{t:.3f}", "-i", str(path),
+                    "-frames:v", "1", str(out_png)], check=True)
+    return out_png
+
+
+def test_a_matte_leaves_every_pixel_outside_it_alone(tmp_path):
+    """The contract the whole remediation path rests on.
+
+    An image model asked to change a bottle does not change only the
+    bottle: one real relettering edit moved 37.9% of the frame to alter
+    something occupying 1.3% of it. Cropping the answer back to the
+    question is what makes "the rest of the scene is untouched" a
+    measurement instead of a hope.
+
+    Measured against a CONTROL rather than against the original, because
+    h264 is lossy and re-encoding moves every pixel a little whether or
+    not anything was edited. The control is the same encode with no patch
+    at all, so any difference between it and the composite is the PATCH,
+    which is the thing this actually has to bound. (Getting rid of the
+    encode loss itself is a different job: render once from an edit list.)
+    """
+    from PIL import Image, ImageChops, ImageDraw
+    from customs import media
+
+    base = tmp_path / "base.mp4"
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-f", "lavfi",
+                    "-i", "testsrc2=s=320x240:d=4:r=25", str(base)], check=True)
+
+    # a patch that is loudly different everywhere, so any leak is obvious
+    patch = tmp_path / "patch.png"
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-f", "lavfi",
+                    "-i", "color=c=magenta:s=320x240", "-frames:v", "1", str(patch)],
+                   check=True)
+
+    box = [250, 250, 750, 750]           # the middle, 0-1000 normalised
+    out = tmp_path / "out.mp4"
+    # crf=0 is lossless: this test is about where the FILTER puts pixels,
+    # and a lossy encode redistributes bits across the whole frame in
+    # response to a change anywhere in it, which would drown the signal.
+    media.composite_matte(base, patch, box, 1.0, 3.0, out, crf=0)
+
+    # the control: identical encode, patch cropped to a corner that does
+    # not overlap the box under test
+    control = tmp_path / "control.mp4"
+    media.composite_matte(base, patch, [0, 0, 20, 20], 1.0, 3.0, control, crf=0)
+
+    w, h = media.probe_resolution(base)
+    x, y, bw, bh = media.box_to_pixels(box, w, h)
+
+    a = Image.open(_frame_at(control, 2.0, tmp_path / "a.png")).convert("RGB")
+    b = Image.open(_frame_at(out,     2.0, tmp_path / "b.png")).convert("RGB")
+    assert a.size == b.size, "the composite must not resize the film"
+
+    diff = ImageChops.difference(a, b)
+    pad = media.MATTE_FEATHER_PX + 2
+    ImageDraw.Draw(diff).rectangle(
+        [x - pad, y - pad, x + bw + pad, y + bh + pad], fill=(0, 0, 0))
+    # also blank the control's own tiny patch, which is not under test here
+    cx, cy, cw, ch = media.box_to_pixels([0, 0, 20, 20], w, h)
+    ImageDraw.Draw(diff).rectangle(
+        [cx - pad, cy - pad, cx + cw + pad, cy + ch + pad], fill=(0, 0, 0))
+
+    worst = diff.convert("L").getextrema()[1]
+    assert worst == 0, (
+        f"the patch reached {worst} levels outside its matte; it must reach none")
+
+    # ...and it did do something inside it
+    inside_a = a.crop((x, y, x + bw, y + bh))
+    inside_b = b.crop((x, y, x + bw, y + bh))
+    assert ImageChops.difference(inside_b, inside_a).convert("L").getextrema()[1] > 60, \
+        "nothing changed inside the matte -- the patch never landed"
+
+
+def test_a_matte_only_applies_inside_its_span(tmp_path):
+    """Outside [t_start, t_end) the film is the film, including at the
+    in-point -- the frame that used to be left showing the violation."""
+    from PIL import Image, ImageChops
+    from customs import media
+
+    base = tmp_path / "base.mp4"
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-f", "lavfi",
+                    "-i", "testsrc2=s=320x240:d=4:r=25", str(base)], check=True)
+    patch = tmp_path / "patch.png"
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-f", "lavfi",
+                    "-i", "color=c=magenta:s=320x240", "-frames:v", "1", str(patch)],
+                   check=True)
+    out = tmp_path / "out.mp4"
+    media.composite_matte(base, patch, [250, 250, 750, 750], 1.0, 3.0, out)
+
+    for t in (0.2, 3.6):
+        a = Image.open(_frame_at(base, t, tmp_path / f"a{t}.png")).convert("RGB")
+        b = Image.open(_frame_at(out,  t, tmp_path / f"b{t}.png")).convert("RGB")
+        # re-encode is lossy, so allow a small delta rather than demanding equality
+        stat = ImageChops.difference(a, b).convert("L").getextrema()
+        assert stat[1] < 40, f"frame at {t}s changed outside the span (max delta {stat[1]})"
+
+
+def test_box_to_pixels_pads_clamps_and_stays_even(tmp_path):
+    """libx264 refuses an odd crop in yuv420p, and a box drawn tight to a
+    bottle clips the shadow the edit also has to deal with."""
+    from customs import media
+
+    x, y, w, h = media.box_to_pixels([250, 250, 750, 750], 1280, 720)
+    assert x % 2 == 0 and y % 2 == 0 and w % 2 == 0 and h % 2 == 0
+    # padded outward past the raw 25%..75%
+    assert x < 320 and y < 180 and w > 640 and h > 360
+
+    # a box at the very edge stays inside the frame
+    x, y, w, h = media.box_to_pixels([0, 0, 1000, 1000], 1280, 720)
+    assert x == 0 and y == 0 and x + w <= 1280 and y + h <= 720
+
+    import pytest as _pytest
+    with _pytest.raises(media.MediaError):
+        media.box_to_pixels([500, 500, 500, 500], 1280, 720)

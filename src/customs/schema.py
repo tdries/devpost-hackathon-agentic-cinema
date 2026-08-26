@@ -61,6 +61,22 @@ class Finding(_JsonMixin):
     # given to the image editor}. Empty on findings judged before this
     # existed, and on those costs.suggestions falls back to its table.
     remedies: list = field(default_factory=list)
+    # WHERE in the frame the violation is, as [ymin, xmin, ymax, xmax]
+    # normalised 0-1000 -- the same convention as Observation.box, copied
+    # here at judging time.
+    #
+    # It is on the Finding and not merely on the Observation because it is
+    # the remediation contract: every edit is composited back through a
+    # matte cut from this box, so every pixel outside it is the brand's
+    # own footage. Without it nothing in the executor is spatially
+    # constrained, and an image model asked to change a bottle is free to
+    # repaint the sky.
+    box: list = field(default_factory=list)
+    # Which shot this finding sits in. Findings inherit their span from the
+    # shot, so several findings routinely share one, and this is the key
+    # that lets them be fixed together instead of each regenerating the
+    # same seconds on top of the last one's output.
+    shot_id: str = ""
 
     def __post_init__(self):
         if self.status not in FINDING_STATUSES:
