@@ -450,6 +450,17 @@ def _still(video_path, change_id: str, tag: str, finding: Finding, out_dir: Path
     span = Shot(shot_id=f"{change_id}_{tag}", t_start=finding.t_start, t_end=finding.t_end)
     return media.extract_keyframes(video_path, span, out_dir, per_shot=1)[0]
 
+def _siblings_for(finding: Finding, store) -> list[Finding]:
+    """The other open findings on this shot, or [] when we cannot ask."""
+    if store is None:
+        return []
+    try:
+        return siblings_in_shot(finding, store.findings(finding.run_id, finding.market))
+    except Exception as exc:  # noqa: BLE001 -- grouping is an optimisation
+        log.warning("sibling lookup failed for %s: %s", finding.id, exc)
+        return []
+
+
 def _box_for(finding: Finding, before: Path, store=None) -> list:
     """Where in the frame this finding is, or [] if nobody can say.
 
@@ -503,14 +514,18 @@ def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str
                      intent: str | None = None, store=None) -> tuple[Path, str]:
     """relettering / prop_swap: edit the keyframe, fit it, composite the span."""
     market_name = _market_name(finding.market)
+    siblings = _siblings_for(finding, store)
     directive = _directive_for(finding, intent)
-    if directive:
+    if directive and not siblings:
         # an intent with its own directive replaces the whole instruction
         instruction = (f"Edit this frame from a television commercial. {directive} "
                        f"Keep the lighting, the composition, the camera angle and "
                        f"every other pixel of the frame identical. Add nothing "
                        f"that is not already in the frame. The market is "
                        f"{market_name}.")
+        if siblings:
+            instruction = _combined_directive(finding, siblings, replacement,
+                                              intent, market_name)
         edited_raw = workdir / f"{before.stem}_edited_raw.png"
         edited_raw.parent.mkdir(parents=True, exist_ok=True)
         edited_raw.write_bytes(_edit_image(instruction, before.read_bytes()))
@@ -528,6 +543,9 @@ def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str
     instruction = _EDIT_INSTRUCTIONS[method].format(replacement=subject)
     if method == "prop_swap" and market_name not in instruction:
         instruction = f"{instruction} The market is {market_name}."
+    if siblings:
+        instruction = _combined_directive(finding, siblings, replacement,
+                                          intent, market_name)
 
     edited_raw = workdir / f"{before.stem}_edited_raw.png"
     edited_raw.parent.mkdir(parents=True, exist_ok=True)
@@ -547,6 +565,62 @@ _GENERIC_EDIT = (
     "the frame, and do not write any text into the picture. The market is "
     "{market_name}."
 )
+
+
+def siblings_in_shot(finding: Finding, findings: list[Finding]) -> list[Finding]:
+    """The other open findings this market holds on the same shot.
+
+    Findings inherit their span from the shot, so a shot routinely carries
+    several. Measured on a real run: SA span 35.083-42.083 holds three.
+    Fixing them one at a time regenerated the same seven seconds three
+    times, at 3.68 EUR each, and every pass after the first took its
+    anchors from the previous pass's OUTPUT -- Veo generating from Veo,
+    which is the compounding that turns a hammer into a baseball bat.
+
+    Matched by shot when both carry one, and by identical span otherwise,
+    which is what a shared shot looked like before shot_id existed.
+    """
+    mine = getattr(finding, "shot_id", "") or ""
+    span = (round(finding.t_start, 3), round(finding.t_end, 3))
+    out = []
+    for other in findings:
+        if other.id == finding.id or other.status != "open":
+            continue
+        if other.market != finding.market or other.remediation_blocked:
+            continue
+        theirs = getattr(other, "shot_id", "") or ""
+        same = (mine and theirs and mine == theirs) or \
+               (round(other.t_start, 3), round(other.t_end, 3)) == span
+        if same:
+            out.append(other)
+    return out
+
+
+def _combined_directive(finding: Finding, siblings: list[Finding],
+                        replacement: str | None, intent: str | None,
+                        market_name: str) -> str:
+    """One instruction that deals with every violation in this shot.
+
+    The alternative is one edit per finding, each starting from the last
+    one's output. That is three generations of loss on the same seconds,
+    and each pass is judged against a frame the previous pass invented.
+
+    The targeted finding leads, because it is the one the operator chose
+    and the one whose intent and replacement they picked. The others are
+    appended as plain additional requirements.
+    """
+    lead = _frame_instruction(finding, replacement, intent, market_name)
+    if not siblings:
+        return lead
+    extra = []
+    for other in siblings:
+        directive = _directive_for(other, None)
+        if not directive:
+            remedies = getattr(other, "remedies", None) or []
+            directive = (remedies[0].get("directive") if remedies else None)
+        extra.append(directive or f"Also resolve: {other.rationale}")
+    return (f"{lead} In the same frame, also make these changes, and change "
+            f"nothing else: " + " ".join(extra))
 
 
 def _frame_instruction(finding: Finding, replacement: str | None,
@@ -855,6 +929,20 @@ def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
                f"on {base.name} at {finding.t_start:.2f}-{finding.t_end:.2f}s")
     store.update_finding_status(finding.id, "remediating", run_id=run.id)
 
+    # Everything else this market holds open on the same shot goes with it.
+    # One shot, one edit: fixing them one at a time regenerated the same
+    # seconds once per finding, each pass taking its anchors from the last
+    # pass's output. The verifier rules on all of them afterwards and puts
+    # back any that survived.
+    company = _siblings_for(finding, store)
+    for other in company:
+        store.update_finding_status(other.id, "remediating", run_id=run.id)
+    if company:
+        store.emit(run.id, "remediator",
+                   f"one edit for {1 + len(company)} findings on this shot: "
+                   f"{finding.rule_id} plus "
+                   f"{', '.join(o.rule_id for o in company)}")
+
     before = _still(base, change_id, "before", finding, changes_dir)
     staged = run_dir(run, store) / f".{change_id}_{master.name}"
 
@@ -870,6 +958,8 @@ def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
         # untouched by construction -- every method writes to `staged` and only
         # the line after this block replaces the master with it.
         store.update_finding_status(finding.id, "open", run_id=run.id)
+        for other in company:
+            store.update_finding_status(other.id, "open", run_id=run.id)
         staged.unlink(missing_ok=True)
         store.emit(run.id, "remediator",
                    f"stage_error: remediate: {method} failed for {finding.id}; "
@@ -887,6 +977,8 @@ def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
                               span=(finding.t_start, finding.t_end))
     if craft["failures"]:
         store.update_finding_status(finding.id, "open", run_id=run.id)
+        for other in company:
+            store.update_finding_status(other.id, "open", run_id=run.id)
         staged.unlink(missing_ok=True)
         for failure in craft["failures"]:
             store.emit(run.id, "remediator", f"craft gate: {failure}")

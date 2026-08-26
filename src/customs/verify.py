@@ -204,6 +204,10 @@ def confirm(run, market: str, changes: list[ChangeRecord], store, workdir) -> bo
         ]
         matched.update(id(f) for f in survivors)
         if survivors:
+            # back to open explicitly: a sibling swept into a shot-wide fix
+            # was moved to "remediating" when the edit started, and leaving
+            # it there would strand it in a status nothing ever clears.
+            store.update_finding_status(finding.id, "open", run_id=run.id)
             _emit(store, run.id,
                   f"still open: {finding.rule_id} continues to fire at "
                   f"{finding.t_start:.2f}-{finding.t_end:.2f}s; {finding.id} untouched")
