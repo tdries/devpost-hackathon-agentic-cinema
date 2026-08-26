@@ -80,3 +80,35 @@ def test_spend_is_recorded_per_utc_day(tmp_path):
     # yesterday's spending does not eat today's budget
     store.record_spend("bridge", 4.0, "run_a", "fnd_old", now=0.0)
     assert store.spent_today() == pytest.approx(3.76)
+
+
+def test_we_only_ever_ask_veo_for_a_duration_it_accepts():
+    """Veo takes 4, 6 or 8 seconds and nothing else.
+
+    Confirmed twice, because the cost of being wrong here is real money:
+    the Gemini API's Veo page lists durationSeconds as 4, 6, 8 for every
+    3.1 model, and the live Vertex endpoint answers an out-of-range ask
+    with "supported durations are [8,4,6] for feature image_to_video".
+
+    math.ceil used to produce 5 and 7 for a fifth of all spans. Those
+    bridges were priced, offered, charged against the day's budget, and
+    only THEN rejected by Veo at execution -- the worst possible order to
+    discover it in, because the refusal arrives after the spend.
+    """
+    from customs import costs
+
+    for tenths in range(1, 95):
+        span = tenths / 10
+        asked = costs.bridge_seconds(span)
+        assert asked in (4.0, 6.0, 8.0), f"span {span}s asks Veo for {asked}s"
+        # and it must COVER the span, or the splice has a gap to fill
+        if span <= costs.MAX_BRIDGE_S:
+            assert asked >= span or asked == costs.MIN_BRIDGE_S, (
+                f"span {span}s would be bridged by only {asked}s")
+
+    # the boundaries, spelled out
+    assert costs.bridge_seconds(4.0) == 4.0
+    assert costs.bridge_seconds(4.1) == 6.0, "4.1s cannot be covered by a 4s clip"
+    assert costs.bridge_seconds(6.0) == 6.0
+    assert costs.bridge_seconds(6.1) == 8.0
+    assert costs.bridge_seconds(8.0) == 8.0

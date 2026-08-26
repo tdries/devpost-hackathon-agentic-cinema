@@ -67,9 +67,31 @@ METHODS = (
 _BY_KEY = {m.key: m for m in METHODS}
 
 
+# Veo does not take an arbitrary number of seconds. For veo-3.1 the only
+# accepted values are 4, 6 and 8 -- confirmed twice: the Gemini API's own
+# Veo page ("durationSeconds: 4, 6, 8"), and the live Vertex endpoint,
+# which answers an out-of-range ask with "supported durations are [8,4,6]
+# for feature image_to_video".
+#
+# math.ceil was producing 5 and 7 for a fifth of all spans. Those bridges
+# were being priced, offered, paid for out of the day's budget, and only
+# then rejected by Veo at execution -- which is the worst order to find
+# out in.
+VEO_DURATIONS = (4, 6, 8)
+
+
 def bridge_seconds(span: float) -> float:
-    """What Veo would actually bill for a span this long."""
-    return min(MAX_BRIDGE_S, max(MIN_BRIDGE_S, math.ceil(span)))
+    """What Veo would actually bill for a span this long.
+
+    Rounds UP to the next duration Veo will accept, so the generated clip
+    always covers the span it has to replace. media.splice retimes the
+    result onto the exact span anyway, so overshooting costs a little
+    money and never a gap.
+    """
+    for allowed in VEO_DURATIONS:
+        if span <= allowed:
+            return float(max(MIN_BRIDGE_S, allowed))
+    return float(MAX_BRIDGE_S)
 
 
 def estimate(method: str, span: float) -> float:
