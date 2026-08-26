@@ -2,7 +2,7 @@
 {% block title %}{{ market }} market room {{ run.id }}{% endblock %}
 {% block nav %}{% include "_runnav.html" %}{% endblock %}
 {% block main %}
-<div data-room="{{ market }}">
+<div class="market-room" data-room="{{ market }}">
 
 {% macro severity(value) %}
 <span class="sev">
@@ -87,19 +87,31 @@
   <div class="panel as-list" id="findings"><div class="panel-body" style="padding:18px 4px 4px">
     <table class="grid">
       <thead><tr>
-        <th>Rule</th><th>Evidence</th><th>Class</th><th>Severity</th><th>Window</th><th>Source</th><th>Status</th><th></th>
+        <th>Rule</th><th>Citation</th><th>Evidence</th><th>Class</th><th>Severity</th><th>Window</th><th>Status</th><th></th>
       </tr></thead>
       <tbody>
       {% for finding in findings %}
       <tr>
-        <td>
+        {# Rule and citation are two columns, not one stacked cell. Stacked,
+           the rationale and a statute title shared a 200px column and ran
+           twelve lines deep while Class, Severity and Window sat empty
+           beside them -- the row was as tall as its narrowest content. #}
+        <td class="rule-cell">
           <div class="rule-id">{{ finding.rule_id }}</div>
           <div class="rationale">{{ finding.rationale }}</div>
+        </td>
+        <td class="cite-cell">
           {% if finding.citation_url %}
-          <div style="margin-top:8px"><a class="cite" href="{{ finding.citation_url }}" target="_blank" rel="noreferrer">{{ finding.citation_ref or 'citation' }}</a></div>
+          <a class="cite" href="{{ finding.citation_url }}" target="_blank" rel="noreferrer">{{ finding.citation_ref or 'citation' }}</a>
           {% elif finding.citation_ref %}
-          <div class="mono" style="margin-top:8px;font-size:12px;color:var(--ink-3)">{{ finding.citation_ref }}</div>
+          <span class="cite-plain">{{ finding.citation_ref }}</span>
           {% endif %}
+          {# provenance belongs WITH the citation it describes, rather than
+             three columns away under a heading of its own #}
+          <div class="cite-state">
+            {% if finding.sourced %}<span class="chip sourced"><svg class="ic"><use href="#i-sourced"/></svg>sourced</span>
+            {% else %}<span class="chip unsourced"><svg class="ic"><use href="#i-unsourced"/></svg>unsourced</span>{% endif %}
+          </div>
         </td>
         <td class="ev-cell">
           {% if finding.observation_id in evidence %}
@@ -117,7 +129,6 @@
         </td>
         <td class="tight">{{ severity(finding.severity) }}</td>
         <td class="tight">{{ window(finding) }}</td>
-        <td class="tight">{% if finding.sourced %}<span class="chip sourced"><svg class="ic"><use href="#i-sourced"/></svg>sourced</span>{% else %}<span class="chip unsourced"><svg class="ic"><use href="#i-unsourced"/></svg>unsourced</span>{% endif %}</td>
         {% set fst = {'open': 'blocked', 'remediating': 'pending', 'resolved': 'cleared'}[finding.status] %}
         <td class="tight"><span class="pill s-{{ fst }}"><svg class="ic"><use href="#i-{{ fst }}"/></svg>{{ finding.status }}</span></td>
         <td class="tight">

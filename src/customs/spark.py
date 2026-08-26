@@ -113,7 +113,7 @@ def statcard(points: list[tuple[float, float]], *, value: str, label: str,
 
 def lanes(rows: list[dict], duration: float, *, width: int = 1180,
           row_h: int = 30, pad_left: int = 34, ruler: bool = True,
-          defs: str = "") -> str:
+          defs: str = "", icon: int = 20) -> str:
     """One lane per problem category, dots where it happens.
 
     Inline, not an <img>: this one has to be hoverable, and an SVG loaded
@@ -161,8 +161,9 @@ def lanes(rows: list[dict], duration: float, *, width: int = 1180,
         y = top + i * row_h
         out.append(f'<line x1="{pad_left}" y1="{y:.1f}" x2="{width - 12}" y2="{y:.1f}" '
                    f'stroke="currentColor" stroke-opacity=".13" stroke-width="1"/>')
-        out.append(f'<use href="#d-{row["dimension"]}" x="4" y="{y - 10:.1f}" '
-                   f'width="20" height="20"/>')
+        out.append(f'<use href="#d-{row["dimension"]}" x="4" '
+                   f'y="{y - icon / 2:.1f}" '
+                   f'width="{icon}" height="{icon}"/>')
         for ev in row["events"]:
             x = pad_left + (min(ev["t"], duration) / duration) * inner
             flagged = ev.get("flagged")
