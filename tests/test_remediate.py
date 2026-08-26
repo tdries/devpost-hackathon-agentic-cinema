@@ -739,3 +739,92 @@ def test_a_generation_that_fails_any_other_way_is_charged(monkeypatch, tmp_path)
         remediate._bridge_span(tmp_path / "b.mp4", finding, None, tmp_path,
                                tmp_path / "out.mp4", spend=lambda: charged.append(1))
     assert charged == [1], "a real generation that died is still billed by Google"
+
+
+def test_one_shot_is_one_edit_even_when_it_carries_several_findings():
+    """The operator's complaint, as a unit test.
+
+    "1 scene causes 3 screenshots and 3 problems, and when 1 screenshot
+    problem is fixed, the full scene start to stop is not fixed."
+
+    Measured on a real run: SA span 35.083-42.083 carries three open
+    findings on one seven-second shot. Fixing them one at a time
+    regenerated those same seven seconds three times at EUR 3.68 each,
+    and every pass after the first took its anchors from the previous
+    pass's OUTPUT -- Veo generating from Veo.
+    """
+    from customs import remediate
+    from customs.schema import Finding
+
+    def _f(fid, rule, status="open", shot="shot_7", t=(35.083, 42.083), market="SA"):
+        return Finding(
+            id=fid, run_id="run_1", observation_id=f"obs_{fid}", market=market,
+            rule_id=rule, klass="legal", severity=90, t_start=t[0], t_end=t[1],
+            rationale=f"something about {rule}", citation_ref="x", citation_url="",
+            sourced=True, remediable=True, remediation_blocked=False,
+            blocked_reason="", status=status, shot_id=shot)
+
+    target = _f("f1", "SA-ALC-01")
+    all_findings = [
+        target,
+        _f("f2", "SA-MOD-01"),
+        _f("f3", "SA-PHARMA-01"),
+        _f("f4", "SA-ALC-01", status="resolved"),          # already dealt with
+        _f("f5", "SA-TOB-01", shot="shot_8", t=(50.0, 55.0)),  # a different shot
+        _f("f6", "FR-ALC-01", market="FR"),                # a different market
+    ]
+
+    company = remediate.siblings_in_shot(target, all_findings)
+    assert {f.id for f in company} == {"f2", "f3"}, \
+        "only the open findings on this shot, in this market"
+
+    # and the instruction they produce asks for all of it at once
+    combined = remediate._combined_directive(
+        target, company, replacement=None, intent=None, market_name="Saudi Arabia")
+    assert "SA-MOD-01" in combined or "something about SA-MOD-01" in combined
+    assert "SA-PHARMA-01" in combined or "something about SA-PHARMA-01" in combined
+    assert "change nothing else" in combined
+
+
+def test_a_finding_with_no_shot_id_still_groups_by_its_span():
+    """shot_id is new. Findings judged before it exists still share a span,
+    which is what a shared shot looked like then."""
+    from customs import remediate
+    from customs.schema import Finding
+
+    def _f(fid, rule, t):
+        return Finding(
+            id=fid, run_id="run_1", observation_id=f"obs_{fid}", market="SA",
+            rule_id=rule, klass="legal", severity=90, t_start=t[0], t_end=t[1],
+            rationale="x", citation_ref="x", citation_url="", sourced=True,
+            remediable=True, remediation_blocked=False, blocked_reason="",
+            status="open")           # no shot_id at all
+
+    target = _f("f1", "SA-ALC-01", (35.083, 42.083))
+    same = _f("f2", "SA-MOD-01", (35.083, 42.083))
+    other = _f("f3", "SA-TOB-01", (12.0, 19.0))
+
+    company = remediate.siblings_in_shot(target, [target, same, other])
+    assert {f.id for f in company} == {"f2"}
+
+
+def test_a_guard_blocked_finding_is_never_swept_into_someone_elses_edit():
+    """The guard takes auto-remediation off the table for a reason. A
+    finding it blocked must not be quietly fixed as a passenger on a fix
+    for something else."""
+    from customs import remediate
+    from customs.schema import Finding
+
+    def _f(fid, blocked):
+        return Finding(
+            id=fid, run_id="run_1", observation_id=f"obs_{fid}", market="SA",
+            rule_id="SA-LGBT-01" if blocked else "SA-ALC-01", klass="legal",
+            severity=90, t_start=1.0, t_end=5.0, rationale="x", citation_ref="x",
+            citation_url="", sourced=True, remediable=not blocked,
+            remediation_blocked=blocked,
+            blocked_reason="protected basis" if blocked else "",
+            status="open", shot_id="shot_1")
+
+    target = _f("f1", False)
+    company = remediate.siblings_in_shot(target, [target, _f("f2", True)])
+    assert company == [], "the guard's decision is not a passenger seat"
