@@ -651,7 +651,8 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
                  keep_dir: Path | None = None,
                  intent: str | None = None,
                  change_id: str = "", statement: str = "",
-                 spend=None, on_event=None) -> tuple[Path, str]:
+                 spend=None, on_event=None,
+                 before: Path | None = None, store=None) -> tuple[Path, str]:
     """Edit both ends of the span and let Veo generate the motion between.
 
     The only method that can follow genuine 3D motion, and the only one that
@@ -776,7 +777,21 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
             kept.write_bytes(Path(clip).read_bytes())
         except OSError:
             pass
-    media.splice_clip(base, clip, finding.t_start, finding.t_end, out_path)
+    # Through the matte when we know where the violation is. Even a
+    # generated span has no business repainting the performance either
+    # side of the object -- and this is the shape of the "hammer turned
+    # into a baseball bat" complaint: Veo invents the whole frame, so
+    # anything it decides to reinterpret goes into the master. Matted,
+    # only the object's own region is Veo's, and the performance, the
+    # background and the light are still the brand's own footage.
+    #
+    # Without a box there is nothing to cut against, so the span is
+    # spliced whole, which is what this always did.
+    box = _box_for(finding, before or anchors[0], store)
+    if box:
+        media.splice_matte(base, clip, box, finding.t_start, finding.t_end, out_path)
+    else:
+        media.splice_clip(base, clip, finding.t_start, finding.t_end, out_path)
     return anchors[0], instruction
 
 
@@ -942,7 +957,8 @@ def _run_method(run, finding: Finding, method: str, replacement: str | None,
                                             Path(workdir), staged,
                                             keep_dir=changes_dir, intent=intent,
                                             change_id=change_id, statement=statement,
-                                            spend=spend, on_event=on_event)
+                                            spend=spend, on_event=on_event,
+                                            before=before, store=store)
         return (f"regenerated {costs.bridge_seconds(finding.t_end - finding.t_start):.0f}s "
                 f"of motion between two edited anchor frames")
     media.crop_span(base, finding.t_start, finding.t_end, staged)

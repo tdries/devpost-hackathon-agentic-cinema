@@ -705,3 +705,54 @@ def test_craft_check_notices_footage_that_was_disturbed(tmp_path):
     assert not report["ok"]
     assert any("should not have touched" in f for f in report["failures"]), report["failures"]
     assert report["psnr"] is not None and report["psnr"] < media.QC_MIN_PSNR_DB
+
+
+def test_a_matted_splice_keeps_the_performance_either_side_of_the_object(tmp_path):
+    """The answer to a hammer coming back as a baseball bat.
+
+    A bridge hands Veo two stills and takes back a whole invented span:
+    measured, 69 of 70 frames of the original are gone. Anything Veo
+    decided to reinterpret -- a prop, a face, a background -- went into
+    the master with it.
+
+    Matted, only the object's own region is Veo's.
+    """
+    from PIL import Image, ImageChops, ImageDraw
+    from customs import media
+
+    base = tmp_path / "base.mp4"
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-f", "lavfi",
+                    "-i", "testsrc2=s=320x240:d=4:r=25", str(base)], check=True)
+    # a "generated" clip that looks nothing like the film
+    clip = tmp_path / "clip.mp4"
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-f", "lavfi",
+                    "-i", "color=c=magenta:s=320x240:d=4:r=25", str(clip)], check=True)
+
+    box = [300, 300, 700, 700]
+    out = tmp_path / "out.mp4"
+    media.splice_matte(base, clip, box, 1.0, 3.0, out, crf=0)
+    control = tmp_path / "ctl.mp4"
+    media.splice_matte(base, clip, [0, 0, 20, 20], 1.0, 3.0, control, crf=0)
+
+    w, h = media.probe_resolution(base)
+    x, y, bw, bh = media.box_to_pixels(box, w, h)
+    a = Image.open(_frame_at(control, 2.0, tmp_path / "a.png")).convert("RGB")
+    b = Image.open(_frame_at(out, 2.0, tmp_path / "b.png")).convert("RGB")
+
+    diff = ImageChops.difference(a, b)
+    pad = media.MATTE_FEATHER_PX + 2
+    ImageDraw.Draw(diff).rectangle([x - pad, y - pad, x + bw + pad, y + bh + pad], fill=(0, 0, 0))
+    cx, cy, cw, ch = media.box_to_pixels([0, 0, 20, 20], w, h)
+    ImageDraw.Draw(diff).rectangle([cx - pad, cy - pad, cx + cw + pad, cy + ch + pad], fill=(0, 0, 0))
+    assert diff.convert("L").getextrema()[1] == 0, \
+        "generated pixels reached footage the finding never pointed at"
+
+    # the generated content really did land inside the box
+    inside = ImageChops.difference(a.crop((x, y, x + bw, y + bh)),
+                                   b.crop((x, y, x + bw, y + bh)))
+    assert inside.convert("L").getextrema()[1] > 60, "the clip never landed"
+
+    # and the film is still the film
+    report = media.craft_check(base, out, span=(1.0, 3.0))
+    assert report["frames_before"] == report["frames_after"]
+    assert report["drift"] <= media.QC_MAX_DRIFT_S
