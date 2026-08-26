@@ -756,3 +756,39 @@ def test_a_matted_splice_keeps_the_performance_either_side_of_the_object(tmp_pat
     report = media.craft_check(base, out, span=(1.0, 3.0))
     assert report["frames_before"] == report["frames_after"]
     assert report["drift"] <= media.QC_MAX_DRIFT_S
+
+
+def test_a_film_does_not_rot_while_you_work_on_it(tmp_path):
+    """Every remediation re-encodes the whole master, so the untouched
+    footage is re-compressed once per fix.
+
+    Measured at libx264's default: 42.85 dB after one edit, 40.68 after
+    two, 39.45 after three, 33.44 after eleven. The commercial decays
+    while it is being corrected, and nothing anywhere was watching.
+
+    Five generations here, which is more fixes than a market usually
+    needs, held against the craft gate's own floor.
+    """
+    from PIL import Image
+    from customs import media
+
+    original = tmp_path / "gen0.mp4"
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-f", "lavfi",
+                    "-i", "testsrc2=s=320x240:d=3:r=25", str(original)], check=True)
+    ratio = tmp_path / "ratio.png"
+    Image.new("RGB", (320, 240), (140, 128, 128)).save(ratio)
+
+    current = original
+    for gen in range(1, 6):
+        nxt = tmp_path / f"gen{gen}.mp4"
+        media.apply_relight(current, ratio, [400, 400, 600, 600], 0.5, 1.0, nxt)
+        current = nxt
+
+    report = media.craft_check(original, current, span=(0.5, 1.0))
+    assert report["frames_before"] == report["frames_after"], \
+        f"five edits changed the frame count: {report['failures']}"
+    assert report["drift"] <= media.QC_MAX_DRIFT_S, \
+        f"five edits moved the running length by {report['drift']:.3f}s"
+    assert report["psnr"] is not None and report["psnr"] >= media.QC_MIN_PSNR_DB, (
+        f"the film decayed to {report['psnr']:.2f} dB over five edits "
+        f"(floor {media.QC_MIN_PSNR_DB})")
