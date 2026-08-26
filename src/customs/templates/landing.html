@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}The Media Customs{% endblock %}
+{# No console tabs here on purpose. This page is the door, not a screen
+   inside the building: the tabs appear once you have chosen a way in. #}
+{% block main %}
+
+<section class="landhero">
+  <div class="swarm" aria-hidden="true">
+    <span class="swarm-row"><svg class="ic"><use href="#d-alcohol_tobacco_drugs"/></svg><svg class="ic"><use href="#i-legal"/></svg><svg class="ic"><use href="#d-gesture_body_language"/></svg><svg class="ic"><use href="#i-pending"/></svg><svg class="ic"><use href="#d-sexual_orientation_gender_id"/></svg><svg class="ic"><use href="#n-timeline"/></svg><svg class="ic"><use href="#d-health_claims_pharma"/></svg><svg class="ic"><use href="#i-policy"/></svg><svg class="ic"><use href="#d-language_profanity_idiom"/></svg><svg class="ic"><use href="#n-market"/></svg><svg class="ic"><use href="#d-photosensitivity_sensory"/></svg><svg class="ic"><use href="#d-comparative_claims"/></svg><svg class="ic"><use href="#i-alert"/></svg><svg class="ic"><use href="#i-guard"/></svg></span>
+    <span class="swarm-row"><svg class="ic"><use href="#i-cleared"/></svg><svg class="ic"><use href="#d-modesty_dress_body"/></svg><svg class="ic"><use href="#n-board"/></svg><svg class="ic"><use href="#d-gender_portrayal"/></svg><svg class="ic"><use href="#i-blocked"/></svg><svg class="ic"><use href="#d-national_symbols_politics"/></svg><svg class="ic"><use href="#n-cut"/></svg><svg class="ic"><use href="#d-violence_and_weapons"/></svg><svg class="ic"><use href="#i-offence"/></svg><svg class="ic"><use href="#d-superstition_number_colour"/></svg><svg class="ic"><use href="#d-text_legibility"/></svg><svg class="ic"><use href="#i-frame"/></svg><svg class="ic"><use href="#i-analyst"/></svg><svg class="ic"><use href="#i-noted"/></svg></span>
+    <span class="swarm-row"><svg class="ic"><use href="#d-religious_symbols_practices"/></svg><svg class="ic"><use href="#i-sourced"/></svg><svg class="ic"><use href="#d-food_and_animals"/></svg><svg class="ic"><use href="#n-feed"/></svg><svg class="ic"><use href="#d-children_and_minors"/></svg><svg class="ic"><use href="#i-at-risk"/></svg><svg class="ic"><use href="#d-gambling_and_finance"/></svg><svg class="ic"><use href="#n-library"/></svg><svg class="ic"><use href="#d-humour_irony_satire"/></svg><svg class="ic"><use href="#i-adjudicator"/></svg><svg class="ic"><use href="#i-remediator"/></svg><svg class="ic"><use href="#i-publisher"/></svg><svg class="ic"><use href="#i-human"/></svg><svg class="ic"><use href="#i-verifier"/></svg></span>
+  </div>
+
+  <div class="landhero-mark" aria-hidden="true">
+    <img src="/static/logo.png?v={{ static_v }}" alt="">
+  </div>
+
+  <div class="landhero-front">
+    <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+    <span class="landhero-kicker mono">The Media Customs</span>
+    <h1 class="landhero-title">One asset.<br>Every market.<br>Before it ships.</h1>
+    <p class="landhero-lede">An agentic ad-clearance crew. It watches your commercial
+      <strong>once</strong>, judges it against the law of
+      <strong>{{ packs_total }} jurisdictions</strong> in parallel, builds its own
+      Grafana instrument panel as it goes, and re-renders the shots that fail.</p>
+
+    <div class="doors">
+      <span class="doors-label label">Come in as</span>
+      <div class="doors-row">
+        <a class="door door-judge" href="/enter/judge">
+          <svg class="ic"><use href="#i-adjudicator"/></svg>
+          <span class="door-text">
+            <span class="door-title">I'm a Devpost judge</span>
+            <span class="door-sub">Straight to the runs already cleared, with the evidence behind every finding</span>
+          </span>
+          <span class="door-go" aria-hidden="true">&rarr;</span>
+        </a>
+        <a class="door door-visitor" href="/enter/visitor">
+          <svg class="ic"><use href="#n-new"/></svg>
+          <span class="door-text">
+            <span class="door-title">I'm a curious visitor</span>
+            <span class="door-sub">Bring a commercial or a YouTube link and watch it clear customs</span>
+          </span>
+          <span class="door-go" aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="landstats">
+  <span><b>{{ packs_total }}</b>jurisdictions</span>
+  <span><b>{{ rules_total }}</b>rules, each with its statute</span>
+  <span><b>{{ dims_total }}</b>things watched for</span>
+  <span><b>{{ runs_total }}</b>clearances run here</span>
+</section>
+
+<section class="landwhy">
+  <div class="rule-row"><span class="label">Why this exists</span></div>
+  <div class="landwhy-grid">
+    <p>Global brands ship one commercial into dozens of markets and check maybe six of
+      them. France bans alcohol advertising under <b>Loi Évin</b>. Quebec bans advertising
+      aimed at children under 13. Thailand's lèse-majesté law makes a careless royal
+      reference a criminal matter. The UK requires every ad to pass <b>Clearcast</b>
+      before it airs.</p>
+    <p>And the unregulated half costs more than the regulated half. Pepsi and Kendall
+      Jenner. Dolce &amp; Gabbana in China. H&amp;M's hoodie. None of those broke a
+      statute. Every one of them was caught by the public instead of by a process.
+      <b>This is the process.</b></p>
+  </div>
+</section>
+
+<section class="landhow">
+  <div class="rule-row"><span class="label">Observe once, judge many</span></div>
+  <p class="subline" style="max-width:80ch">The architectural decision everything else
+    follows from. One multimodal analyst watches the film a single time and writes down
+    what it sees &mdash; neutral, timecoded, no verdicts. Then one adjudicator per
+    jurisdiction judges that same fact sheet against its own rulebook, in parallel.</p>
+
+  <div class="landsteps">
+    <div class="landstep">
+      <span class="ls-n mono">01</span>
+      <svg class="ic"><use href="#i-ingest"/></svg>
+      <b>Ingest</b>
+      <span>Shots, audio and a transcript. The film is broken into the pieces a
+        regulator would argue about.</span>
+    </div>
+    <div class="landstep">
+      <span class="ls-n mono">02</span>
+      <svg class="ic"><use href="#i-analyst"/></svg>
+      <b>Analyst</b>
+      <span>One pass, {{ dims_total }} dimensions, and verdicts forbidden. &ldquo;A woman
+        raises a glass of red wine&rdquo; is an observation. &ldquo;This breaks Loi
+        Évin&rdquo; is not.</span>
+    </div>
+    <div class="landstep">
+      <span class="ls-n mono">03</span>
+      <svg class="ic"><use href="#i-adjudicator"/></svg>
+      <b>Adjudicators</b>
+      <span>One per jurisdiction, all at once, each grounding its citation against a
+        live source. A finding is always observation &times; rule &times; citation.</span>
+    </div>
+    <div class="landstep">
+      <span class="ls-n mono">04</span>
+      <svg class="ic"><use href="#i-guard"/></svg>
+      <b>Guard</b>
+      <span>A pure rule layer with no model in it. Where a market's rule targets who
+        appears in your ad, it refuses to auto-fix and hands you the statute.</span>
+    </div>
+    <div class="landstep">
+      <span class="ls-n mono">05</span>
+      <svg class="ic"><use href="#i-publisher"/></svg>
+      <b>Publisher</b>
+      <span>Metrics, logs, annotations and dashboards, written into Grafana by the
+        crew itself over MCP.</span>
+    </div>
+    <div class="landstep">
+      <span class="ls-n mono">06</span>
+      <svg class="ic"><use href="#i-remediator"/></svg>
+      <b>Remediator</b>
+      <span>Woken by a Grafana alert. Re-letters, re-props, re-voices or regenerates
+        the failing span &mdash; priced in euro before you press.</span>
+    </div>
+  </div>
+</section>
+
+<section class="landgraf">
+  <div class="rule-row"><span class="label">Grafana is a participant, not a picture</span></div>
+  <div class="landgraf-grid">
+    <div class="landgraf-cell">
+      <span class="lg-n mono">1</span>
+      <b>The crew writes into it</b>
+      <span>Seven dashboards, four metrics, three kinds of log line and an annotation
+        on every finding. The publisher is an agent with real MCP tools, and the
+        dashboard description is prose it wrote itself.</span>
+    </div>
+    <div class="landgraf-cell">
+      <span class="lg-n mono">2</span>
+      <b>It triggers the crew</b>
+      <span>An alert rule fires a webhook that wakes the remediator. Grafana sits
+        upstream of the work rather than in a report after it.</span>
+    </div>
+    <div class="landgraf-cell">
+      <span class="lg-n mono">3</span>
+      <b>The crew reads it back</b>
+      <span>Every chart in this console is a Loki or Mimir query. Ask the agent a
+        question nobody wrote a screen for and it writes the LogQL itself.</span>
+    </div>
+  </div>
+</section>
+
+<section class="landfoot">
+  <p class="subline">Built for the <a class="cite" href="https://agentic-cinema.devpost.com" target="_blank" rel="noreferrer">Agentic Cinema</a>
+    hackathon, Grafana Labs track. Google ADK, Gemini 3.7, Veo 3.1, Grafana Cloud.
+    <a class="cite" href="https://github.com/tdries/td-devpost-agentic-cinema" target="_blank" rel="noreferrer">Source on GitHub</a>.</p>
+</section>
+
+{% endblock %}
