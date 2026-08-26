@@ -546,3 +546,89 @@ def test_box_to_pixels_pads_clamps_and_stays_even(tmp_path):
     import pytest as _pytest
     with _pytest.raises(media.MediaError):
         media.box_to_pixels([500, 500, 500, 500], 1280, 720)
+
+
+def test_relight_carries_a_colour_change_without_carrying_the_lighting(tmp_path):
+    """The clean-plate trick, checked on the property that makes it work.
+
+    A model edit is one frame under one lighting condition. Dividing the
+    edited frame by the original divides that lighting out and leaves the
+    albedo change; multiplying it back into a DIFFERENT frame re-applies
+    the change under that frame's own light.
+
+    So: build an "original" and an "edited" that differ only in hue, and
+    a second frame that is the original at half brightness -- a later
+    moment in the same shot as the light falls. Applying the ratio to the
+    dim frame must give the NEW hue at the DIM brightness. If the ratio
+    were carrying lighting instead of albedo, it would drag the bright
+    exposure along with it.
+    """
+    from PIL import Image
+    from customs import media
+
+    box = [200, 200, 800, 800]
+    orig = tmp_path / "orig.png"
+    edit = tmp_path / "edit.png"
+    Image.new("RGB", (160, 120), (200, 100, 100)).save(orig)   # reddish
+    Image.new("RGB", (160, 120), (100, 200, 100)).save(edit)   # greenish
+
+    ratio = media.relight_ratio(orig, edit, box, tmp_path / "ratio.png")
+    r = Image.open(ratio).convert("RGB")
+    px = r.load()[r.size[0] // 2, r.size[1] // 2]
+
+    # encoded as 128 == 1.0, so: red halves (0.5 -> 64), green doubles (2.0 -> 255)
+    assert 55 <= px[0] <= 75, f"red ratio {px[0]} should encode ~0.5"
+    assert px[1] >= 250, f"green ratio {px[1]} should encode >=2.0 (clipped)"
+
+    # and the ratio is dimensionless: the SAME ratio applied to a frame at
+    # half the brightness must land at half the brightness, new hue
+    dim = (100, 50, 50)
+    out = tuple(min(255, int(dim[c] * (px[c] / 128) * 1.0)) for c in range(3))
+    assert 45 <= out[0] <= 55, f"red should stay dim ({out[0]})"
+    assert out[1] >= 95, f"green should have risen but stayed dim-ish ({out[1]})"
+
+
+def test_relight_leaves_near_black_pixels_alone(tmp_path):
+    """A pixel that is nearly black carries no reliable colour, and its
+    ratio explodes. Clamp it to 1 rather than let it blow out."""
+    from PIL import Image
+    from customs import media
+
+    orig = tmp_path / "o.png"
+    edit = tmp_path / "e.png"
+    Image.new("RGB", (80, 60), (2, 2, 2)).save(orig)      # essentially black
+    Image.new("RGB", (80, 60), (200, 200, 200)).save(edit)
+
+    ratio = media.relight_ratio(orig, edit, [0, 0, 1000, 1000], tmp_path / "r.png")
+    px = Image.open(ratio).convert("RGB").load()[10, 10]
+    assert px == (128, 128, 128), f"near-black should encode 1.0, got {px}"
+
+
+def test_relight_applies_only_inside_the_matte(tmp_path):
+    """Same contract as composite_matte: outside the box, nothing moves."""
+    from PIL import Image, ImageChops, ImageDraw
+    from customs import media
+
+    base = tmp_path / "base.mp4"
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-f", "lavfi",
+                    "-i", "testsrc2=s=320x240:d=3:r=25", str(base)], check=True)
+    ratio = tmp_path / "ratio.png"
+    Image.new("RGB", (320, 240), (255, 64, 64)).save(ratio)   # loud, non-neutral
+
+    box = [300, 300, 700, 700]
+    out = tmp_path / "out.mp4"
+    media.apply_relight(base, ratio, box, 0.5, 2.5, out, crf=0)
+    control = tmp_path / "ctl.mp4"
+    media.apply_relight(base, ratio, [0, 0, 20, 20], 0.5, 2.5, control, crf=0)
+
+    w, h = media.probe_resolution(base)
+    x, y, bw, bh = media.box_to_pixels(box, w, h)
+    a = Image.open(_frame_at(control, 1.5, tmp_path / "a.png")).convert("RGB")
+    b = Image.open(_frame_at(out, 1.5, tmp_path / "b.png")).convert("RGB")
+
+    diff = ImageChops.difference(a, b)
+    pad = media.MATTE_FEATHER_PX + 2
+    ImageDraw.Draw(diff).rectangle([x - pad, y - pad, x + bw + pad, y + bh + pad], fill=(0, 0, 0))
+    cx, cy, cw, ch = media.box_to_pixels([0, 0, 20, 20], w, h)
+    ImageDraw.Draw(diff).rectangle([cx - pad, cy - pad, cx + cw + pad, cy + ch + pad], fill=(0, 0, 0))
+    assert diff.convert("L").getextrema()[1] == 0, "relight leaked outside its matte"

@@ -555,6 +555,92 @@ def composite_matte(base, patch, box, t_start: float, t_end: float, out_path,
     return Path(out_path)
 
 
+def relight_ratio(original_png, edited_png, box, out_png, *, floor: int = 8) -> Path:
+    """The per-pixel ratio edited/original inside the box, as a PNG.
+
+    This is the compositor's clean-plate trick and it is the reason one
+    image edit can carry a whole span. What the model changed is the
+    object's SURFACE -- its colour, its label, its material. What it must
+    not change is the light falling on it, which belongs to the shot and
+    moves with it.
+
+    Dividing the edited frame by the original divides the lighting out
+    and leaves the albedo change on its own. Multiplying that ratio back
+    into a LIVE frame re-applies it under that frame's own light, so the
+    object changes while the grain, the exposure and the motion stay the
+    frame's own.
+
+    `floor` guards the division: a pixel that is nearly black carries no
+    reliable colour and its ratio explodes, so it is clamped to 1 (leave
+    that pixel alone) rather than allowed to blow out.
+    """
+    from PIL import Image
+    orig = Image.open(original_png).convert("RGB")
+    edit = Image.open(edited_png).convert("RGB").resize(orig.size, Image.LANCZOS)
+    width, height = orig.size
+    x, y, w, h = box_to_pixels(box, width, height)
+
+    o = orig.crop((x, y, x + w, y + h)).load()
+    e = edit.crop((x, y, x + w, y + h)).load()
+    ratio = Image.new("RGB", (w, h))
+    r = ratio.load()
+    for j in range(h):
+        for i in range(w):
+            op, ep = o[i, j], e[i, j]
+            out = []
+            for c in range(3):
+                base = op[c]
+                if base < floor:
+                    out.append(128)          # 1.0 in the encoding below
+                else:
+                    # encode ratio 0..2 into 0..255, so 1.0 lands on 128
+                    out.append(max(0, min(255, int(round(ep[c] / base * 128)))))
+            r[i, j] = tuple(out)
+    ratio.save(out_png)
+    return Path(out_png)
+
+
+def apply_relight(base, ratio_png, box, t_start: float, t_end: float, out_path,
+                  *, feather: int = MATTE_FEATHER_PX, crf: int = 16) -> Path:
+    """Multiply a live span by a ratio field, inside the matte only.
+
+    out(t) = frame(t) * ratio, for the pixels the finding pointed at, and
+    frame(t) everywhere else. The span keeps its own motion, its own
+    lighting and its own grain -- the thing that a generated span throws
+    away and cannot get back.
+
+    Costs one image edit for the whole span, against 1.88-3.68 EUR for a
+    Veo regeneration of the same seconds.
+    """
+    base = Path(base)
+    width, height = probe_resolution(base)
+    duration = probe_duration(base)
+    x, y, w, h = box_to_pixels(box, width, height)
+    ramp = max(1, int(feather))
+    alpha = f"clip(min(min(X,{w}-X),min(Y,{h}-Y))/{ramp}*255,0,255)"
+    # blend=multiply doubles at 255, so the ratio's 128 == 1.0 encoding is
+    # undone by multiplying and scaling back up by two.
+    filt = (
+        f"[0:v]crop={w}:{h}:{x}:{y},format=gbrp[live];"
+        f"[1:v]scale={w}:{h},format=gbrp[ratio];"
+        f"[live][ratio]blend=all_mode=multiply:all_opacity=1,"
+        f"lutrgb=r='clip(val*2,0,255)':g='clip(val*2,0,255)':b='clip(val*2,0,255)',"
+        f"format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='{alpha}'[patch];"
+        f"[0:v][patch]overlay={x}:{y}:enable='between(t,{t_start:.3f},{t_end:.3f})'[v]"
+    )
+    args = [
+        "ffmpeg", "-y", "-i", str(base), "-loop", "1", "-i", str(ratio_png),
+        "-filter_complex", filt,
+        "-map", "[v]", "-map", "0:a?",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", str(int(crf)),
+        "-pix_fmt", "yuv420p", "-c:a", "copy",
+        "-t", f"{duration:.3f}", "-shortest", "-movflags", "+faststart",
+        str(out_path),
+    ]
+    _run(args, timeout=_encode_timeout(duration))
+    return Path(out_path)
+
+
 def replace_audio_span(path, wav, t_start: float, t_end: float, out_path) -> Path:
     span = max(t_end - t_start, 0.0)
     delay_ms = max(int(round(t_start * 1000)), 0)

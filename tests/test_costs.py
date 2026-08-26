@@ -38,8 +38,13 @@ def test_every_option_is_priced_and_says_what_it_is_for():
     assert [o["key"] for o in opts] == ["overlay", "track", "bridge"]
     for o in opts:
         assert o["eur"] > 0 and o["length"] and o["complexity"] and o["best_for"]
-    # tracking is honestly reported as not built rather than quietly offered
-    assert not next(o for o in opts if o["key"] == "track")["available"]
+    # track was a promise for most of this project's life and is now the
+    # relight propagation: one edit, its lighting divided out, the colour
+    # change multiplied into every live frame inside the finding's matte
+    assert next(o for o in opts if o["key"] == "track")["available"]
+    # and it costs one image edit, not a regeneration
+    assert next(o for o in opts if o["key"] == "track")["eur"] == \
+        next(o for o in opts if o["key"] == "overlay")["eur"]
 
 
 def test_three_concrete_choices_per_finding():
