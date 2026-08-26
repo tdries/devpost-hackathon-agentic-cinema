@@ -151,11 +151,15 @@
   <div class="rule-row"><span class="label">Go deeper</span></div>
   <div class="cards">
     <a class="card" href="/runs/{{ run.id }}/mission">
+      {# the same glyph the tab for this screen carries, so the card and
+         the destination are visibly the same place #}
+      <svg class="ic card-ic"><use href="#n-feed"/></svg>
       <span class="label">Live</span>
       <h3>Mission feed</h3>
       <p>The agents' own log as it happens: every shot transcribed, every rule judged, every citation grounded, every stage error admitted.</p>
     </a>
     <a class="card" href="/runs/{{ run.id }}/cutting">
+      <svg class="ic card-ic"><use href="#n-cut"/></svg>
       <span class="label">{{ changes }} change record{{ '' if changes == 1 else 's' }}</span>
       <h3>Cutting room</h3>
       <p>Original against localized master, with the before and after still behind every edit the Remediator made.</p>

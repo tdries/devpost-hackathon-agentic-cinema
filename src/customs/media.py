@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 _PTS_TIME_RE = re.compile(r"pts_time:([0-9]+(?:\.[0-9]+)?)")
+_SCENE_SCORE_RE = re.compile(r"scene_score=([0-9]+(?:\.[0-9]+)?)")
 _FRAME_LINE_RE = re.compile(r"frame:\d+\s+pts:\S+\s+pts_time:([0-9]+(?:\.[0-9]+)?)")
 _YAVG_LINE_RE = re.compile(r"lavfi\.signalstats\.YAVG=([0-9]+(?:\.[0-9]+)?)")
 _TIMEOUT = 60
@@ -231,24 +232,96 @@ def crop_span(path, t_start: float, t_end: float, out_path, factor: float = 0.8)
     _run(args, timeout=_encode_timeout(duration))
     return Path(out_path)
 
-def detect_shots(path) -> list[Shot]:
-    duration = probe_duration(path)
+# A hard cut scores high in one frame. A dissolve or a fade spreads the
+# same change across twenty frames, so no single pair of frames differs by
+# much and a fixed threshold sees nothing at all.
+#
+# Measured on a real one -- a 1990s Marlboro commercial, 15.2s, 640x480:
+# the HIGHEST scene score in the whole film is 0.1906, and the changes
+# arrive in clusters of adjacent frames (2.33/2.37/2.43, 14.30/14.37/14.43)
+# which is the signature of a dissolve rather than a cut. At 0.3 that ad
+# is one shot. Every observation in it then spans the entire commercial,
+# every finding inherits that span, and the fix picker offers to
+# regenerate 15.2 seconds of video -- which Veo refuses, because its
+# ceiling is 8. The button was greyed out for a film that was never
+# actually one shot.
+_SCENE_LADDER = (0.30, 0.15, 0.10, 0.07, 0.05, 0.035)
+
+# Why 8: a take longer than this cannot be bridged by Veo in one piece, so
+# a detector that leaves one has not finished its job. It is a reason to
+# look harder, not a guarantee -- some films really are one long take.
+_LONGEST_USEFUL_S = 8.0
+
+# A dissolve trips several adjacent frames. They are one transition and
+# deserve one boundary, at its strongest frame.
+_CUT_CLUSTER_S = 0.5
+
+
+def _scene_scores(path) -> list[tuple[float, float]]:
+    """(timecode, scene score) for every frame ffmpeg will score.
+
+    One pass, every score kept, threshold applied afterwards in Python.
+    The old code let ffmpeg do the thresholding, which meant the only way
+    to ask "and what if the cuts are softer than that" was to decode the
+    film again.
+    """
     args = [
-        "ffmpeg", "-i", str(path), "-an", "-vf",
-        "select='gt(scene,0.3)',showinfo", "-f", "null", "-",
+        "ffmpeg", "-v", "quiet", "-i", str(path), "-an", "-vf",
+        "select='gt(scene,0)',metadata=print:file=-", "-f", "null", "-",
     ]
     proc = _run(args, timeout=_TIMEOUT)
-    cuts = set()
-    for line in proc.stderr.splitlines():
-        if "showinfo" not in line:
-            continue
+    scores, t = [], None
+    for line in proc.stdout.splitlines():
         m = _PTS_TIME_RE.search(line)
-        if not m:
+        if m:
+            t = float(m.group(1))
             continue
-        t = round(float(m.group(1)), 3)
-        if 0.05 < t < duration - 0.05:
-            cuts.add(t)
-    boundaries = [0.0] + sorted(cuts) + [duration]
+        m = _SCENE_SCORE_RE.search(line)
+        if m and t is not None:
+            scores.append((round(t, 3), float(m.group(1))))
+            t = None
+    return scores
+
+
+def _cuts_at(scores, threshold: float, duration: float) -> list[float]:
+    """Boundaries above `threshold`, one per transition rather than per frame."""
+    hits = [(t, s) for t, s in scores
+            if s > threshold and 0.05 < t < duration - 0.05]
+    cuts = []
+    for t, s in hits:
+        if cuts and t - cuts[-1][0] <= _CUT_CLUSTER_S:
+            if s > cuts[-1][1]:        # keep the strongest frame of the cluster
+                cuts[-1] = (t, s)
+            continue
+        cuts.append((t, s))
+    return [t for t, _ in cuts]
+
+
+def detect_shots(path) -> list[Shot]:
+    """Shot boundaries, with the threshold chosen to suit the material.
+
+    Starts where a hard cut lives and walks down only as far as it has to.
+    Sharp modern footage stops on the first rung and behaves exactly as
+    before; archival footage that dissolves rather than cuts keeps going
+    until the takes are short enough to be worth something.
+
+    Over-segmenting is the cheap failure here: analyst.merge_micro_shots
+    folds anything under half a second back into its neighbour, so a
+    threshold that finds noise costs a merge rather than a wrong answer.
+    """
+    duration = probe_duration(path)
+    scores = _scene_scores(path)
+
+    chosen: list[float] = []
+    for threshold in _SCENE_LADDER:
+        cuts = _cuts_at(scores, threshold, duration)
+        chosen = cuts
+        longest = max((b - a for a, b in zip([0.0] + cuts, cuts + [duration])),
+                      default=duration)
+        if longest <= _LONGEST_USEFUL_S:
+            break
+
+    boundaries = [0.0] + sorted(chosen) + [duration]
     return [
         Shot(shot_id=f"shot_{i}", t_start=boundaries[i], t_end=boundaries[i + 1])
         for i in range(len(boundaries) - 1)

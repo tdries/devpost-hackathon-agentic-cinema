@@ -343,3 +343,89 @@ def test_splice_retimes_the_clip_so_the_landing_frame_arrives(tmp_path):
 
     r, g, b = rgb_at(3.0)          # outside the span: the brand's own footage
     assert r > 120 and b < 90, f"original footage was disturbed: rgb={(r, g, b)}"
+
+
+def test_a_dissolve_is_a_cut_even_though_no_two_frames_differ_by_much():
+    """A hard cut scores high in one frame. A dissolve spreads the same
+    change over twenty, so no single pair differs by much and a fixed
+    threshold sees nothing at all.
+
+    These numbers are not invented. They are the measured scene-score
+    profile of a real 1990s Marlboro commercial, 15.2s at 640x480: the
+    highest score in the entire film is 0.1906, and the changes arrive in
+    clusters of adjacent frames -- 2.33/2.37/2.43 and 14.30/14.37/14.43 --
+    which is the signature of a dissolve rather than a cut.
+
+    At the hard-cut threshold that ad is ONE shot. Every observation in it
+    then spanned the whole commercial, every finding inherited that span,
+    and the fix picker offered to regenerate 15.2 seconds of video, which
+    Veo refuses because its ceiling is 8. The button was greyed out for a
+    film that was never one shot.
+
+    Driven as data rather than as a video, because ffmpeg's scene metric
+    on a synthetic cross-fade is far gentler than on real grainy footage
+    -- a fixture built from lavfi sources would test the fixture, not this.
+    """
+    duration = 15.17
+    profile = [
+        (2.33, 0.0922), (2.37, 0.0788), (2.43, 0.0829),      # dissolve one
+        (4.37, 0.0222), (5.27, 0.0204), (5.37, 0.0208), (5.67, 0.0291),
+        (6.93, 0.0202), (8.10, 0.0174), (8.30, 0.0185), (8.80, 0.0191),
+        (10.13, 0.1906), (10.17, 0.0908), (10.20, 0.0192),   # dissolve two
+        (14.10, 0.0201), (14.30, 0.0453), (14.37, 0.0207), (14.43, 0.0162),
+        (14.80, 0.0192),                                      # fade to black
+    ]
+
+    # the old behaviour, and the whole problem
+    assert media._cuts_at(profile, 0.30, duration) == []
+
+    cuts = None
+    for threshold in media._SCENE_LADDER:
+        cuts = media._cuts_at(profile, threshold, duration)
+        longest = max(b - a for a, b in zip([0.0] + cuts, cuts + [duration]))
+        if longest <= media._LONGEST_USEFUL_S:
+            break
+    assert cuts, "the ladder never found the dissolves"
+    longest = max(b - a for a, b in zip([0.0] + cuts, cuts + [duration]))
+    assert longest <= media._LONGEST_USEFUL_S, (
+        f"longest take {longest:.1f}s is still past what Veo will bridge")
+
+    # the boundaries land on the transitions, not on the noise between them
+    assert any(abs(c - 2.33) < 0.2 for c in cuts), cuts
+    assert any(abs(c - 10.13) < 0.2 for c in cuts), cuts
+
+
+def test_one_transition_yields_one_boundary_not_one_per_frame():
+    """A dissolve trips several adjacent frames. They are one transition
+    and deserve one boundary, at its strongest frame -- otherwise a soft
+    cut becomes four micro-shots that merge_micro_shots has to sweep up.
+    """
+    cluster = [(2.33, 0.09), (2.37, 0.08), (2.43, 0.11), (2.47, 0.07)]
+    cuts = media._cuts_at(cluster, 0.05, 20.0)
+    assert cuts == [2.43], f"expected the strongest frame of the cluster, got {cuts}"
+
+
+def test_a_film_of_hard_cuts_still_stops_on_the_first_rung(tmp_path):
+    """Walking down the ladder is for material that needs it. Sharp
+    footage must not be re-thresholded into confetti just because the
+    option exists -- the first rung is the hard-cut threshold, and a film
+    whose takes are already short enough never leaves it.
+    """
+    from customs import media
+
+    if True:
+        clip = tmp_path / "cuts.mp4"
+        subprocess.run([
+            "ffmpeg", "-y", "-v", "quiet",
+            "-f", "lavfi", "-i", "color=c=red:s=320x240:d=3:r=25",
+            "-f", "lavfi", "-i", "color=c=blue:s=320x240:d=3:r=25",
+            "-f", "lavfi", "-i", "color=c=green:s=320x240:d=3:r=25",
+            "-filter_complex", "[0][1][2]concat=n=3:v=1:a=0",
+            str(clip),
+        ], check=True)
+
+        scores = media._scene_scores(clip)
+        assert max(s for _, s in scores) > 0.30, "hard cuts should score high"
+        shots = media.detect_shots(clip)
+        # three colours, two cuts -- not two hundred
+        assert len(shots) == 3, [(round(s.t_start, 2), round(s.t_end, 2)) for s in shots]
