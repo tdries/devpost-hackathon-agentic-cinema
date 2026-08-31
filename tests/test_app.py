@@ -219,7 +219,7 @@ def test_two_alerts_for_one_market_serialize_end_to_end(tmp_path, monkeypatch):
         return True
 
     monkeypatch.setattr(app_module.remediate, "apply", slow_apply)
-    monkeypatch.setattr(app_module.remediate, "plan", lambda finding, observation=None: "reframe")
+    monkeypatch.setattr(app_module.remediate, "plan", lambda finding, observation=None: "prop_swap")
     monkeypatch.setattr(app_module.verify, "confirm", slow_verify)
 
     threads = [
@@ -673,11 +673,11 @@ def test_the_feed_resumes_from_the_last_event_id_header(console):
 def test_the_mission_page_renders_the_backlog_and_the_agent_badges(console):
     client, store, _launched, _jobs = console
     run = _judged_run(store)
-    store.emit(run.id, "remediator", "reframe instruction: crop the glass out")
+    store.emit(run.id, "remediator", "prop_swap instruction: swap the glass for a teacup")
 
     body = client.get(f"/runs/{run.id}/mission").text
 
-    assert "reframe instruction" in body
+    assert "prop_swap instruction" in body
     assert "remediator" in body
 
 
@@ -857,13 +857,13 @@ def test_the_cutting_room_lists_the_change_records_with_both_stills(console, tmp
     (run_dir / "localized_FR.mp4").write_bytes(b"mp4")
     store.add_change(ChangeRecord(
         id="chg_1", run_id=run.id, finding_id="fnd_FR_FR-ALC-01_obs_shot_0_000",
-        method="reframe", description="reframe: crop the wine glass out of frame",
+        method="prop_swap", description="prop_swap: the wine glass becomes a teacup",
         before_frame=str(run_dir / "changes" / "chg_1_before_kf0.png"),
         after_frame=str(run_dir / "changes" / "chg_1_after_kf0.png")))
 
     body = client.get(f"/runs/{run.id}/cutting").text
 
-    assert "reframe" in body
+    assert "prop_swap" in body
     assert "chg_1_before_kf0.png" in body and "chg_1_after_kf0.png" in body
     assert f"/runs/{run.id}/media/localized/FR" in body
     assert client.get(f"/runs/{run.id}/stills/chg_1_before_kf0.png").status_code == 200

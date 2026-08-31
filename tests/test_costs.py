@@ -56,8 +56,10 @@ def test_three_concrete_choices_per_finding():
     # for a non-alcoholic one" over a lit cigarette.
     assert not any("drink" in s.lower() or "glass" in s.lower()
                    or "alcohol" in s.lower() for s in fallback)
-    # an unmapped dimension still offers three real choices
-    assert len(costs.suggestions("something_new")) == 3
+    # an unmapped dimension still offers real choices (two since the
+    # centre-crop reframe was removed 2026-08-31)
+    fallback_keys = [s["key"] for s in costs.suggestions("something_new")]
+    assert fallback_keys == ["neutral", "remove"]
 
 
 def test_the_judges_own_remedies_beat_the_table():

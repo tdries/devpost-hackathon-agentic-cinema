@@ -1,12 +1,17 @@
 """The Remediator: turn one finding into one edit of the localized master.
 
-Design spec section 10. Five methods, ordered by cost and by risk of looking
-fake, and the spine proves four of them on real pixels and real audio:
+Design spec section 10. The methods, ordered by cost and by risk of looking
+fake, proven on real pixels and real audio:
 
     relettering  the on-screen text is re-lettered in the market's language
     prop_swap    the offending prop becomes a market-appropriate one
     revoice      the offending line is re-spoken, compliant, over the same span
-    reframe      the frame punches in for the span, regenerating no pixels
+
+There used to be a fourth cheap method, reframe: a centre crop that punched
+in on the whole frame for the span. It was removed 2026-08-31 because it was
+useless in practice -- it zoomed the shot without knowing where the offending
+element was, so it degraded every pixel to maybe exclude one. prop_swap is
+the fallback now: the finding carries a box, the edit lands through it.
 
 Every method produces exactly one artifact -- runs/{run_id}/localized_{market}.mp4
 -- and every method appends to it rather than forking a new file: the first
@@ -115,7 +120,7 @@ def _pace_image_call() -> None:
 # "bridge" is never chosen by plan(): it regenerates pixels and costs real
 # money, so it only ever runs because an operator picked it in the console
 # and the day's budget allowed it.
-METHODS = ("relettering", "prop_swap", "revoice", "reframe", "per_frame", "bridge")
+METHODS = ("relettering", "prop_swap", "revoice", "per_frame", "bridge")
 
 # --- the mapping table (task-14 contract) ---
 #
@@ -127,8 +132,11 @@ METHODS = ("relettering", "prop_swap", "revoice", "reframe", "per_frame", "bridg
 # health_claims_pharma           revoice      a claim, which in an ad is spoken
 # comparative_claims             revoice      same, unless the observation says it is
 #                                             on-screen text, and then relettering
-# everything else                reframe      no way to translate or swap it, so
-#                                             exclude it from frame instead
+# everything else                prop_swap    the generic image edit: the
+#                                             instruction comes from the intent
+#                                             or the judge's remedy, and the
+#                                             edit lands through the finding's
+#                                             own box
 #
 # The dimension is the observation's own (the analyst assigned it, and
 # adjudicate.candidates only ever pairs an observation with a rule of the same
@@ -141,7 +149,7 @@ METHOD_BY_DIMENSION = {
     "health_claims_pharma": "revoice",
     "comparative_claims": "revoice",
 }
-DEFAULT_METHOD = "reframe"
+DEFAULT_METHOD = "prop_swap"
 
 # Claims can be made either way round. When the observation quotes on-screen
 # text rather than speech, a claims finding is re-lettered, not re-voiced.
@@ -199,7 +207,6 @@ INTENT_INSTRUCTIONS = {
     "dim": None,
     "cut": None,
     "disclaim": None,
-    "reframe": None,
 }
 
 _EDIT_INSTRUCTIONS = {
@@ -735,9 +742,14 @@ def _frame_instruction(finding: Finding, replacement: str | None,
     if directive:
         return _GENERIC_EDIT.format(directive=directive, market_name=market_name)
 
-    method = plan(finding)
-    if replacement is not None or method in _DEFAULT_REPLACEMENT:
-        key = method if method in _DEFAULT_REPLACEMENT else "prop_swap"
+    # Gate on the dimension's OWN mapping, not on plan(): plan() now answers
+    # prop_swap for every unmapped dimension (the crop fallback is gone), and
+    # letting that reach the substitution default re-created the green can --
+    # a modesty finding sent "replace each alcoholic drink". Only the
+    # dimensions that really are substitutions get the substitution text.
+    mapped = METHOD_BY_DIMENSION.get(_dimension_of(finding, None))
+    if replacement is not None or mapped in _DEFAULT_REPLACEMENT:
+        key = mapped if mapped in _DEFAULT_REPLACEMENT else "prop_swap"
         subject = replacement or _DEFAULT_REPLACEMENT[key].format(market_name=market_name)
         return _EDIT_INSTRUCTIONS[key].format(replacement=subject)
 
@@ -1215,8 +1227,7 @@ def _run_method(run, finding: Finding, method: str, replacement: str | None,
                                             spend=spend, on_event=on_event)
         return (f"regenerated {costs.bridge_seconds(finding.t_end - finding.t_start):.0f}s "
                 f"of motion between two edited anchor frames")
-    media.crop_span(base, finding.t_start, finding.t_end, staged)
-    return (
-        "centre crop for the span, excluding the outer edge of the frame "
-        "without regenerating any pixels"
-    )
+    # Unreachable while the METHODS guard above holds: every member has an
+    # explicit branch. The old fall-through here was the reframe centre
+    # crop, removed 2026-08-31 for being useless in practice.
+    raise ValueError(f"unhandled method: {method}")

@@ -195,52 +195,6 @@ def fit_image(png, video_path, out_path) -> Path:
     ], timeout=_TIMEOUT)
     return Path(out_path)
 
-def crop_span(path, t_start: float, t_end: float, out_path, factor: float = 0.8) -> Path:
-    """Punch in on the centre of the frame for one span only (the reframe
-    remediation method).
-
-    A true "crop out the offending region" needs a bounding box the pipeline
-    does not carry (observations are sentences, not boxes), so the spine's
-    reframe is a centre crop to `factor` of the frame, rescaled back to the
-    original resolution: it removes the outer 10% on each side for the span,
-    which is what excludes an element sitting at the edge of the frame.
-    Documented as the deliberate approximation it is.
-
-    Implemented as split + crop + overlay rather than a timeline-gated crop
-    filter so the output keeps one constant resolution end to end (a crop
-    that switched size mid-stream would not encode), reusing the same
-    enable='between(t,...)' composite the rest of this module uses.
-    """
-    duration = probe_duration(path)
-    frame_count = probe_frames(path)
-    width, height = probe_resolution(path)
-    crop_w = max(2, int(width * factor) // 2 * 2)
-    crop_h = max(2, int(height * factor) // 2 * 2)
-    filt = (
-        f"[0:v]split=2[base][pre];"
-        f"[pre]crop={crop_w}:{crop_h}:(iw-{crop_w})/2:(ih-{crop_h})/2,"
-        f"scale={width}:{height},setsar=1[zoom];"
-        f"[base][zoom]overlay=enable='between(t,{t_start:.3f},{t_end:.3f})'[v]"
-    )
-    args = [
-        "ffmpeg", "-y", "-i", str(path),
-        "-filter_complex", _cap_frames(filt, frame_count),
-        "-map", "[v]", "-map", "0:a?",
-        "-c:v", "libx264", "-preset", "veryfast", "-crf", str(EDIT_CRF),
-        "-pix_fmt", "yuv420p", "-c:a", "copy",
-        # Bounded by FRAME COUNT, not by a float duration: -t rounds, and a
-        # file whose duration probes a hair short comes back missing the
-        # frames at the end of it -- which is how a remediated commercial
-        # silently lost 0.649s of running length across eleven edits. A
-        # spot's running time is contractual. The bound lives in the graph
-        # (_cap_frames) rather than in -frames:v, which took the copied
-        # audio down with it.
-        "-movflags", "+faststart",
-        str(out_path),
-    ]
-    _run(args, timeout=_encode_timeout(duration))
-    return Path(out_path)
-
 # A hard cut scores high in one frame. A dissolve or a fade spreads the
 # same change across twenty frames, so no single pair of frames differs by
 # much and a fixed threshold sees nothing at all.

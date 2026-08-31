@@ -191,7 +191,7 @@ def test_confirm_guards_a_new_protected_basis_finding_it_surfaces(
                           observation_id="obs_shot_0_000", status="remediating")
     store.add_findings([sa_finding])
     sa_change = ChangeRecord(id="chg_sa", run_id=run.id, finding_id="fnd_sa",
-                             method="reframe", description="", before_frame="",
+                             method="prop_swap", description="", before_frame="",
                              after_frame="")
     monkeypatch.setattr(pipeline, "observe_shot", lambda *a, **k: [_observation()])
     monkeypatch.setattr(pipeline, "judge",
@@ -245,7 +245,7 @@ def test_confirm_reports_false_for_a_change_naming_an_unknown_finding(
 def test_confirm_reports_false_when_there_is_no_localized_master(tmp_path, clip):
     store = Store(tmp_path / "customs.db")
     run = store.create_run(asset_path=str(clip), markets=["FR"])
-    change = ChangeRecord(id="c", run_id=run.id, finding_id="f", method="reframe",
+    change = ChangeRecord(id="c", run_id=run.id, finding_id="f", method="prop_swap",
                           description="", before_frame="", after_frame="")
     assert verify.confirm(run, "FR", [change], store, tmp_path / "work") is False
 

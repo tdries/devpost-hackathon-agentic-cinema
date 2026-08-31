@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/agents-Google%20ADK-4285F4?logo=google&logoColor=white" alt="Google ADK">
   <img src="https://img.shields.io/badge/models-Gemini%203.7%20%C2%B7%20Veo%203.1-34A853?logo=googlegemini&logoColor=white" alt="Gemini and Veo">
   <img src="https://img.shields.io/badge/observability-Grafana%20Cloud-F46800?logo=grafana&logoColor=white" alt="Grafana Cloud">
-  <img src="https://img.shields.io/badge/tests-492%20passing-34A853" alt="492 tests">
+  <img src="https://img.shields.io/badge/tests-490%20passing-34A853" alt="490 tests">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache 2.0"></a>
 </p>
 
@@ -367,7 +367,7 @@ The operator picks a **method**, and the Remediator picks the technique.
 | **Repaint every frame** | edits the offending region on every frame (12 fps) and composites each back through the finding's own matte | €0.04 × frames |
 | **Regenerate with Veo** | both ends of the span edited, then **Veo 3.1 generates the motion between them** | €1.88 – €3.68 |
 
-Outside the bridge, the Remediator resolves the actual technique from the finding's dimension — `relettering` (on-screen text re-lettered in the market's language), `prop_swap` (the object replaced in place), `revoice` (the line re-voiced with Gemini TTS), or `reframe` (an ffmpeg centre crop, the default when nothing else fits). `bridge` is the fifth.
+Outside the bridge, the Remediator resolves the actual technique from the finding's dimension — `relettering` (on-screen text re-lettered in the market's language), `prop_swap` (the object replaced in place, and the default when nothing else fits), or `revoice` (the line re-voiced with Gemini TTS). `bridge` is the fourth. An earlier fifth, a centre-crop `reframe`, was removed for being useless: it zoomed the whole frame without knowing where the offending element was.
 
 **Scope no longer closes doors.** A guess about what shape of violation this "is" used to disable most of the picker. Now that guess rides along as a *caveat* — the sentence explaining why a technique is a poor fit for a violation of this shape — and the operator decides. `available` reflects only what genuinely cannot run: an unimplemented method, a span longer than Veo will generate, or a price the day's budget will not cover.
 
@@ -508,11 +508,11 @@ Runtime: `--max-instances 1 --min-instances 1 --concurrency 20 --memory 2Gi --cp
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest -q        # 492 passed, 8 deselected
+.venv/bin/python -m pytest -q        # 490 passed, 8 deselected
 .venv/bin/python -m pytest -m live   # the 8: real Gemini, real Grafana
 ```
 
-500 collected, 492 offline, 8 marked `live`. ffmpeg must be on `PATH` — without it 85 tests error and 3 fail, which is the honest signal rather than a quiet skip.
+498 collected, 490 offline, 8 marked `live`. ffmpeg must be on `PATH` — without it 85 tests error and 3 fail, which is the honest signal rather than a quiet skip.
 
 ---
 
