@@ -36,6 +36,21 @@
 </div>
 
 <section style="border-top:none;padding-top:0">
+  {# The run that proves the whole pitch -- findings, a Veo-generated bridge,
+     a fix the verifier confirmed -- used to sit unmarked at position six
+     while the newest scratch runs greeted every judge. It gets named. #}
+  {% if showcase and not scoped %}
+  <a class="door starthere" href="/runs/{{ showcase }}">
+    <svg class="ic"><use href="#i-cleared"/></svg>
+    <span class="door-text">
+      <span class="door-title">Start here</span>
+      <span class="door-sub">The run that shows the whole loop: real findings with their statutes,
+        a failing span re-rendered by Veo, and a fix the verifier signed off.
+        Its cutting room has the before and after.</span>
+    </span>
+    <span class="door-go" aria-hidden="true">&rarr;</span>
+  </a>
+  {% endif %}
   {% if rows %}
   <div class="runlist" id="runlist">
     {% for item in rows %}
@@ -86,6 +101,11 @@
     <p>Runs you start appear here. Hand it a commercial or a YouTube link and
       watch it clear customs, market by market.</p>
     <p style="margin-top:16px"><a class="btn go" href="/new">Start a clearance</a></p>
+    {% if showcase %}
+    <p style="margin-top:12px">Or look before you leap:
+      <a class="cite" href="/runs/{{ showcase }}">see a finished clearance</a>
+      &mdash; real findings, the statutes behind them, and a shot re-rendered by Veo.</p>
+    {% endif %}
     {% else %}
     <span class="big">No runs yet</span>
     <p>Nothing has been cleared on this instance. Start one from the front door and it appears here.</p>

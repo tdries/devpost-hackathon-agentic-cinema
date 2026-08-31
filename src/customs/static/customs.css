@@ -387,7 +387,12 @@ section:first-of-type { border-top: none; }
   overflow: hidden;
 }
 .embed iframe { display: block; width: 100%; border: 0; background: var(--well); }
-.embed img { display: block; width: 100%; height: auto; }
+.embed img { display: block; width: 100%; height: auto; background: var(--well); }
+/* The lanes render is 1200x420 of Grafana PNG: without this it overflowed
+   every viewport under ~1250px sideways, and its 6-20s first render shoved
+   the page when it finally landed. aspect-ratio OVERRIDES a replaced
+   element's natural ratio, so it must match the render exactly. */
+.boardlanes { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 420; background: var(--well); }
 .embed.down .shade { padding: 40px; text-align: center; }
 .embed-note { padding: 10px 16px; border-top: 1px solid var(--line); color: var(--ink-3); font-size: 12px; }
 .embed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
@@ -790,6 +795,12 @@ html[data-theme="studio"] .a-analyst       { color: #2a63c4 !important; }
 html[data-theme="studio"] .a-guard         { color: #6a3fd0 !important; }
 html[data-theme="studio"] .a-remediator    { color: #c25412 !important; }
 html[data-theme="studio"] .a-verifier      { color: #0d8f6c !important; }
+/* The two the list forgot: brand yellow on near-white is 1.6:1 -- the
+   adjudicator badge simply vanished in the light theme -- and raw #34A853
+   at 10px is not much better for the publisher. */
+html[data-theme="studio"] .a-adjudicator   { color: #8a6d00 !important; }
+html[data-theme="studio"] .a-publisher     { color: #0d7a44 !important; }
+html[data-theme="studio"] .fix-why.caveat  { color: #8a6d00; }
 html[data-theme="studio"] .pane video { background: #dde3e8; }
 
 /* ---------- youtube link input ---------- */
@@ -1949,6 +1960,11 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 .door-sub { font-size: 12.5px; line-height: 1.45; color: var(--ink-3); }
 .door-go { font-size: 18px; color: var(--ink-3); transition: color .16s, transform .16s; }
 .door:hover .door-go { color: var(--signal); transform: translateX(3px); }
+
+/* The archive's pinned showcase card: the landing page's door, promoted to
+   the top of the run list and wearing the cleared colour. */
+.starthere { margin: 0 0 18px; max-width: 100ch; border-left: 3px solid var(--cleared); }
+.starthere .ic { color: var(--cleared); }
 
 /* The numbers, as a single band. They are the claim the rest of the page
    spends its words on, so they get to be read in one glance. */

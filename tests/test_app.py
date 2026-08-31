@@ -523,6 +523,27 @@ def test_status_reports_a_clearance_a_count_and_the_errored_market(console):
     assert body["overall"]["failing"] == ["FR", "SA"]
 
 
+def test_a_run_that_died_before_adjudication_is_not_go_for_launch(console):
+    """A corrupt or audio-only upload passes the door checks and then dies in
+    ingest: run status "error", zero findings anywhere, no adjudicator event.
+    clearance([]) says "cleared" for such a market, so this exact run used to
+    render GO FOR LAUNCH with every tile green and progress at "done" -- the
+    single most dishonest thing the board could do, and reachable by any
+    judge with a broken file."""
+    client, store, _launched, _jobs = console
+    run = store.create_run(asset_path=ASSET, markets=list(MARKETS))
+    store.set_run_t0(run.id, time.time())
+    store.emit(run.id, "pipeline", "stage_error: run: ffmpeg exited 234")
+    store.set_run_status(run.id, "error")
+
+    body = client.get(f"/runs/{run.id}/status").json()
+
+    assert all(m["errored"] for m in body["markets"].values())
+    assert body["overall"]["state"] == "no_go"
+    assert body["overall"]["cleared"] == 0
+    assert body["progress"]["stage"] == "stopped on an error"
+
+
 def test_a_market_with_no_verdict_yet_reads_as_pending(console):
     client, store, _launched, _jobs = console
     run = store.create_run(asset_path=ASSET, markets=list(MARKETS))
@@ -1724,7 +1745,14 @@ def test_the_lane_chart_is_a_grafana_panel_served_as_an_image(console):
     body = client.get(f"/runs/{run.id}").text
     assert "<iframe" not in body, "this stack refuses to be framed"
     assert "/lanes.png" in body, "the board asks Grafana for the picture"
-    assert "/d/customs-lanes" in body, "and links to the same panel in Grafana"
+    # The chip links to the PUBLIC timeline, not /d/customs-lanes: the lanes
+    # dashboard lives on the stack and greets anyone without a Grafana login
+    # with a sign-in wall, which is the worst answer to "open in Grafana".
+    from customs.config import settings as _settings
+    assert _settings.grafana_public_timeline in body, \
+        "and links to a Grafana page that opens without a login"
+    assert "/d/customs-lanes" not in body, \
+        "the login-walled operator dashboard stays out of the chips"
 
     # The render is Grafana's. When Grafana cannot be reached -- as here --
     # the route falls back to the app-drawn SVG rather than to a broken

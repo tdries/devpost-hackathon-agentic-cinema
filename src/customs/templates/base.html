@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}The Media Customs{% endblock %}</title>
+{# The unfurl. Without these, the live URL pasted into Devpost, Slack or X
+   renders a blank card -- no title, no image -- for a submission judged
+   partly on its links. Absolute URLs because scrapers resolve nothing. #}
+<meta property="og:title" content="The Media Customs">
+<meta property="og:description" content="Agentic ad clearance: an AI crew watches your commercial once, judges it against 98 jurisdictions in parallel, builds its own Grafana instrument panel, and re-renders the shots that fail.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://customs-app-akap4ao72a-ew.a.run.app/static/og.png">
+<meta name="twitter:card" content="summary_large_image">
 <script>/* Apply the style mode before first paint so it never flashes.
    Studio is the default on a phone: Mission is built for a dark room and a
    big screen, and it is the wrong thing to hand someone reading outdoors.

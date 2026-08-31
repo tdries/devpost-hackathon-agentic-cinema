@@ -61,6 +61,49 @@
     });
   }
 
+  /* The launcher used to let the natural first-time path through to a bare
+     plain-text 400 (no market ticked) or Google's raw 413 page (Cloud Run
+     kills bodies over 32 MiB before the app sees a byte, whatever the app's
+     own limit says). Both are caught here instead, inline, with the form
+     state intact. */
+  var launcher = document.querySelector("form.launcher");
+  if (launcher && asset) {
+    var warn = document.getElementById("launchwarn");
+    launcher.addEventListener("submit", function (event) {
+      var file = asset.files && asset.files[0];
+      var url = ((launcher.youtube_url && launcher.youtube_url.value) || "").trim();
+      var markets = launcher.querySelectorAll('input[name="markets"]:checked').length;
+      var wrong =
+        !markets ? "Tick at least one market to clear for." :
+        (!file && !url) ? "Hand over a master or paste a YouTube link first." :
+        (file && file.size > 30 * 1024 * 1024)
+          ? "That file is " + (file.size / (1024 * 1024)).toFixed(0) +
+            " MB and this door closes at 30 MB. Paste the ad as a YouTube " +
+            "link instead — the server fetches that itself."
+          : "";
+      if (wrong) {
+        event.preventDefault();
+        if (warn) {
+          warn.textContent = wrong;
+          warn.style.color = "var(--blocked)";
+          warn.hidden = false;
+        }
+        return;
+      }
+      if (warn) { warn.hidden = true; }
+      /* One press only, and say the upload is happening: a 30 MB master on
+         hotel wifi is otherwise a long, frozen silence. Disable on the next
+         tick so the button's value still submits. */
+      var button = launcher.querySelector("button[type=submit]");
+      if (button) {
+        window.setTimeout(function () {
+          button.disabled = true;
+          button.textContent = "Uploading the master…";
+        }, 0);
+      }
+    });
+  }
+
   /* An agent's message is data, not markup: it carries model-written text
      and file paths, so it is escaped before it reaches innerHTML. */
   function escapeHtml(text) {
@@ -274,7 +317,9 @@
       fetch("/runs/" + runId + "/status", { headers: { Accept: "application/json" } })
         .then(function (response) { return response.ok ? response.json() : null; })
         .then(function (data) {
-          if (!data) { return; }
+          /* A non-OK answer (a redeploy's brief 503) must reschedule too,
+             or one bad response freezes the board until a manual reload. */
+          if (!data) { window.setTimeout(poll, 10000); return; }
           paint(data);
           /* A finished run still moves: a Grafana alert can wake the
              Remediator an hour later and a resolved finding changes the

@@ -7,6 +7,11 @@
   <div class="rule-row"><span class="label">New clearance run</span></div>
   <h1 class="headline" style="font-size:clamp(22px,2.6vw,30px)">One asset. Every market. Before it ships.</h1>
   <p class="subline">The Media Customs watches the commercial the way a regulator would, market by market, and comes back with the statute behind every finding. Pick the markets, hand it the master, and the crew starts on the next screen.</p>
+  {% if showcase %}
+  <p class="subline" style="font-size:13.5px">Rather look before you leap?
+    <a class="cite" href="/runs/{{ showcase }}">See a finished clearance</a>
+    &mdash; real findings, the statutes behind them, and a failing shot re-rendered by Veo.</p>
+  {% endif %}
 </section>
 
 <section class="hero" style="padding:0 0 26px;border-top:none">
@@ -72,17 +77,24 @@
         <span class="pick">Choose a file</span>
         <span class="picked" id="picked">or drop the master here</span>
       </label>
-      <p class="limits">MP4 or MOV &middot; up to 120 seconds &middot; up to 200 MB</p>
+      {# The app would take 200 MB, but Cloud Run's front end rejects any
+         request body over 32 MiB before a byte reaches us -- so the form
+         promises what actually works and points bigger masters at the
+         YouTube path, which the server fetches itself. #}
+      <p class="limits">MP4 or MOV &middot; up to 120 seconds &middot; up to 30 MB &mdash; bigger master? Paste a YouTube link instead</p>
       <div class="rule-row" style="margin:20px 0 12px"><span class="label">Or a YouTube link</span></div>
       <input class="urlin" type="url" name="youtube_url" placeholder="https://youtu.be/&hellip;" autocomplete="off" spellcheck="false">
-      <p class="limits">Public YouTube video &middot; same limits apply &middot; fetched at up to 720p</p>
-      <p class="subline" style="font-size:13.5px">A run takes about four minutes: shot detection, a transcription and an observation pass per shot, then every market judged in parallel with a grounded citation for each finding.</p>
+      <p class="limits">Public YouTube video &middot; up to 120 seconds &middot; fetched at up to 720p &mdash; the way in for masters over 30 MB</p>
+      <p class="subline" style="font-size:13.5px">A run takes about four minutes for a 30-second spot &mdash; longer films take proportionally longer, because the analyst reads every shot: shot detection, a transcription and an observation pass per shot, then every market judged in parallel with a grounded citation for each finding.</p>
     </div>
     <div>
       <div class="rule-row"><span class="label">Markets</span></div>
       <div class="levels">
         {% for group in groups %}
-        <details class="level">
+        {# global and continental open with GLOBAL + EU pre-ticked: the
+           natural first-time path used to be pick-a-file, press Begin,
+           and land on a bare 400 because nothing was selected. #}
+        <details class="level"{% if group.level in ('global', 'continental') %} open{% endif %}>
           <summary>
             {% if group.level == 'channel' %}
             <svg class="ic lvl"><use href="#n-cut"/></svg>
@@ -104,7 +116,7 @@
           <div class="markets">
             {% for pack in family.packs %}
             <label class="market-pick">
-              <input type="checkbox" name="markets" value="{{ pack.market }}">
+              <input type="checkbox" name="markets" value="{{ pack.market }}"{% if pack.market in ('GLOBAL', 'EU') %} checked{% endif %}>
               {% if pack.level == 'channel' %}
               <svg class="ic lvl"><use href="#n-cut"/></svg>
               {% elif pack.level == 'global' %}
@@ -126,7 +138,10 @@
         <p class="subline">No market packs loaded. Check the markets/ directory.</p>
         {% endfor %}
       </div>
-      <div style="margin-top:22px"><button class="btn go" type="submit">Begin clearance</button></div>
+      <div style="margin-top:22px">
+        <p class="limits" id="launchwarn" role="alert" hidden></p>
+        <button class="btn go" type="submit">Begin clearance</button>
+      </div>
     </div>
   </form>
 </section>
