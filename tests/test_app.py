@@ -2158,3 +2158,36 @@ def test_the_gauge_is_centred_horizontally_in_the_card():
     css = Path("src/customs/static/customs.css").read_text()
     block = css[css.index(".cardgauge {"):css.index(".cardgauge {") + 160]
     assert "justify-content: center" in block, block
+
+
+def test_the_pickers_word_is_law(console, monkeypatch, tmp_path):
+    """Three explicit "Regenerate with Veo" picks once became two centre
+    crops, because everything except bridge collapsed into plan()'s choice.
+    Now: per_frame passes through as itself, overlay forces the single-frame
+    freeze landing, track keeps the relight propagation, and the webhook's
+    "auto" stays the planner's call. Called through _remediate_and_verify
+    directly because the console fixture stubs the background job."""
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    fid = "fnd_FR_FR-ALC-01_obs_shot_0_000"
+    got = []
+
+    monkeypatch.setattr(app_module.remediate, "plan",
+                        lambda finding, observation=None: "prop_swap")
+    monkeypatch.setattr(app_module.remediate, "apply",
+                        lambda run_arg, finding, chosen, workdir, db, **kw:
+                        got.append((chosen, kw.get("landing"))) or object())
+    monkeypatch.setattr(app_module.verify, "confirm",
+                        lambda *a, **k: True)
+    monkeypatch.setattr(app_module.persist, "snapshot", lambda *a, **k: "snap")
+    monkeypatch.setattr(app_module, "asset_duration", lambda run_arg: 42.0)
+
+    for method, expected in (("overlay", ("prop_swap", "freeze")),
+                             ("track", ("prop_swap", None)),
+                             ("per_frame", ("per_frame", None)),
+                             ("auto", ("prop_swap", None))):
+        store.update_finding_status(fid, "open", run_id=run.id)
+        # the underscored one: the console fixture stubs the public wrapper
+        assert app_module._remediate_and_verify(
+            run.id, fid, "FR", tmp_path, method=method) is True, method
+        assert got[-1] == expected, method

@@ -160,6 +160,12 @@
                 </span>
               </label>
               {% endfor %}
+              {# Filled by customs.js when a disabled method row is clicked.
+                 A disabled radio silently ignores the click and the form
+                 submits whatever was already checked -- which is how three
+                 explicit Veo picks once became two centre crops. The click
+                 now explains itself instead. #}
+              <p class="fix-why fix-refused" role="alert" hidden></p>
               <div class="fix-foot">
                 <span class="label">Generation budget {{ '%.2f'|format(budget_left) }} of {{ '%.2f'|format(budget_total) }} EUR left today</span>
                 <button class="btn go" type="submit">Run the fix</button>

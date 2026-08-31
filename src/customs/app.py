@@ -196,9 +196,13 @@ def _remediate_and_verify(run_id: str, finding_id: str, market: str,
             (o for o in db.observations(run_id) if o.id == finding.observation_id), None
         )
         with remediate.market_lock(run_id, market):
-            # "bridge" is the operator's call, never the planner's: it is
-            # the only method that regenerates footage. "overlay" means
-            # "patch it, and let plan() pick which kind of patch".
+            # The picker's word is law. It used to be "bridge or planner's
+            # choice", which turned three explicit picks into two centre
+            # crops and left per_frame unreachable from the console. Now:
+            # bridge and per_frame run exactly as named; overlay forces the
+            # single-frame freeze; track keeps the relight propagation.
+            # plan() still decides WHICH edit (re-letter, swap, revoice) --
+            # the picker chooses how it lands, not what it says.
             # The violation's shape is recorded, not enforced. It used to
             # refuse the job, and at concept scope it refused nearly every
             # one: the verifier is what decides whether an edit actually
@@ -207,7 +211,12 @@ def _remediate_and_verify(run_id: str, finding_id: str, market: str,
             # see it was expected. See customs/scope.py.
             shape = scope_mod.classify(finding, db.findings(run_id),
                                        asset_duration(run) or 120.0)
-            chosen = "bridge" if method == "bridge" else remediate.plan(finding, observation)
+            technique = remediate.plan(finding, observation)
+            chosen, landing = {
+                "bridge": ("bridge", None),
+                "per_frame": ("per_frame", None),
+                "overlay": (technique, "freeze"),
+            }.get(method, (technique, None))
             fits, why = scope_mod.allows(shape,
                                          "bridge" if chosen == "bridge" else "overlay",
                                          finding.substitutable)
@@ -216,19 +225,24 @@ def _remediate_and_verify(run_id: str, finding_id: str, market: str,
                         f"{finding.rule_id} ({market}) -> {shape} scope, "
                         f"running {chosen} anyway: {why}")
             db.emit(run_id, "remediator",
-                    f"{finding.rule_id} ({market}) -> planned {chosen}")
+                    f"{finding.rule_id} ({market}) -> planned {chosen}"
+                    + (" (single-frame freeze)" if landing == "freeze" else ""))
             span = max(0.0, finding.t_end - finding.t_start)
 
-            def _charge(_db=db, _run=run_id, _fid=finding.id, _span=span) -> None:
-                _db.record_spend("bridge", costs.estimate("bridge", _span),
+            def _charge(eur: float | None = None, *, _db=db, _run=run_id,
+                        _fid=finding.id, _span=span, _method=chosen) -> None:
+                _db.record_spend(_method,
+                                 eur if eur is not None
+                                 else costs.estimate(_method, _span),
                                  _run, _fid)
 
             change = remediate.apply(
                 run, finding, chosen, workdir, db,
                 replacement=replacement, intent=intent,
                 statement=observation.statement if observation else "",
-                spend=_charge if chosen == "bridge" else None,
-                on_event=lambda agent, message: db.emit(run_id, agent, message))
+                spend=_charge if chosen in ("bridge", "per_frame") else None,
+                on_event=lambda agent, message: db.emit(run_id, agent, message),
+                landing=landing)
             return verify.confirm(run, market, [change], db, workdir)
     except Exception as exc:  # noqa: BLE001 -- a background task has nobody to raise to
         log.exception("remediation of %s failed", finding_id)

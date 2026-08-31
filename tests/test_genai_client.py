@@ -49,3 +49,16 @@ def test_a_failed_operation_reports_why_instead_of_none():
     src = __import__("inspect").getsource(genai_client.generate_bridge)
     assert 'getattr(operation, "error", None)' in src, "the error is never read"
     assert src.index('"error"') < src.index('"response"'), "error must be read first"
+
+
+def test_an_input_image_refusal_is_its_own_exception():
+    """"The input image violates Vertex AI's usage guidelines" produced zero
+    seconds of video, so it must not be charged like an attempted generation
+    -- and the caller's fix is different frames, not a re-roll. The message
+    routing lives inline in generate_bridge; this pins it."""
+    from customs import genai_client
+
+    src = __import__("inspect").getsource(genai_client.generate_bridge)
+    assert "VeoRefusedInput" in src, "input refusals routed to their own class"
+    assert '"input image" in lowered' in src
+    assert issubclass(genai_client.VeoRefusedInput, RuntimeError)

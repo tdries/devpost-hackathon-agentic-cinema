@@ -66,6 +66,20 @@ class VeoBlocked(RuntimeError):
     """
 
 
+class VeoRefusedInput(RuntimeError):
+    """Veo's input filter rejected the anchor frames before generating.
+
+    A different gate from VeoBlocked: this one fires on the operation's
+    error, on the way IN ("the input image violates Vertex AI's usage
+    guidelines"), so zero seconds of video were produced. Veo bills per
+    second of output, which is why this must not be charged -- and why it
+    is worth its own class: the fix is different frames, not a re-roll.
+    Gemini's image editor and Veo do not share a safety policy; a frame
+    the editor happily produced and our anchor check passed can still be
+    refused here, most often over people and skin.
+    """
+
+
 def _seed_from(*paths) -> int:
     """A stable seed for these exact anchor frames.
 
@@ -147,6 +161,9 @@ def generate_bridge(prompt: str, first_frame, last_frame, seconds: float,
     if failed:
         message = (failed.get("message") if isinstance(failed, dict)
                    else getattr(failed, "message", None)) or str(failed)
+        lowered = message.lower()
+        if "input image" in lowered and ("violat" in lowered or "guidelines" in lowered):
+            raise VeoRefusedInput(f"Veo refused the anchor frames: {message}")
         raise RuntimeError(f"Veo refused the request: {message}")
 
     result = getattr(operation, "response", None) or getattr(operation, "result", None)

@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/agents-Google%20ADK-4285F4?logo=google&logoColor=white" alt="Google ADK">
   <img src="https://img.shields.io/badge/models-Gemini%203.7%20%C2%B7%20Veo%203.1-34A853?logo=googlegemini&logoColor=white" alt="Gemini and Veo">
   <img src="https://img.shields.io/badge/observability-Grafana%20Cloud-F46800?logo=grafana&logoColor=white" alt="Grafana Cloud">
-  <img src="https://img.shields.io/badge/tests-490%20passing-34A853" alt="490 tests">
+  <img src="https://img.shields.io/badge/tests-494%20passing-34A853" alt="494 tests">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache 2.0"></a>
 </p>
 
@@ -508,11 +508,11 @@ Runtime: `--max-instances 1 --min-instances 1 --concurrency 20 --memory 2Gi --cp
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest -q        # 490 passed, 8 deselected
+.venv/bin/python -m pytest -q        # 494 passed, 8 deselected
 .venv/bin/python -m pytest -m live   # the 8: real Gemini, real Grafana
 ```
 
-498 collected, 490 offline, 8 marked `live`. ffmpeg must be on `PATH` — without it 85 tests error and 3 fail, which is the honest signal rather than a quiet skip.
+502 collected, 494 offline, 8 marked `live`. ffmpeg must be on `PATH` — without it 85 tests error and 3 fail, which is the honest signal rather than a quiet skip.
 
 ---
 
