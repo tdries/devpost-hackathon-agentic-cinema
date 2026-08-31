@@ -41,6 +41,7 @@ the point of judgement.
 import logging
 import re
 import threading
+import time
 import uuid
 import wave
 from pathlib import Path
@@ -62,6 +63,10 @@ class RemediationBlocked(Exception):
 
 class RemediationError(Exception):
     """Raised when an edit could not be produced (no image back, no audio back)."""
+
+# Long enough to clear a per-minute window, short enough that an operator
+# watching the console does not think the run has died.
+_QUOTA_BACKOFF = 20
 
 # "bridge" is never chosen by plan(): it regenerates pixels and costs real
 # money, so it only ever runs because an operator picked it in the console
@@ -355,8 +360,9 @@ def _edit_image(instruction: str, image_bytes: bytes, mime_type: str = "image/pn
 
     Gemini-native editing (see the module docstring on Imagen): the frame is
     an input Part next to the instruction, and the response carries the
-    edited frame as an inline_data part. Any text part the model also returns
-    is ignored; only pixels matter here.
+    edited frame as an inline_data part. A text part alongside the pixels is
+    ignored; a text part INSTEAD of pixels is all the explanation there is
+    for a failed edit, so it is reported rather than dropped.
 
     `reference` is a frame from the same shot that has already been edited.
     A bridge edits two anchors, and editing them independently gives two
@@ -378,18 +384,62 @@ def _edit_image(instruction: str, image_bytes: bytes, mime_type: str = "image/pn
             "return this image edited.",
         ]
     parts += [types.Part.from_bytes(data=image_bytes, mime_type=mime_type)]
-    response = client().models.generate_content(
-        model=settings.model_image,
-        contents=parts,
-        config=types.GenerateContentConfig(response_modalities=["TEXT", "IMAGE"]),
-    )
+    # A bridge fires two to four of these inside half a minute -- head, head
+    # retry, tail, tail retry -- and the image model's per-minute quota does
+    # not always survive that. The 429 comes back instantly and used to end
+    # the whole bridge: two observed failures were the tail edit and an
+    # anchor retry, both aborting a bridge whose head was already correct.
+    # Sleeping once past the minute boundary is the entire fix; a second 429
+    # means the quota is genuinely gone, not merely busy, and that is worth
+    # telling the operator rather than sitting on.
+    # ponytail: fixed 20s sleep, no jitter and no Retry-After -- Vertex does
+    # not send one here. One serial caller, so there is nothing to stagger.
+    for attempt in (1, 2):
+        try:
+            response = client().models.generate_content(
+                model=settings.model_image,
+                contents=parts,
+                config=types.GenerateContentConfig(
+                    response_modalities=["TEXT", "IMAGE"]),
+            )
+            break
+        except Exception as exc:  # noqa: BLE001 -- only quota is retried
+            quota = (getattr(exc, "code", None) == 429
+                     or "RESOURCE_EXHAUSTED" in str(exc))
+            if not quota or attempt == 2:
+                raise
+            log.warning("%s hit its quota, retrying the edit in %ss",
+                        settings.model_image, _QUOTA_BACKOFF)
+            time.sleep(_QUOTA_BACKOFF)
     for candidate in (response.candidates or []):
         for part in (getattr(candidate.content, "parts", None) or []):
             inline = getattr(part, "inline_data", None)
             if inline and inline.data and (inline.mime_type or "").startswith("image/"):
                 return inline.data
+    # No pixels back, and until this the error said only that. Which of the
+    # reasons it is -- input-side filtering, output-side filtering, or a model
+    # that simply answered in prose -- lives in the finish_reason, in
+    # prompt_feedback, or in the text part it sent instead of an image, and
+    # all three were being discarded here. It is NOT safe to assume the edit
+    # itself was refused: the same instruction on a neighbouring shot came
+    # back edited and passed the modesty check minutes earlier, so an empty
+    # response is a fact about one request, not about the class of edit.
+    candidates = response.candidates or []
+    said = " ".join(
+        (getattr(part, "text", "") or "").strip()
+        for candidate in candidates
+        for part in (getattr(getattr(candidate, "content", None), "parts", None) or [])
+    ).strip()
+    detail = "; ".join(x for x in (
+        ", ".join(str(getattr(c, "finish_reason", "") or "") for c in candidates
+                  if getattr(c, "finish_reason", None)),
+        str(getattr(getattr(response, "prompt_feedback", None),
+                    "block_reason", "") or ""),
+        said[:300],
+    ) if x)
     raise RemediationError(
         f"{settings.model_image} returned no image part for this edit"
+        + (f" ({detail})" if detail else "")
     )
 
 def _compliant_line(finding: Finding, market_name: str) -> str:
