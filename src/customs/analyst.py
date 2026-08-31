@@ -184,7 +184,11 @@ def observe_shot(video_path, shot: Shot, workdir, on_event=None, transcripts=Non
     prompt_text = PROMPT.format(taxonomy=sorted(dims))
     parts = [prompt_text]
     for kf in keyframes:
-        parts.append(types.Part.from_bytes(data=kf.read_bytes(), mime_type="image/jpeg"))
+        # ponytail: extract_keyframes writes PNG. Declaring JPEG sent the
+        # vision model bytes that do not match the type it was told.
+        parts.append(types.Part.from_bytes(
+            data=kf.read_bytes(),
+            mime_type="image/png" if kf.suffix.lower() == ".png" else "image/jpeg"))
     transcript_text = TRANSCRIPT_UNAVAILABLE if transcripts is None else transcripts.get(shot.shot_id, TRANSCRIPT_UNAVAILABLE)
     parts.append(f"Transcript span: {transcript_text}")
     parts.append(f"Shot timecodes: t_start={shot.t_start:.3f}s, t_end={shot.t_end:.3f}s")
