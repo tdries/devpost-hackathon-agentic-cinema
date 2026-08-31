@@ -234,3 +234,58 @@ def bars(values: list[tuple[str, float]], *, width: int = 260, height: int = 40,
 #
 # So drawing here is not a workaround for something nobody switched on.
 # It is what works today against this stack.
+
+
+def gauge(open_n: int, total: int, *, width: int = 168, height: int = 104,
+          colour: str = CLEARED, label: str = "open") -> str:
+    """A Grafana-style radial gauge: how much is still open before clearance.
+
+    Inline, not a route and not a Grafana render. The archive already has
+    these numbers in hand -- market_states counts open, resolved and total
+    for every row on the page -- so fetching them again over the network
+    would be a round trip to learn something we were already holding.
+    That is what made the lane charts a separate URL and it does not apply
+    here.
+
+    The arc is Grafana's: 270 degrees, open at the bottom, filled
+    clockwise from the left. Empty is the whole run cleared.
+    """
+    total = max(int(total), 0)
+    open_n = max(0, min(int(open_n), total)) if total else 0
+    frac = (open_n / total) if total else 0.0
+
+    cx, cy, r = width / 2, height * 0.62, min(width, height * 1.3) * 0.36
+    start, sweep = 135.0, 270.0          # degrees, clockwise from lower-left
+
+    def point(deg):
+        import math
+        a = math.radians(deg)
+        return cx - r * math.cos(a), cy - r * math.sin(a)
+
+    x0, y0 = point(start)
+    x1, y1 = point(start - sweep)
+    track = (f'<path d="M{x0:.1f} {y0:.1f} A{r:.1f} {r:.1f} 0 1 1 {x1:.1f} {y1:.1f}" '
+             f'fill="none" stroke="currentColor" stroke-opacity=".16" '
+             f'stroke-width="9" stroke-linecap="round"/>')
+    fill = ""
+    if frac > 0:
+        xf, yf = point(start - sweep * frac)
+        large = 1 if sweep * frac > 180 else 0
+        fill = (f'<path d="M{x0:.1f} {y0:.1f} A{r:.1f} {r:.1f} 0 {large} 1 '
+                f'{xf:.1f} {yf:.1f}" fill="none" stroke="{colour}" '
+                f'stroke-width="9" stroke-linecap="round"/>')
+    return (
+        f'<svg xmlns="http://www.w3.org/2000/svg" class="gauge" '
+        f'width="{width}" height="{height}" viewBox="0 0 {width} {height}" '
+        f'role="img" aria-label="{open_n} of {total} {label}">'
+        f'{track}{fill}'
+        f'<text x="{cx:.1f}" y="{cy:.1f}" text-anchor="middle" '
+        f'font-family="ui-monospace,Menlo,monospace" font-size="26" '
+        # A zero is coloured too: an empty arc with a green nought reads
+        # "cleared and clean" at a glance, which a grey one does not.
+        f'font-weight="700" fill="{colour}">{open_n}</text>'
+        f'<text x="{cx:.1f}" y="{cy + 17:.1f}" text-anchor="middle" '
+        f'font-family="ui-monospace,Menlo,monospace" font-size="9" '
+        f'letter-spacing="1.6" fill="currentColor" fill-opacity=".5">'
+        f'{label.upper()}</text>'
+        f'</svg>')

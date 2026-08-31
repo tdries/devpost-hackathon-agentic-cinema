@@ -51,6 +51,10 @@
          reason the full version on the launch board is inline. #}
       <img class="cardlanes" src="/runs/{{ item.run.id }}/lanes.svg" alt=""
            loading="lazy" onerror="this.remove()">
+      {# Open items before clearance. Inline because the archive already
+         counted them -- fetching them back over the network would be a
+         round trip to learn what we were holding. #}
+      <span class="cardgauge">{{ item.gauge | safe }}</span>
       <span class="id">{{ item.run.id }}</span>
       <span class="asset">{{ item.run.asset_path.split('/')[-1] }}</span>
       <span class="when">{{ item.run.t0 | stamp }}</span>

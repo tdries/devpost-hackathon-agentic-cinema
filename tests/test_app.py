@@ -2050,3 +2050,43 @@ def test_every_method_the_picker_offers_is_a_method_the_route_accepts():
         # priced and gate-able: enough to prove it is a real, offerable method
         assert costs.estimate(method.key, 4.0) >= 0
         assert isinstance(costs.available(method.key, 4.0, 0.0), tuple)
+
+
+def test_a_run_card_shows_what_is_still_open_before_it_clears(client):
+    """The archive said which markets objected, never how much of it is
+    still standing. The gauge is that number, and it is drawn inline --
+    market_states already counted open, resolved and total for every row,
+    so fetching it back would be a round trip for what we were holding."""
+    from customs.app import clearance_gauge
+    from customs import state
+
+    test_client, _store, _run, _ = client
+    body = test_client.get("/runs").text
+    assert 'class="cardgauge"' in body
+
+    # nothing open on a clean run: an empty arc, in the cleared colour
+    clean = clearance_gauge({"FR": {"clearance": "cleared", "open": 0, "findings": 0}})
+    assert state.CLEARED in clean and clean.count("<path") == 1
+
+    # something open but cleared to air: amber, part-filled
+    noted = clearance_gauge({"FR": {"clearance": "cleared", "open": 2, "findings": 5}})
+    assert state.AT_RISK in noted and noted.count("<path") == 2
+    assert ">2<" in noted
+
+    # a blocked market outranks it
+    blocked = clearance_gauge({"FR": {"clearance": "cleared", "open": 1, "findings": 3},
+                               "SA": {"clearance": "blocked", "open": 4, "findings": 4}})
+    assert state.BLOCKED in blocked and ">5<" in blocked
+
+
+def test_agent_mode_can_be_handed_a_file_without_leaving_the_conversation(client):
+    """The point of agent mode is not having to go and find the form."""
+    test_client, _store, _run, _ = client
+    body = test_client.get("/agent").text
+    assert 'id="agent-drop"' in body and 'id="agent-file"' in body
+
+    js = test_client.get("/static/customs.js").text
+    # it posts to the SAME route the form uses, so the caps and the
+    # plain-text rejections do not have to be reimplemented
+    assert 'fetch("/runs", { method: "POST"' in js
+    assert '"GLOBAL"' in js and '"EU"' in js, "a run starts immediately, markets refine later"
