@@ -923,3 +923,55 @@ def test_the_image_pacer_lets_the_first_call_through_and_spaces_the_next(monkeyp
     now[0] += 40
     remediate._pace_image_call()
     assert slept == [26.0], "a call that is already late waits for nothing"
+
+
+def test_veo_refusing_the_anchors_gets_one_redress_and_pays_only_for_footage(
+        monkeypatch, tmp_path):
+    """Veo's input filter refused anchors Gemini's editor produced and our
+    own check passed -- a bare-shoulders Chanel shot, live, charged 3.68 EUR
+    for zero generated seconds. The retry has to be a different PICTURE with
+    the same goal: both anchors re-edited more conservatively, one more look,
+    and the charge lands only when footage actually comes back."""
+    from customs.genai_client import VeoRefusedInput
+    ok = {"fixed": True, "still_visible": "", "added": ""}
+    remediate, finding, ran = _bridge_fixture(
+        monkeypatch, tmp_path, [dict(ok) for _ in range(4)])
+
+    def veo(**kw):
+        ran["veo"] += 1
+        if ran["veo"] == 1:
+            raise VeoRefusedInput("Veo refused the anchor frames: the input "
+                                  "image violates Vertex AI's usage guidelines")
+        return kw["out_path"]
+    monkeypatch.setattr(remediate, "generate_bridge", veo)
+
+    remediate._bridge_span(tmp_path / "b.mp4", finding, None, tmp_path,
+                           tmp_path / "out.mp4",
+                           spend=lambda: ran.__setitem__("charged", ran["charged"] + 1),
+                           on_event=lambda a, m: ran["events"].append(m))
+
+    assert ran["veo"] == 2, "one redress, one more look"
+    assert ran["edits"] == 4, "both anchors re-edited for the second look"
+    assert ran["charged"] == 1, "charged once, for footage that exists"
+    assert any("re-editing both" in m for m in ran["events"])
+
+
+def test_veo_refusing_twice_gives_up_clearly_and_charges_nothing(
+        monkeypatch, tmp_path):
+    from customs.genai_client import VeoRefusedInput
+    ok = {"fixed": True, "still_visible": "", "added": ""}
+    remediate, finding, ran = _bridge_fixture(
+        monkeypatch, tmp_path, [dict(ok) for _ in range(4)])
+
+    def veo(**kw):
+        ran["veo"] += 1
+        raise VeoRefusedInput("the input image violates the guidelines")
+    monkeypatch.setattr(remediate, "generate_bridge", veo)
+
+    with pytest.raises(remediate.RemediationError, match="never go through Veo"):
+        remediate._bridge_span(tmp_path / "b.mp4", finding, None, tmp_path,
+                               tmp_path / "out.mp4",
+                               spend=lambda: ran.__setitem__("charged", ran["charged"] + 1),
+                               on_event=lambda a, m: ran["events"].append(m))
+
+    assert ran["veo"] == 2 and ran["charged"] == 0

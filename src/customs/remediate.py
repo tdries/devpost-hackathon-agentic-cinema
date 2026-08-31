@@ -55,8 +55,9 @@ from google.genai import types
 
 from customs import costs, media
 from customs.config import settings
-from customs.genai_client import (VeoBlocked, client, generate_bridge,
-                                  generate_json, generate_json_image)
+from customs.genai_client import (VeoBlocked, VeoRefusedInput, client,
+                                  generate_bridge, generate_json,
+                                  generate_json_image)
 from customs.media import Shot
 from customs.packs import load as load_packs
 from customs.schema import ChangeRecord, Finding, Observation
@@ -262,6 +263,18 @@ _BRIDGE_PROMPT = (
     "Same camera move, same lighting, same performers, same wardrobe, same "
     "set, same framing."
 )
+
+# Appended to the anchor edit when Veo's input filter refuses the frames.
+# Same goal, different picture: Veo's gate is far more conservative about
+# people and skin than the image editor that produced the frame or the
+# check that passed it, so the second attempt over-corrects on purpose.
+_ANCHOR_RETRY_EXTRA = (
+    " A downstream safety filter refused the previous version of this frame. "
+    "Redo the edit more conservatively toward the same goal: where a person "
+    "is visible, make the clothing unmistakably modest -- opaque fabric, "
+    "covered shoulders, chest and midriff -- and mute anything else in the "
+    "frame a strict reviewer could object to. Change as little of the rest "
+    "of the frame as possible.")
 
 _DEFAULT_REPLACEMENT = {
     "relettering": "the same sentence translated into the language of {market_name}",
@@ -583,7 +596,8 @@ def _box_for(finding: Finding, before: Path, store=None) -> list:
 
 
 def _land_edit(base: Path, before: Path, edited: Path, finding: Finding,
-               workdir: Path, out_path: Path, box: list) -> str:
+               workdir: Path, out_path: Path, box: list,
+               landing: str | None = None) -> str:
     """Get an edited still onto the master, and say how it was done.
 
     With a box, the edit is landed as a RELIGHT: the ratio edited/original
@@ -595,7 +609,15 @@ def _land_edit(base: Path, before: Path, edited: Path, finding: Finding,
     Without a box there is nothing to constrain the edit to, so it falls
     back to what this always did: hold the edited still over the span.
     That is a freeze frame, and it is why a box is worth locating.
+
+    `landing="freeze"` forces the freeze: it is what the console's "Patch
+    one frame" promises, and the picker's word is kept even when a box
+    exists. Anything else means choose as above -- which is exactly what
+    "Propagate the change" promises when a box exists.
     """
+    if landing == "freeze":
+        media.overlay_image(base, edited, finding.t_start, finding.t_end, out_path)
+        return "freeze"
     if box:
         ratio = media.relight_ratio(before, edited, box,
                                     workdir / f"{before.stem}_ratio.png")
@@ -608,7 +630,8 @@ def _land_edit(base: Path, before: Path, edited: Path, finding: Finding,
 
 def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str | None,
                      before: Path, workdir: Path, out_path: Path,
-                     intent: str | None = None, store=None) -> tuple[Path, str]:
+                     intent: str | None = None, store=None,
+                     landing: str | None = None) -> tuple[Path, str]:
     """relettering / prop_swap: edit the keyframe, fit it, composite the span."""
     market_name = _market_name(finding.market)
     siblings = _siblings_for(finding, store)
@@ -629,7 +652,7 @@ def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str
         edited = media.fit_image(edited_raw, base,
                                  before.with_name(f"{before.stem}_edited.png"))
         _land_edit(base, before, edited, finding, workdir, out_path,
-                   _box_for(finding, before, store))
+                   _box_for(finding, before, store), landing=landing)
         return edited, instruction
     if replacement is None:
         subject = _DEFAULT_REPLACEMENT[method].format(market_name=market_name)
@@ -652,7 +675,7 @@ def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str
     edited = media.fit_image(edited_raw, base, before.with_name(f"{before.stem}_edited.png"))
 
     _land_edit(base, before, edited, finding, workdir, out_path,
-               _box_for(finding, before, store))
+               _box_for(finding, before, store), landing=landing)
     return edited, instruction
 
 _GENERIC_EDIT = (
@@ -915,57 +938,69 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
     # and Veo spends the span morphing one answer into the other -- which
     # looks exactly like the artefact it is. Chained, both ends hold the same
     # object and Veo only has to move it.
-    anchors = []
-    first_edit: bytes | None = None
-    for tag, when in (("head", finding.t_start), ("tail", max(finding.t_start, finding.t_end - 0.08))):
-        span = Shot(shot_id=f"bridge_{tag}", t_start=when, t_end=when + 0.04)
-        raw = media.extract_keyframes(base, span, workdir / "bridge", per_shot=1)[0]
+    def _make_anchors(extra: str = "") -> list[Path]:
+        """Both anchors, edited, checked and fitted.
 
-        # Check the anchor before it is worth anything. Veo costs about
-        # EUR 1.88 and several minutes; this is one image call. One retry,
-        # told what went wrong, then give up rather than generate four
-        # seconds of motion between two frames that never got fixed.
-        attempt_instruction = instruction
-        for attempt in (1, 2):
-            edited_bytes = _edit_image(attempt_instruction, raw.read_bytes(),
-                                       reference=first_edit)
-            verdict = _anchor_check(edited_bytes, finding, statement, instruction)
-            if verdict.get("unchecked"):
-                _note(on_event, f"bridge {tag}: could not be checked, proceeding")
-                break
-            if verdict.get("fixed") and not (verdict.get("added") or "").strip():
-                _note(on_event, f"bridge {tag}: checked, compliant")
-                break
-            problem = ", ".join(x for x in (verdict.get("still_visible"),
-                                            verdict.get("added")) if x)
-            if attempt == 2:
-                raise RemediationError(
-                    f"the edited {tag} frame still does not satisfy "
-                    f"{finding.rule_id}: {problem or 'unchanged'}. Nothing was "
-                    f"generated, so nothing was charged.")
-            _note(on_event, f"bridge {tag}: rejected ({problem}), retrying")
-            attempt_instruction = (
-                f"{instruction} A previous attempt failed because: {problem}. "
-                f"Fix that specifically, and do not add anything to the scene.")
+        `extra` re-phrases the edit toward the same goal. It exists because
+        Veo's input filter sometimes refuses frames Gemini's editor happily
+        produced and our own check passed -- and the second try then has to
+        be a different PICTURE, not different words to Veo.
+        """
+        built: list[Path] = []
+        first_edit: bytes | None = None
+        base_instruction = instruction + extra
+        for tag, when in (("head", finding.t_start), ("tail", max(finding.t_start, finding.t_end - 0.08))):
+            span = Shot(shot_id=f"bridge_{tag}", t_start=when, t_end=when + 0.04)
+            raw = media.extract_keyframes(base, span, workdir / "bridge", per_shot=1)[0]
 
-        if first_edit is None:
-            first_edit = edited_bytes
-        edited_raw = workdir / f"bridge_{tag}_edited_raw.png"
-        edited_raw.write_bytes(edited_bytes)
-        fitted = media.fit_image(edited_raw, base, workdir / f"bridge_{tag}.png")
-        anchors.append(fitted)
-        # Kept beside the change record, not left in the scratch workdir,
-        # which is never mirrored. These two frames ARE the brief Veo was
-        # given: everything in the generated seconds is supposed to trace
-        # back to them, so they are the only way to judge whether Veo
-        # invented something or was handed it.
-        if keep_dir is not None and change_id:
-            keep_dir.mkdir(parents=True, exist_ok=True)
-            try:
-                (keep_dir / f"{change_id}_anchor_{tag}.png").write_bytes(
-                    fitted.read_bytes())
-            except OSError:
-                pass
+            # Check the anchor before it is worth anything. Veo costs about
+            # EUR 1.88 and several minutes; this is one image call. One retry,
+            # told what went wrong, then give up rather than generate four
+            # seconds of motion between two frames that never got fixed.
+            attempt_instruction = base_instruction
+            for attempt in (1, 2):
+                edited_bytes = _edit_image(attempt_instruction, raw.read_bytes(),
+                                           reference=first_edit)
+                verdict = _anchor_check(edited_bytes, finding, statement, base_instruction)
+                if verdict.get("unchecked"):
+                    _note(on_event, f"bridge {tag}: could not be checked, proceeding")
+                    break
+                if verdict.get("fixed") and not (verdict.get("added") or "").strip():
+                    _note(on_event, f"bridge {tag}: checked, compliant")
+                    break
+                problem = ", ".join(x for x in (verdict.get("still_visible"),
+                                                verdict.get("added")) if x)
+                if attempt == 2:
+                    raise RemediationError(
+                        f"the edited {tag} frame still does not satisfy "
+                        f"{finding.rule_id}: {problem or 'unchanged'}. Nothing was "
+                        f"generated, so nothing was charged.")
+                _note(on_event, f"bridge {tag}: rejected ({problem}), retrying")
+                attempt_instruction = (
+                    f"{base_instruction} A previous attempt failed because: {problem}. "
+                    f"Fix that specifically, and do not add anything to the scene.")
+
+            if first_edit is None:
+                first_edit = edited_bytes
+            edited_raw = workdir / f"bridge_{tag}_edited_raw.png"
+            edited_raw.write_bytes(edited_bytes)
+            fitted = media.fit_image(edited_raw, base, workdir / f"bridge_{tag}.png")
+            built.append(fitted)
+            # Kept beside the change record, not left in the scratch workdir,
+            # which is never mirrored. These two frames ARE the brief Veo was
+            # given: everything in the generated seconds is supposed to trace
+            # back to them, so they are the only way to judge whether Veo
+            # invented something or was handed it.
+            if keep_dir is not None and change_id:
+                keep_dir.mkdir(parents=True, exist_ok=True)
+                try:
+                    (keep_dir / f"{change_id}_anchor_{tag}.png").write_bytes(
+                        fitted.read_bytes())
+                except OSError:
+                    pass
+        return built
+
+    anchors = _make_anchors()
 
     seconds = costs.bridge_seconds(finding.t_end - finding.t_start)
     # _BRIDGE_PROMPT, not `instruction`: the anchors already carry the swap,
@@ -982,26 +1017,48 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
             seconds=seconds, out_path=workdir / f"bridge{attempt}.mp4")
 
     clip = None
-    for attempt in (1, 2):
+    blocked_tries = 0
+    redressed = False
+    attempt = 0
+    while clip is None:
+        attempt += 1
         try:
             clip = _generate(attempt)
         except VeoBlocked as exc:
             # Google does not charge for a blocked video, so neither do we.
+            blocked_tries += 1
             _note(on_event, f"bridge: Veo's safety filter rejected the "
-                            f"generation (attempt {attempt}/2), not charged")
-            if attempt == 2:
+                            f"generation (attempt {blocked_tries}/2), not charged")
+            if blocked_tries == 2:
                 raise RemediationError(
                     "Veo's safety filter rejected this generation twice. "
                     "Nothing was charged. Try a different remedy, or patch "
                     "the frame instead of regenerating the shot.") from exc
-            continue
+        except VeoRefusedInput as exc:
+            # The INPUT gate, not the output one: Veo would not take the
+            # anchor frames at all, so zero seconds were generated and
+            # nothing is charged. Retrying the same frames is pointless --
+            # the fix is a different picture with the same goal, so both
+            # anchors are re-edited more conservatively and Veo gets one
+            # more look. New anchors also mean a new derived seed.
+            if redressed:
+                raise RemediationError(
+                    "Veo refused the anchor frames twice, even re-dressed "
+                    "more conservatively: its input filter will not take "
+                    "this scene. Nothing was generated, so nothing was "
+                    "charged. Patch the frame instead -- the patch methods "
+                    "never go through Veo.") from exc
+            redressed = True
+            _note(on_event, "bridge: Veo refused the anchor frames (input "
+                            "filter); re-editing both more conservatively "
+                            "and trying once more, not charged")
+            anchors = _make_anchors(_ANCHOR_RETRY_EXTRA)
         except Exception:
             # Any other failure means the generation was attempted and
             # billed, whether or not it came back.
             if spend is not None:
                 spend()
             raise
-        break
 
     # Charged once, for a generation that actually happened.
     if spend is not None:
@@ -1038,7 +1095,8 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
 
 def apply(run, finding: Finding, method: str, workdir, store, *,
           replacement: str | None = None, intent: str | None = None,
-          statement: str = "", spend=None, on_event=None) -> ChangeRecord:
+          statement: str = "", spend=None, on_event=None,
+          landing: str | None = None) -> ChangeRecord:
     """Apply one remediation to this market's localized master.
 
     Args:
@@ -1081,12 +1139,13 @@ def apply(run, finding: Finding, method: str, workdir, store, *,
     with market_lock(run.id, finding.market):
         return _apply_locked(run, finding, method, workdir, store, intent,
                              replacement, changes_dir, statement=statement,
-                             spend=spend, on_event=on_event)
+                             spend=spend, on_event=on_event, landing=landing)
 
 def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
                   intent: str | None,
                   replacement: str | None, changes_dir: Path,
-                  statement: str = "", spend=None, on_event=None) -> ChangeRecord:
+                  statement: str = "", spend=None, on_event=None,
+                  landing: str | None = None) -> ChangeRecord:
     """apply()'s body, with this market's master already locked."""
     master = localized_master(run, finding.market, store)
     base = master if master.exists() else Path(run.asset_path)
@@ -1116,7 +1175,8 @@ def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
     try:
         edit = _run_method(run, finding, method, replacement, intent, base, before,
                            workdir, staged, store, changes_dir, change_id,
-                           statement=statement, spend=spend, on_event=on_event)
+                           statement=statement, spend=spend, on_event=on_event,
+                           landing=landing)
     except Exception:
         # A half-done remediation must never look like a done one. The finding
         # goes straight back to open, so clearance() counts it again and the
@@ -1178,7 +1238,8 @@ def _run_method(run, finding: Finding, method: str, replacement: str | None,
                 intent: str | None,
                 base: Path, before: Path, workdir: Path, staged: Path, store,
                 changes_dir: Path | None = None, change_id: str = "",
-                statement: str = "", spend=None, on_event=None) -> str:
+                statement: str = "", spend=None, on_event=None,
+                landing: str | None = None) -> str:
     """Produce the edited video at `staged` and return the change description.
 
     Split out of apply() so every failure mode of every method funnels through
@@ -1189,7 +1250,7 @@ def _run_method(run, finding: Finding, method: str, replacement: str | None,
     if method in ("relettering", "prop_swap"):
         _edited, instruction = _edit_frame_onto(
             base, finding, method, replacement, before, workdir, staged,
-            intent=intent, store=store)
+            intent=intent, store=store, landing=landing)
         # The full edit instruction goes in the run's event log, not in the
         # change description: the description is read on dashboards and in
         # Grafana annotations, where a paragraph of prompt is noise, but

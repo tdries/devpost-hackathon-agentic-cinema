@@ -538,6 +538,28 @@
   })();
 
 
+  /* ---------- 6b. a disabled fix option explains itself ----------
+     A disabled radio ignores the click and the form quietly submits the
+     already-checked default -- which once turned three explicit "Regenerate
+     with Veo" picks into two centre crops. The click now says why the row
+     cannot run instead of pretending nothing happened. */
+
+  document.querySelectorAll(".fix-opt.off").forEach(function (row) {
+    row.addEventListener("click", function () {
+      var form = row.closest("form");
+      var note = form && form.querySelector(".fix-refused");
+      if (!note) { return; }
+      var name = row.querySelector(".fix-m b");
+      var why = row.querySelector(".fix-why");
+      note.textContent = (name ? name.textContent : "That option") +
+        " cannot run right now: " +
+        (why ? why.textContent : "see the note on the option.") +
+        " Your current selection is unchanged.";
+      note.hidden = false;
+    });
+  });
+
+
   /* ---------- 7. a market room with work in flight ----------
      Remediation takes a minute of model calls and ffmpeg. The room is
      server-rendered, so without this the operator watches a row that says
