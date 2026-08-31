@@ -64,9 +64,53 @@ class RemediationBlocked(Exception):
 class RemediationError(Exception):
     """Raised when an edit could not be produced (no image back, no audio back)."""
 
-# Long enough to clear a per-minute window, short enough that an operator
-# watching the console does not think the run has died.
-_QUOTA_BACKOFF = 20
+# The image model's ceiling, read from the project's own Vertex quotas
+# rather than guessed: gemini-3.1-flash-image appears in none of the 366
+# quotaInfos for this project, so it takes the default of
+#
+#   GenContentImageGenRequestsPerMinutePerProjectPerBaseModelGlobal = 2
+#
+# TWO image-generation requests per minute, for the whole project. That is
+# the entire budget a bridge has, and a bridge spends exactly two on a clean
+# run (head anchor, tail anchor) -- so an unspaced pair uses the minute up
+# and any retry is a certain 429, which is what happened four times on the
+# Chanel spot. Reacting to the 429 cannot win; the calls have to be spaced
+# so the second one is asking a fresh minute.
+#
+# ponytail: one process-wide gate, because the quota is project-wide and
+# this service runs a single instance by design (see scripts/deploy.sh). A
+# second replica would need a shared one, and would also halve everyone's
+# budget, so this is the same assumption the rest of the service already
+# makes rather than a new one.
+#
+# The real fix is a quota increase on that metric. Until then this trades
+# roughly 30 seconds per bridge for a bridge that completes, which against
+# a Veo generation of several minutes and EUR 1.88 is not a close call.
+_IMAGE_MIN_INTERVAL_S = 31
+_image_gate = threading.Lock()
+_last_image_call = 0.0
+
+# Longer than a minute: a 429 means the window is already spent, and the
+# next one does not open until 60s after the call that spent it.
+_QUOTA_BACKOFF = 65
+
+
+def _pace_image_call() -> None:
+    """Block until this process may make another image-generation request.
+
+    The lock is held across the sleep on purpose: the quota is counted per
+    project, not per caller, so two threads waiting independently would
+    both wake and both spend the same minute.
+    """
+    global _last_image_call
+    with _image_gate:
+        waited = time.monotonic() - _last_image_call
+        if waited < _IMAGE_MIN_INTERVAL_S:
+            delay = _IMAGE_MIN_INTERVAL_S - waited
+            log.info("pacing the image model: %.0fs, to stay inside "
+                     "2 requests per minute", delay)
+            time.sleep(delay)
+        _last_image_call = time.monotonic()
 
 # "bridge" is never chosen by plan(): it regenerates pixels and costs real
 # money, so it only ever runs because an operator picked it in the console
@@ -384,18 +428,14 @@ def _edit_image(instruction: str, image_bytes: bytes, mime_type: str = "image/pn
             "return this image edited.",
         ]
     parts += [types.Part.from_bytes(data=image_bytes, mime_type=mime_type)]
-    # A bridge fires two to four of these inside half a minute -- head, head
-    # retry, tail, tail retry -- and the image model's per-minute quota does
-    # not always survive that. The 429 comes back instantly and used to end
-    # the whole bridge: two observed failures were the tail edit and an
-    # anchor retry, both aborting a bridge whose head was already correct.
-    # Sleeping once past the minute boundary is the entire fix; a second 429
-    # means the quota is genuinely gone, not merely busy, and that is worth
-    # telling the operator rather than sitting on.
-    # ponytail: fixed 20s sleep, no jitter and no Retry-After -- Vertex does
-    # not send one here. One serial caller, so there is nothing to stagger.
+    # Paced, not merely retried. At two requests per minute a bridge's two
+    # anchors are the whole budget, so asking for them back to back spends
+    # the minute and the 429 is arithmetic rather than bad luck. The retry
+    # below is what is left for when the pacing is not enough -- another
+    # run in the same project, or a window this process cannot see.
     for attempt in (1, 2):
         try:
+            _pace_image_call()
             response = client().models.generate_content(
                 model=settings.model_image,
                 contents=parts,
@@ -811,6 +851,16 @@ def _per_frame_span(base: Path, finding: Finding, replacement: str | None,
     instruction = _frame_instruction(finding, replacement, intent, market_name)
     if spend is not None:
         spend(costs.estimate("per_frame", finding.t_end - finding.t_start))
+
+    # One image call per frame, against a quota of two per minute, is the one
+    # method the pacing in _edit_image cannot hide: a four second span is
+    # around half an hour of mostly waiting. Say so before starting rather
+    # than leaving an operator watching a progress line crawl -- the number
+    # is what tells them to raise the quota or pick another method.
+    if len(frames) > 2:
+        minutes = len(frames) * _IMAGE_MIN_INTERVAL_S / 60
+        _note(on_event, f"{len(frames)} frames at two image generations per "
+                        f"minute: about {minutes:.0f} minutes of pacing")
 
     previous: bytes | None = None
     for i, frame in enumerate(frames):

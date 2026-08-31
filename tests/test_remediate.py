@@ -19,6 +19,14 @@ from customs.store import Store
 
 # --- fixtures / helpers ---
 
+@pytest.fixture(autouse=True)
+def _no_image_pacing(monkeypatch):
+    """_edit_image waits 31s between calls to stay inside the project's quota
+    of two image generations per minute. Tests do not have a minute; the gate
+    itself is tested with a fake clock below."""
+    monkeypatch.setattr(remediate, "_IMAGE_MIN_INTERVAL_S", 0)
+
+
 @pytest.fixture(scope="session")
 def clip(tmp_path_factory):
     # one visual cut plus a real (silent) audio track, so both the video edit
@@ -905,3 +913,26 @@ def test_no_image_back_carries_the_refusal_reason_not_just_the_absence(monkeypat
     assert "IMAGE_SAFETY" in message
     assert "PROHIBITED_CONTENT" in message
     assert "edit clothing on people" in message
+
+
+def test_the_image_pacer_lets_the_first_call_through_and_spaces_the_next(monkeypatch):
+    """Two image generations per minute is the project's whole budget, and a
+    bridge wants two. Asking for them back to back is what made the 429
+    arithmetic rather than bad luck."""
+    now, slept = [1000.0], []
+    monkeypatch.setattr(remediate, "_IMAGE_MIN_INTERVAL_S", 31)
+    monkeypatch.setattr(remediate, "_last_image_call", 0.0)
+    monkeypatch.setattr(remediate.time, "monotonic", lambda: now[0])
+    monkeypatch.setattr(remediate.time, "sleep",
+                        lambda s: (slept.append(s), now.__setitem__(0, now[0] + s)))
+
+    remediate._pace_image_call()
+    assert slept == [], "the first call has nothing to wait for"
+
+    now[0] += 5
+    remediate._pace_image_call()
+    assert slept == [26.0], "five seconds in, 26 are still owed"
+
+    now[0] += 40
+    remediate._pace_image_call()
+    assert slept == [26.0], "a call that is already late waits for nothing"
