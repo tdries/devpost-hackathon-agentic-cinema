@@ -2090,3 +2090,27 @@ def test_agent_mode_can_be_handed_a_file_without_leaving_the_conversation(client
     # plain-text rejections do not have to be reimplemented
     assert 'fetch("/runs", { method: "POST"' in js
     assert '"GLOBAL"' in js and '"EU"' in js, "a run starts immediately, markets refine later"
+
+
+def test_the_gauge_is_centred_on_its_arc_not_on_its_box():
+    """A 270-degree arc is not symmetric about its own centre: it reaches
+    a full radius above and only r*sin(45) below. Centring on the box left
+    three times as much air above the gauge as below it."""
+    import math, re
+    from customs import spark
+
+    svg = spark.gauge(3, 12, width=168, height=104)
+    ys = [float(y) for y in re.findall(r'[ML]-?[0-9.]+ (-?[0-9.]+)', svg)]
+    top, bottom = min(ys), max(ys)
+    above, below = top, 104 - bottom
+    assert abs(above - below) < 1.5, f"{above:.1f}px above, {below:.1f}px below"
+
+
+def test_the_gauge_is_centred_horizontally_in_the_card():
+    """The card is a grid, so the span holding the gauge is a grid item.
+    `margin: 0 auto` on the svg centred it inside a box that was not
+    itself centred; the container does the centring now."""
+    from pathlib import Path
+    css = Path("src/customs/static/customs.css").read_text()
+    block = css[css.index(".cardgauge {"):css.index(".cardgauge {") + 160]
+    assert "justify-content: center" in block, block

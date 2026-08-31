@@ -2173,8 +2173,11 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 /* The clearance gauge, under the thumbnail on a run card. How much is
    still open before this run can ship: empty is cleared and clean, a full
    arc is nothing dealt with yet. */
-.cardgauge { display: block; margin: 2px 0 -2px; }
-.cardgauge .gauge { display: block; margin: 0 auto; color: var(--ink-3); }
+/* Flex, not `margin: 0 auto` on the child. The card is a grid and the
+   span is a grid item, so the auto margins were centring the svg inside
+   a box that was not itself centred. */
+.cardgauge { display: flex; justify-content: center; margin: 2px 0 -2px; }
+.cardgauge .gauge { display: block; color: var(--ink-3); }
 .runlist:not(.as-rows) .runrow .cardgauge { order: 2; }
 .runlist.as-rows .cardgauge { display: none; }
 
