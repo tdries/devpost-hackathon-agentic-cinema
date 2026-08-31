@@ -55,6 +55,23 @@ What the system believes, so you do not contradict it:
   offending element can be swapped for a permitted one.
 * The guard refuses to auto-edit anything written on a protected basis. That
   refusal is a feature and you never work around it.
+
+Charting. Call data_schema() first, then chart() with the panels you want.
+Any Grafana panel type. The two shapes that cover most questions:
+
+  one value per thing (bars, slices, a stat) -- instant: true
+    sum by (dimension) (count_over_time({app="customs", kind="observation"} [$__range]))
+
+  a line over time (evolution, trend) -- instant: false
+    sum(count_over_time({app="customs", kind="observation"} [$__interval]))
+
+Two traps. A field that is not a stream label needs `| json` before you can
+group on it: run_id, severity, confidence and rule_id on observations all
+live in the line body, so "per run" is
+    sum by (run_id) (count_over_time({app="customs", kind="observation"} | json [$__range]))
+And a count over time needs a range selector: [$__range] for one number,
+[$__interval] for a line. Without one, Loki returns nothing and the panel
+draws "No data".
 """
 
 
@@ -280,6 +297,61 @@ def dashboard_spec(title: str, run_id: str, group_by: str) -> dict:
     }
 
 
+_SOURCES = {
+    "loki": {"type": "loki", "uid": "grafanacloud-logs"},
+    "prom": {"type": "prometheus", "uid": "grafanacloud-prom"},
+}
+
+# Grafana core panel types. Listed so the agent picks a real one rather than
+# inventing "linechart"; the builder is otherwise indifferent to which.
+VIZ_TYPES = (
+    "timeseries", "barchart", "piechart", "stat", "gauge", "bargauge",
+    "table", "heatmap", "histogram", "state-timeline", "status-history",
+    "xychart", "trend", "logs", "candlestick", "text",
+)
+
+
+def chart_spec(title: str, panels: list[dict], time_from: str = "now-24h") -> dict:
+    """A Grafana dashboard of arbitrary panels, laid out two per row.
+
+    The agent writes the panels; this only turns them into the JSON Grafana
+    wants. Each panel is {type, title, source: loki|prom, expr, instant}.
+
+    ponytail: fixed two-up grid rather than a layout engine. Grafana's
+    gridPos is 24 columns; anything cleverer is a panel nobody asked for.
+    """
+    out = []
+    for i, panel in enumerate(panels):
+        kind = (panel.get("type") or "timeseries").strip()
+        source = _SOURCES.get((panel.get("source") or "loki").strip(), _SOURCES["loki"])
+        expr = (panel.get("expr") or "").strip()
+        # An instant query is one value per series (a bar, a slice, a stat).
+        # A range query is a line over time. Getting this wrong is why a
+        # barchart sometimes draws a time series instead of bars.
+        instant = bool(panel.get("instant"))
+        target = {"expr": expr, "refId": "A",
+                  "legendFormat": panel.get("legend") or ""}
+        if source["type"] == "prometheus":
+            target |= {"instant": instant, "range": not instant}
+        elif instant:
+            target["queryType"] = "instant"
+        out.append({
+            "type": kind,
+            "title": panel.get("title") or kind,
+            "gridPos": {"h": 10, "w": 12, "x": (i % 2) * 12, "y": (i // 2) * 10},
+            "datasource": source,
+            "targets": [target],
+            "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}},
+        })
+    return {
+        "uid": f"customs-adhoc-{int(time.time() * 1000)}"[:40],
+        "title": title or "Ad hoc",
+        "tags": ["customs", "adhoc"],
+        "time": {"from": time_from, "to": "now"},
+        "panels": out,
+    }
+
+
 # --- the agent itself ----------------------------------------------------
 #
 # An ADK LlmAgent with FunctionTools over the functions above, run one turn
@@ -481,11 +553,52 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
         turn.view_external = made["url"]
         return json.dumps(made)
 
+    def chart(panels: str, title: str = "", time_from: str = "now-24h") -> str:
+        """Build and open a Grafana dashboard of any visualisation types.
+
+        panels is a JSON list. Each entry:
+          type    one of timeseries, barchart, piechart, stat, gauge,
+                  bargauge, table, heatmap, histogram, state-timeline,
+                  status-history, xychart, trend, logs
+          source  "loki" for log lines, "prom" for metrics
+          expr    the LogQL or PromQL. Call data_schema() first.
+          instant true for one value per series (bars, slices, a stat),
+                  false for a line over time
+          title   the panel heading
+          legend  optional, e.g. "{{market}}"
+
+        Use this for anything shaped like a chart. build_dashboard is only
+        the canned findings-by-label view."""
+        from customs.grafana_ops import GrafanaOps
+
+        try:
+            spec = json.loads(panels) if isinstance(panels, str) else panels
+        except json.JSONDecodeError as exc:
+            return f"panels was not valid JSON: {exc}"
+        if not isinstance(spec, list) or not spec:
+            return "panels must be a non-empty JSON list of panel objects"
+        bad = [p.get("type") for p in spec
+               if p.get("type") and p["type"] not in VIZ_TYPES]
+        if bad:
+            return f"not Grafana panel types: {bad}. Use one of {list(VIZ_TYPES)}"
+
+        turn.calls.append({"tool": "chart", "panels": len(spec),
+                           "types": [p.get("type") for p in spec]})
+        try:
+            with GrafanaOps(settings) as ops:
+                made = ops.create_adhoc_dashboard(chart_spec(title, spec, time_from))
+        except Exception as exc:  # noqa: BLE001 -- the agent reports the failure
+            return f"could not build the chart: {exc}"
+        turn.view = f"/grafana/{made['uid']}.png"
+        turn.view_label = made["title"]
+        turn.view_external = made["url"]
+        return json.dumps(made)
+
     return LlmAgent(
         name="console",
         model=settings.model_text,
         instruction=SYSTEM_PROMPT,
-        tools=[FunctionTool(f) for f in (list_runs, markets, findings,
+        tools=[FunctionTool(f) for f in (chart, list_runs, markets, findings,
                                          fix_options, library, show,
                                          data_schema, query, build_dashboard)],
     )
