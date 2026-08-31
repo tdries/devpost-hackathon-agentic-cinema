@@ -224,16 +224,18 @@ def crop_span(path, t_start: float, t_end: float, out_path, factor: float = 0.8)
     )
     args = [
         "ffmpeg", "-y", "-i", str(path),
-        "-filter_complex", filt,
+        "-filter_complex", _cap_frames(filt, frame_count),
         "-map", "[v]", "-map", "0:a?",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", str(EDIT_CRF),
         "-pix_fmt", "yuv420p", "-c:a", "copy",
-                # Bounded by FRAME COUNT, not by a float duration. -t rounds, and a
+        # Bounded by FRAME COUNT, not by a float duration: -t rounds, and a
         # file whose duration probes a hair short comes back missing the
         # frames at the end of it -- which is how a remediated commercial
         # silently lost 0.649s of running length across eleven edits. A
-        # spot's running time is contractual; this is what keeps it.
-        "-frames:v", str(frame_count), "-movflags", "+faststart",
+        # spot's running time is contractual. The bound lives in the graph
+        # (_cap_frames) rather than in -frames:v, which took the copied
+        # audio down with it.
+        "-movflags", "+faststart",
         str(out_path),
     ]
     _run(args, timeout=_encode_timeout(duration))
@@ -442,20 +444,23 @@ def replace_segment_video(path, t_start: float, t_end: float, new_frames_dir, ou
         "-itsoffset", f"{t_start:.3f}",
         "-loop", "1", "-framerate", f"{fps:.3f}", "-pattern_type", "glob",
         "-i", str(new_frames_dir / "*.png"),
-        "-filter_complex", filt,
+        "-filter_complex", _cap_frames(filt, frame_count),
         "-map", "[v]", "-map", "0:a?",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", str(EDIT_CRF),
         "-pix_fmt", "yuv420p", "-c:a", "copy",
-        # -shortest alone only bounds the encode via a *mapped* stream reaching a
-        # real EOF (e.g. audio, when present); with no audio track the only output
-        # stream is [v], fed by an infinite -loop input, so it never ends on its
-        # own. -t is an unconditional cap regardless of which streams are mapped.
-                # Bounded by FRAME COUNT, not by a float duration. -t rounds, and a
+        # This input loops forever, so something has to end the encode. The
+        # graph's own frame cap does: trim=end_frame ends [v], and with no
+        # audio track [v] is the only output stream, so the mux ends with
+        # it. Verified on a silent base -- it returns in a fraction of a
+        # second rather than spinning on the loop.
+        # Bounded by FRAME COUNT, not by a float duration: -t rounds, and a
         # file whose duration probes a hair short comes back missing the
         # frames at the end of it -- which is how a remediated commercial
         # silently lost 0.649s of running length across eleven edits. A
-        # spot's running time is contractual; this is what keeps it.
-        "-frames:v", str(frame_count), "-movflags", "+faststart",
+        # spot's running time is contractual. The bound lives in the graph
+        # (_cap_frames) rather than in -frames:v, which took the copied
+        # audio down with it.
+        "-movflags", "+faststart",
         str(out_path),
     ]
     _run(args, timeout=_encode_timeout(duration))
@@ -469,18 +474,20 @@ def overlay_image(path, png, t_start: float, t_end: float, out_path) -> Path:
         "ffmpeg", "-y",
         "-i", str(path),
         "-loop", "1", "-i", str(png),
-        "-filter_complex", filt,
+        "-filter_complex", _cap_frames(filt, frame_count),
         "-map", "[v]", "-map", "0:a?",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", str(EDIT_CRF),
         "-pix_fmt", "yuv420p", "-c:a", "copy",
-        # see replace_segment_video: -t is the unconditional bound, -shortest is
-        # belt-and-suspenders for whenever a real audio stream is also mapped.
-                # Bounded by FRAME COUNT, not by a float duration. -t rounds, and a
+        # see replace_segment_video: the looped input is bounded by the
+        # graph's frame cap, not by anything on the output side.
+        # Bounded by FRAME COUNT, not by a float duration: -t rounds, and a
         # file whose duration probes a hair short comes back missing the
         # frames at the end of it -- which is how a remediated commercial
         # silently lost 0.649s of running length across eleven edits. A
-        # spot's running time is contractual; this is what keeps it.
-        "-frames:v", str(frame_count), "-movflags", "+faststart",
+        # spot's running time is contractual. The bound lives in the graph
+        # (_cap_frames) rather than in -frames:v, which took the copied
+        # audio down with it.
+        "-movflags", "+faststart",
         str(out_path),
     ]
     _run(args, timeout=_encode_timeout(duration))
@@ -586,16 +593,18 @@ def composite_matte(base, patch, box, t_start: float, t_end: float, out_path,
     else:
         args += ["-i", str(patch)]
     args += [
-        "-filter_complex", filt,
+        "-filter_complex", _cap_frames(filt, frame_count),
         "-map", "[v]", "-map", "0:a?",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", str(int(crf)),
         "-pix_fmt", "yuv420p", "-c:a", "copy",
-                # Bounded by FRAME COUNT, not by a float duration. -t rounds, and a
+        # Bounded by FRAME COUNT, not by a float duration: -t rounds, and a
         # file whose duration probes a hair short comes back missing the
         # frames at the end of it -- which is how a remediated commercial
         # silently lost 0.649s of running length across eleven edits. A
-        # spot's running time is contractual; this is what keeps it.
-        "-frames:v", str(frame_count), "-movflags", "+faststart",
+        # spot's running time is contractual. The bound lives in the graph
+        # (_cap_frames) rather than in -frames:v, which took the copied
+        # audio down with it.
+        "-movflags", "+faststart",
         str(out_path),
     ]
     _run(args, timeout=_encode_timeout(duration))
@@ -648,6 +657,29 @@ def _psnr(a, b, *, exclude: tuple[float, float] | None = None) -> float | None:
     if not m:
         return None
     return float("inf") if m.group(1) == "inf" else float(m.group(1))
+
+
+def _cap_frames(filt: str, frame_count: int) -> str:
+    """Cap a filtergraph's [v] output at frame_count frames, inside the graph.
+
+    `-frames:v frame_count` is the same arithmetic and is what every encode
+    below used to carry. It stops the WHOLE mux the moment the video stream
+    is full, and the audio being stream-copied alongside stops with it. On a
+    film whose audio runs a little past its last video frame -- ordinary,
+    and 47ms of it on the Chanel spot -- the output came back 64ms short of
+    the master's own audio, so `format=duration` fell from the audio's
+    length to the picture's and craft_check correctly refused a bridge whose
+    picture was frame-exact: something HAD been lost, just not the picture.
+
+    Bounding inside the graph bounds the picture only, which is the stream a
+    frame count was ever about. The guarantee is unchanged -- trim cannot
+    invent frames it was not handed, and neither could -frames:v -- and the
+    0.649s that went missing across eleven edits stays fixed.
+    """
+    if not filt.endswith("[v]"):
+        raise MediaError(
+            f"cannot frame-bound a graph that does not end in [v]: {filt}")
+    return f"{filt[:-3]},trim=end_frame={frame_count}[v]"
 
 
 def craft_check(before, after, *, span: tuple[float, float] | None = None) -> dict:
@@ -736,11 +768,11 @@ def splice_matte(base, clip, box, t_start: float, t_end: float, out_path,
     )
     args = [
         "ffmpeg", "-y", "-i", str(base), "-itsoffset", f"{t_start:.3f}", "-i", str(clip),
-        "-filter_complex", filt,
+        "-filter_complex", _cap_frames(filt, frame_count),
         "-map", "[v]", "-map", "0:a?",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", str(int(crf)),
         "-pix_fmt", "yuv420p", "-c:a", "copy",
-        "-frames:v", str(frame_count), "-movflags", "+faststart",
+        "-movflags", "+faststart",
         str(out_path),
     ]
     _run(args, timeout=_encode_timeout(duration))
@@ -871,16 +903,18 @@ def apply_relight(base, ratio_png, box, t_start: float, t_end: float, out_path,
     )
     args = [
         "ffmpeg", "-y", "-i", str(base), "-loop", "1", "-i", str(ratio_png),
-        "-filter_complex", filt,
+        "-filter_complex", _cap_frames(filt, frame_count),
         "-map", "[v]", "-map", "0:a?",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", str(int(crf)),
         "-pix_fmt", "yuv420p", "-c:a", "copy",
-                # Bounded by FRAME COUNT, not by a float duration. -t rounds, and a
+        # Bounded by FRAME COUNT, not by a float duration: -t rounds, and a
         # file whose duration probes a hair short comes back missing the
         # frames at the end of it -- which is how a remediated commercial
         # silently lost 0.649s of running length across eleven edits. A
-        # spot's running time is contractual; this is what keeps it.
-        "-frames:v", str(frame_count), "-movflags", "+faststart",
+        # spot's running time is contractual. The bound lives in the graph
+        # (_cap_frames) rather than in -frames:v, which took the copied
+        # audio down with it.
+        "-movflags", "+faststart",
         str(out_path),
     ]
     _run(args, timeout=_encode_timeout(duration))
@@ -966,16 +1000,18 @@ def splice_clip(path, clip, t_start: float, t_end: float, out_path) -> Path:
         "ffmpeg", "-y",
         "-i", str(path),
         "-i", str(clip),
-        "-filter_complex", filt,
+        "-filter_complex", _cap_frames(filt, frame_count),
         "-map", "[v]", "-map", "0:a?",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", str(EDIT_CRF),
         "-pix_fmt", "yuv420p", "-c:a", "copy",
-                # Bounded by FRAME COUNT, not by a float duration. -t rounds, and a
+        # Bounded by FRAME COUNT, not by a float duration: -t rounds, and a
         # file whose duration probes a hair short comes back missing the
         # frames at the end of it -- which is how a remediated commercial
         # silently lost 0.649s of running length across eleven edits. A
-        # spot's running time is contractual; this is what keeps it.
-        "-frames:v", str(frame_count), "-movflags", "+faststart",
+        # spot's running time is contractual. The bound lives in the graph
+        # (_cap_frames) rather than in -frames:v, which took the copied
+        # audio down with it.
+        "-movflags", "+faststart",
         str(out_path),
     ]
     _run(args, timeout=_encode_timeout(duration))

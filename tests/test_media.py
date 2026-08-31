@@ -820,3 +820,80 @@ def test_pasting_a_box_leaves_the_rest_of_the_frame_bit_identical(tmp_path):
 
     # and it really landed inside
     assert b.getpixel((x + w // 2, y + h // 2)) != a.getpixel((x + w // 2, y + h // 2))
+
+
+@pytest.fixture(scope="session")
+def audio_outruns_video(tmp_path_factory):
+    """A film whose audio runs 47ms past its last video frame.
+
+    Ordinary, and exactly the shape of the Chanel spot: 376 frames at 25fps
+    is 15.040s of picture under 15.087s of sound, so format=duration reads
+    the audio's length and probe_frames reads the picture's.
+    """
+    d = tmp_path_factory.mktemp("outrun")
+    v, a, p = d / "v.mp4", d / "a.m4a", d / "base.mp4"
+    subprocess.run(["ffmpeg", "-y", "-f", "lavfi", "-i", "testsrc=s=320x240:r=25",
+                    "-frames:v", "376", "-pix_fmt", "yuv420p", "-an", str(v)],
+                   check=True, capture_output=True, timeout=120)
+    subprocess.run(["ffmpeg", "-y", "-f", "lavfi", "-i", "sine=f=440:r=44100",
+                    "-t", "15.087", "-c:a", "aac", str(a)],
+                   check=True, capture_output=True, timeout=120)
+    subprocess.run(["ffmpeg", "-y", "-i", str(v), "-i", str(a), "-c", "copy",
+                    "-map", "0:v", "-map", "1:a", str(p)],
+                   check=True, capture_output=True, timeout=120)
+    assert media.probe_frames(p) == 376
+    assert abs(media.probe_duration(p) - 15.087) < 0.005
+    return p
+
+
+def test_an_edit_keeps_the_audio_that_runs_past_the_last_video_frame(
+        audio_outruns_video, clip, png, tmp_path):
+    """The bridge that failed the craft gate for 0.047s of nothing.
+
+    -frames:v bounded the video and stopped the whole mux with it, so the
+    stream-copied audio was cut 64ms short of the master's own. The picture
+    was frame-exact, format=duration fell from the audio's length to the
+    picture's, and craft_check refused a Veo generation that was correct.
+    Every filtergraph encode in this module carried that bound, so every
+    remedy failed the same way on the same film.
+    """
+    base = audio_outruns_video
+    for label, out, run in (
+        ("splice_clip", tmp_path / "sc.mp4",
+         lambda o: media.splice_clip(base, clip, 0.0, 2.0, o)),
+        ("splice_matte", tmp_path / "sm.mp4",
+         lambda o: media.splice_matte(base, clip, [40, 40, 200, 160], 0.0, 2.0, o)),
+        ("crop_span", tmp_path / "cs.mp4",
+         lambda o: media.crop_span(base, 0.0, 2.0, o)),
+        ("overlay_image", tmp_path / "oi.mp4",
+         lambda o: media.overlay_image(base, png, 0.0, 2.0, o)),
+    ):
+        run(out)
+        craft = media.craft_check(base, out, span=(0.0, 2.0))
+        assert craft["ok"], f"{label} failed the craft gate: {craft['failures']}"
+        assert craft["frames_after"] == 376, label
+
+
+def test_the_graph_frame_cap_ends_an_encode_fed_by_an_infinite_loop(
+        audio_outruns_video, tmp_path):
+    """replace_segment_video loops its PNG input forever, and -frames:v used
+    to be what ended the encode. With no audio track [v] is the only output
+    stream, so the graph's own cap has to end it -- or this hangs."""
+    silent = tmp_path / "silent.mp4"
+    subprocess.run(["ffmpeg", "-y", "-i", str(audio_outruns_video), "-an",
+                    "-c:v", "copy", str(silent)],
+                   check=True, capture_output=True, timeout=120)
+    frames = tmp_path / "frames"
+    frames.mkdir()
+    subprocess.run(["ffmpeg", "-y", "-f", "lavfi", "-i", "color=red:s=320x240:d=1:r=25",
+                    str(frames / "f_%03d.png")],
+                   check=True, capture_output=True, timeout=120)
+    started = time.monotonic()
+    out = media.replace_segment_video(silent, 1.0, 2.0, frames, tmp_path / "rsv.mp4")
+    assert time.monotonic() - started < 60, "the looped input was never bounded"
+    assert media.probe_frames(out) == 376
+
+
+def test_a_graph_that_does_not_end_in_v_is_refused_rather_than_mangled():
+    with pytest.raises(media.MediaError):
+        media._cap_frames("[0:v]scale=2:2[wrong]", 376)
