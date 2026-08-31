@@ -975,3 +975,31 @@ def test_veo_refusing_twice_gives_up_clearly_and_charges_nothing(
                                on_event=lambda a, m: ran["events"].append(m))
 
     assert ran["veo"] == 2 and ran["charged"] == 0
+
+
+def test_a_celebrity_refusal_skips_the_redress_it_cannot_help(
+        monkeypatch, tmp_path):
+    """A celebrity or child code means Veo recognised a face it will not
+    animate. Re-dressing changes clothes, not faces, so the redress's two
+    image edits would be pure waste -- give up honestly and immediately."""
+    from customs.genai_client import VeoRefusedInput
+    ok = {"fixed": True, "still_visible": "", "added": ""}
+    remediate, finding, ran = _bridge_fixture(
+        monkeypatch, tmp_path, [dict(ok) for _ in range(2)])
+
+    def veo(**kw):
+        ran["veo"] += 1
+        raise VeoRefusedInput(
+            "Veo refused the anchor frames [celebrity]: Support codes: 15236754",
+            categories=("celebrity",))
+    monkeypatch.setattr(remediate, "generate_bridge", veo)
+
+    with pytest.raises(remediate.RemediationError, match="who is on screen"):
+        remediate._bridge_span(tmp_path / "b.mp4", finding, None, tmp_path,
+                               tmp_path / "out.mp4",
+                               spend=lambda: ran.__setitem__("charged", ran["charged"] + 1),
+                               on_event=lambda a, m: ran["events"].append(m))
+
+    assert ran["veo"] == 1, "no second look: it would see the same face"
+    assert ran["edits"] == 2, "no redress edits were spent"
+    assert ran["charged"] == 0

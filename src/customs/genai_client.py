@@ -1,4 +1,4 @@
-import json, os
+import json, os, re
 from google import genai
 from google.genai import types
 from customs.config import settings
@@ -76,8 +76,55 @@ class VeoRefusedInput(RuntimeError):
     is worth its own class: the fix is different frames, not a re-roll.
     Gemini's image editor and Veo do not share a safety policy; a frame
     the editor happily produced and our anchor check passed can still be
-    refused here, most often over people and skin.
+    refused here.
+
+    `categories` names WHY, decoded from the refusal's support codes
+    (Google's documented table, docs.cloud.google.com responsible-ai-imagen).
+    The distinction is load-bearing: a "sexual"/"people" refusal can be
+    answered by re-editing the frames more conservatively, a "celebrity"
+    or "child" refusal cannot -- no amount of clothing fixes a face, so
+    the caller must not waste edits trying.
     """
+
+    def __init__(self, message: str, categories: tuple[str, ...] = ()):
+        super().__init__(message)
+        self.categories = categories
+
+
+# Google's documented support-code table for the image/video safety
+# filters (verified against the responsible-ai-imagen page, 2026-08-31).
+# An opaque "Support codes: 15236754" answered a real operator question --
+# "did Veo refuse the woman or the perfume?" -- only after a docs dig; the
+# feed should name the category itself.
+_SUPPORT_CODES = {
+    "58061214": "child", "17301594": "child",
+    "29310472": "celebrity", "15236754": "celebrity",
+    "64151117": "celebrity or child",
+    "62263041": "dangerous content",
+    "57734940": "hate", "22137204": "hate",
+    "39322892": "people/face",
+    "92201652": "personal information",
+    "89371032": "prohibited content", "49114662": "prohibited content",
+    "72817394": "prohibited content",
+    "90789179": "sexual", "63429089": "sexual", "43188360": "sexual",
+    "35561574": "third-party content", "35561575": "third-party content",
+    "78610348": "toxic",
+    "61493863": "violence", "56562880": "violence",
+    "32635315": "vulgar",
+}
+
+
+def _refusal_categories(message: str) -> tuple[str, ...]:
+    """The human names behind 'Support codes: NNN, NNN', deduplicated."""
+    found = re.search(r"[Ss]upport codes?:\s*([\d,\s]+)", message)
+    if not found:
+        return ()
+    names = []
+    for code in re.findall(r"\d+", found.group(1)):
+        name = _SUPPORT_CODES.get(code)
+        if name and name not in names:
+            names.append(name)
+    return tuple(names)
 
 
 def _seed_from(*paths) -> int:
@@ -163,7 +210,11 @@ def generate_bridge(prompt: str, first_frame, last_frame, seconds: float,
                    else getattr(failed, "message", None)) or str(failed)
         lowered = message.lower()
         if "input image" in lowered and ("violat" in lowered or "guidelines" in lowered):
-            raise VeoRefusedInput(f"Veo refused the anchor frames: {message}")
+            categories = _refusal_categories(message)
+            named = f" [{', '.join(categories)}]" if categories else ""
+            raise VeoRefusedInput(
+                f"Veo refused the anchor frames{named}: {message}",
+                categories=categories)
         raise RuntimeError(f"Veo refused the request: {message}")
 
     result = getattr(operation, "response", None) or getattr(operation, "result", None)

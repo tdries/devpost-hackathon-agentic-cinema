@@ -62,3 +62,19 @@ def test_an_input_image_refusal_is_its_own_exception():
     assert "VeoRefusedInput" in src, "input refusals routed to their own class"
     assert '"input image" in lowered' in src
     assert issubclass(genai_client.VeoRefusedInput, RuntimeError)
+
+
+def test_support_codes_are_decoded_to_names():
+    """"Support codes: 15236754" answered a real operator question -- did
+    Veo refuse the woman or the perfume? -- only after a docs dig. The
+    feed names the category itself now (15236754 = celebrity: the Chanel
+    spot's anchors carry Keira Knightley's likeness)."""
+    from customs.genai_client import _refusal_categories
+
+    assert _refusal_categories(
+        "the input image violates Vertex AI's usage guidelines. "
+        "Support codes: 15236754") == ("celebrity",)
+    assert _refusal_categories("Support codes: 58061214, 90789179") == (
+        "child", "sexual")
+    assert _refusal_categories("no codes here") == ()
+    assert _refusal_categories("Support codes: 99999999") == ()

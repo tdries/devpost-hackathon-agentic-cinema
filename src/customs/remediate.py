@@ -1041,6 +1041,22 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
             # the fix is a different picture with the same goal, so both
             # anchors are re-edited more conservatively and Veo gets one
             # more look. New anchors also mean a new derived seed.
+            #
+            # Unless the refusal is about WHO is in the frame. A celebrity
+            # or child code means Veo recognised a face it will not animate
+            # -- the Chanel spot refused Keira Knightley's likeness, code
+            # 15236754 -- and no amount of re-dressing changes a face, so
+            # the two image edits a redress costs would be pure waste.
+            identity = [c for c in getattr(exc, "categories", ())
+                        if "celebrity" in c or "child" in c]
+            if identity:
+                raise RemediationError(
+                    f"Veo will not generate video of this scene: its input "
+                    f"filter flagged {' and '.join(identity)} in the anchor "
+                    f"frames, and that is about who is on screen, not how "
+                    f"they are dressed. Nothing was generated, so nothing "
+                    f"was charged. Patch the frame instead -- the patch "
+                    f"methods never go through Veo.") from exc
             if redressed:
                 raise RemediationError(
                     "Veo refused the anchor frames twice, even re-dressed "
