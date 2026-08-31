@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/agents-Google%20ADK-4285F4?logo=google&logoColor=white" alt="Google ADK">
   <img src="https://img.shields.io/badge/models-Gemini%203.7%20%C2%B7%20Veo%203.1-34A853?logo=googlegemini&logoColor=white" alt="Gemini and Veo">
   <img src="https://img.shields.io/badge/observability-Grafana%20Cloud-F46800?logo=grafana&logoColor=white" alt="Grafana Cloud">
-  <img src="https://img.shields.io/badge/tests-446%20passing-34A853" alt="446 tests">
+  <img src="https://img.shields.io/badge/tests-492%20passing-34A853" alt="492 tests">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache 2.0"></a>
 </p>
 
@@ -62,7 +62,7 @@ Customs is the instrument that catches it first.
 | **Evidence** | A consultant's opinion | A **named statute or code behind every finding**, and a live source link on every one that could be grounded — the rest are marked unsourced and capped |
 | **Timeline** | Days to weeks | Minutes |
 | **Monitoring** | A PDF report | A **Grafana instrument panel the crew builds and writes to itself** |
-| **The fix** | Re-edit by an agency | Three fix tiers over five techniques, from a text re-letter to a **Veo-generated bridge** — priced in euro before you press |
+| **The fix** | Re-edit by an agency | Four fix methods over five techniques, from a text re-letter to a **Veo-generated bridge** — priced in euro before you press |
 | **The hard cases** | Silently "fixed" | A rule-layer **Guard** refuses to censor who appears in your ad, and surfaces it as a human decision with the statute cited |
 
 ---
@@ -121,7 +121,7 @@ Every screen renders its content on the server: the board shows the state it had
 
 ### New clearance run
 
-Hand it a master — an MP4 up to 120 s and 200 MB, or a public YouTube link — and pick your jurisdictions. The picker *is* the ladder: a global baseline, what a continent adds on top, sixteen countries, and eighty broadcasters that inherit their country's rules and add their own.
+Hand it a master — an MP4 up to 120 s and 30 MB, or a public YouTube link (the way in for bigger masters — Cloud Run's front end caps direct uploads at 32 MiB) — and pick your jurisdictions. The picker *is* the ladder: a global baseline, what a continent adds on top, sixteen countries, and eighty broadcasters that inherit their country's rules and add their own.
 
 ![New clearance run](docs/screenshots/08-new-run.png)
 
@@ -358,15 +358,16 @@ Severity runs 20 (`US-HUM-01`, a humour-tone note) to 95 (`FR-ALC-01` Loi Évin,
 
 ## Remediation, and the loop that stops it wasting money
 
-The operator picks a **tier**, and the Remediator picks the technique.
+The operator picks a **method**, and the Remediator picks the technique.
 
-| Tier in the console | What it does | Cost |
+| Method in the console | What it does | Cost |
 |---|---|---|
 | **Patch one frame** | edits a single frame and holds it over the span | €0.04 |
-| **Track and propagate** | one clean frame warped across the span with optical flow | *not built — always shown, always disabled* |
+| **Propagate the change** | edits one frame, divides its lighting out, and multiplies the colour change into every live frame — the shot keeps its own motion, light and grain | €0.04 |
+| **Repaint every frame** | edits the offending region on every frame (12 fps) and composites each back through the finding's own matte | €0.04 × frames |
 | **Regenerate with Veo** | both ends of the span edited, then **Veo 3.1 generates the motion between them** | €1.88 – €3.68 |
 
-Behind the patch tier the Remediator chooses one of four techniques by the finding's dimension — `relettering` (on-screen text re-lettered in the market's language), `prop_swap` (the object replaced in place), `revoice` (the line re-voiced with Gemini TTS), or `reframe` (an ffmpeg centre crop, the default when nothing else fits). `bridge` is the fifth.
+Outside the bridge, the Remediator resolves the actual technique from the finding's dimension — `relettering` (on-screen text re-lettered in the market's language), `prop_swap` (the object replaced in place), `revoice` (the line re-voiced with Gemini TTS), or `reframe` (an ffmpeg centre crop, the default when nothing else fits). `bridge` is the fifth.
 
 **Scope no longer closes doors.** A guess about what shape of violation this "is" used to disable most of the picker. Now that guess rides along as a *caveat* — the sentence explaining why a technique is a poor fit for a violation of this shape — and the operator decides. `available` reflects only what genuinely cannot run: an unimplemented method, a span longer than Veo will generate, or a price the day's budget will not cover.
 
@@ -397,7 +398,7 @@ That last branch is deliberate: the check **fails open**. A safety loop that tur
 
 A Veo generation the model refuses on safety grounds is **not charged**: the spend is deferred until Veo is actually called, and a refusal is retried once for free.
 
-**Veo** runs against a **€20/day budget** — it is the only thing metered, because it is the only thing that costs real money — reset at midnight UTC, and the console shows what is left in euro *before* you press. That is between 5 and 10 bridges a day depending on span.
+**Veo** runs against a **€30/day budget** — it is the only thing metered, because it is the only thing that costs real money — reset at midnight UTC, and the console shows what is left in euro *before* you press. That is between 5 and 10 bridges a day depending on span.
 
 ---
 
@@ -507,11 +508,11 @@ Runtime: `--max-instances 1 --min-instances 1 --concurrency 20 --memory 2Gi --cp
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest -q        # 446 passed, 8 deselected
+.venv/bin/python -m pytest -q        # 492 passed, 8 deselected
 .venv/bin/python -m pytest -m live   # the 8: real Gemini, real Grafana
 ```
 
-454 collected, 446 offline, 8 marked `live`. ffmpeg must be on `PATH` — without it 85 tests error and 3 fail, which is the honest signal rather than a quiet skip.
+500 collected, 492 offline, 8 marked `live`. ffmpeg must be on `PATH` — without it 85 tests error and 3 fail, which is the honest signal rather than a quiet skip.
 
 ---
 
@@ -539,7 +540,7 @@ Drop the file in `markets/` and the jurisdiction appears in the console on the n
 
 - **The Guard is deliberate friction.** Customs will tell you a market requires censoring who appears in your ad, and it will not do that for you.
 - **Unsourced findings are capped.** A finding whose citation cannot be resolved to a live source is marked `sourced: false`, capped at severity 40, never blocks a market, and never fires an alert — so it never triggers remediation on its own. An operator can still choose to act on one by hand.
-- **Veo is budgeted, not unlimited.** €20/day system-wide, reset at midnight UTC. Veo will not generate a span longer than 8 s, and the console refuses the button rather than failing mid-generation. A span shorter than 4 s is rounded up to Veo's four-second minimum and priced accordingly.
+- **Veo is budgeted, not unlimited.** €30/day system-wide, reset at midnight UTC. Veo will not generate a span longer than 8 s, and the console refuses the button rather than failing mid-generation. A span shorter than 4 s is rounded up to Veo's four-second minimum and priced accordingly.
 - **Input caps.** 120 seconds and 200 MB, enforced at the door.
 - **Single instance by design.** SQLite and in-process locks; Cloud Run runs `--max-instances 1`. Demo-grade persistence, stated as a tradeoff rather than hidden.
 - **Nothing Grafana serves is interactive in the console.** Grafana Cloud cannot be framed, so its panels arrive as server-side renders. The "open in Grafana" links go to the real thing.

@@ -70,11 +70,15 @@
 <section>
   <div class="rule-row">
     <span class="label">Where the problems are</span>
-    <a class="chip" href="{{ embeds.lanes }}" target="_blank" rel="noreferrer" data-grafana>open in Grafana</a>
+    {# The public timeline, not the lanes dashboard: the lanes page lives on
+       the stack itself and greets anyone without a Grafana login with a
+       sign-in wall -- the single worst answer to "go see the live Grafana". #}
+    <a class="chip" href="{{ embeds.timeline }}" target="_blank" rel="noreferrer" data-grafana>open in Grafana</a>
   </div>
   <p class="subline" style="max-width:92ch;font-size:13.5px">
     One lane per category the analyst can see, across this film's own clock. Coloured where a
-    market objected, flat where we looked and nobody minded.
+    market objected, flat where we looked and nobody minded. The axis is the run's mapped
+    clock &mdash; wall second t0+n <em>is</em> film second n.
   </p>
   <img class="boardlanes" src="/runs/{{ run.id }}/lanes.png" alt="Problem lanes"
        loading="lazy">
@@ -130,7 +134,7 @@
       <a href="{{ embeds.overview }}" target="_blank" rel="noreferrer">
         <img src="/runs/{{ run.id }}/panels/clearance.png" alt="Market clearance status, from Grafana">
       </a>
-      <div class="embed-note">Market clearance status on the current clock. It moves again every time a remediation resolves a finding. <a class="cite" href="{{ embeds.overview }}" target="_blank" rel="noreferrer">Open the overview</a></div>
+      <div class="embed-note">Market clearance status for every asset this instance is tracking, on the current clock &mdash; not just this run. It moves again every time a remediation resolves a finding. <a class="cite" href="{{ embeds.overview }}" target="_blank" rel="noreferrer">Open the overview</a></div>
     </div>
     <div class="embed">
       <a href="{{ embeds.timeline }}" target="_blank" rel="noreferrer">

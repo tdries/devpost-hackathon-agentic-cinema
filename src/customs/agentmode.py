@@ -98,6 +98,11 @@ live in the line body, so "per run" is
 And a count over time needs a range selector: [$__range] for one number,
 [$__interval] for a line. Without one, Loki returns nothing and the panel
 draws "No data".
+
+A third trap: the chart's window must match the window you queried. chart()
+takes time_from (default "now-7d"); if you answered from a different window
+-- query(window_hours=24), say -- pass the matching time_from ("now-24h"),
+or your sentence and your chart will state two different numbers.
 """
 
 
@@ -297,7 +302,9 @@ def dashboard_spec(title: str, run_id: str, group_by: str) -> dict:
         "uid": uid,
         "title": title or f"Findings by {label}",
         "tags": ["customs", "adhoc"],
-        "time": {"from": "now-24h", "to": "now"},
+        # now-7d, not now-24h: the store's runs span days, and a 24h window
+        # once let the agent say "62 findings" beside a chart drawing 9.
+        "time": {"from": "now-7d", "to": "now"},
         "panels": [
             {
                 "type": "barchart", "title": f"{unit.capitalize()} by {label}",
@@ -340,7 +347,7 @@ VIZ_TYPES = (
 )
 
 
-def chart_spec(title: str, panels: list[dict], time_from: str = "now-24h") -> dict:
+def chart_spec(title: str, panels: list[dict], time_from: str = "now-7d") -> dict:
     """A Grafana dashboard of arbitrary panels, laid out two per row.
 
     The agent writes the panels; this only turns them into the JSON Grafana
@@ -603,7 +610,7 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
         turn.view_external = made["url"]
         return json.dumps(made)
 
-    def chart(panels: str, title: str = "", time_from: str = "now-24h") -> str:
+    def chart(panels: str, title: str = "", time_from: str = "now-7d") -> str:
         """Build and open a Grafana dashboard of any visualisation types.
 
         panels is a JSON list. Each entry:

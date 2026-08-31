@@ -468,7 +468,8 @@ def run_progress(run, states: dict[str, dict]) -> dict:
     handful of calls at the end.
     """
     if run.status in ("done", "error"):
-        return {"pct": 100, "stage": "done"}
+        return {"pct": 100,
+                "stage": "done" if run.status == "done" else "stopped on an error"}
 
     rows = store().events_since(run.id, 0)
     shots, transcribed, observed, judged, published = 0, 0, 0, 0, False
@@ -660,6 +661,20 @@ def _kinds_found(findings) -> list[str]:
     return [d for d, _ in sorted(worst.items(), key=lambda kv: -kv[1])]
 
 
+# The one run a stranger should see first: a real commercial with findings,
+# a Veo-generated bridge in its cutting room and a verified fix. Both doors
+# point at it -- the judge's archive pins it, the visitor's empty state and
+# the launcher link it -- because the run that proves the product was
+# otherwise sitting unmarked at position six of thirty-five.
+# ponytail: hardcoded id, becomes a computed best-run when the archive churns
+SHOWCASE_RUN = "run_c61fa291681f"
+
+
+def _showcase(db) -> str:
+    """The showcase run's id, or "" when this store does not hold it."""
+    return SHOWCASE_RUN if db.get_run(SHOWCASE_RUN) else ""
+
+
 def market_states(run) -> dict[str, dict]:
     """Per market: {clearance, findings, blocked, errored} for one run.
 
@@ -674,6 +689,13 @@ def market_states(run) -> dict[str, dict]:
     errored = pipeline.errored_markets(db, run.id)
     judged = _judged_markets(db, run.id)
     finished = run.status in ("done", "error")
+    # A run that died before adjudication (ingest crashed on a corrupt or
+    # audio-only asset) has zero findings in every market, and clearance([])
+    # says "cleared" -- so without this line the deadest possible run drew
+    # GO FOR LAUNCH with every tile green. If the run errored, any market
+    # the adjudicators never answered for is an errored market.
+    if run.status == "error":
+        errored = errored | (set(run.markets) - judged)
     states = {}
     for market in run.markets:
         findings = db.findings(run.id, market)
@@ -950,12 +972,27 @@ def grafana_png(uid: str, run: str = ""):
     try:
         from customs.grafana_ops import GrafanaOps  # local: pulls the MCP client
         with GrafanaOps(settings) as ops:
+            # The dashboard knows its own window: chart_spec stamps time.from
+            # on everything the agent builds. Rendering a hardcoded 24h here
+            # was half of how the agent once said "62 findings" beside a
+            # chart drawing 9 -- the window the agent asked for never
+            # reached the renderer.
+            window_ms = (now_ms - 24 * 3600 * 1000, now_ms)
+            try:
+                stored = ops._api_json("GET", f"/api/dashboards/uid/{uid}")
+                span = re.fullmatch(r"now-(\d+)([mhd])",
+                                    str(stored["dashboard"]["time"]["from"]))
+                if span:
+                    unit = {"m": 60_000, "h": 3_600_000, "d": 86_400_000}
+                    window_ms = (now_ms - int(span.group(1)) * unit[span.group(2)],
+                                 now_ms)
+            except Exception:  # noqa: BLE001 -- no readable window, default holds
+                pass
             # Light, and wide. The pane this lands in is the right half of
             # a desktop window, so the render is sized to fill it rather
             # than sit as a small dark card in a light console.
             png = ops.render_png(uid, None, None, None, width=1600, height=900,
-                                 theme="light",
-                                 window_ms=(now_ms - 24 * 3600 * 1000, now_ms))
+                                 theme="light", window_ms=window_ms)
     except Exception as exc:  # noqa: BLE001 -- a dead renderer is not a 500 here
         log.warning("dashboard render failed for %s: %s", uid, exc)
         raise HTTPException(status_code=502,
@@ -1196,7 +1233,8 @@ def home(request: Request):
     It used to be at /, which is now the page that explains the product
     to someone who has never seen it.
     """
-    return _page(request, "home.html", groups=pack_groups(), screen="home")
+    return _page(request, "home.html", groups=pack_groups(), screen="home",
+                 showcase=_showcase(store()))
 
 @app.post("/runs")
 async def create_run(request: Request,
@@ -1580,6 +1618,7 @@ def all_runs(request: Request):
              "gauge": clearance_gauge(st)}
             for run in runs]
     return _page(request, "runs.html", rows=rows, screen="runs", scoped=scoped,
+                 showcase=_showcase(store()),
                  packs_total=len(market_packs()), dims_total=len(packs.taxonomy()))
 
 @app.get("/runs/{run_id}/timeline", response_class=HTMLResponse)

@@ -9,3 +9,4 @@ PyYAML==6.0.3
 pytest==9.1.1
 pytest-asyncio==1.4.0
 yt-dlp[default]==2026.8.19
+Pillow==12.3.0
