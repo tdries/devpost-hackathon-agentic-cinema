@@ -21,6 +21,25 @@ def test_chart_spec_maps_instant_and_range_the_way_each_datasource_spells_it():
 
     # two per row, and the datasource follows the source name
     assert [p["gridPos"]["x"] for p in spec["panels"]] == [0, 12, 0, 12]
-    assert [p["gridPos"]["y"] for p in spec["panels"]] == [0, 0, 10, 10]
     assert spec["panels"][0]["datasource"]["uid"] == "grafanacloud-logs"
     assert spec["panels"][2]["datasource"]["uid"] == "grafanacloud-prom"
+
+
+def test_charts_fill_the_space_and_wear_the_app_colours():
+    """A single chart should not sit in half a pane, and no chart should
+    arrive in Grafana's own palette -- that reads as a different product."""
+    from customs import agentmode, state
+
+    one = agentmode.chart_spec("t", [{"type": "timeseries", "expr": "x"}])
+    assert one["panels"][0]["gridPos"] == {"h": 24, "w": 24, "x": 0, "y": 0}
+
+    four = agentmode.chart_spec("t", [{"type": "barchart", "expr": "x"}] * 4)
+    assert all(p["gridPos"]["w"] == 12 and p["gridPos"]["h"] == 12
+               for p in four["panels"])
+    assert {p["gridPos"]["y"] for p in four["panels"]} == {0, 12}
+
+    hues = [p["fieldConfig"]["defaults"]["color"]["fixedColor"]
+            for p in four["panels"]]
+    assert hues == [state.SIGNAL, state.BLOCKED, state.AT_RISK, state.CLEARED]
+    assert all(p["fieldConfig"]["defaults"]["color"]["mode"] == "shades"
+               for p in four["panels"]), "shades gives each series a tint of the hue"
