@@ -2092,17 +2092,33 @@ def test_agent_mode_can_be_handed_a_file_without_leaving_the_conversation(client
     assert '"GLOBAL"' in js and '"EU"' in js, "a run starts immediately, markets refine later"
 
 
-def test_the_gauge_is_centred_on_its_arc_not_on_its_box():
-    """A 270-degree arc is not symmetric about its own centre: it reaches
-    a full radius above and only r*sin(45) below. Centring on the box left
-    three times as much air above the gauge as below it."""
+def test_the_gauge_is_a_gauge_and_is_centred_on_its_arc():
+    """Two bugs behind one complaint that it "was not centralised well".
+
+    The arc opened to the RIGHT, not the bottom: the point helper had the
+    x sign inverted, which mirrors the circle and lands both open ends on
+    the same side. A gauge's gap goes at the bottom.
+
+    And it was centred on its box rather than on the arc. A 270-degree arc
+    reaches a full radius above its centre and only r*sin(45) below, so
+    centring the CENTRE left three times as much air above as below.
+    """
     import math, re
     from customs import spark
 
     svg = spark.gauge(3, 12, width=168, height=104)
-    ys = [float(y) for y in re.findall(r'[ML]-?[0-9.]+ (-?[0-9.]+)', svg)]
-    top, bottom = min(ys), max(ys)
-    above, below = top, 104 - bottom
+    m = re.search(r'M([0-9.]+) ([0-9.]+) A([0-9.]+) [0-9.]+ 0 [01] 1 ([0-9.]+) ([0-9.]+)', svg)
+    assert m, svg[:200]
+    x0, y0, r, x1, y1 = (float(v) for v in m.groups())
+
+    # the two open ends are on opposite sides, level with each other
+    assert abs(x0 - x1) > r, f"the arc opens to one side: x {x0} and {x1}"
+    assert abs(y0 - y1) < 0.5, "the gap is not level, so it is not at the bottom"
+    assert abs((x0 + x1) / 2 - 84) < 1, "the arc is not centred horizontally"
+
+    # apex is a full radius above the centre; the tips are the low points
+    cy = y0 - r * math.sin(math.radians(45))
+    above, below = cy - r, 104 - max(y0, y1)
     assert abs(above - below) < 1.5, f"{above:.1f}px above, {below:.1f}px below"
 
 

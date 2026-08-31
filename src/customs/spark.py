@@ -254,21 +254,27 @@ def gauge(open_n: int, total: int, *, width: int = 168, height: int = 104,
     open_n = max(0, min(int(open_n), total)) if total else 0
     frac = (open_n / total) if total else 0.0
 
-    start, sweep = 135.0, 270.0          # degrees, clockwise from lower-left
-    # Centred on the ARC, not on the box. A 270-degree arc is not
-    # symmetric about its own centre: it reaches a full radius above the
-    # centre and only r*sin(45) below, so putting the centre halfway down
-    # the box leaves twice as much air above the gauge as below it.
+    # Screen coordinates: x right, y DOWN. A point at angle t is
+    # (cx + r cos t, cy - r sin t). Getting the x sign wrong mirrors the
+    # arc and puts both open ends on the same side, which is what this
+    # did: a gauge that opened to the right instead of the bottom.
+    #
+    # 225deg is lower-left, sweeping 270deg clockwise to -45deg
+    # (lower-right), so the gap sits at the bottom where a gauge's gap goes.
     import math as _math
     cx = width / 2
     r = min(width, height * 1.3) * 0.36
-    reach = r + r * _math.sin(_math.radians(45))     # true height of the arc
-    cy = r + (height - reach) / 2
+    start, sweep = 225.0, 270.0
+
+    # Centred on the ARC, not the box. The arc reaches a full radius above
+    # its centre and only r*sin(45) below, so centring the CENTRE leaves
+    # three times as much air above the gauge as below it.
+    reach_up, reach_down = r, r * _math.sin(_math.radians(45))
+    cy = reach_up + (height - (reach_up + reach_down)) / 2
 
     def point(deg):
-        import math
-        a = math.radians(deg)
-        return cx - r * math.cos(a), cy - r * math.sin(a)
+        a = _math.radians(deg)
+        return cx + r * _math.cos(a), cy - r * _math.sin(a)
 
     x0, y0 = point(start)
     x1, y1 = point(start - sweep)
