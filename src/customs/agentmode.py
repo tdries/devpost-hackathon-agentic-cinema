@@ -31,6 +31,7 @@ import time
 from dataclasses import dataclass, field
 
 from customs import adjudicate, costs, packs, scope as scope_mod
+from customs import state
 from customs.config import settings
 from customs.store import Store
 
@@ -297,6 +298,9 @@ def dashboard_spec(title: str, run_id: str, group_by: str) -> dict:
     }
 
 
+# The app's four colours, in the order a reader meets them on the console.
+BRAND_CYCLE = (state.SIGNAL, state.BLOCKED, state.AT_RISK, state.CLEARED)
+
 _SOURCES = {
     "loki": {"type": "loki", "uid": "grafanacloud-logs"},
     "prom": {"type": "prometheus", "uid": "grafanacloud-prom"},
@@ -320,6 +324,15 @@ def chart_spec(title: str, panels: list[dict], time_from: str = "now-24h") -> di
     ponytail: fixed two-up grid rather than a layout engine. Grafana's
     gridPos is 24 columns; anything cleverer is a panel nobody asked for.
     """
+    # Fill the space. Grafana's grid is 24 columns; one panel takes all of
+    # them, two share a row, more go two-up. Row height divides a ~24-unit
+    # canvas so one panel is tall and four are not letterboxed.
+    n = len(panels)
+    cols = 1 if n == 1 else 2
+    width = 24 // cols
+    rows = (n + cols - 1) // cols
+    height = max(8, min(24, 24 // max(rows, 1)))
+
     out = []
     for i, panel in enumerate(panels):
         kind = (panel.get("type") or "timeseries").strip()
@@ -335,13 +348,25 @@ def chart_spec(title: str, panels: list[dict], time_from: str = "now-24h") -> di
             target |= {"instant": instant, "range": not instant}
         elif instant:
             target["queryType"] = "instant"
+        # Brand colours only. palette-classic is Grafana's own eight hues and
+        # put charts on screen that belonged to a different product.
+        #
+        # "shades" is the mode that makes this work without knowing the series
+        # names in advance: one brand hue per panel, and each series inside it
+        # gets a shade of that hue. Cycled across panels so a four-panel
+        # answer reads blue, red, yellow, green.
+        hue = BRAND_CYCLE[i % len(BRAND_CYCLE)]
         out.append({
             "type": kind,
             "title": panel.get("title") or kind,
-            "gridPos": {"h": 10, "w": 12, "x": (i % 2) * 12, "y": (i // 2) * 10},
+            "gridPos": {"h": height, "w": width,
+                        "x": (i % cols) * width, "y": (i // cols) * height},
             "datasource": source,
             "targets": [target],
-            "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}},
+            "fieldConfig": {"defaults": {
+                "color": {"mode": "shades", "fixedColor": hue},
+                "thresholds": state.grafana_thresholds(),
+            }},
         })
     return {
         "uid": f"customs-adhoc-{int(time.time() * 1000)}"[:40],

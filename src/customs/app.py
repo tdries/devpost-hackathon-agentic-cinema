@@ -950,7 +950,11 @@ def grafana_png(uid: str, run: str = ""):
     try:
         from customs.grafana_ops import GrafanaOps  # local: pulls the MCP client
         with GrafanaOps(settings) as ops:
-            png = ops.render_png(uid, None, None, None, width=1200, height=700,
+            # Light, and wide. The pane this lands in is the right half of
+            # a desktop window, so the render is sized to fill it rather
+            # than sit as a small dark card in a light console.
+            png = ops.render_png(uid, None, None, None, width=1600, height=900,
+                                 theme="light",
                                  window_ms=(now_ms - 24 * 3600 * 1000, now_ms))
     except Exception as exc:  # noqa: BLE001 -- a dead renderer is not a 500 here
         log.warning("dashboard render failed for %s: %s", uid, exc)
