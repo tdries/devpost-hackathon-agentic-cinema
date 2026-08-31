@@ -398,7 +398,7 @@ That last branch is deliberate: the check **fails open**. A safety loop that tur
 
 A Veo generation the model refuses on safety grounds is **not charged**: the spend is deferred until Veo is actually called, and a refusal is retried once for free.
 
-**Veo** runs against a **€30/day budget** — it is the only thing metered, because it is the only thing that costs real money — reset at midnight UTC, and the console shows what is left in euro *before* you press. That is between 5 and 10 bridges a day depending on span.
+**Veo** runs against a **€45/day budget** — it is the only thing metered, because it is the only thing that costs real money — reset at midnight UTC, and the console shows what is left in euro *before* you press. That is between 5 and 10 bridges a day depending on span.
 
 ---
 
@@ -540,7 +540,7 @@ Drop the file in `markets/` and the jurisdiction appears in the console on the n
 
 - **The Guard is deliberate friction.** Customs will tell you a market requires censoring who appears in your ad, and it will not do that for you.
 - **Unsourced findings are capped.** A finding whose citation cannot be resolved to a live source is marked `sourced: false`, capped at severity 40, never blocks a market, and never fires an alert — so it never triggers remediation on its own. An operator can still choose to act on one by hand.
-- **Veo is budgeted, not unlimited.** €30/day system-wide, reset at midnight UTC. Veo will not generate a span longer than 8 s, and the console refuses the button rather than failing mid-generation. A span shorter than 4 s is rounded up to Veo's four-second minimum and priced accordingly.
+- **Veo is budgeted, not unlimited.** €45/day system-wide, reset at midnight UTC. Veo will not generate a span longer than 8 s, and the console refuses the button rather than failing mid-generation. A span shorter than 4 s is rounded up to Veo's four-second minimum and priced accordingly.
 - **Input caps.** 120 seconds and 200 MB, enforced at the door.
 - **Single instance by design.** SQLite and in-process locks; Cloud Run runs `--max-instances 1`. Demo-grade persistence, stated as a tradeoff rather than hidden.
 - **Nothing Grafana serves is interactive in the console.** Grafana Cloud cannot be framed, so its panels arrive as server-side renders. The "open in Grafana" links go to the real thing.
