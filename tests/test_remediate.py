@@ -828,3 +828,80 @@ def test_a_guard_blocked_finding_is_never_swept_into_someone_elses_edit():
     target = _f("f1", False)
     company = remediate.siblings_in_shot(target, [target, _f("f2", True)])
     assert company == [], "the guard's decision is not a passenger seat"
+
+
+def test_a_quota_rejection_is_slept_off_once_not_fatal_to_the_bridge(monkeypatch):
+    """The 429 that killed two bridges landed on the second image call of the
+    same bridge -- the tail edit, and an anchor retry -- with a correct head
+    already in hand. One sleep past the minute boundary saves the bridge."""
+    from customs import remediate
+
+    class Quota(Exception):
+        code = 429
+
+    class FakePart:
+        inline_data = types.SimpleNamespace(data=b"png-out", mime_type="image/png")
+
+    calls, slept = [], []
+
+    class FakeModels:
+        def generate_content(self, model, contents, config):
+            calls.append(model)
+            if len(calls) == 1:
+                raise Quota("429 RESOURCE_EXHAUSTED")
+            content = types.SimpleNamespace(parts=[FakePart()])
+            return types.SimpleNamespace(
+                candidates=[types.SimpleNamespace(content=content)])
+
+    monkeypatch.setattr(remediate, "client",
+                        lambda: types.SimpleNamespace(models=FakeModels()))
+    monkeypatch.setattr(remediate.time, "sleep", slept.append)
+
+    assert remediate._edit_image("cover the shoulders", b"frame") == b"png-out"
+    assert len(calls) == 2, "the quota rejection must be retried, once"
+    assert slept == [remediate._QUOTA_BACKOFF]
+
+
+def test_a_second_quota_rejection_is_raised_rather_than_slept_on_forever(monkeypatch):
+    from customs import remediate
+
+    class Quota(Exception):
+        code = 429
+
+    class FakeModels:
+        def generate_content(self, model, contents, config):
+            raise Quota("429 RESOURCE_EXHAUSTED")
+
+    monkeypatch.setattr(remediate, "client",
+                        lambda: types.SimpleNamespace(models=FakeModels()))
+    monkeypatch.setattr(remediate.time, "sleep", lambda _s: None)
+
+    with pytest.raises(Quota):
+        remediate._edit_image("cover the shoulders", b"frame")
+
+
+def test_no_image_back_carries_the_refusal_reason_not_just_the_absence(monkeypatch):
+    """"returned no image part" alone reads as a fault. It is nearly always a
+    refusal -- a modesty edit asks the model to re-dress a real person -- and
+    the reason was being thrown away with the text part."""
+    from customs import remediate
+
+    class FakeModels:
+        def generate_content(self, model, contents, config):
+            content = types.SimpleNamespace(
+                parts=[types.SimpleNamespace(inline_data=None,
+                                             text="I can't edit clothing on people.")])
+            return types.SimpleNamespace(
+                candidates=[types.SimpleNamespace(content=content,
+                                                 finish_reason="IMAGE_SAFETY")],
+                prompt_feedback=types.SimpleNamespace(block_reason="PROHIBITED_CONTENT"))
+
+    monkeypatch.setattr(remediate, "client",
+                        lambda: types.SimpleNamespace(models=FakeModels()))
+
+    with pytest.raises(remediate.RemediationError) as caught:
+        remediate._edit_image("cover the shoulders", b"frame")
+    message = str(caught.value)
+    assert "IMAGE_SAFETY" in message
+    assert "PROHIBITED_CONTENT" in message
+    assert "edit clothing on people" in message
