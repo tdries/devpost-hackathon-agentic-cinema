@@ -666,6 +666,78 @@
         .then(function () { busy = false; });
     };
 
+    /* Upload from inside the conversation.
+
+       It posts to /runs, the same route the upload form uses, and reads
+       the run id off the redirect it follows. No second upload endpoint:
+       the limits, the rejections and the plain-text 400s are already
+       right there and would only have to be reimplemented.
+
+       Markets default to the global baseline and the EU layer so the run
+       starts immediately. Adding more is cheap afterwards -- /analysis
+       re-judges the observations this run already has, without opening
+       the asset again -- and the agent offers it. That is the trade: get
+       moving, then refine by talking, rather than filling in a form. */
+    var drop = document.getElementById("agent-drop");
+    var file = document.getElementById("agent-file");
+    var dropText = document.getElementById("agent-drop-text");
+
+    var upload = function (chosen) {
+      if (busy || !chosen) { return; }
+      busy = true;
+      bubble("you", "Uploading " + chosen.name, "human");
+      var note = bubble("agent", "", "pending");
+      note.querySelector(".ag-body").innerHTML =
+        '<span class="ag-think"><span class="spin"></span>uploading and starting the run</span>';
+
+      var body = new FormData();
+      body.append("asset", chosen);
+      ["GLOBAL", "EU"].forEach(function (m) { body.append("markets", m); });
+
+      fetch("/runs", { method: "POST", body: body })
+        .then(function (r) {
+          if (!r.ok) { return r.text().then(function (t) { throw new Error(t); }); }
+          return r.url;
+        })
+        .then(function (url) {
+          note.remove();
+          var id = (String(url).match(/\/runs\/([a-z0-9_]+)/) || [])[1];
+          if (!id) { throw new Error("the run started but did not say where"); }
+          runId = id;
+          document.querySelector(".agent").setAttribute("data-run", id);
+          if (dropText) { dropText.textContent = chosen.name + " — run " + id; }
+          open("/runs/" + id, "Launch board", "/runs/" + id);
+          busy = false;
+          ask("I have just uploaded " + chosen.name +
+              " and started run " + id +
+              " against the global baseline and the EU. Tell me what happens now," +
+              " and what you would do next.");
+        })
+        .catch(function (err) {
+          note.remove();
+          busy = false;
+          var failed = bubble("agent", String(err.message || err).slice(0, 400), "error");
+          failed.querySelector(".ag-body").classList.add("ag-err");
+        });
+    };
+
+    if (file) {
+      file.addEventListener("change", function () { upload(file.files[0]); });
+    }
+    if (drop) {
+      ["dragenter", "dragover"].forEach(function (e) {
+        drop.addEventListener(e, function (ev) {
+          ev.preventDefault(); drop.classList.add("over");
+        });
+      });
+      ["dragleave", "drop"].forEach(function (e) {
+        drop.addEventListener(e, function (ev) {
+          ev.preventDefault(); drop.classList.remove("over");
+          if (e === "drop" && ev.dataTransfer) { upload(ev.dataTransfer.files[0]); }
+        });
+      });
+    }
+
     form.addEventListener("submit", function (event) {
       event.preventDefault();
       ask(input.value);

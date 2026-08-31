@@ -1055,6 +1055,28 @@ def market_rows(run) -> list[dict]:
     return rows
 
 
+def clearance_gauge(states: dict) -> str:
+    """How much is still open before this run clears, as a gauge.
+
+    Open findings across every market on the run, against everything it
+    raised. Empty means cleared and clean; a full arc means nothing has
+    been dealt with yet.
+
+    Coloured by the worst thing standing: red while a market is blocked,
+    amber while a cleared market still carries open findings, green when
+    there is nothing left.
+    """
+    open_n = sum(m.get("open", 0) for m in states.values())
+    total = sum(m.get("findings", 0) for m in states.values())
+    if any(m.get("clearance") == "blocked" for m in states.values()):
+        colour = state_mod.BLOCKED
+    elif open_n:
+        colour = state_mod.AT_RISK
+    else:
+        colour = state_mod.CLEARED
+    return spark.gauge(open_n, total, colour=colour)
+
+
 def pill_groups(run, states: dict) -> list[dict]:
     """A run card's market pills, split into where and on what.
 
@@ -1554,7 +1576,8 @@ def all_runs(request: Request):
     if scoped:
         runs = [r for r in runs if r.id in set(mine)]
     rows = [{"run": run, "states": (st := market_states(run)),
-             "groups": pill_groups(run, st)}
+             "groups": pill_groups(run, st),
+             "gauge": clearance_gauge(st)}
             for run in runs]
     return _page(request, "runs.html", rows=rows, screen="runs", scoped=scoped,
                  packs_total=len(market_packs()), dims_total=len(packs.taxonomy()))

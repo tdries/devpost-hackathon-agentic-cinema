@@ -19,12 +19,23 @@
     </div>
 
     <div class="agent-suggest" id="agent-suggest">
+      <button type="button" class="sugg" data-say="What is the status of this run?"><svg class="ic"><use href="#i-pending"/></svg>Where are we</button>
       <button type="button" class="sugg" data-say="What is blocked right now, and where?"><svg class="ic"><use href="#i-blocked"/></svg>What is blocked</button>
+      <button type="button" class="sugg" data-say="Clear this asset for more markets too."><svg class="ic"><use href="#n-market"/></svg>Add markets</button>
       <button type="button" class="sugg" data-say="Show me the frame board for this run."><svg class="ic"><use href="#i-frame"/></svg>Show the frames</button>
       <button type="button" class="sugg" data-say="Which findings need a human decision, and why?"><svg class="ic"><use href="#i-human"/></svg>Needs a human</button>
       <button type="button" class="sugg" data-say="Build a Grafana dashboard of the findings by dimension."><svg class="ic"><use href="#i-publisher"/></svg>Build a dashboard</button>
       <button type="button" class="sugg" data-say="What would you fix first, and what would it cost?"><svg class="ic"><use href="#i-remediator"/></svg>What to fix first</button>
     </div>
+
+    {# Upload where the conversation is. The point of agent mode is not
+       having to go and find the form: hand it a file and it starts the
+       run, then talks you through what happens to it. #}
+    <label class="agent-drop" id="agent-drop">
+      <input type="file" id="agent-file" accept="video/mp4,video/quicktime,video/*" hidden>
+      <svg class="ic"><use href="#n-new"/></svg>
+      <span id="agent-drop-text">Drop a commercial here, or choose a file</span>
+    </label>
 
     <form class="agent-ask" id="agent-ask">
       <input type="hidden" name="run" value="{{ run_id }}">

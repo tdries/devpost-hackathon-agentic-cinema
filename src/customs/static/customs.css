@@ -2169,3 +2169,25 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   opacity: .9; transition: opacity .18s ease, transform .18s ease;
 }
 .card:hover .card-ic { opacity: 1; transform: translateY(-1px); }
+
+/* The clearance gauge, under the thumbnail on a run card. How much is
+   still open before this run can ship: empty is cleared and clean, a full
+   arc is nothing dealt with yet. */
+.cardgauge { display: block; margin: 2px 0 -2px; }
+.cardgauge .gauge { display: block; margin: 0 auto; color: var(--ink-3); }
+.runlist:not(.as-rows) .runrow .cardgauge { order: 2; }
+.runlist.as-rows .cardgauge { display: none; }
+
+/* Upload inside the conversation. The point of agent mode is not having to
+   go and find the form. */
+.agent-drop {
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+  margin: 0 0 8px; padding: 12px 14px; border-radius: 10px;
+  border: 1px dashed var(--line-2); background: var(--panel);
+  font-size: 13px; color: var(--ink-3);
+  transition: border-color .16s, color .16s, background .16s;
+}
+.agent-drop:hover, .agent-drop.over {
+  border-color: var(--signal); color: var(--ink-2); background: var(--ground-2);
+}
+.agent-drop .ic { width: 18px; height: 18px; flex: none; }
