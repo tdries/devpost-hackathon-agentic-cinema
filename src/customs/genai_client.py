@@ -110,12 +110,14 @@ def generate_bridge(prompt: str, first_frame, last_frame, seconds: float,
         # re-roll. Derived from the anchors so the same span regenerates
         # the same way, and a genuine retry can pass a different one.
         seed=seed if seed is not None else _seed_from(first, last),
-        # Vertex will otherwise rewrite the prompt with its own model
-        # before generating. This prompt is the one input the bridge
-        # guards hardest -- deliberately task-free, so nothing about the
-        # violation can leak into the picture -- and handing it to a
-        # rewriter undoes that guarding silently.
-        enhance_prompt=False,
+        # NOT enhance_prompt=False. It was set here for a real reason --
+        # Vertex otherwise rewrites the prompt with its own model, and this
+        # prompt is the one input the bridge guards hardest, deliberately
+        # task-free so nothing about the violation can leak into the
+        # picture. Veo simply does not allow it: the API answers "Veo 3
+        # prompt enhancement cannot be disabled", and it answers it AFTER
+        # both anchors have been edited and checked, which is the most
+        # expensive possible place to find out.
         # Commercials are made of people. Left unset this defaults to a
         # stricter policy and rejects perfectly ordinary advertising
         # footage; the anchors are the brand's own frames of adults.
@@ -136,6 +138,16 @@ def generate_bridge(prompt: str, first_frame, last_frame, seconds: float,
         if waited > timeout_s:
             raise RuntimeError(f"Veo bridge still running after {waited:.0f}s")
         operation = client().operations.get(operation)
+
+    # The error first. An operation that fails carries `error` and NOTHING
+    # in response or result, so reading only those reported the failure as
+    # "Veo returned no video: None" and threw the actual reason away --
+    # which is how an unsupported parameter looked like an empty answer.
+    failed = getattr(operation, "error", None)
+    if failed:
+        message = (failed.get("message") if isinstance(failed, dict)
+                   else getattr(failed, "message", None)) or str(failed)
+        raise RuntimeError(f"Veo refused the request: {message}")
 
     result = getattr(operation, "response", None) or getattr(operation, "result", None)
     videos = getattr(result, "generated_videos", None) or []
