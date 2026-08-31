@@ -400,3 +400,21 @@ def test_a_failed_locate_is_not_cached_as_an_empty_box(monkeypatch):
     monkeypatch.setattr("customs.genai_client.generate_json_image",
                         lambda *a, **k: {"found": True, "box_2d": [400, 200, 100, 600]})
     assert analyst.locate(b"png", "x") == []
+
+
+def test_keyframes_are_declared_as_the_format_they_actually_are(tmp_path):
+    """extract_keyframes writes .png; the analyst declared image/jpeg, so the
+    vision model was handed bytes that did not match the type it was told."""
+    import inspect
+    from customs import analyst, media
+    from customs.media import Shot
+
+    assert 'image/png' in inspect.getsource(analyst.observe_shot)
+
+    # and the writer really does produce png, which is what makes that right
+    clip = tmp_path / "c.mp4"
+    import subprocess
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-f", "lavfi",
+                    "-i", "testsrc2=s=64x48:d=1:r=10", str(clip)], check=True)
+    out = media.extract_keyframes(clip, Shot("shot_0", 0.0, 1.0), tmp_path, per_shot=1)
+    assert out and out[0].suffix == ".png"
