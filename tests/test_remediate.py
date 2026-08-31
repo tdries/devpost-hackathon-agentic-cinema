@@ -119,10 +119,10 @@ def fake_models(monkeypatch):
     ("food_and_animals", "prop_swap"),
     ("health_claims_pharma", "revoice"),
     ("comparative_claims", "revoice"),
-    ("gesture_body_language", "reframe"),
-    ("modesty_dress_body", "reframe"),
-    ("sexual_orientation_gender_id", "reframe"),
-    ("photosensitivity_sensory", "reframe"),
+    ("gesture_body_language", "prop_swap"),
+    ("modesty_dress_body", "prop_swap"),
+    ("sexual_orientation_gender_id", "prop_swap"),
+    ("photosensitivity_sensory", "prop_swap"),
 ])
 def test_plan_maps_dimension_to_method(dimension, expected):
     # a neutral statement, so each row tests the dimension mapping alone and
@@ -150,8 +150,10 @@ def test_plan_without_an_observation_reads_the_dimension_off_the_market_pack():
     assert remediate.plan(_finding(rule_id="FR-LANG-01")) == "relettering"
     assert remediate.plan(_finding(rule_id="FR-ALC-01")) == "prop_swap"
 
-def test_plan_falls_back_to_reframe_for_an_unknown_rule():
-    assert remediate.plan(_finding(rule_id="ZZ-NOPE-99")) == "reframe"
+def test_plan_falls_back_to_the_generic_image_edit_for_an_unknown_rule():
+    # the centre-crop reframe used to be the fallback; removed 2026-08-31 for
+    # degrading the whole frame to maybe exclude one element
+    assert remediate.plan(_finding(rule_id="ZZ-NOPE-99")) == "prop_swap"
 
 # --- apply: the guard, enforced a second time ---
 
@@ -166,7 +168,7 @@ def test_apply_refuses_what_the_guard_took_off_the_table(overrides, store_with_r
     finding = _finding(run_id=run.id, **overrides)
 
     with pytest.raises(remediate.RemediationBlocked):
-        remediate.apply(run, finding, "reframe", tmp_path / "work", store)
+        remediate.apply(run, finding, "prop_swap", tmp_path / "work", store)
 
     assert store.changes(run.id) == []
     assert not remediate.localized_master(run, "FR", store).exists()
@@ -246,21 +248,6 @@ def test_apply_accumulates_edits_on_the_same_localized_master(
     assert bases[0] == run.asset_path, "first edit starts from the original asset"
     assert bases[1] == str(master), "later edits accumulate on the localized master"
     assert len(store.changes(run.id)) == 2
-
-def test_apply_reframe_uses_ffmpeg_only_and_calls_no_model(
-        store_with_run, tmp_path, monkeypatch):
-    store, run, finding = store_with_run
-
-    def fail(*a, **k):
-        raise AssertionError("reframe must not call any model")
-    monkeypatch.setattr(remediate, "_edit_image", fail)
-    monkeypatch.setattr(remediate, "_compliant_line", fail)
-    monkeypatch.setattr(remediate, "_speak", fail)
-
-    change = remediate.apply(run, finding, "reframe", tmp_path / "work", store)
-
-    assert change.method == "reframe"
-    assert remediate.localized_master(run, "FR", store).exists()
 
 def test_apply_revoice_renders_a_replacement_line_and_replaces_the_audio(
         store_with_run, tmp_path, fake_models):

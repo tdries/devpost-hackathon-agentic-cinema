@@ -237,14 +237,6 @@ def test_fit_image_matches_the_video_resolution(clip, tmp_path):
     out = media.fit_image(src, clip, tmp_path / "fitted.png")
     assert media.probe_resolution(out) == (320, 240)
 
-def test_crop_span_preserves_duration_and_resolution(clip, tmp_path):
-    out = tmp_path / "reframed.mp4"
-    result = media.crop_span(clip, 0.5, 1.5, out)
-    assert result == out and out.exists()
-    assert media.probe_resolution(out) == media.probe_resolution(clip)
-    assert abs(media.probe_duration(out) - media.probe_duration(clip)) < 0.3
-
-
 def test_long_takes_are_sampled_more_densely_than_short_cuts(clip, tmp_path):
     """The fixed two-frames-per-shot rate is what let a 43 second cigarette
     ad clear the EU: judged on four stills, none showing tobacco. Frame
@@ -812,8 +804,6 @@ def test_an_edit_keeps_the_audio_that_runs_past_the_last_video_frame(
     for label, out, run in (
         ("splice_clip", tmp_path / "sc.mp4",
          lambda o: media.splice_clip(base, clip, 0.0, 2.0, o)),
-        ("crop_span", tmp_path / "cs.mp4",
-         lambda o: media.crop_span(base, 0.0, 2.0, o)),
         ("overlay_image", tmp_path / "oi.mp4",
          lambda o: media.overlay_image(base, png, 0.0, 2.0, o)),
     ):

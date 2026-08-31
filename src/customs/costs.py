@@ -39,8 +39,9 @@ _EURO_PER_IMAGE_EDIT = 0.04
 # The whole system's Veo allowance for one day. Spent, it stays spent until
 # midnight UTC: a twenty second cigarette scene is exactly the thing this
 # stops someone from regenerating on a whim. Raised to 10, then 20, then
-# 30 EUR on 2026-08-26, each time at the operator's request.
-DAILY_BUDGET_EUR = 30.0
+# 30 EUR on 2026-08-26 and 45 EUR on 2026-08-31, each time at the
+# operator's request.
+DAILY_BUDGET_EUR = 45.0
 
 
 @dataclass(frozen=True)
@@ -214,13 +215,11 @@ _SUGGESTIONS = {
     ],
     "modesty_dress_body": [
         ("cover", "Extend the clothing to cover more"),
-        ("reframe", "Reframe the shot to exclude it"),
         ("replace", "Replace the garment with a modest one"),
     ],
     "religious_symbols_practices": [
         ("remove", "Remove the symbol"),
         ("neutral", "Replace it with a neutral object"),
-        ("reframe", "Reframe to keep it out of shot"),
     ],
     "text_legibility": [
         ("translate", "Re-letter the text in the market's language"),
@@ -245,12 +244,10 @@ _SUGGESTIONS = {
     "violence_and_weapons": [
         ("remove", "Remove the weapon"),
         ("neutral", "Replace it with a harmless object"),
-        ("reframe", "Reframe to exclude the action"),
     ],
     "food_and_animals": [
         ("swap", "Swap the food for an acceptable one"),
         ("remove", "Remove it from the shot"),
-        ("reframe", "Reframe so it is not visible"),
     ],
     "photosensitivity_sensory": [
         ("slow", "Slow the flashing below the threshold"),
@@ -262,12 +259,11 @@ _SUGGESTIONS = {
 _DEFAULT_SUGGESTIONS = [
     ("neutral", "Replace it with something market-appropriate"),
     ("remove", "Remove it from the shot"),
-    ("reframe", "Reframe the shot to exclude it"),
 ]
 
 
 def suggestions(dimension: str, finding=None) -> list[dict]:
-    """Three concrete ways to deal with a finding.
+    """A few concrete ways to deal with a finding.
 
     The judge writes three while it is deciding the finding, so they name the
     thing it actually saw. Those win. The dimension table is the fallback for
