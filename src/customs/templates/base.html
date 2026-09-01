@@ -13,17 +13,16 @@
 <meta property="og:image" content="https://customs-app-akap4ao72a-ew.a.run.app/static/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <script>/* Apply the style mode before first paint so it never flashes.
-   Studio is the default on a phone: Mission is built for a dark room and a
-   big screen, and it is the wrong thing to hand someone reading outdoors.
-   An explicit choice is stored as "mission" or "studio" and always wins --
-   Mission cannot be "no key stored", or choosing it on a phone would be
-   indistinguishable from never having chosen and revert on the next load. */
+   Studio -- the light one -- is the default everywhere now: the console is
+   read in daylight, printed, screenshotted and put in front of people, and
+   a dark room is the exception rather than the rule. Mission is still one
+   click away in the topbar for anyone who wants it, and an explicit choice
+   always wins over this default. */
 try {
   var _t = localStorage.getItem("customs-theme");
   if (_t !== "studio" && _t !== "mission") { if (_t) { localStorage.removeItem("customs-theme"); } _t = null; }
-  if (!_t && window.matchMedia("(max-width: 900px)").matches) { _t = "studio"; }
-  if (_t === "studio") { document.documentElement.setAttribute("data-theme", "studio"); }
-} catch (e) {}</script>
+  if (_t !== "mission") { document.documentElement.setAttribute("data-theme", "studio"); }
+} catch (e) { document.documentElement.setAttribute("data-theme", "studio"); }</script>
 <link rel="stylesheet" href="/static/customs.css?v={{ static_v }}">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230a0d10'/><path d='M4 24 L11 10 L15 18 L20 8 L28 22' fill='none' stroke='%234285F4' stroke-width='3'/><path d='M11 10 L15 18' stroke='%23EA4335' stroke-width='3' fill='none'/><path d='M15 18 L20 8' stroke='%23FBBC05' stroke-width='3' fill='none'/><path d='M20 8 L28 22' stroke='%2334A853' stroke-width='3' fill='none'/></svg>">
 </head>

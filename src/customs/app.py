@@ -883,13 +883,14 @@ def embeds(run) -> dict[str, str]:
     # rather than rendered -- so the panel in the console is the live one you
     # can hover, zoom and click. kiosk drops Grafana's chrome; the theme is
     # pinned dark to sit inside Mission.
-    # ponytail: dark always. A theme-following iframe means re-sourcing it
-    # on every toggle, for a panel that already reads fine in both.
+    # Light, like the rest of the console now is. A theme-following iframe
+    # would mean re-sourcing it on every toggle, and there is one theme to
+    # follow.
     viewer = {}
     if settings.grafana_viewer_url:
         base = settings.grafana_viewer_url
         asset_v = quote(Path(run.asset_path).stem or run.asset_path)
-        common = f"var-asset={asset_v}&var-run={quote(run.id)}&kiosk&theme=dark"
+        common = f"var-asset={asset_v}&var-run={quote(run.id)}&kiosk&theme=light"
         if run.t0 is not None:
             span = asset_duration(run)
             lo, hi = int((run.t0 - 5) * 1000), int((run.t0 + span + 5) * 1000)
@@ -1933,6 +1934,11 @@ def timeline(request: Request, run_id: str):
                     "worst": cell["worst"],
                     "finding": best.id if best else "",
                     "market": best.market if best else "",
+                    # The Gantt this grid replaced put the rule and the
+                    # rationale in a hover card; a cell keeps them in its
+                    # tooltip rather than losing them to the market room.
+                    "rule": best.rule_id if best else "",
+                    "why": (best.rationale or "")[:140] if best else "",
                     "eur": costs.estimate(
                         "omni", max(0.0, best.t_end - best.t_start))
                     if best else 0.0,
@@ -2649,7 +2655,7 @@ def run_lanes_grafana(run_id: str):
             duration = asset_duration(run) or MAX_DURATION_S
             with GrafanaOps(settings) as ops:
                 png = ops.render_png("customs-lanes", 1, run, duration,
-                                     width=1200, height=420, theme="dark",
+                                     width=1200, height=420, theme="light",
                                      variables={"asset": asset, "run": run.id})
         except Exception as exc:  # noqa: BLE001 -- the SVG has the same facts
             log.warning("grafana lanes render failed for %s: %s", run.id, exc)

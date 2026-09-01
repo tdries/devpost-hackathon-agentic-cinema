@@ -20,50 +20,48 @@
     screenshots on an axis; below it is the same pair of coordinates drawn by
     Grafana itself, where the click does the same thing.
   </p>
-  <div class="mxwrap">
-    <table class="mx">
-      <thead><tr>
-        <th class="mx-corner"></th>
-        {% for sc in scenes %}
-        <th class="mx-scene">
-          <a href="/runs/{{ run.id }}/frames#sc-{{ sc.shot_id }}" title="{{ sc.shot_id.replace('_',' ') }} &middot; {{ sc.t_start | timecode }}">
-            {% if sc.hero %}<img src="/runs/{{ run.id }}/evidence/{{ sc.hero }}" alt="" loading="lazy">
-            {% else %}<span class="ss-blank label">no frame</span>{% endif %}
-            <span class="mono ss-t">{{ sc.t_start | timecode }}</span>
-          </a>
-        </th>
-        {% endfor %}
-      </tr></thead>
-      <tbody>
-        {% for row in matrix %}
-        <tr>
-          <th class="mx-dim">
-            <svg class="ic"><use href="#d-{{ row.dimension }}"/></svg>
-            <span>{{ row.dimension.replace('_', ' ') }}</span>
-          </th>
-          {% for cell in row.cells %}
-          {% if cell is none %}
-          <td class="mx-cell mx-empty"></td>
-          {% elif cell.working %}
-          <td class="mx-cell"><span class="mx-box mx-working sparkle" title="a fix is running here">{{ cell.working }}</span></td>
-          {% elif cell.open %}
-          <td class="mx-cell">
-            <a class="mx-box mx-hot {{ 'mx-block' if cell.worst >= 70 }}"
-               href="/launch/remediate?run={{ run.id }}&finding={{ cell.finding }}&method=omni"
-               title="Remediate now &middot; Omni rewrite &middot; {{ '%.2f'|format(cell.eur) }} EUR &middot; {{ cell.market }}">
-              <b>{{ cell.open }}</b><i>remediate<br>now</i></a>
-          </td>
-          {% elif cell.resolved %}
-          <td class="mx-cell"><span class="mx-box mx-fixed" title="fixed and verified"><svg class="ic"><use href="#i-cleared"/></svg></span></td>
-          {% else %}
-          <td class="mx-cell"><span class="mx-box mx-clean" title="looked at, nothing objected"></span></td>
-          {% endif %}
-          {% endfor %}
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  {# One grid, sized to the page: the label column is fixed and every scene
+     column is 1fr, so eighteen scenes shrink rather than scroll. Icons down
+     the side, the scene's opening frame across the top. #}
+  <div class="mx2" style="--cols:{{ scenes | length }}">
+    <span class="mx2-corner label">scene &rarr;</span>
+    {% for sc in scenes %}
+    <a class="mx2-scene" href="/runs/{{ run.id }}/frames#sc-{{ sc.shot_id }}"
+       title="{{ sc.shot_id.replace('_',' ') }} &middot; {{ sc.t_start | timecode }}">
+      {% if sc.hero %}<img src="/runs/{{ run.id }}/evidence/{{ sc.hero }}" alt="" loading="lazy">
+      {% else %}<span class="mx2-noframe"></span>{% endif %}
+      <span class="mono mx2-t">{{ sc.t_start | timecode }}</span>
+    </a>
+    {% endfor %}
+    {% for row in matrix %}
+    <span class="mx2-dim" title="{{ row.dimension.replace('_', ' ') }}">
+      <svg class="ic"><use href="#d-{{ row.dimension }}"/></svg>
+      <span>{{ row.dimension.replace('_', ' ') }}</span>
+    </span>
+    {% for cell in row.cells %}
+    {% if cell is none %}
+    <span class="mx2-cell mx2-empty"></span>
+    {% elif cell.working %}
+    <span class="mx2-cell mx2-working sparkle" title="a fix is running here"></span>
+    {% elif cell.open %}
+    <a class="mx2-cell mx2-hot {{ 'mx2-block' if cell.worst >= 70 }}"
+       href="/launch/remediate?run={{ run.id }}&finding={{ cell.finding }}&method=omni"
+       title="{{ cell.rule }} ({{ cell.market }}) &middot; {{ cell.why }}&#10;&#10;Remediate now &middot; Omni rewrite &middot; {{ '%.2f'|format(cell.eur) }} EUR"><b>{{ cell.open }}</b></a>
+    {% elif cell.resolved %}
+    <span class="mx2-cell mx2-fixed" title="fixed and verified"></span>
+    {% else %}
+    <span class="mx2-cell mx2-clean" title="looked at, nothing objected"></span>
+    {% endif %}
+    {% endfor %}
+    {% endfor %}
   </div>
+  <div class="mx2-key label">
+    <span><i class="sw mx2-hot"></i>open &mdash; click to remediate</span>
+    <span><i class="sw mx2-block"></i>blocking</span>
+    <span><i class="sw mx2-fixed"></i>fixed and verified</span>
+    <span><i class="sw mx2-clean"></i>looked at, nothing objected</span>
+  </div>
+
   {% if embeds and embeds.viewer %}
   <div class="rule-row" style="margin-top:26px">
     <span class="label">The same thing, drawn by Grafana</span>
@@ -80,55 +78,5 @@
   {% endif %}
 </section>
 {% endif %}
-
-<section style="border-top:none;padding-top:0">
-  <div class="tl">
-    <div class="tl-row">
-      <span></span>
-      <div class="tl-ruler">
-        {% for tick in ticks %}
-        <span class="tick" style="left:{{ tick.left }}%"><i></i>{{ tick.t | timecode }}</span>
-        {% endfor %}
-      </div>
-    </div>
-    {% for lane in lanes %}
-    <div class="tl-row" data-lane="{{ lane.market }}">
-      <span class="tl-label">
-        <a class="mono" href="/runs/{{ run.id }}/markets/{{ lane.market }}">{{ lane.market }}</a>
-        <svg class="ic s-{{ lane.tile }}" style="color:var(--{{ 'pending' if lane.tile == 'pending' else lane.tile }})"><use href="#i-{{ lane.tile.replace('_', '-') }}"/></svg>
-      </span>
-      <div class="tl-track">
-        {% for seg in lane.segs %}
-        {% set finding = seg.finding %}
-        {% set sc = 'ok' if finding.status == 'resolved' else finding.klass %}
-        <a class="seg sc-{{ sc }}" style="left:{{ seg.left }}%;width:{{ seg.width }}%" href="/runs/{{ run.id }}/markets/{{ lane.market }}">
-          <span class="segcard{{ ' flip' if seg.flip }}">
-            {% if seg.frame %}<img src="/runs/{{ run.id }}/evidence/{{ finding.observation_id }}" alt="Frame that triggered {{ finding.rule_id }}" loading="lazy">{% endif %}
-            <span class="segcard-head">
-              <span class="rule-id">{{ finding.rule_id }}</span>
-              <span class="mono" style="font-size:11px;color:var(--ink-3)">{{ finding.t_start | timecode }} to {{ finding.t_end | timecode }}</span>
-            </span>
-            <span class="segcard-chips">
-              <span class="chip {{ finding.klass }}"><svg class="ic"><use href="#i-{{ finding.klass }}"/></svg>{{ finding.klass }}</span>
-              <span class="chip">severity {{ finding.severity }}</span>
-              {% if finding.status == 'resolved' %}<span class="chip sourced"><svg class="ic"><use href="#i-cleared"/></svg>verified fixed</span>
-              {% elif finding.remediation_blocked %}<span class="chip offence"><svg class="ic"><use href="#i-human"/></svg>needs a human</span>{% endif %}
-            </span>
-            <span class="segcard-why">{{ finding.rationale }}</span>
-          </span>
-        </a>
-        {% endfor %}
-        {% if not lane.segs %}<span class="tl-clean label">nothing triggered</span>{% endif %}
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-  <div class="tl-legend">
-    <span><i class="sw sc-legal"></i>legal</span>
-    <span><i class="sw sc-policy"></i>policy</span>
-    <span><i class="sw sc-offence"></i>offence</span>
-    <span><i class="sw sc-ok"></i>fixed and verified</span>
-  </div>
-</section>
 
 {% endblock %}
