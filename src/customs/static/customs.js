@@ -135,6 +135,24 @@
   })();
 
 
+  /* ---------- 1a3. the landing's before/after, in lockstep ----------
+     Two muted looping videos of identical length drift apart over
+     minutes; a gentle corrector keeps the after glued to the before so
+     the comparison stays honest. */
+
+  (function () {
+    var pair = document.querySelectorAll("video[data-lockstep]");
+    if (pair.length !== 2) { return; }
+    var lead = pair[0], follow = pair[1];
+    window.setInterval(function () {
+      if (lead.paused || follow.paused) { return; }
+      if (Math.abs(follow.currentTime - lead.currentTime) > 0.12) {
+        follow.currentTime = lead.currentTime;
+      }
+    }, 500);
+  })();
+
+
   /* ---------- 1b. the mission feed's two tabs ---------- */
 
   (function () {
