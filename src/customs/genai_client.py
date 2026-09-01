@@ -201,14 +201,17 @@ def generate_omni_edit(instruction: str, clip_path, out_path,
                 "quota reads 10 and request one still 429s); the configured "
                 "alias should not hit it.") from exc
         if "prohibited_content" in message or "third-party content" in message:
-            # Omni checks its INPUT for recognizable third-party IP -- a
-            # famous cartoon reel was refused with "interests of
-            # third-party content providers". Nothing ran, nothing charged.
+            # Omni checks its INPUT -- a famous cartoon reel and the Chanel
+            # spot were both refused over "interests of third-party content
+            # providers". The code covers more reasons than that one, so the
+            # feed quotes Omni's own words instead of asserting a cause.
+            import re as _re
+            said = _re.search(r"'message':\s*'([^']+)'", message)
             raise OmniRefusedInput(
-                "Omni's content filter refused the input footage itself "
-                "(third-party content). Nothing was charged. This span "
-                "cannot be rewritten by Omni; use a patch method or the "
-                "bridge.") from exc
+                "Omni's content filter refused the input footage itself. "
+                "Nothing was charged, and a retry cannot help: the footage "
+                "is the refusal. Use a patch method instead. Omni said: "
+                + (said.group(1) if said else message[:200])) from exc
         raise
 
     waited = 0.0
