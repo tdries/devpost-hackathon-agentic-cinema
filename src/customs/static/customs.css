@@ -132,6 +132,35 @@ a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visibl
 
 /* ---------- run navigation ---------- */
 
+/* --- wayfinding: breadcrumb, lifecycle strip, first-visit hints --- */
+.crumb { display: flex; align-items: center; gap: 10px; padding: 8px 0 2px; }
+.crumb-up { display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+  color: var(--ink-2); text-decoration: none; }
+.crumb-up:hover { color: var(--signal); }
+.crumb-up .ic { width: 13px; height: 13px; }
+.crumb-sep { color: var(--ink-3); font-size: 12px; }
+.crumb-here { font-size: 12px; color: var(--ink); }
+.crumb-asset { font-size: 12px; color: var(--ink-3); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.lifecycle { display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  padding: 7px 0 4px; }
+.lc { display: inline-flex; align-items: center; gap: 5px;
+  font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em;
+  text-transform: uppercase; text-decoration: none; color: var(--ink-3); }
+.lc .ic { width: 12px; height: 12px; }
+.lc-done { color: var(--ink-2); }
+a.lc-done:hover, a.lc-current:hover { color: var(--signal); }
+.lc-current { color: var(--g-yellow); }
+.lc-sep { width: 14px; height: 1px; background: var(--line-2); flex: none; }
+.lc-cta { display: inline-flex; align-items: center; gap: 10px; margin-left: auto;
+  min-width: 0; }
+.lc-why { font-size: 12px; color: var(--ink-2); }
+@media (max-width: 900px) { .lc-cta { margin-left: 0; flex-basis: 100%; } .lc-why { display: none; } }
+html[data-theme="studio"] .lc-current { color: #8a6d00; }
+
+.tab-continue { margin-left: auto; color: var(--ink-3); }
+.tab-continue .mono { font-size: 11px; }
+
 .runnav {
   border-bottom: 1px solid var(--line);
   background: var(--ground-2);
@@ -1212,6 +1241,10 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 .ss-t { font-size: 10px; color: var(--ink-3); }
 .ss-n { position: absolute; top: 3px; right: 3px; background: var(--blocked); color: #fff; font-size: 10px; line-height: 1.5; padding: 0 4px; border-radius: 2px; }
 .sc { scroll-margin-top: 72px; }
+/* scene header rows inside the market room's findings table */
+.scene-row td { border-top: 2px solid var(--line-2); padding: 14px 14px 6px; }
+.scene-row .label + .fb-time { margin: 0 10px; }
+.scene-row { scroll-margin-top: 72px; }
 /* scene cards: one per shot, opened and closed by its first and last kept
    frame, every observation of the shot inside. A three second smoking scene
    used to be a scroll of near-identical frames, one per observation. */

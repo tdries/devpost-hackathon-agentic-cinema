@@ -1201,7 +1201,84 @@ def _page(request: Request, name: str, **context):
     return templates.TemplateResponse(request, name, context)
 
 
+def run_lifecycle(run) -> dict:
+    """Where this run stands in the product's own story, and what to do next.
+
+    The run screens are five flat tabs; nothing told a first-timer that the
+    mission feed IS the processing stage or that the cutting room IS the
+    result. This renders the lifecycle -- upload, processing, findings,
+    decision, fix, verified -- as a strip on every run screen, the current
+    stage lit, every stage linking to the screen that serves it, plus ONE
+    state-driven next step so nobody finishes something and is left
+    standing. Modern apps keep users oriented with exactly these two
+    devices: a stepper for "where am I" and a status-driven call to
+    action for "what now".
+    """
+    st = market_states(run)
+    ov = overall(st)
+    open_n = sum(v["open"] for v in st.values())
+    working = sum(v["working"] for v in st.values())
+    resolved = sum(v["resolved"] for v in st.values())
+    findings_n = sum(v["findings"] for v in st.values())
+    changed = bool(resolved) or working
+    finished = run.status in ("done", "error")
+    base = f"/runs/{run.id}"
+    worst = next((m for m in ov["failing"] if not st[m]["errored"]), None)         or (ov["failing"][0] if ov["failing"] else None)
+
+    def mark(done, current):
+        return "done" if done else ("current" if current else "todo")
+
+    stages = [
+        {"key": "upload", "label": "upload", "href": None,
+         "state": "done"},
+        {"key": "processing", "label": "processing", "href": f"{base}/mission",
+         "state": mark(finished, not finished)},
+        {"key": "findings", "label": "findings", "href": f"{base}/frames",
+         "state": mark(finished, False)},
+        {"key": "decision", "label": "decision", "href": base,
+         "state": mark(finished and not open_n, finished and open_n > 0 and not working)},
+        {"key": "fix", "label": "fix",
+         "href": f"{base}/markets/{worst}" if worst else base,
+         "state": mark(changed and not open_n and not working, working > 0)},
+        {"key": "verified", "label": "verified", "href": f"{base}/cutting",
+         "state": mark(resolved > 0 and not open_n and not working, False)},
+    ]
+
+    if run.status == "error":
+        cta = {"text": "The run stopped on an error. The mission feed has "
+                       "the agents' own account of where.",
+               "href": f"{base}/mission", "label": "Open the mission feed"}
+    elif not finished:
+        cta = {"text": "The crew is on it. The mission feed narrates every "
+                       "step as it happens.",
+               "href": f"{base}/mission", "label": "Watch the mission feed"}
+    elif working:
+        cta = {"text": "A fix is running. The market room shows it land, "
+                       "and the verifier rules right after.",
+               "href": f"{base}/markets/{worst}" if worst else base,
+               "label": "Open the market room"}
+    elif open_n and worst:
+        cta = {"text": f"{open_n} finding{'' if open_n == 1 else 's'} still "
+                       f"open. Every fix is priced in euro before you press.",
+               "href": f"{base}/markets/{worst}",
+               "label": f"Fix {worst}'s findings"}
+    elif resolved:
+        cta = {"text": "Fixed and verified. The cutting room has the "
+                       "before and after, side by side.",
+               "href": f"{base}/cutting", "label": "Open the cutting room"}
+    elif findings_n:
+        cta = {"text": "Cleared to air, with notes on record. The frame "
+                       "board shows every scene and what was said about it.",
+               "href": f"{base}/frames", "label": "Read the scenes"}
+    else:
+        cta = {"text": "Cleared everywhere, nothing on record. More markets "
+                       "are cheap: they re-judge facts the run already has.",
+               "href": base, "label": "See the board"}
+    return {"stages": stages, "cta": cta}
+
+
 templates.env.globals["market_rows"] = market_rows
+templates.env.globals["run_lifecycle"] = run_lifecycle
 
 # -- the front door --
 
@@ -1978,7 +2055,36 @@ def market_room(request: Request, run_id: str, market: str):
         for f in findings if f.status == "open" and not f.remediation_blocked
         and f.remediable
     }
+    # The market's findings, clustered by SCENE, same as the frame board:
+    # a three second shot with four objections is one section with one
+    # thumbnail, not four table rows competing for attention. The
+    # scenescroll on top jumps straight to a scene's findings.
+    obs_by_id = {o.id: o for o in store().observations(run.id)}
+    visible = [f for f in findings if not f.remediation_blocked]
+    scene_map: dict[str, dict] = {}
+    scenes: list[dict] = []
+    for f in sorted(visible, key=lambda f: (f.t_start, f.id)):
+        obs = obs_by_id.get(f.observation_id)
+        sid = (getattr(f, "shot_id", "") or (obs.shot_id if obs else "")
+               or f.observation_id)
+        sc = scene_map.get(sid)
+        if sc is None:
+            sc = scene_map[sid] = {"shot_id": sid, "t_start": f.t_start,
+                                   "t_end": f.t_end, "findings": [],
+                                   "open": 0, "hero": None}
+            scenes.append(sc)
+        sc["findings"].append(f)
+        sc["t_start"] = min(sc["t_start"], f.t_start)
+        sc["t_end"] = max(sc["t_end"], f.t_end)
+        if f.status == "open":
+            sc["open"] += 1
+        if sc["hero"] is None and f.observation_id in evidence:
+            sc["hero"] = f.observation_id
+    for sc in scenes:
+        sc["findings"].sort(key=lambda f: (-f.severity, f.t_start))
+
     return _page(request, "market_room.html", run=run, market=market,
+                 scenes=scenes,
                  evidence=evidence, fixes=fixes, scopes=scopes,
                  scope_text=scope_mod.DESCRIPTION,
                  budget_left=max(0.0, costs.DAILY_BUDGET_EUR - spent),

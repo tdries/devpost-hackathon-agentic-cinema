@@ -1,5 +1,37 @@
 {% set run_state = {"done": "cleared", "error": "blocked", "running": "pending", "created": "pending"}.get(run.status, "pending") %}
+{% set lc = run_lifecycle(run) %}
 <nav class="runnav">
+  {# The way up. Inside a run the only exits used to be the brand (which
+     lands on the marketing page) and a mode switch named Studio -- neither
+     reads as "back to my runs". A breadcrumb names the level above and
+     what this run is, on every run screen. #}
+  <div class="wrap crumb">
+    <a class="crumb-up" href="/runs"><svg class="ic"><use href="#n-board"/></svg>All runs</a>
+    <span class="crumb-sep" aria-hidden="true">/</span>
+    <span class="crumb-here mono">{{ run.id }}</span>
+    <span class="crumb-asset">{{ run.asset_path.split('/')[-1] }}</span>
+    <span class="runnav-right">
+      <span class="pill s-{{ run_state }}"><svg class="ic"><use href="#i-{{ run_state.replace('_', '-') }}"/></svg>{{ run.status }}</span>
+    </span>
+  </div>
+  {# The lifecycle strip: the product's own story -- upload, processing,
+     findings, decision, fix, verified -- with this run's current stage
+     lit and every stage linking to the screen that serves it. The five
+     tabs below are rooms; this line is the plot. #}
+  <div class="wrap lifecycle" aria-label="Run lifecycle">
+    {% for st in lc.stages %}
+    {% if not loop.first %}<span class="lc-sep" aria-hidden="true"></span>{% endif %}
+    {% if st.href and st.state != 'todo' %}
+    <a class="lc lc-{{ st.state }}" href="{{ st.href }}">{% if st.state == 'done' %}<svg class="ic"><use href="#i-cleared"/></svg>{% elif st.state == 'current' %}<svg class="ic"><use href="#i-pending"/></svg>{% endif %}{{ st.label }}</a>
+    {% else %}
+    <span class="lc lc-{{ st.state }}">{% if st.state == 'done' %}<svg class="ic"><use href="#i-cleared"/></svg>{% endif %}{{ st.label }}</span>
+    {% endif %}
+    {% endfor %}
+    <span class="lc-cta">
+      <span class="lc-why">{{ lc.cta.text }}</span>
+      <a class="chip on" href="{{ lc.cta.href }}">{{ lc.cta.label }} &rarr;</a>
+    </span>
+  </div>
   <div class="wrap screens">
     <a class="tab {% if screen == 'board' %}on{% endif %}" href="/runs/{{ run.id }}"><svg class="ic"><use href="#n-board"/></svg>Launch board</a>
     <a class="tab {% if screen == 'mission' %}on{% endif %}" href="/runs/{{ run.id }}/mission"><svg class="ic"><use href="#n-feed"/></svg>Mission feed</a>
@@ -18,12 +50,7 @@
       {% elif row.level == 'continental' %}<svg class="ic"><use href="#n-market"/></svg>
       {% else %}<svg class="ic lvl country"><use href="#c-{{ m.code }}"/></svg>{% endif %}{{ m.code }}</a>
     {% endfor %}
-    {% if loop.last %}
-    <span class="runnav-right">
-      <span class="runid">{{ run.id }}</span>
-      <span class="pill s-{{ run_state }}"><svg class="ic"><use href="#i-{{ run_state.replace('_', '-') }}"/></svg>{{ run.status }}</span>
-    </span>
-    {% endif %}
+
   </div>
   {% endfor %}
 </nav>
