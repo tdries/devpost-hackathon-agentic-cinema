@@ -2323,3 +2323,34 @@ tr.sparkle td { background: rgba(251, 188, 5, 0.06); }
   .sparkle::before, [data-busy]::before, .sparkle::after,
   [data-busy]::after, .lc-current .ic { animation: none; }
 }
+
+/* ---------- the matrix: occurrence types x scenes, cells that launch ---- */
+.mxwrap { overflow-x: auto; }
+.mx { border-collapse: separate; border-spacing: 4px; }
+.mx-corner { min-width: 150px; }
+.mx-scene img, .mx-scene .ss-blank { width: 88px; height: 50px; object-fit: cover;
+  display: block; border: 1px solid var(--line); border-radius: 2px; }
+.mx-scene a { display: grid; gap: 3px; text-decoration: none; justify-items: start; }
+.mx-dim { display: flex; align-items: center; gap: 8px; font-size: 11.5px;
+  color: var(--ink-2); font-weight: 400; text-align: left; white-space: nowrap;
+  padding-right: 8px; height: 46px; }
+.mx-dim .ic { width: 16px; height: 16px; flex: none; }
+.mx-cell { padding: 0; }
+.mx-box { position: relative; display: grid; place-items: center; width: 88px;
+  height: 46px; border-radius: 4px; border: 1px solid var(--line);
+  font-family: var(--mono); font-size: 13px; text-decoration: none; }
+.mx-empty { }
+.mx-clean { background: var(--well); opacity: 0.45; }
+.mx-fixed { background: rgba(52, 168, 83, 0.12); border-color: rgba(52, 168, 83, 0.5); }
+.mx-fixed .ic { width: 14px; height: 14px; }
+.mx-hot { background: rgba(251, 188, 5, 0.14); border-color: var(--g-yellow);
+  color: var(--g-yellow); }
+.mx-hot.mx-block { background: rgba(234, 67, 53, 0.14);
+  border-color: var(--blocked); color: var(--blocked); }
+.mx-hot i { display: none; font-style: normal; font-size: 9.5px; line-height: 1.15;
+  letter-spacing: 0.06em; text-transform: uppercase; text-align: center; }
+.mx-hot:hover b { display: none; }
+.mx-hot:hover i { display: block; }
+.mx-hot:hover { border-width: 2px; }
+.mx-working { background: rgba(66, 133, 244, 0.12); border-color: var(--g-blue);
+  color: var(--g-blue); font-size: 12px; }
