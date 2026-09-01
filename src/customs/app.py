@@ -893,11 +893,16 @@ def embeds(run) -> dict[str, str]:
         common = f"var-asset={asset_v}&var-run={quote(run.id)}&kiosk&theme=light"
         if run.t0 is not None:
             span = asset_duration(run)
-            lo, hi = int((run.t0 - 5) * 1000), int((run.t0 + span + 5) * 1000)
+            # No padding either side: the console draws the axes for this
+            # panel, so x% across the plot has to be x% through the film.
+            lo, hi = int(run.t0 * 1000), int((run.t0 + span) * 1000)
             window = f"from={lo}&to={hi}"
         else:
             window = "from=now-3h&to=now"
         viewer = {
+            # d-solo: the panel alone, no variable pickers and no time
+            # picker, because the grid it sits inside is its chrome.
+            "squares": f"{base}/d-solo/customs-grid/the-grid?panelId=1&{common}&{window}",
             # squares, to sit under the console's own grid
             "grid": f"{base}/d/customs-grid/the-grid?{common}&{window}",
             "lanes": f"{base}/d/customs-lanes/customs?{common}&{window}",
@@ -1890,6 +1895,15 @@ def timeline(request: Request, run_id: str):
         if sc["hero"] is None and obs.id in live:
             sc["hero"] = obs.id
     scenes.sort(key=lambda sc: sc["t_start"])
+    # A scene's column is as wide as the scene is long. Even columns could
+    # never line up with Grafana's squares, which sit on the clock -- and a
+    # ten second scene deserves more of the eye than a two second one.
+    for i, sc in enumerate(scenes):
+        nxt = scenes[i + 1]["t_start"] if i + 1 < len(scenes) else duration
+        sc["span"] = max(0.4, min(nxt, duration) - sc["t_start"])
+    total_span = sum(sc["span"] for sc in scenes) or 1.0
+    for sc in scenes:
+        sc["weight"] = round(sc["span"] / total_span * 1000)
     order = {sc["shot_id"]: i for i, sc in enumerate(scenes)}
 
     all_findings = db.findings(run.id)

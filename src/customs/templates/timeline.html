@@ -13,71 +13,81 @@
 <section style="border-top:none;padding-top:0">
   <div class="rule-row"><span class="label">The matrix</span></div>
   <p class="subline" style="max-width:96ch;font-size:13.5px">
-    Every occurrence type against every scene, on the run's own coordinates:
-    the scene's place on the mapped clock is x, the dimension is y. A hot cell
-    is a launch button &mdash; one click starts the Omni rewrite for that exact
-    scene. This grid is drawn by the console, because no Grafana panel puts
-    screenshots on an axis; below it is the same pair of coordinates drawn by
-    Grafana itself, where the click does the same thing.
+    One grid, drawn by both: the taxonomy icons down the side and each scene's
+    opening frame across the top are the console's, because no Grafana panel
+    can put an image on an axis &mdash; and the squares between them are
+    Grafana's own status history, live, with its row labels and time axis
+    hidden because these are them. Columns are as wide as their scenes are
+    long, so a column's share of the width is its share of the film. Click a
+    square to start the Omni rewrite for the scene it sits on.
   </p>
-  {# One grid, sized to the page: the label column is fixed and every scene
-     column is 1fr, so eighteen scenes shrink rather than scroll. Icons down
-     the side, the scene's opening frame across the top. #}
-  <div class="mx2" style="--cols:{{ scenes | length }}">
-    <span class="mx2-corner label">scene &rarr;</span>
-    {% for sc in scenes %}
-    <a class="mx2-scene" href="/runs/{{ run.id }}/frames#sc-{{ sc.shot_id }}"
-       title="{{ sc.shot_id.replace('_',' ') }} &middot; {{ sc.t_start | timecode }}">
-      {% if sc.hero %}<img src="/runs/{{ run.id }}/evidence/{{ sc.hero }}" alt="" loading="lazy">
-      {% else %}<span class="mx2-noframe"></span>{% endif %}
-      <span class="mono mx2-t">{{ sc.t_start | timecode }}</span>
-    </a>
-    {% endfor %}
-    {% for row in matrix %}
-    <span class="mx2-dim" title="{{ row.dimension.replace('_', ' ') }}">
-      <svg class="ic"><use href="#d-{{ row.dimension }}"/></svg>
-      <span>{{ row.dimension.replace('_', ' ') }}</span>
-    </span>
-    {% for cell in row.cells %}
-    {% if cell is none %}
-    <span class="mx2-cell mx2-empty"></span>
-    {% elif cell.working %}
-    <span class="mx2-cell mx2-working sparkle" title="a fix is running here"></span>
-    {% elif cell.open %}
-    <a class="mx2-cell mx2-hot {{ 'mx2-block' if cell.worst >= 70 }}"
-       href="/launch/remediate?run={{ run.id }}&finding={{ cell.finding }}&method=omni"
-       title="{{ cell.rule }} ({{ cell.market }}) &middot; {{ cell.why }}&#10;&#10;Remediate now &middot; Omni rewrite &middot; {{ '%.2f'|format(cell.eur) }} EUR"><b>{{ cell.open }}</b></a>
-    {% elif cell.resolved %}
-    <span class="mx2-cell mx2-fixed" title="fixed and verified"></span>
+  {# ONE grid. The console draws the axes Grafana cannot -- the taxonomy
+     icons down the side and the scene's own opening frame across the top --
+     and where the viewer is deployed, Grafana's live squares are the body
+     between them. Columns are weighted by how long each scene lasts, so a
+     column's share of the width is its share of the film, which is exactly
+     what the panel's time axis is. Without a viewer the console draws its
+     own cells instead, which is what it did before any of this. #}
+  {% set cols = scenes | map(attribute='weight') | map('string') | join('fr ') ~ 'fr' %}
+  <div class="mg" style="--cols:{{ cols }}">
+    <span class="mg-corner label">scene &rarr;</span>
+    <div class="mg-strip">
+      {% for sc in scenes %}
+      <a class="mg-scene" href="/runs/{{ run.id }}/frames#sc-{{ sc.shot_id }}"
+         title="{{ sc.shot_id.replace('_',' ') }} &middot; {{ sc.t_start | timecode }}">
+        {% if sc.hero %}<img src="/runs/{{ run.id }}/evidence/{{ sc.hero }}" alt="" loading="lazy">
+        {% else %}<span class="mg-noframe"></span>{% endif %}
+        <span class="mono mg-t">{{ sc.t_start | timecode }}</span>
+      </a>
+      {% endfor %}
+    </div>
+
+    <div class="mg-labels">
+      {% for row in matrix %}
+      <span class="mg-dim" title="{{ row.dimension.replace('_', ' ') }}">
+        <svg class="ic"><use href="#d-{{ row.dimension }}"/></svg>
+        <span>{{ row.dimension.replace('_', ' ') }}</span>
+      </span>
+      {% endfor %}
+    </div>
+
+    {% if embeds and embeds.viewer %}
+    {# The body is Grafana's own: its row labels and time axis are hidden,
+       because the two columns around it are those axes. Height is the row
+       count times the row height, so it never scrolls. #}
+    <iframe class="mg-live" style="height:{{ matrix | length * 44 }}px"
+            src="{{ embeds.viewer.squares }}"
+            title="Occurrences per scene, live from Grafana" loading="lazy"></iframe>
     {% else %}
-    <span class="mx2-cell mx2-clean" title="looked at, nothing objected"></span>
+    <div class="mg-cells">
+      {% for row in matrix %}
+      {% for cell in row.cells %}
+      {% if cell is none %}
+      <span class="mg-cell mg-empty"></span>
+      {% elif cell.working %}
+      <span class="mg-cell mg-working sparkle"></span>
+      {% elif cell.open %}
+      <a class="mg-cell mg-hot {{ 'mg-block' if cell.worst >= 70 }}"
+         href="/launch/remediate?run={{ run.id }}&finding={{ cell.finding }}&method=omni"
+         title="{{ cell.rule }} ({{ cell.market }}) &middot; {{ cell.why }}"><b>{{ cell.open }}</b></a>
+      {% elif cell.resolved %}
+      <span class="mg-cell mg-fixed"></span>
+      {% else %}
+      <span class="mg-cell mg-clean"></span>
+      {% endif %}
+      {% endfor %}
+      {% endfor %}
+    </div>
     {% endif %}
-    {% endfor %}
-    {% endfor %}
   </div>
   <div class="mx2-key label">
-    <span><i class="sw mx2-hot"></i>open &mdash; click to remediate</span>
     <span><i class="sw mx2-block"></i>blocking</span>
-    <span><i class="sw mx2-fixed"></i>fixed and verified</span>
-    <span><i class="sw mx2-clean"></i>looked at, nothing objected</span>
+    <span><i class="sw mx2-fixed"></i>cleared</span>
+    <span>click a square to remediate the scene it sits on</span>
+    {% if embeds and embeds.viewer %}
+    <a class="cite" href="{{ embeds.viewer.grid }}" target="_blank" rel="noreferrer">open the panel in Grafana</a>
+    {% endif %}
   </div>
-
-  {% if embeds and embeds.viewer %}
-  <div class="rule-row" style="margin-top:26px">
-    <span class="label">The same thing, drawn by Grafana</span>
-    <a class="chip" href="{{ embeds.viewer.grid }}" target="_blank" rel="noreferrer">open it full size</a>
-  </div>
-  <p class="subline" style="max-width:96ch;font-size:13.5px">
-    Squares, not bars: a status history of the same observation stream, live in
-    a Grafana that reads this stack. Its row labels are text because no Grafana
-    panel can put an image on an axis &mdash; that is what the grid above is
-    for. Hover a square for its values, and click one to remediate the scene
-    beneath it: the same workflow the cells above launch, fired from inside a
-    Grafana panel.
-  </p>
-  <iframe class="boardlanes live" src="{{ embeds.viewer.grid }}"
-          title="The same coordinates, live from Grafana" loading="lazy"></iframe>
-  {% endif %}
 </section>
 {% endif %}
 
