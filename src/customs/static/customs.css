@@ -1201,6 +1201,17 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
    it wrote beside it, and what each market did with that sentence. */
 
 .fb { display: grid; gap: 12px; }
+/* the scenescroll: one opening still per scene, flagged ones badged, each
+   an anchor jump to its card. Scrolls sideways inside its own strip. */
+.scenescroll { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 12px; }
+.ss { position: relative; flex: none; width: 104px; display: grid; gap: 3px; text-decoration: none; }
+.ss img, .ss-blank { width: 104px; height: 58px; object-fit: cover; display: block; border: 1px solid var(--line); border-radius: 2px; }
+.ss-blank { display: grid; place-items: center; border-style: dashed; font-size: 9px; }
+.ss.hit img { border-color: var(--g-yellow); box-shadow: 0 0 0 1px var(--g-yellow); }
+.ss:hover img { border-color: var(--signal); box-shadow: 0 0 0 1px var(--signal); }
+.ss-t { font-size: 10px; color: var(--ink-3); }
+.ss-n { position: absolute; top: 3px; right: 3px; background: var(--blocked); color: #fff; font-size: 10px; line-height: 1.5; padding: 0 4px; border-radius: 2px; }
+.sc { scroll-margin-top: 72px; }
 /* scene cards: one per shot, opened and closed by its first and last kept
    frame, every observation of the shot inside. A three second smoking scene
    used to be a scroll of near-identical frames, one per observation. */
