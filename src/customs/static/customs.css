@@ -2354,3 +2354,9 @@ tr.sparkle td { background: rgba(251, 188, 5, 0.06); }
 .mx-hot:hover { border-width: 2px; }
 .mx-working { background: rgba(66, 133, 244, 0.12); border-color: var(--g-blue);
   color: var(--g-blue); font-size: 12px; }
+
+/* the live Grafana embeds: same box the PNGs had, minus the picture */
+.boardlanes.live, .embed iframe { width: 100%; border: 1px solid var(--line);
+  border-radius: 2px; background: var(--well); display: block; }
+.boardlanes.live { aspect-ratio: 1200 / 420; }
+.embed iframe { aspect-ratio: 1200 / 300; }

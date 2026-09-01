@@ -1,0 +1,37 @@
+# The same data, through the same door the app already uses.
+#
+# url is the Cloud stack's own datasource proxy -- exactly the path
+# grafana_ops.loki_lines calls (/api/datasources/proxy/uid/<uid>/...), so a
+# Loki datasource appending /loki/api/v1/query_range and a Prometheus one
+# appending /api/v1/query_range both land where they should. Verified live
+# against this stack: 200, real streams, real series.
+#
+# The UIDs are deliberately Cloud's own. Every dashboard JSON in this repo
+# names grafanacloud-logs and grafanacloud-prom, so keeping them means the
+# crew's dashboards provision here unmodified.
+apiVersion: 1
+
+datasources:
+  - name: Loki
+    uid: grafanacloud-logs
+    type: loki
+    access: proxy
+    url: ${STACK_URL}/api/datasources/proxy/uid/grafanacloud-logs
+    editable: false
+    jsonData:
+      httpHeaderName1: Authorization
+    secureJsonData:
+      httpHeaderValue1: Bearer ${SA_TOKEN}
+
+  - name: Mimir
+    uid: grafanacloud-prom
+    type: prometheus
+    access: proxy
+    url: ${STACK_URL}/api/datasources/proxy/uid/grafanacloud-prom
+    isDefault: true
+    editable: false
+    jsonData:
+      httpMethod: GET
+      httpHeaderName1: Authorization
+    secureJsonData:
+      httpHeaderValue1: Bearer ${SA_TOKEN}

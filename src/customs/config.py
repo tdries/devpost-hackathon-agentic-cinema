@@ -53,6 +53,7 @@ class Settings:
     db_path: str
     grafana_public_overview: str
     grafana_public_timeline: str
+    grafana_viewer_url: str
 
     @classmethod
     def load(cls, env_file: Path | str | None = ".env") -> "Settings":
@@ -92,6 +93,10 @@ class Settings:
                                      or _PUBLIC_DASHBOARDS["customs-overview"]),
             grafana_public_timeline=(g("GRAFANA_PUBLIC_TIMELINE")
                                      or _PUBLIC_DASHBOARDS["customs-timeline"]),
+            # The embeddable viewer (scripts/deploy_viewer.sh). Empty when
+            # it is not deployed, and every screen falls back to the
+            # server-rendered PNGs it used before.
+            grafana_viewer_url=g("GRAFANA_VIEWER_URL", "").rstrip("/"),
         )
 
 settings = Settings.load()

@@ -2378,3 +2378,25 @@ def test_the_timeline_draws_the_matrix_with_launch_cells(console):
     assert f"/launch/remediate?run={run.id}&finding=" in page, \
         "a hot cell is a launch button"
     assert "remediate<br>now" in page.lower() or "remediate" in page.lower()
+
+
+def test_the_board_frames_live_grafana_when_the_viewer_is_deployed(console, monkeypatch):
+    """Grafana Cloud will not be framed -- frame-ancestors 'none' on every
+    dashboard URL, 403 on the settings API -- so the board renders its panels
+    as PNGs. When the embeddable viewer is deployed (scripts/deploy_viewer.sh)
+    the same dashboards arrive live instead, from a Grafana whose datasources
+    proxy through this very stack."""
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    page = client.get(f"/runs/{run.id}").text
+    assert "/lanes.png" in page and "<iframe" not in page, "PNG until a viewer exists"
+
+    # settings is a frozen dataclass, so swap in a copy carrying the viewer
+    import dataclasses
+    monkeypatch.setattr(app_module, "settings", dataclasses.replace(
+        app_module.settings, grafana_viewer_url="https://viewer.example.run.app"))
+    page = client.get(f"/runs/{run.id}").text
+    assert "https://viewer.example.run.app/d/customs-lanes/customs" in page
+    assert "kiosk" in page and "var-run=" in page, "framed without chrome, on this run"
+    assert "<iframe" in page and "/lanes.png" not in page

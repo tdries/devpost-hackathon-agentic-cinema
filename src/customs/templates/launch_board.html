@@ -80,8 +80,19 @@
     market objected, flat where we looked and nobody minded. The axis is the run's mapped
     clock &mdash; wall second t0+n <em>is</em> film second n.
   </p>
+  {% if embeds.viewer %}
+  {# Live, and framed: this is the crew's own lanes dashboard, running in a
+     Grafana that allows embedding, reading THIS stack through its datasource
+     proxy. Hover a segment for its values -- and the data link on it starts
+     the Omni rewrite for the scene under the click. #}
+  <iframe class="boardlanes live" src="{{ embeds.viewer.lanes }}"
+          title="Problem lanes, live from Grafana" loading="lazy"></iframe>
+  <p class="label" style="margin-top:8px">live grafana &middot; hover a segment
+    for its values, click one to remediate the scene it sits on</p>
+  {% else %}
   <img class="boardlanes" src="/runs/{{ run.id }}/lanes.png" alt="Problem lanes"
        loading="lazy">
+  {% endif %}
 </section>
 
 <section>
@@ -131,9 +142,13 @@
   {% if published %}
   <div class="embed-grid">
     <div class="embed">
+      {% if embeds.viewer %}
+      <iframe src="{{ embeds.viewer.overview }}" title="Market clearance status, live from Grafana" loading="lazy"></iframe>
+      {% else %}
       <a href="{{ embeds.overview }}" target="_blank" rel="noreferrer">
         <img src="/runs/{{ run.id }}/panels/clearance.png" alt="Market clearance status, from Grafana">
       </a>
+      {% endif %}
       <div class="embed-note">Market clearance status for every asset this instance is tracking, on the current clock &mdash; not just this run. It moves again every time a remediation resolves a finding. <a class="cite" href="{{ embeds.overview }}" target="_blank" rel="noreferrer">Open the overview</a></div>
     </div>
     <div class="embed">
