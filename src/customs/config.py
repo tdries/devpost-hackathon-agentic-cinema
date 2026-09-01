@@ -48,6 +48,7 @@ class Settings:
     model_text: str
     model_image: str
     model_video: str
+    model_omni: str
     model_tts: str
     db_path: str
     grafana_public_overview: str
@@ -72,6 +73,9 @@ class Settings:
             model_text=g("GEMINI_MODEL_TEXT", "gemini-3.7-flash"),
             model_image=g("IMAGEN_MODEL", "gemini-3.1-flash-image"),
             model_video=g("VEO_MODEL", "veo-3.1-generate-001"),
+            # The Vertex name carries -preview; the bare name answers
+            # "Unsupported model interaction" (probed live 2026-09-01).
+            model_omni=g("OMNI_MODEL", "gemini-omni-1.1-flash-preview"),
             model_tts=g("TTS_MODEL", "gemini-2.5-flash-tts"),
             db_path=g("CUSTOMS_DB", "runs/customs.db"),
             # `or` rather than a default argument: .env.example ships both

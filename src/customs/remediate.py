@@ -55,9 +55,9 @@ from google.genai import types
 
 from customs import costs, media
 from customs.config import settings
-from customs.genai_client import (VeoBlocked, VeoRefusedInput, client,
-                                  generate_bridge, generate_json,
-                                  generate_json_image)
+from customs.genai_client import (OmniQuota, VeoBlocked, VeoRefusedInput,
+                                  client, generate_bridge, generate_json,
+                                  generate_json_image, generate_omni_edit)
 from customs.media import Shot
 from customs.packs import load as load_packs
 from customs.schema import ChangeRecord, Finding, Observation
@@ -121,7 +121,7 @@ def _pace_image_call() -> None:
 # "bridge" is never chosen by plan(): it regenerates pixels and costs real
 # money, so it only ever runs because an operator picked it in the console
 # and the day's budget allowed it.
-METHODS = ("relettering", "prop_swap", "revoice", "per_frame", "bridge")
+METHODS = ("relettering", "prop_swap", "revoice", "per_frame", "omni", "bridge")
 
 # --- the mapping table (task-14 contract) ---
 #
@@ -940,6 +940,52 @@ def _per_frame_span(base: Path, finding: Finding, replacement: str | None,
     return frames[0], instruction
 
 
+def _omni_span(base: Path, finding: Finding, replacement: str | None,
+               workdir: Path, out_path: Path,
+               keep_dir: Path | None = None,
+               intent: str | None = None,
+               change_id: str = "", statement: str = "",
+               spend=None, on_event=None, store=None) -> tuple[Path, str]:
+    """Hand the span itself to Gemini Omni and splice its rewrite back.
+
+    The other expensive tier, and the opposite bet to the bridge: the
+    bridge regenerates pixels between two edited stills, Omni edits the
+    moving footage directly -- same shots, same motion, only what the
+    instruction names changes. Cheaper per second than Veo, capped at 10
+    input seconds by Google, and subject to the same group contract as
+    every other method: one edit answers every open finding on the shot.
+    """
+    market_name = _market_name(finding.market)
+    siblings = _siblings_for(finding, store)
+    directive = _combined_directive(finding, siblings, replacement, intent,
+                                    market_name)
+    instruction = (f"Edit this video. {directive} Keep everything else "
+                   f"exactly the same: same shots, same motion, same "
+                   f"performers, same lighting, same duration. Change "
+                   f"nothing that was not named.")
+
+    clip = media.cut_span(base, finding.t_start, finding.t_end,
+                          workdir / f"omni_{finding.id}_in.mp4")
+    try:
+        edited = generate_omni_edit(instruction, clip,
+                                    workdir / f"omni_{finding.id}_out.mp4")
+    except OmniQuota as exc:
+        raise RemediationError(str(exc)) from exc
+
+    # Charged only for footage that exists, like the bridge.
+    if spend is not None:
+        spend()
+    if keep_dir is not None and change_id:
+        keep_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            (keep_dir / f"{change_id}_omni.mp4").write_bytes(edited.read_bytes())
+        except OSError:
+            pass
+    media.splice_clip(base, edited, finding.t_start, finding.t_end, out_path)
+    _note(on_event, f"omni rewrote {finding.t_end - finding.t_start:.1f}s in place")
+    return edited, instruction
+
+
 def _bridge_span(base: Path, finding: Finding, replacement: str | None,
                  workdir: Path, out_path: Path,
                  keep_dir: Path | None = None,
@@ -1330,6 +1376,16 @@ def _run_method(run, finding: Finding, method: str, replacement: str | None,
         span = finding.t_end - finding.t_start
         return (f"repainted the offending region on "
                 f"{costs.per_frame_edits(span)} frames of the span")
+    if method == "omni":
+        _edited, instruction = _omni_span(base, finding, replacement,
+                                          Path(workdir), staged,
+                                          keep_dir=changes_dir, intent=intent,
+                                          change_id=change_id, statement=statement,
+                                          spend=spend, on_event=on_event,
+                                          store=store)
+        store.emit(run.id, "remediator", f"omni instruction: {instruction}")
+        return (f"rewrote the span in place with Omni; the footage is the "
+                f"brand's own throughout")
     if method == "bridge":
         _edited, instruction = _bridge_span(base, finding, replacement,
                                             Path(workdir), staged,

@@ -2185,6 +2185,7 @@ def test_the_pickers_word_is_law(console, monkeypatch, tmp_path):
     for method, expected in (("overlay", ("prop_swap", "freeze")),
                              ("track", ("prop_swap", None)),
                              ("per_frame", ("per_frame", None)),
+                             ("omni", ("omni", None)),
                              ("auto", ("prop_swap", None))):
         store.update_finding_status(fid, "open", run_id=run.id)
         # the underscored one: the console fixture stubs the public wrapper

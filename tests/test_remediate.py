@@ -1124,3 +1124,62 @@ def test_the_patch_path_never_sends_the_alcohol_default_to_an_unmapped_dimension
     assert "alcoholic" not in seen["instruction"], seen["instruction"]
     assert "cover" in seen["instruction"].lower() or \
            "clothing" in seen["instruction"].lower(), seen["instruction"]
+
+
+def test_omni_edits_the_whole_shot_and_pays_only_for_footage(
+        monkeypatch, tmp_path):
+    """The Omni rewrite obeys the same two contracts as everything else:
+    one edit answers every open finding on the shot, and the budget is
+    charged only when footage actually came back."""
+    from customs import remediate
+    lead, thighs = _two_findings_one_shot()
+
+    class FakeStore:
+        def findings(self, run_id, market=None):
+            return [lead, thighs]
+        def observations(self, run_id):
+            return []
+
+    ran = {"charged": 0, "spliced": None, "instruction": None}
+    monkeypatch.setattr(remediate.media, "cut_span",
+                        lambda base, t0, t1, out: pathlib.Path(out))
+    def fake_omni(instruction, clip, out):
+        ran["instruction"] = instruction
+        out = pathlib.Path(out)
+        out.write_bytes(b"mp4")
+        return out
+    monkeypatch.setattr(remediate, "generate_omni_edit", fake_omni)
+    monkeypatch.setattr(remediate.media, "splice_clip",
+                        lambda base, clip, t0, t1, out:
+                        ran.__setitem__("spliced", (round(t0, 2), round(t1, 2))))
+
+    remediate._omni_span(tmp_path / "b.mp4", lead, None, tmp_path,
+                         tmp_path / "out.mp4", intent="remedy:0",
+                         spend=lambda: ran.__setitem__("charged", ran["charged"] + 1),
+                         store=FakeStore())
+
+    assert "Extend the clothing." in ran["instruction"], "the lead's remedy"
+    assert "Lengthen the shorts to the knee." in ran["instruction"], \
+        "and the sibling's, in one edit"
+    assert ran["spliced"] == (6.71, 7.21), "spliced back onto the exact span"
+    assert ran["charged"] == 1
+
+
+def test_omni_quota_refusal_is_honest_and_charges_nothing(monkeypatch, tmp_path):
+    from customs import remediate
+    from customs.genai_client import OmniQuota
+    lead, _ = _two_findings_one_shot()
+
+    ran = {"charged": 0}
+    monkeypatch.setattr(remediate.media, "cut_span",
+                        lambda base, t0, t1, out: pathlib.Path(out))
+    def refuse(instruction, clip, out):
+        raise OmniQuota("Omni's quota on this project is still zero: nothing "
+                        "ran and nothing was charged.")
+    monkeypatch.setattr(remediate, "generate_omni_edit", refuse)
+
+    with pytest.raises(remediate.RemediationError, match="quota"):
+        remediate._omni_span(tmp_path / "b.mp4", lead, None, tmp_path,
+                             tmp_path / "out.mp4",
+                             spend=lambda: ran.__setitem__("charged", 1))
+    assert ran["charged"] == 0

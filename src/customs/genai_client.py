@@ -144,6 +144,90 @@ def _seed_from(*paths) -> int:
     return int.from_bytes(digest.digest()[:4], "big")
 
 
+class OmniQuota(RuntimeError):
+    """Omni's quota on this project refused the request before any work.
+
+    gemini-omni-1.1-flash-preview ships with a zero default quota on
+    global_generate_content_requests_per_minute_per_project_per_base_model
+    (probed live 2026-09-01: two spaced attempts, both 429) -- the same
+    story as the image model. Nothing runs, so nothing is charged, and the
+    fix is a quota increase request in the console, not a retry.
+    """
+
+
+def generate_omni_edit(instruction: str, clip_path, out_path,
+                       poll_s: float = 10.0, timeout_s: float = 600.0):
+    """Gemini Omni, video-to-video: edit this clip as instructed.
+
+    The clip goes in whole, inline, and comes back the same length with
+    only the named change made -- no anchors, no interpolation, the
+    footage stays the brand's own. Input must be 10 seconds or less
+    (Google's documented cap for editing uploads).
+
+    The response contract is from the SDK's own generated types
+    (VideoContent: data/uri, Interaction: status/outputs); the first
+    quota-approved call is the live verification.
+    """
+    import base64 as _b64
+    import time as _time
+    from pathlib import Path as _P
+
+    clip = _P(clip_path)
+    try:
+        interaction = client().interactions.create(
+            model=settings.model_omni,
+            input=[
+                {"type": "video", "mime_type": "video/mp4",
+                 "data": _b64.b64encode(clip.read_bytes()).decode()},
+                {"type": "text", "text": instruction},
+            ])
+    except Exception as exc:  # noqa: BLE001 -- classify, then re-raise
+        message = str(exc)
+        if "429" in message or "Quota exceeded" in message:
+            raise OmniQuota(
+                "Omni's quota on this project is still zero: nothing ran and "
+                "nothing was charged. Request an increase on "
+                "global_generate_content_requests_per_minute_per_project_per_"
+                "base_model for gemini-omni-1.1-flash-preview.") from exc
+        raise
+
+    waited = 0.0
+    while getattr(interaction, "status", "") in ("queued", "pending",
+                                                 "in_progress", "running"):
+        _time.sleep(poll_s)
+        waited += poll_s
+        if waited > timeout_s:
+            raise RuntimeError(f"Omni edit still running after {waited:.0f}s")
+        interaction = client().interactions.get(getattr(interaction, "id"))
+
+    status = getattr(interaction, "status", "")
+    if status not in ("completed", ""):
+        raise RuntimeError(f"Omni edit ended {status}: "
+                           f"{str(interaction)[:300]}")
+
+    def _blocks(node):
+        for item in (getattr(node, "outputs", None) or []):
+            yield item
+            for sub_item in (getattr(item, "content", None) or []):
+                yield sub_item
+
+    for block in _blocks(interaction):
+        if getattr(block, "type", "") != "video":
+            continue
+        data = getattr(block, "data", None)
+        if data:
+            out = _P(out_path)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_bytes(_b64.b64decode(data) if isinstance(data, str) else data)
+            return out
+        uri = getattr(block, "uri", None)
+        if uri:
+            raise RuntimeError(
+                f"Omni returned the video as a uri ({uri[:80]}), which this "
+                f"client does not fetch yet -- teach generate_omni_edit.")
+    raise RuntimeError(f"Omni returned no video block: {str(interaction)[:300]}")
+
+
 def generate_bridge(prompt: str, first_frame, last_frame, seconds: float,
                     out_path, poll_s: float = 10.0, timeout_s: float = 600.0,
                     seed: int | None = None):
