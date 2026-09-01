@@ -2264,3 +2264,51 @@ def test_ops_busy_reports_what_a_deploy_would_destroy(console):
     store.set_run_status(live.id, "running")
     body = client.get("/ops/busy").json()
     assert body["busy"] is True and live.id in body["running_runs"]
+
+
+def test_the_lifecycle_strip_knows_where_a_run_stands(console):
+    """Five flat tabs never told a first-timer that the mission feed IS the
+    processing stage or the cutting room IS the result. The lifecycle helper
+    lights the current stage and hands the one state-driven next step."""
+    client, store, _launched, _jobs = console
+
+    live = store.create_run(asset_path=ASSET, markets=["FR"])
+    store.set_run_status(live.id, "running")
+    lc = app_module.run_lifecycle(store.get_run(live.id))
+    assert {s["key"]: s["state"] for s in lc["stages"]}["processing"] == "current"
+    assert "mission" in lc["cta"]["href"]
+
+    judged = _judged_run(store)
+    lc = app_module.run_lifecycle(store.get_run(judged.id))
+    states = {s["key"]: s["state"] for s in lc["stages"]}
+    assert states["processing"] == "done" and states["decision"] == "current"
+    assert "/markets/" in lc["cta"]["href"], "the next step names a failing market"
+
+    for f in store.findings(judged.id):
+        store.update_finding_status(f.id, "resolved", run_id=judged.id)
+    lc = app_module.run_lifecycle(store.get_run(judged.id))
+    assert {s["key"]: s["state"] for s in lc["stages"]}["verified"] == "done"
+    assert lc["cta"]["href"].endswith("/cutting")
+
+    # and the strip plus breadcrumb render on a run screen
+    page = client.get(f"/runs/{judged.id}").text
+    assert "All runs" in page and 'class="wrap lifecycle"' in page
+
+
+def test_the_market_room_clusters_findings_by_scene(console):
+    """Same device as the frame board: a shot with several objections is one
+    section under one header, and the scenescroll on top jumps straight to
+    a scene's rows."""
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    # a second scene: the fixture's FR findings both hang off shot_0's
+    # observation, and one scene alone earns no scroll
+    store.add_findings([_finding(
+        run.id, id="fnd_FR_FR-MOD-01_obs_shot_1_000", rule_id="FR-MOD-01",
+        observation_id="obs_shot_1_000", t_start=4.2, t_end=5.1,
+        rationale="a second scene's objection")])
+
+    page = client.get(f"/runs/{run.id}/markets/FR").text
+    assert 'id="mk-shot_0"' in page and 'id="mk-shot_1"' in page
+    assert 'href="#mk-shot_0"' in page, "the scenescroll jumps to the scene"
+    assert page.count('class="scene-row"') == 2

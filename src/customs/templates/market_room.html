@@ -84,13 +84,38 @@
     </span>
   </div>
   {% if findings %}
+  {% if scenes | length > 1 %}
+  {# The scenescroll, same device as the frame board: one still per scene
+     that has findings HERE, open ones badged, each an anchor jump to the
+     scene's rows below. #}
+  <nav class="scenescroll" aria-label="Jump to a scene">
+    {% for sc in scenes %}
+    <a class="ss{{ ' hit' if sc.open }}" href="#mk-{{ sc.shot_id }}"
+       title="{{ sc.shot_id.replace('_', ' ') }} &middot; {{ sc.t_start | timecode }}{{ ' &middot; %d open' % sc.open if sc.open }}">
+      {% if sc.hero %}
+      <img src="/runs/{{ run.id }}/evidence/{{ sc.hero }}" alt="" loading="lazy">
+      {% else %}
+      <span class="ss-blank label">no frame</span>
+      {% endif %}
+      <span class="mono ss-t">{{ sc.t_start | timecode }}</span>
+      {% if sc.open %}<span class="ss-n mono">{{ sc.open }}</span>{% endif %}
+    </a>
+    {% endfor %}
+  </nav>
+  {% endif %}
   <div class="panel as-list" id="findings"><div class="panel-body" style="padding:18px 4px 4px">
     <table class="grid">
       <thead><tr>
         <th>Rule</th><th>Citation</th><th>Evidence</th><th>Class</th><th>Severity</th><th>Window</th><th>Status</th><th></th>
       </tr></thead>
       <tbody>
-      {% for finding in findings %}
+      {% for sc in scenes %}
+      <tr class="scene-row" id="mk-{{ sc.shot_id }}"><td colspan="8">
+        <span class="label">{{ sc.shot_id.replace('_', ' ') }}</span>
+        <span class="mono fb-time">{{ sc.t_start | timecode }} to {{ sc.t_end | timecode }}</span>
+        <span class="label">{{ sc.findings | length }} finding{{ '' if sc.findings | length == 1 else 's' }}{{ ' · %d open' % sc.open if sc.open }}</span>
+      </td></tr>
+      {% for finding in sc.findings %}
       <tr>
         {# Rule and citation are two columns, not one stacked cell. Stacked,
            the rationale and a statute title shared a 200px column and ran
@@ -181,6 +206,7 @@
           {% endif %}
         </td>
       </tr>
+      {% endfor %}
       {% endfor %}
       </tbody>
     </table>

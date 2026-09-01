@@ -112,6 +112,29 @@
     return d.innerHTML;
   }
 
+  /* ---------- 1a2. continue where you left off ----------
+     Run pages remember themselves; app-level screens offer the way back.
+     The id is validated twice -- written from our own URL match, and
+     matched again before it is ever put into the page. */
+
+  (function () {
+    var here = location.pathname.match(/^\/runs\/(run_[a-z0-9]{6,32})(\/|$)/);
+    try {
+      if (here) { localStorage.setItem("customs-last-run", here[1]); return; }
+      var last = localStorage.getItem("customs-last-run");
+      if (!last || !/^run_[a-z0-9]{6,32}$/.test(last)) { return; }
+      var nav = document.querySelector(".runnav .screens");
+      if (!nav || document.querySelector(".crumb")) { return; }
+      var link = document.createElement("a");
+      link.className = "tab tab-continue";
+      link.href = "/runs/" + last;
+      link.innerHTML = '<svg class="ic"><use href="#n-board"/></svg>' +
+        'continue: <span class="mono">' + last + "</span>";
+      nav.appendChild(link);
+    } catch (e) {}
+  })();
+
+
   /* ---------- 1b. the mission feed's two tabs ---------- */
 
   (function () {
