@@ -15,7 +15,7 @@
   <img src="https://img.shields.io/badge/agents-Google%20ADK-4285F4?logo=google&logoColor=white" alt="Google ADK">
   <img src="https://img.shields.io/badge/models-Gemini%203.7%20%C2%B7%20Veo%203.1-34A853?logo=googlegemini&logoColor=white" alt="Gemini and Veo">
   <img src="https://img.shields.io/badge/observability-Grafana%20Cloud-F46800?logo=grafana&logoColor=white" alt="Grafana Cloud">
-  <img src="https://img.shields.io/badge/tests-501%20passing-34A853" alt="501 tests">
+  <img src="https://img.shields.io/badge/tests-504%20passing-34A853" alt="504 tests">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue" alt="Apache 2.0"></a>
 </p>
 
@@ -62,7 +62,7 @@ Customs is the instrument that catches it first.
 | **Evidence** | A consultant's opinion | A **named statute or code behind every finding**, and a live source link on every one that could be grounded — the rest are marked unsourced and capped |
 | **Timeline** | Days to weeks | Minutes |
 | **Monitoring** | A PDF report | A **Grafana instrument panel the crew builds and writes to itself** |
-| **The fix** | Re-edit by an agency | Four fix methods over five techniques, from a text re-letter to a **Veo-generated bridge** — priced in euro before you press |
+| **The fix** | Re-edit by an agency | Five fix methods over five techniques, from a text re-letter to a **Veo-generated bridge** — priced in euro before you press |
 | **The hard cases** | Silently "fixed" | A rule-layer **Guard** refuses to censor who appears in your ad, and surfaces it as a human decision with the statute cited |
 
 ---
@@ -365,6 +365,7 @@ The operator picks a **method**, and the Remediator picks the technique.
 | **Patch one frame** | edits a single frame and holds it over the span | €0.04 |
 | **Propagate the change** | edits one frame, divides its lighting out, and multiplies the colour change into every live frame — the shot keeps its own motion, light and grain | €0.04 |
 | **Repaint every frame** | edits the offending region on every frame (12 fps) and composites each back through the finding's own matte | €0.04 × frames |
+| **Rewrite with Omni** | hands the span itself to **Gemini Omni** (video-to-video): same shots, same motion, only the named change | €0.10 × seconds |
 | **Regenerate with Veo** | both ends of the span edited, then **Veo 3.1 generates the motion between them** | €1.88 – €3.68 |
 
 Outside the bridge, the Remediator resolves the actual technique from the finding's dimension — `relettering` (on-screen text re-lettered in the market's language), `prop_swap` (the object replaced in place, and the default when nothing else fits), or `revoice` (the line re-voiced with Gemini TTS). `bridge` is the fourth. An earlier fifth, a centre-crop `reframe`, was removed for being useless: it zoomed the whole frame without knowing where the offending element was.
@@ -508,11 +509,11 @@ Runtime: `--max-instances 1 --min-instances 1 --concurrency 20 --memory 2Gi --cp
 ## Tests
 
 ```bash
-.venv/bin/python -m pytest -q        # 501 passed, 8 deselected
+.venv/bin/python -m pytest -q        # 504 passed, 8 deselected
 .venv/bin/python -m pytest -m live   # the 8: real Gemini, real Grafana
 ```
 
-509 collected, 501 offline, 8 marked `live`. ffmpeg must be on `PATH` — without it 85 tests error and 3 fail, which is the honest signal rather than a quiet skip.
+512 collected, 504 offline, 8 marked `live`. ffmpeg must be on `PATH` — without it 85 tests error and 3 fail, which is the honest signal rather than a quiet skip.
 
 ---
 
@@ -540,6 +541,7 @@ Drop the file in `markets/` and the jurisdiction appears in the console on the n
 
 - **The Guard is deliberate friction.** Customs will tell you a market requires censoring who appears in your ad, and it will not do that for you.
 - **Unsourced findings are capped.** A finding whose citation cannot be resolved to a live source is marked `sourced: false`, capped at severity 40, never blocks a market, and never fires an alert — so it never triggers remediation on its own. An operator can still choose to act on one by hand.
+- **Omni is quota-gated.** The Omni rewrite (gemini-omni-1.1-flash-preview, Interactions API) ships with a zero default quota per project; until the increase is granted the picker offers it and the attempt reports the quota honestly, charging nothing.
 - **Veo is budgeted, not unlimited.** €45/day system-wide, reset at midnight UTC. Veo will not generate a span longer than 8 s, and the console refuses the button rather than failing mid-generation. A span shorter than 4 s is rounded up to Veo's four-second minimum and priced accordingly.
 - **Input caps.** 120 seconds and 200 MB, enforced at the door.
 - **Single instance by design.** SQLite and in-process locks; Cloud Run runs `--max-instances 1`. Demo-grade persistence, stated as a tradeoff rather than hidden.

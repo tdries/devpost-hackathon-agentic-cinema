@@ -63,7 +63,8 @@ def test_scope_advises_but_never_closes_a_method():
     scene = {o["key"]: o["available"] for o in costs.options(6.0, 0.0, "scene")}
     # nothing is off any more: scope advises, it does not close doors, and
     # track stopped being a promise once relight propagation landed
-    assert scene == {"overlay": True, "track": True, "per_frame": True, "bridge": True}
+    assert scene == {"overlay": True, "track": True, "per_frame": True,
+                     "omni": True, "bridge": True}
 
 
 def test_a_premise_can_still_be_fixable_when_the_element_is_swappable():
@@ -76,7 +77,7 @@ def test_a_premise_can_still_be_fixable_when_the_element_is_swappable():
     assert not fits and "regenerated" in why
     # a poor fit is still offered, at its own price
     assert {o["key"] for o in costs.options(6.0, 0.0, "concept", True)
-            if o["available"]} == {"overlay", "track", "per_frame", "bridge"}
+            if o["available"]} == {"overlay", "track", "per_frame", "omni", "bridge"}
     assert "still works" in scope.verdict("concept", True)
 
     # an advertisement for alcohol is not an advertisement for alcohol with

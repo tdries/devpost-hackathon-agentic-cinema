@@ -249,6 +249,7 @@ def _remediate_and_verify(run_id: str, finding_id: str, market: str,
             technique = remediate.plan(finding, observation)
             chosen, landing = {
                 "bridge": ("bridge", None),
+                "omni": ("omni", None),
                 "per_frame": ("per_frame", None),
                 "overlay": (technique, "freeze"),
             }.get(method, (technique, None))
@@ -275,7 +276,7 @@ def _remediate_and_verify(run_id: str, finding_id: str, market: str,
                 run, finding, chosen, workdir, db,
                 replacement=replacement, intent=intent,
                 statement=observation.statement if observation else "",
-                spend=_charge if chosen in ("bridge", "per_frame") else None,
+                spend=_charge if chosen in ("bridge", "per_frame", "omni") else None,
                 on_event=lambda agent, message: db.emit(run_id, agent, message),
                 landing=landing)
             return verify.confirm(run, market, [change], db, workdir)

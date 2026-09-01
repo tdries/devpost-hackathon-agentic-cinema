@@ -35,7 +35,8 @@ def test_the_day_s_budget_closes_the_expensive_option_and_leaves_the_cheap_one()
 
 def test_every_option_is_priced_and_says_what_it_is_for():
     opts = costs.options(3.0, spent_today=0.0)
-    assert [o["key"] for o in opts] == ["overlay", "track", "per_frame", "bridge"]
+    assert [o["key"] for o in opts] == ["overlay", "track", "per_frame",
+                                        "omni", "bridge"]
     for o in opts:
         assert o["eur"] > 0 and o["length"] and o["complexity"] and o["best_for"]
     # track was a promise for most of this project's life and is now the
@@ -142,3 +143,16 @@ def test_per_frame_is_priced_by_the_frame_and_can_outrun_the_budget():
     ok, why = costs.available("per_frame", 7.0, costs.DAILY_BUDGET_EUR - 1.0)
     assert not ok and "84 frames" in why, why
     assert costs.available("per_frame", 7.0, 0.0)[0]
+
+
+def test_omni_is_priced_by_the_second_and_capped_at_ten():
+    """Google's own numbers: ~$0.10 per output second, and 'input videos for
+    editing must be 10 seconds or less'. Priced 1:1 in EUR like Veo."""
+    assert costs.estimate("omni", 8.0) == 0.80
+    assert costs.estimate("omni", 0.5) == 0.10, "billed at least one second"
+
+    ok, why = costs.available("omni", 12.0, 0.0)
+    assert not ok and "10" in why
+    ok, why = costs.available("omni", 8.0, costs.DAILY_BUDGET_EUR - 0.10)
+    assert not ok and "budget" in why.lower()
+    assert costs.available("omni", 8.0, 0.0) == (True, "")

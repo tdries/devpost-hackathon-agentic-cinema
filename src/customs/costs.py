@@ -30,6 +30,14 @@ from dataclasses import dataclass
 # refuses to emit less than MIN_BRIDGE_S or more than MAX_BRIDGE_S, so a
 # span outside that range cannot be bridged at all.
 _EURO_PER_VIDEO_SECOND = 0.45
+# Gemini Omni Flash edits video-to-video at ~$0.10 per output second
+# (Google's own pricing page: $17.50/1M video tokens, "approximately $0.10
+# per second"). Priced 1:1 in EUR like Veo above. Output length equals
+# input length for an edit, so the span itself is the bill.
+_EURO_PER_OMNI_SECOND = 0.10
+# Google: "input videos for editing and extension must be 10 seconds or
+# less" (ai.google.dev/gemini-api/docs/omni, read 2026-09-01).
+OMNI_MAX_SPAN_S = 10.0
 MIN_BRIDGE_S = 4.0
 MAX_BRIDGE_S = 8.0
 
@@ -69,6 +77,11 @@ METHODS = (
            "high", "a target that deforms or is occluded, where one edit "
                    "cannot be propagated: a bottle travelling to a mouth, a "
                    "garment on a moving body"),
+    Method("omni", "Rewrite with Omni",
+           "Hands the span itself to Gemini Omni, which edits the footage "
+           "in place: same shots, same motion, only what you name changes.",
+           "high", "any span up to 10 seconds where the footage should stay "
+                   "the brand's own instead of being regenerated"),
     Method("bridge", "Regenerate with Veo",
            "Edits both ends of the span and generates the motion between them.",
            "high", "genuine 3D motion, where a patch cannot hold"),
@@ -123,6 +136,8 @@ def estimate(method: str, span: float) -> float:
         raw = 2 * _EURO_PER_IMAGE_EDIT + bridge_seconds(span) * _EURO_PER_VIDEO_SECOND
     elif method == "per_frame":
         raw = per_frame_edits(span) * _EURO_PER_IMAGE_EDIT
+    elif method == "omni":
+        raw = max(1.0, span) * _EURO_PER_OMNI_SECOND
     elif method in ("overlay", "track"):
         raw = _EURO_PER_IMAGE_EDIT
     else:
@@ -152,6 +167,17 @@ def available(method: str, span: float, spent_today: float) -> tuple[bool, str]:
             left = max(0.0, DAILY_BUDGET_EUR - spent_today)
             return False, (f"Today's budget has {left:.2f} EUR left and repainting "
                            f"{per_frame_edits(span)} frames costs {price:.2f} EUR.")
+        return True, ""
+    if method == "omni":
+        if span > OMNI_MAX_SPAN_S:
+            return False, (f"{span:.1f}s is longer than Omni will take in one "
+                           f"piece ({OMNI_MAX_SPAN_S:.0f}s). Cut the finding's "
+                           f"span, or bridge part of it.")
+        price = estimate("omni", span)
+        if spent_today + price > DAILY_BUDGET_EUR:
+            left = max(0.0, DAILY_BUDGET_EUR - spent_today)
+            return False, (f"Today's budget has {left:.2f} EUR left and this "
+                           f"rewrite costs {price:.2f} EUR.")
         return True, ""
     if method != "bridge":
         return False, f"Unknown method {method}."

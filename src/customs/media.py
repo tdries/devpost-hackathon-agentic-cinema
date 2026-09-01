@@ -854,6 +854,26 @@ def replace_audio_span(path, wav, t_start: float, t_end: float, out_path) -> Pat
     return Path(out_path)
 
 
+def cut_span(path, t_start: float, t_end: float, out_path) -> Path:
+    """The span as its own clip, frame-exact, no audio.
+
+    Feeds the Omni rewrite: the model gets exactly the seconds under the
+    finding and nothing else. No audio on purpose -- splice_clip keeps the
+    original soundtrack across the whole file, so the clip's own would be
+    thrown away anyway. Re-encoded (not stream-copied) because -c copy
+    cuts at keyframes, and a finding's span starts wherever it starts.
+    """
+    args = [
+        "ffmpeg", "-y", "-ss", f"{max(0.0, t_start):.3f}",
+        "-i", str(path), "-t", f"{max(0.05, t_end - t_start):.3f}",
+        "-an", "-c:v", "libx264", "-preset", "veryfast",
+        "-crf", str(EDIT_CRF), "-pix_fmt", "yuv420p",
+        "-movflags", "+faststart", str(out_path),
+    ]
+    _run(args, timeout=_encode_timeout(max(1.0, t_end - t_start)))
+    return Path(out_path)
+
+
 def splice_clip(path, clip, t_start: float, t_end: float, out_path) -> Path:
     """Replace [t_start, t_end) of `path` with ALL of `clip`, retimed to fit,
     keeping the original audio across the whole file.
