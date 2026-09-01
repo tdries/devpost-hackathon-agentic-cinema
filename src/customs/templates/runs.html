@@ -54,7 +54,7 @@
   {% if rows %}
   <div class="runlist" id="runlist">
     {% for item in rows %}
-    <a class="runrow" href="/runs/{{ item.run.id }}">
+    <a class="runrow{{ ' sparkle' if item.busy }}" href="/runs/{{ item.run.id }}">
       <img class="runthumb" src="/runs/{{ item.run.id }}/poster.jpg" alt="" loading="lazy" onerror="this.remove()">
       {# Grafana's numbers, drawn in our own hex. Its own URL so the list
          paints immediately and one slow Grafana cannot hold up the

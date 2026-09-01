@@ -116,7 +116,7 @@
         <span class="label">{{ sc.findings | length }} finding{{ '' if sc.findings | length == 1 else 's' }}{{ ' · %d open' % sc.open if sc.open }}</span>
       </td></tr>
       {% for finding in sc.findings %}
-      <tr>
+      <tr{{ ' class="sparkle"' | safe if finding.status == 'remediating' }}>
         {# Rule and citation are two columns, not one stacked cell. Stacked,
            the rationale and a statute title shared a 200px column and ran
            twelve lines deep while Class, Severity and Window sat empty

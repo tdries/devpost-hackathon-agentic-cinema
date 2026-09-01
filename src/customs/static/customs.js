@@ -98,6 +98,7 @@
       if (button) {
         window.setTimeout(function () {
           button.disabled = true;
+          button.classList.add("sparkle");
           button.textContent = "Uploading the master…";
         }, 0);
       }
@@ -157,6 +158,44 @@
         }
       }, 500);
     });
+  })();
+
+
+  /* ---------- 1a4. the activity beacon ----------
+     Wherever you are in the console, whatever is running shows in the
+     topbar: runs mid-analysis, fixes in the making. Fed by /ops/busy,
+     the same answer the deploy gate trusts. */
+
+  (function () {
+    var beacon = document.getElementById("beacon");
+    if (!beacon) { return; }
+    var RUN_ID = /^run_[a-z0-9]{6,32}$/;
+    var paint = function (d) {
+      var runs = (d.running_runs || []).filter(function (r) { return RUN_ID.test(r); });
+      var fixes = (d.remediating_runs || []).filter(function (r) { return RUN_ID.test(r); });
+      if (!d.busy || (!runs.length && !fixes.length && !(d.remediating_findings || []).length)) {
+        beacon.hidden = true;
+        beacon.classList.remove("sparkle");
+        return;
+      }
+      var parts = [];
+      if (runs.length) { parts.push(runs.length + " run" + (runs.length === 1 ? "" : "s") + " analysing"); }
+      var fixCount = (d.remediating_findings || []).length;
+      if (fixCount) { parts.push(fixCount + " fix" + (fixCount === 1 ? "" : "es") + " running"); }
+      beacon.textContent = parts.join(" · ") || "working";
+      beacon.href = runs.length ? "/runs/" + runs[0] + "/mission"
+                  : fixes.length ? "/runs/" + fixes[0] : "/runs";
+      beacon.classList.add("sparkle");
+      beacon.hidden = false;
+    };
+    var poll = function () {
+      fetch("/ops/busy", { headers: { Accept: "application/json" } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) { if (d) { paint(d); } })
+        .catch(function () {});
+    };
+    poll();
+    window.setInterval(poll, 9000);
   })();
 
 

@@ -17,7 +17,7 @@
      Plain anchors -- the browser does the jumping. #}
   <nav class="scenescroll" aria-label="Jump to a scene">
     {% for sc in scenes %}
-    <a class="ss{{ ' hit' if sc.findings }}" href="#sc-{{ sc.shot_id }}"
+    <a class="ss{{ ' hit' if sc.findings }}{{ ' sparkle' if sc.working }}" href="#sc-{{ sc.shot_id }}"
        title="{{ sc.shot_id.replace('_', ' ') }} &middot; {{ sc.t_start | timecode }}{{ ' &middot; %d finding(s)' % sc.findings if sc.findings }}">
       {% if sc.hero %}
       <img src="/runs/{{ run.id }}/evidence/{{ sc.hero.obs.id }}" alt="" loading="lazy">
@@ -32,7 +32,7 @@
   {% endif %}
   <div class="fb">
     {% for sc in scenes %}
-    <div class="sc{{ ' hit' if sc.findings }}" id="sc-{{ sc.shot_id }}">
+    <div class="sc{{ ' hit' if sc.findings }}{{ ' sparkle' if sc.working }}" id="sc-{{ sc.shot_id }}">
       <div class="sc-frames">
         {% if sc.hero %}
         {% for r in [sc.hero, sc.tail] if r %}

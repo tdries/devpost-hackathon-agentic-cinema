@@ -88,7 +88,7 @@
   <div class="rule-row"><span class="label">Market tiles</span></div>
   <div class="tiles" id="tiles">
     {% for tile in tiles %}
-    <a class="tile t-{{ tile.state }}" id="tile-{{ tile.market }}" href="/runs/{{ run.id }}/markets/{{ tile.market }}">
+    <a class="tile t-{{ tile.state }}{{ ' sparkle' if tile.working }}" id="tile-{{ tile.market }}" href="/runs/{{ run.id }}/markets/{{ tile.market }}">
       <span class="tile-top">
         <span class="tile-code">{{ tile.market }}</span>
         <span class="pill s-{{ tile.state }}" data-role="state"><svg class="ic"><use href="#i-{{ tile.state.replace('_', '-') }}"/></svg>{{ {'error': 'not evaluated', 'at_risk': 'at risk', 'noted': 'cleared, notes'}.get(tile.state, tile.state) }}</span>
