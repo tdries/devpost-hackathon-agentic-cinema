@@ -1207,3 +1207,24 @@ def test_omni_content_refusal_is_honest_and_charges_nothing(monkeypatch, tmp_pat
                              tmp_path / "out.mp4",
                              spend=lambda: ran.__setitem__("charged", 1))
     assert ran["charged"] == 0
+
+
+def test_a_grouped_patch_lands_through_the_union_of_the_groups_boxes():
+    """The model was told to swap the cigar AND clear the smoke, did both,
+    and the composite clipped the cigar -- in the sibling's box -- back to
+    the original. The landing box is the union of every box the group can
+    locate, so what the instruction may change, the composite may keep."""
+    from customs import remediate
+    lead, thighs = _two_findings_one_shot()
+    lead.box = [100, 100, 300, 300]
+    thighs.box = [500, 50, 700, 250]
+
+    union = remediate._group_box(lead, [thighs], pathlib.Path("/nope.png"))
+    assert union == [100, 50, 700, 300]
+
+    # one box missing -> the other's stands; none -> freeze ([])
+    thighs.box = []
+    assert remediate._group_box(lead, [thighs], pathlib.Path("/nope.png")) == \
+        [100, 100, 300, 300]
+    lead.box = []
+    assert remediate._group_box(lead, [thighs], pathlib.Path("/nope.png")) == []
