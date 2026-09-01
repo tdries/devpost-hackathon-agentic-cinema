@@ -809,7 +809,11 @@ _CHECK_PROMPT = (
     "WHAT THE EDIT WAS ASKED TO DO: {directive}\n\n"
     "fixed: true only if the frame as it now stands no longer breaks that "
     "rule. Judge the picture in front of you, not the instruction: an edit "
-    "that changed something else, or changed nothing, is not fixed.\n"
+    "that changed something else, or changed nothing, is not fixed. Judge "
+    "as the market's most conservative reviewer would, and judge EVERY "
+    "problem listed above: exposure that was reduced but is still visible "
+    "is not fixed, and one problem solved while another remains is not "
+    "fixed.\n"
     "still_visible: if it is not fixed, name what still breaks the rule, in "
     "a few words. Empty string if it is fixed.\n"
     "added: name anything present that the description does not account for "
@@ -824,7 +828,7 @@ def _note(on_event, message: str) -> None:
 
 
 def _anchor_check(image_bytes: bytes, finding: Finding, statement: str,
-                  directive: str) -> dict:
+                  directive: str, siblings: list | None = None) -> dict:
     """Ask a cheap model whether the edited frame actually complies.
 
     A Veo bridge costs about EUR 1.88 and takes minutes; this is one image
@@ -833,9 +837,17 @@ def _anchor_check(image_bytes: bytes, finding: Finding, statement: str,
     charge, for a frame that never had its sleeves changed.
     """
     rule = _rule_for(finding)
+    observed = statement or "(not recorded)"
+    # The check judges the GROUP: an edit that satisfied the lead finding
+    # while a sibling's problem stayed on screen was passed here as
+    # "compliant" and then honestly failed by the verifier -- sleeves were
+    # added, the short shorts stayed, 1.88 EUR bought a reopened finding.
+    for other in (siblings or []):
+        if other.rationale:
+            observed += f"\nALSO OBSERVED IN THIS SHOT: {other.rationale}"
     prompt = _CHECK_PROMPT.format(
         trigger=(rule.trigger if rule else finding.rationale) or "the market's rule",
-        statement=statement or "(not recorded)",
+        statement=observed,
         directive=directive,
     )
     try:
@@ -921,7 +933,7 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
                  keep_dir: Path | None = None,
                  intent: str | None = None,
                  change_id: str = "", statement: str = "",
-                 spend=None, on_event=None) -> tuple[Path, str]:
+                 spend=None, on_event=None, store=None) -> tuple[Path, str]:
     """Edit both ends of the span and let Veo generate the motion between.
 
     The only method that can follow genuine 3D motion, and the only one that
@@ -931,7 +943,16 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
     generated motion starts and ends on frames that are already compliant.
     """
     market_name = _market_name(finding.market)
-    instruction = _frame_instruction(finding, replacement, intent, market_name)
+    # The GROUP's instruction, not the lead finding's. _apply_locked has
+    # already announced "one edit for N findings on this shot" and set the
+    # siblings remediating -- but this function used to edit for the lead
+    # alone, so a 1.88 EUR bridge dressed the tank top and left the short
+    # shorts on screen, and the verifier honestly reopened the finding.
+    # _combined_directive returns the plain lead instruction when the shot
+    # holds nothing else.
+    siblings = _siblings_for(finding, store)
+    instruction = _combined_directive(finding, siblings, replacement, intent,
+                                      market_name)
 
     # The tail is edited against the head's result, not on its own. Two
     # independent edits answer the same question twice and rarely identically,
@@ -961,7 +982,8 @@ def _bridge_span(base: Path, finding: Finding, replacement: str | None,
             for attempt in (1, 2):
                 edited_bytes = _edit_image(attempt_instruction, raw.read_bytes(),
                                            reference=first_edit)
-                verdict = _anchor_check(edited_bytes, finding, statement, base_instruction)
+                verdict = _anchor_check(edited_bytes, finding, statement,
+                                        base_instruction, siblings=siblings)
                 if verdict.get("unchecked"):
                     _note(on_event, f"bridge {tag}: could not be checked, proceeding")
                     break
@@ -1301,7 +1323,8 @@ def _run_method(run, finding: Finding, method: str, replacement: str | None,
                                             Path(workdir), staged,
                                             keep_dir=changes_dir, intent=intent,
                                             change_id=change_id, statement=statement,
-                                            spend=spend, on_event=on_event)
+                                            spend=spend, on_event=on_event,
+                                            store=store)
         return (f"regenerated {costs.bridge_seconds(finding.t_end - finding.t_start):.0f}s "
                 f"of motion between two edited anchor frames")
     # Unreachable while the METHODS guard above holds: every member has an

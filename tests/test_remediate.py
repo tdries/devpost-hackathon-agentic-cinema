@@ -1003,3 +1003,86 @@ def test_a_celebrity_refusal_skips_the_redress_it_cannot_help(
     assert ran["veo"] == 1, "no second look: it would see the same face"
     assert ran["edits"] == 2, "no redress edits were spent"
     assert ran["charged"] == 0
+
+
+def _two_findings_one_shot():
+    from customs.schema import Finding
+    def make(fid, obs, rationale):
+        return Finding(id=fid, run_id="r", observation_id=obs, market="AE",
+                       rule_id="AE-MOD-01", klass="legal", severity=80,
+                       t_start=6.71, t_end=7.21, rationale=rationale,
+                       citation_ref="", citation_url="", sourced=True,
+                       remediable=True, remediation_blocked=False,
+                       blocked_reason="", shot_id="shot_1",
+                       remedies=[{"label": "Cover up",
+                                  "directive": "Extend the clothing."}])
+    lead = make("f_top", "obs_shot_1_001",
+                "sleeveless tank top exposes shoulders and arms")
+    thighs = make("f_thighs", "obs_shot_1_002",
+                  "short athletic shorts expose bare thighs")
+    # the sibling's own remedy wins over its rationale in the combined
+    # directive, so give it a distinct one, as a judge would have
+    thighs.remedies = [{"label": "Longer shorts",
+                        "directive": "Lengthen the shorts to the knee."}]
+    return lead, thighs
+
+
+def test_a_bridge_edits_for_the_whole_shot_not_just_the_lead_finding(
+        monkeypatch, tmp_path):
+    """A 1.88 EUR bridge dressed the tank top and left the short shorts on
+    screen: _apply_locked announced "one edit for 2 findings" but
+    _bridge_span built its instruction from the lead alone, so the sibling
+    ride-along was cosmetic and the verifier honestly reopened the finding."""
+    from customs import remediate
+    lead, thighs = _two_findings_one_shot()
+
+    class FakeStore:
+        def findings(self, run_id, market=None):
+            return [lead, thighs]
+        def observations(self, run_id):
+            return []
+
+    seen = {}
+    monkeypatch.setattr(remediate, "_edit_image",
+                        lambda instruction, image_bytes, mime_type="image/png",
+                               reference=None:
+                        seen.setdefault("instruction", instruction) and b"x" or b"x")
+    monkeypatch.setattr(remediate, "_anchor_check",
+                        lambda *a, **k: {"fixed": True, "still_visible": "",
+                                         "added": ""})
+    monkeypatch.setattr(remediate.media, "extract_keyframes",
+                        lambda *a, **k: [tmp_path / "kf.png"])
+    monkeypatch.setattr(remediate.media, "fit_image",
+                        lambda a, b, c: pathlib.Path(c))
+    monkeypatch.setattr(remediate.media, "splice_clip", lambda *a, **k: None)
+    monkeypatch.setattr(remediate, "generate_bridge",
+                        lambda **kw: kw["out_path"])
+    (tmp_path / "kf.png").write_bytes(b"raw")
+
+    remediate._bridge_span(tmp_path / "b.mp4", lead, None, tmp_path,
+                           tmp_path / "out.mp4", intent="remedy:0",
+                           store=FakeStore())
+
+    assert "Extend the clothing." in seen["instruction"], "the lead's remedy"
+    assert "Lengthen the shorts to the knee." in seen["instruction"], \
+        "and the sibling's own remedy rides along"
+
+
+def test_the_anchor_check_judges_the_whole_group(monkeypatch, tmp_path):
+    """The check passed a short-sleeved tee as "compliant" while the shot's
+    other finding -- bare thighs -- stayed on screen. It now sees every
+    problem the shot holds, so "fixed" means all of them."""
+    from customs import remediate
+    lead, thighs = _two_findings_one_shot()
+
+    prompts = []
+    monkeypatch.setattr(remediate, "generate_json_image",
+                        lambda prompt, image, schema:
+                        prompts.append(prompt) or
+                        {"fixed": True, "still_visible": "", "added": ""})
+
+    remediate._anchor_check(b"png", lead, "tank top observed", "cover her",
+                            siblings=[thighs])
+
+    assert "bare thighs" in prompts[0], "the sibling's problem is in the check"
+    assert "most conservative reviewer" in prompts[0], "and the bar is strict"
