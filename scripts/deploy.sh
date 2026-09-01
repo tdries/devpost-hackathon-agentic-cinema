@@ -270,6 +270,24 @@ if [ "$FAST" != "1" ]; then
     )
 fi
 
+# Never deploy over live work. A deploy replaces the single container:
+# an Omni edit once finished on the OLD container seconds after the NEW
+# one had restored the bucket, and the paid, verified master was silently
+# discarded (2026-09-01, run_b2021b183715). The app says what is in
+# flight; a deploy while it is busy needs to be said out loud.
+if [ "${FORCE_DEPLOY:-}" != "1" ]; then
+    LIVE_URL_FOR_CHECK="${LIVE_URL_FOR_CHECK:-https://customs-app-akap4ao72a-ew.a.run.app}"
+    BUSY=$(curl -s --max-time 10 "$LIVE_URL_FOR_CHECK/ops/busy" | python3 -c "import json,sys
+try: print('yes' if json.load(sys.stdin).get('busy') else 'no')
+except Exception: print('unknown')" 2>/dev/null || echo unknown)
+    if [ "$BUSY" = "yes" ]; then
+        echo "FATAL: the live service reports work in flight ($LIVE_URL_FOR_CHECK/ops/busy)."
+        echo "       A deploy now would discard it. Wait, or FORCE_DEPLOY=1 to override."
+        exit 1
+    fi
+    echo "-- live service busy check: $BUSY --"
+fi
+
 echo "-- gcloud run deploy $SERVICE --"
 gcloud run deploy "$SERVICE" \
     --image "${IMAGE}:${SHA}" \

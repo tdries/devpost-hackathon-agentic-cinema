@@ -2219,3 +2219,27 @@ def test_boot_sweeps_statuses_no_thread_can_own(console, monkeypatch, tmp_path):
     monkeypatch.setattr(app_module.persist, "state_dir", lambda: None)
     app_module._sweep_orphaned_work()
     assert {f.id: f.status for f in store.findings(run.id, "FR")}[fid] == "remediating"
+
+
+def test_ops_busy_reports_what_a_deploy_would_destroy(console):
+    """A deploy replaces the single container: an Omni edit once finished on
+    the old container seconds after the new one had restored, and the paid
+    master was silently discarded. deploy.sh gates on this answer."""
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    body = client.get("/ops/busy").json()
+    assert body["busy"] is False
+
+    store.update_finding_status("fnd_FR_FR-ALC-01_obs_shot_0_000",
+                                "remediating", run_id=run.id)
+    body = client.get("/ops/busy").json()
+    assert body["busy"] is True
+    assert body["remediating_findings"] == ["fnd_FR_FR-ALC-01_obs_shot_0_000"]
+
+    store.update_finding_status("fnd_FR_FR-ALC-01_obs_shot_0_000",
+                                "open", run_id=run.id)
+    live = store.create_run(asset_path=ASSET, markets=["FR"])
+    store.set_run_status(live.id, "running")
+    body = client.get("/ops/busy").json()
+    assert body["busy"] is True and live.id in body["running_runs"]
