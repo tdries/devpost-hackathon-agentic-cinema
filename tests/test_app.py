@@ -1844,7 +1844,7 @@ def test_every_dashboard_is_painted_from_the_one_palette():
     four the app knows, or the two surfaces have drifted and the console is
     telling two stories about the same severity.
 
-    It is written over all seven dashboards on purpose: asserting it for one
+    It is written over every dashboard on purpose: asserting it for one
     panel proved only that one panel, which is how the drift would start.
     """
     import json, pathlib, re
@@ -1860,7 +1860,7 @@ def test_every_dashboard_is_painted_from_the_one_palette():
         assert not stray, f"{path.name} paints with {sorted(stray)}, not the palette"
         seen[path.name] = found
 
-    assert len(seen) == 7, f"expected 7 dashboards, found {sorted(seen)}"
+    assert len(seen) == 8, f"expected 8 dashboards, found {sorted(seen)}"
     # and the palette is actually used, rather than trivially satisfied by
     # dashboards that carry no colour literal at all
     assert set().union(*seen.values()) >= {state.BLOCKED.upper(),
@@ -2421,5 +2421,5 @@ def test_the_timeline_pairs_its_matrix_with_the_live_grafana(console, monkeypatc
         app_module.settings, grafana_viewer_url="https://viewer.example.run.app"))
     page = client.get(f"/runs/{run.id}/timeline").text
     assert 'class="mx2"' in page, "the grid stays"
-    assert "https://viewer.example.run.app/d/customs-lanes/customs" in page
+    assert "https://viewer.example.run.app/d/customs-grid/the-grid" in page
     assert "drawn by Grafana" in page

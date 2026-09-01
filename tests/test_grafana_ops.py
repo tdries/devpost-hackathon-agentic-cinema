@@ -32,6 +32,8 @@ EXPECTED_DASHBOARDS = {
     "customs-remediation",
     "customs-history",
     "customs-lanes",
+    # squares rather than bars, for the console's grid to sit above
+    "customs-grid",
 }
 
 PROM_UID = "grafanacloud-prom"
@@ -668,9 +670,9 @@ def _strings(obj, path="$"):
             yield from _strings(v, f"{path}[{i}]")
 
 
-def test_all_seven_dashboards_exist_with_stable_uids():
+def test_every_dashboard_exists_with_a_stable_uid():
     dashboards = _dashboards()
-    assert len(dashboards) == 7
+    assert len(dashboards) == len(EXPECTED_DASHBOARDS)
     assert {d["uid"] for d in dashboards.values()} == EXPECTED_DASHBOARDS
     for stem, dash in dashboards.items():
         assert dash["uid"] == f"customs-{stem}", stem
