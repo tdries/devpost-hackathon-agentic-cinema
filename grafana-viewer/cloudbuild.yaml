@@ -1,0 +1,14 @@
+# The viewer's build. A config rather than `--tag`, because the Dockerfile
+# is not the one at the context root -- that one is the app's, and the
+# context has to stay the repo so grafana/dashboards/ comes along.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    id: build
+    args: ["build", "-f", "grafana-viewer/Dockerfile",
+           "-t", "${_IMAGE}:latest", "."]
+  - name: gcr.io/cloud-builders/docker
+    id: push
+    args: ["push", "${_IMAGE}:latest"]
+images: ["${_IMAGE}:latest"]
+options:
+  logging: CLOUD_LOGGING_ONLY

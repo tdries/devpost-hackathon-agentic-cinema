@@ -28,7 +28,10 @@ cd "$ROOT"
 PROJECT_ID="veoapi-469317"
 REGION="${REGION:-europe-west1}"
 SERVICE="${SERVICE:-customs-grafana}"
-IMAGE="europe-west1-docker.pkg.dev/${PROJECT_ID}/customs/grafana-viewer"
+# The app's own runtime identity: it already holds secretAccessor, and the
+# default compute SA does not.
+RUNTIME_SA="veo-api-user@${PROJECT_ID}.iam.gserviceaccount.com"
+IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/grafana-viewer"
 ENV_FILE="${ENV_FILE:-.env}"
 
 if [[ ! -f "$ENV_FILE" ]]; then
@@ -43,9 +46,25 @@ if [[ -z "${STACK_URL:-}" ]]; then
     exit 1
 fi
 
+# Where Grafana Cloud actually keeps this stack's Loki and Mimir, and which
+# tenant id each wants as its basic-auth user -- asked of the stack rather
+# than pasted in, so a moved tenant fixes itself on the next deploy.
+read -r LOKI_URL LOKI_USER < <(curl -s -H "Authorization: Bearer $GRAFANA_SA_TOKEN" \
+    "$STACK_URL/api/datasources/uid/grafanacloud-logs" \
+    | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["url"], d["basicAuthUser"])')
+read -r PROM_URL PROM_USER < <(curl -s -H "Authorization: Bearer $GRAFANA_SA_TOKEN" \
+    "$STACK_URL/api/datasources/uid/grafanacloud-prom" \
+    | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d["url"], d["basicAuthUser"])')
+if [[ -z "${LOKI_URL:-}" || -z "${PROM_URL:-}" ]]; then
+    echo "deploy_viewer.sh: could not read the stack's datasource endpoints." >&2
+    exit 1
+fi
+echo "-- loki $LOKI_URL (tenant $LOKI_USER) | mimir $PROM_URL (tenant $PROM_USER) --"
+
 echo "-- building $IMAGE --"
 gcloud builds submit --project "$PROJECT_ID" --region "$REGION" \
-    --tag "${IMAGE}:latest" --file grafana-viewer/Dockerfile . --quiet
+    --config grafana-viewer/cloudbuild.yaml \
+    --substitutions "_IMAGE=${IMAGE}" --quiet
 
 # The env that makes a stock Grafana embeddable and anonymous-readable:
 #
@@ -56,11 +75,11 @@ gcloud builds submit --project "$PROJECT_ID" --region "$REGION" \
 #                         is already public on the console
 #   DISABLE_LOGIN_FORM    there is no account to log into; do not offer one
 #
-# ponytail: anonymous Viewer can also open Explore and run queries against
-# this stack. The stack holds only this project's clearance telemetry, which
-# the console publishes anyway, so the ceiling is stated rather than fenced.
-# Fence it with GF_USERS_VIEWERS_CAN_EDIT=false plus an auth proxy the day
-# it holds anything else.
+# The containment is the TOKEN, not the UI. An anonymous Viewer can reach
+# POST /api/ds/query whatever the Explore setting says, so the credential
+# this service carries is a purpose-minted access policy: logs:read +
+# metrics:read, pinned by labelPolicy to {app="customs"}, and refused by
+# grafana.com's account API. Never mount the stack's admin SA token here.
 ENV_VARS="GF_SERVER_HTTP_PORT=8080"
 ENV_VARS+=",GF_SECURITY_ALLOW_EMBEDDING=true"
 ENV_VARS+=",GF_SECURITY_COOKIE_SAMESITE=none"
@@ -74,18 +93,25 @@ ENV_VARS+=",GF_USERS_VIEWERS_CAN_EDIT=false"
 ENV_VARS+=",GF_ANALYTICS_REPORTING_ENABLED=false"
 ENV_VARS+=",GF_ANALYTICS_CHECK_FOR_UPDATES=false"
 ENV_VARS+=",GF_NEWS_NEWS_FEED_ENABLED=false"
-ENV_VARS+=",STACK_URL=${STACK_URL}"
+# Explore off. It does not close POST /api/ds/query -- an anonymous caller
+# can still run a query the API way -- which is why the token itself is
+# scoped and label-pinned rather than trusted to the UI.
+ENV_VARS+=",GF_EXPLORE_ENABLED=false"
+ENV_VARS+=",GF_SNAPSHOTS_EXTERNAL_ENABLED=false"
+ENV_VARS+=",LOKI_URL=${LOKI_URL},LOKI_USER=${LOKI_USER}"
+ENV_VARS+=",PROM_URL=${PROM_URL},PROM_USER=${PROM_USER}"
 
 echo "-- deploying $SERVICE --"
 gcloud run deploy "$SERVICE" \
     --project "$PROJECT_ID" --region "$REGION" \
     --image "${IMAGE}:latest" \
     --allow-unauthenticated \
+    --service-account "$RUNTIME_SA" \
     --port 8080 \
-    --memory 512Mi \
+    --memory 1Gi \
     --min-instances 0 --max-instances 1 \
     --set-env-vars "$ENV_VARS" \
-    --set-secrets "SA_TOKEN=grafana-sa-token:latest" \
+    --set-secrets "VIEWER_TOKEN=grafana-viewer-token:latest" \
     --quiet
 
 URL="$(gcloud run services describe "$SERVICE" --project "$PROJECT_ID" \
