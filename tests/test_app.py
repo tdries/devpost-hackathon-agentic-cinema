@@ -1255,6 +1255,11 @@ def test_the_frame_board_puts_every_frame_beside_what_was_read_from_it(client, t
     # same still at both ends of the scene collapses to one image
     assert page.text.count(f"/runs/{run.id}/evidence/obs_shot_0_000") >= 1
     assert f"/runs/{run.id}/evidence/obs_shot_0_001" not in page.text
+    # the scenescroll: one opening still per scene, anchor-jumping to its
+    # card, with the flagged scene wearing its finding count
+    assert 'href="#sc-shot_0"' in page.text and 'id="sc-shot_0"' in page.text
+    assert 'href="#sc-shot_1"' in page.text
+    assert 'class="ss hit"' in page.text
 
     assert test_client.get("/runs/nope/frames").status_code == 404
 

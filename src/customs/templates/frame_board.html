@@ -11,9 +11,28 @@
 
 <section style="border-top:none;padding-top:0">
   {% if scenes %}
+  {% if scenes | length > 1 %}
+  {# The scenescroll: every scene's opening still in one strip, so the whole
+     film is scannable at a glance and a flagged scene is one click away.
+     Plain anchors -- the browser does the jumping. #}
+  <nav class="scenescroll" aria-label="Jump to a scene">
+    {% for sc in scenes %}
+    <a class="ss{{ ' hit' if sc.findings }}" href="#sc-{{ sc.shot_id }}"
+       title="{{ sc.shot_id.replace('_', ' ') }} &middot; {{ sc.t_start | timecode }}{{ ' &middot; %d finding(s)' % sc.findings if sc.findings }}">
+      {% if sc.hero %}
+      <img src="/runs/{{ run.id }}/evidence/{{ sc.hero.obs.id }}" alt="" loading="lazy">
+      {% else %}
+      <span class="ss-blank label">no frame</span>
+      {% endif %}
+      <span class="mono ss-t">{{ sc.t_start | timecode }}</span>
+      {% if sc.findings %}<span class="ss-n mono">{{ sc.findings }}</span>{% endif %}
+    </a>
+    {% endfor %}
+  </nav>
+  {% endif %}
   <div class="fb">
     {% for sc in scenes %}
-    <div class="sc{{ ' hit' if sc.findings }}">
+    <div class="sc{{ ' hit' if sc.findings }}" id="sc-{{ sc.shot_id }}">
       <div class="sc-frames">
         {% if sc.hero %}
         {% for r in [sc.hero, sc.tail] if r %}
