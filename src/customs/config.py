@@ -73,9 +73,16 @@ class Settings:
             model_text=g("GEMINI_MODEL_TEXT", "gemini-3.7-flash"),
             model_image=g("IMAGEN_MODEL", "gemini-3.1-flash-image"),
             model_video=g("VEO_MODEL", "veo-3.1-generate-001"),
-            # The Vertex name carries -preview; the bare name answers
-            # "Unsupported model interaction" (probed live 2026-09-01).
-            model_omni=g("OMNI_MODEL", "gemini-omni-1.1-flash-preview"),
+            # The OLD alias, deliberately. gemini-omni-1.1-flash-preview
+            # sits behind an access gate that answers a fake quota error:
+            # probed 2026-09-01, effective quota granted and reading 10
+            # everywhere Google will show it, and request #1 of a fresh
+            # minute still 429s. The alias works today on this project. It
+            # deprecates 2026-09-30 -- after the deadline -- and the day
+            # 1.1 unlocks, OMNI_MODEL flips it without a deploy... of code.
+            # The bare "gemini-omni-1.1-flash" answers "Unsupported model
+            # interaction" on Vertex.
+            model_omni=g("OMNI_MODEL", "gemini-omni-flash-preview"),
             model_tts=g("TTS_MODEL", "gemini-2.5-flash-tts"),
             db_path=g("CUSTOMS_DB", "runs/customs.db"),
             # `or` rather than a default argument: .env.example ships both

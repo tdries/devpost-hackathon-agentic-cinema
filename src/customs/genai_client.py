@@ -144,6 +144,16 @@ def _seed_from(*paths) -> int:
     return int.from_bytes(digest.digest()[:4], "big")
 
 
+class OmniRefusedInput(RuntimeError):
+    """Omni's input filter refused the footage before any work.
+
+    Seen live 2026-09-01: a reel of famous cartoons answered 400
+    prohibited_content, "the input could not be submitted due to interests
+    of third-party content providers". Zero seconds ran, so nothing is
+    charged, and no retry can help -- the footage itself is the refusal.
+    """
+
+
 class OmniQuota(RuntimeError):
     """Omni's quota on this project refused the request before any work.
 
@@ -185,10 +195,20 @@ def generate_omni_edit(instruction: str, clip_path, out_path,
         message = str(exc)
         if "429" in message or "Quota exceeded" in message:
             raise OmniQuota(
-                "Omni's quota on this project is still zero: nothing ran and "
-                "nothing was charged. Request an increase on "
-                "global_generate_content_requests_per_minute_per_project_per_"
-                "base_model for gemini-omni-1.1-flash-preview.") from exc
+                "Omni answered quota-exceeded before any work: nothing ran "
+                "and nothing was charged. On gemini-omni-1.1-flash-preview "
+                "this is an access gate wearing a quota error (the granted "
+                "quota reads 10 and request one still 429s); the configured "
+                "alias should not hit it.") from exc
+        if "prohibited_content" in message or "third-party content" in message:
+            # Omni checks its INPUT for recognizable third-party IP -- a
+            # famous cartoon reel was refused with "interests of
+            # third-party content providers". Nothing ran, nothing charged.
+            raise OmniRefusedInput(
+                "Omni's content filter refused the input footage itself "
+                "(third-party content). Nothing was charged. This span "
+                "cannot be rewritten by Omni; use a patch method or the "
+                "bridge.") from exc
         raise
 
     waited = 0.0
@@ -204,6 +224,18 @@ def generate_omni_edit(instruction: str, clip_path, out_path,
     if status not in ("completed", ""):
         raise RuntimeError(f"Omni edit ended {status}: "
                            f"{str(interaction)[:300]}")
+
+    # The easy path first: the interaction carries a convenience
+    # `output_video` field (verified live 2026-09-01 -- outputs[] holds a
+    # "thought" block and a "model_output" whose content is the video, and
+    # this field is the same bytes without the walk).
+    direct = getattr(interaction, "output_video", None)
+    data = getattr(direct, "data", None) if direct is not None else None
+    if data:
+        out = _P(out_path)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_bytes(_b64.b64decode(data) if isinstance(data, str) else data)
+        return out
 
     def _blocks(node):
         for item in (getattr(node, "outputs", None) or []):
