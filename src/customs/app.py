@@ -1754,6 +1754,30 @@ def _ticker(run) -> dict | None:
     event_id, agent, message = latest
     return {"id": event_id, "agent": agent, "message": message}
 
+@app.get("/ops/busy")
+def ops_busy():
+    """Is anything running that a deploy would destroy?
+
+    A deploy replaces the single container mid-work: this morning an Omni
+    edit finished on the old container seconds after the new one had
+    already restored the bucket, so a paid, verified master was silently
+    discarded and the next edit rebuilt it from the original. The old
+    pre-deploy check only asked whether the newest RUN was done;
+    remediations run on any run at any time. scripts/deploy.sh refuses to
+    deploy while this answers busy (FORCE_DEPLOY=1 overrides).
+    """
+    db = store()
+    running, remediating = [], []
+    for run in db.recent_runs(100):
+        if run.status in ("created", "running"):
+            running.append(run.id)
+        for f in db.findings(run.id):
+            if f.status == "remediating":
+                remediating.append(f.id)
+    return {"busy": bool(running or remediating),
+            "running_runs": running, "remediating_findings": remediating}
+
+
 @app.get("/runs/{run_id}/status")
 def run_status(run_id: str):
     """The 2 second poll behind the tiles. Shape is the contract, keep it."""
