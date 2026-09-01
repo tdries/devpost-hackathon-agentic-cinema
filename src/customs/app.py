@@ -1736,7 +1736,42 @@ def frame_board(request: Request, run_id: str):
             "findings": hits,
             "markets": sorted({f.market for f in hits}),
         })
-    return _page(request, "frame_board.html", run=run, rows=rows,
+
+    # One card per SCENE, not per observation. A three second scene of a
+    # smoking character used to be a scroll of near-identical frames, one
+    # per observation. The pipeline already thinks in shots -- "one shot,
+    # one edit" is the remediation contract -- so this view does too:
+    # the shot's first and last kept frame, and every sentence the analyst
+    # wrote inside it, on one card.
+    by_shot: dict[str, dict] = {}
+    scenes: list[dict] = []
+    for row in rows:
+        sid = row["obs"].shot_id or row["obs"].id
+        scene = by_shot.get(sid)
+        if scene is None:
+            scene = by_shot[sid] = {
+                "shot_id": sid, "rows": [],
+                "t_start": row["obs"].t_start, "t_end": row["obs"].t_end,
+                "markets": set(), "findings": 0}
+            scenes.append(scene)
+        scene["rows"].append(row)
+        scene["t_start"] = min(scene["t_start"], row["obs"].t_start)
+        scene["t_end"] = max(scene["t_end"], row["obs"].t_end)
+        scene["findings"] += len(row["findings"])
+        scene["markets"].update(row["markets"])
+    for scene in scenes:
+        framed = [r for r in scene["rows"] if r["frame"]]
+        scene["hero"] = framed[0] if framed else None
+        # "from screenshot to screenshot": the last kept frame closes the
+        # scene, unless it is literally the same still as the first.
+        tail = framed[-1] if len(framed) > 1 else None
+        if tail is not None and tail["obs"].evidence_frame == scene["hero"]["obs"].evidence_frame:
+            tail = None
+        scene["tail"] = tail
+        scene["markets"] = sorted(scene["markets"])
+    scenes.sort(key=lambda sc: sc["t_start"])
+
+    return _page(request, "frame_board.html", run=run, scenes=scenes,
                  total=len(rows), flagged=sum(1 for r in rows if r["findings"]),
                  screen="frames")
 

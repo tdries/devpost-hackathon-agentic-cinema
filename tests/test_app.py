@@ -1228,17 +1228,33 @@ def test_the_frame_board_puts_every_frame_beside_what_was_read_from_it(client, t
                     evidence_frame="", confidence=0.6),
     ])
 
+    # a second observation in the SAME shot: the board must not repeat the
+    # scene as another full-width row of near-identical frames
+    store.add_observations(run.id, [
+        Observation(id="obs_shot_0_001", shot_id="shot_0", t_start=3.0, t_end=7.0,
+                    dimension="gesture_body_language",
+                    statement="A hand raises the glass in a toast.",
+                    evidence_frame=str(frame), confidence=0.8),
+    ])
+
     page = test_client.get(f"/runs/{run.id}/frames")
     assert page.status_code == 200
     # the frame, the analyst's neutral sentence, and the finding hung off it
     assert f"/runs/{run.id}/evidence/obs_shot_0_000" in page.text
     assert "A glass of red wine sits on the table." in page.text
     assert "FR-ALC-01" in page.text
-    # an observation nobody objected to says so rather than looking flagged
+    # a scene nobody objected to says so rather than looking flagged
     assert "no market objected to this" in page.text
     # and one whose frame is gone still shows its reading
     assert "A woman walks past." in page.text
     assert "no frame kept" in page.text
+    # clustered: two observations of shot_0 share ONE scene card, so the
+    # page holds two cards, and the toast sentence sits inside the first
+    assert page.text.count('class="sc ') + page.text.count('class="sc"') == 2
+    assert "A hand raises the glass in a toast." in page.text
+    # same still at both ends of the scene collapses to one image
+    assert page.text.count(f"/runs/{run.id}/evidence/obs_shot_0_000") >= 1
+    assert f"/runs/{run.id}/evidence/obs_shot_0_001" not in page.text
 
     assert test_client.get("/runs/nope/frames").status_code == 404
 

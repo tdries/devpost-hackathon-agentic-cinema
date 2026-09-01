@@ -5,59 +5,73 @@
 
 <section class="hero" style="padding-bottom:22px">
   <div class="rule-row"><span class="label">Frame board</span></div>
-  <h1 class="headline" style="font-size:clamp(26px,3.4vw,38px)">Everything the crew looked at, and what it made of it.</h1>
-  <p class="subline">{{ total }} observations, {{ flagged }} of which a market had something to say about. The sentence beside each frame is the analyst's, written before any market saw it: neutral, timecoded, no verdict. The findings under it are what each adjudicator did with that sentence.</p>
+  <h1 class="headline" style="font-size:clamp(26px,3.4vw,38px)">Every scene the crew looked at, and what it made of it.</h1>
+  <p class="subline">{{ scenes | length }} scene{{ '' if scenes | length == 1 else 's' }} holding {{ total }} observations, {{ flagged }} of which a market had something to say about. Each card is one shot, opened and closed by its first and last kept frame. The sentences are the analyst's, written before any market saw them: neutral, timecoded, no verdict. The findings under each are what the adjudicators did with them.</p>
 </section>
 
 <section style="border-top:none;padding-top:0">
-  {% if rows %}
+  {% if scenes %}
   <div class="fb">
-    {% for row in rows %}
-    <div class="fb-row{{ ' hit' if row.findings }}">
-      <div class="fb-frame">
-        {% if row.frame %}
-        {# The box is drawn OVER the image, never into it: this PNG is what a
-           remediation edits and what Veo is anchored on, so a rectangle
-           burned into the file would be treated as part of the picture. #}
-        <div class="fb-shot" data-box-for="{{ row.obs.id }}" data-run="{{ run.id }}">
-          <a href="/runs/{{ run.id }}/evidence/{{ row.obs.id }}" target="_blank" title="Open the full frame">
-            <img src="/runs/{{ run.id }}/evidence/{{ row.obs.id }}" alt="Frame at {{ row.obs.t_start | timecode }}" loading="lazy">
-          </a>
-          <svg class="fb-box" viewBox="0 0 1000 1000" preserveAspectRatio="none" hidden aria-hidden="true"></svg>
+    {% for sc in scenes %}
+    <div class="sc{{ ' hit' if sc.findings }}">
+      <div class="sc-frames">
+        {% if sc.hero %}
+        {% for r in [sc.hero, sc.tail] if r %}
+        <div class="fb-frame">
+          {# The box is drawn OVER the image, never into it: this PNG is what
+             a remediation edits and what Veo is anchored on, so a rectangle
+             burned into the file would be treated as part of the picture. #}
+          <div class="fb-shot" data-box-for="{{ r.obs.id }}" data-run="{{ run.id }}">
+            <a href="/runs/{{ run.id }}/evidence/{{ r.obs.id }}" target="_blank" title="Open the full frame">
+              <img src="/runs/{{ run.id }}/evidence/{{ r.obs.id }}" alt="Frame at {{ r.obs.t_start | timecode }}" loading="lazy">
+            </a>
+            <svg class="fb-box" viewBox="0 0 1000 1000" preserveAspectRatio="none" hidden aria-hidden="true"></svg>
+          </div>
+          <span class="mono fb-time">{{ ('opens at ' if sc.tail else 'at ') if loop.first else 'closes at ' }}{{ r.obs.t_start | timecode }}</span>
+          <label class="fb-boxtoggle label">
+            <input type="checkbox" class="box-toggle"> show what was spotted
+            <span class="box-note"></span>
+          </label>
         </div>
+        {% endfor %}
         {% else %}
         <div class="fb-noframe label">no frame kept</div>
         {% endif %}
-        <span class="mono fb-time">{{ row.obs.t_start | timecode }} to {{ row.obs.t_end | timecode }}</span>
-        {% if row.frame %}
-        <label class="fb-boxtoggle label">
-          <input type="checkbox" class="box-toggle"> show what was spotted
-          <span class="box-note"></span>
-        </label>
-        {% endif %}
       </div>
-      <div class="fb-read">
-        <div class="fb-top">
-          <span class="chip"><svg class="ic"><use href="#d-{{ row.obs.dimension }}"/></svg>{{ row.obs.dimension.replace('_', ' ') }}</span>
-          <span class="label">{{ row.obs.shot_id }}</span>
-          <span class="label">confidence {{ '%.2f'|format(row.obs.confidence) }}</span>
+      <div class="sc-read">
+        <div class="fb-top sc-head">
+          <span class="label">{{ sc.shot_id.replace('_', ' ') }}</span>
+          <span class="mono fb-time">{{ sc.t_start | timecode }} to {{ sc.t_end | timecode }}</span>
+          <span class="label">{{ sc.rows | length }} observation{{ '' if sc.rows | length == 1 else 's' }}</span>
+          {% if sc.findings %}
+          <span class="chip on">{{ sc.findings }} finding{{ '' if sc.findings == 1 else 's' }} &middot; {{ sc.markets | join(' ') }}</span>
+          {% else %}
+          <span class="fb-clean label"><svg class="ic"><use href="#i-cleared"/></svg>no market objected to this</span>
+          {% endif %}
         </div>
-        <p class="fb-statement">{{ row.obs.statement }}</p>
-        {% if row.findings %}
-        <div class="fb-findings">
-          {% for f in row.findings %}
-          <a class="fb-finding" href="/runs/{{ run.id }}/markets/{{ f.market }}">
-            <span class="chip on">{{ f.market }}</span>
-            <span class="rule-id">{{ f.rule_id }}</span>
-            <span class="chip {{ f.klass }}"><svg class="ic"><use href="#i-{{ f.klass }}"/></svg>{{ f.klass }}</span>
-            <span class="mono fb-sev">{{ f.severity }}</span>
-            <span class="fb-why">{{ f.rationale }}</span>
-          </a>
-          {% endfor %}
+        {% for row in sc.rows %}
+        <div class="sc-obs">
+          <div class="fb-top">
+            <span class="chip"><svg class="ic"><use href="#d-{{ row.obs.dimension }}"/></svg>{{ row.obs.dimension.replace('_', ' ') }}</span>
+            <span class="mono fb-time">{{ row.obs.t_start | timecode }}</span>
+            <span class="label">confidence {{ '%.2f'|format(row.obs.confidence) }}</span>
+          </div>
+          <p class="fb-statement">{{ row.obs.statement }}</p>
+          {% if row.findings %}
+          <div class="fb-findings">
+            {% for f in row.findings %}
+            <a class="fb-finding" href="/runs/{{ run.id }}/markets/{{ f.market }}">
+              <span class="chip on">{{ f.market }}</span>
+              <span class="rule-id">{{ f.rule_id }}</span>
+              <span class="chip {{ f.klass }}"><svg class="ic"><use href="#i-{{ f.klass }}"/></svg>{{ f.klass }}</span>
+              <span class="mono fb-sev">{{ f.severity }}</span>
+              <span class="fb-why">{{ f.rationale }}</span>
+            </a>
+            {% endfor %}
+          </div>
+          {% endif %}
         </div>
-        {% else %}
-        <div class="fb-clean label"><svg class="ic"><use href="#i-cleared"/></svg>no market objected to this</div>
-        {% endif %}
+        {% endfor %}
       </div>
     </div>
     {% endfor %}
