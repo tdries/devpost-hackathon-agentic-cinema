@@ -2312,3 +2312,17 @@ def test_the_market_room_clusters_findings_by_scene(console):
     assert 'id="mk-shot_0"' in page and 'id="mk-shot_1"' in page
     assert 'href="#mk-shot_0"' in page, "the scenescroll jumps to the scene"
     assert page.count('class="scene-row"') == 2
+
+
+def test_the_landing_page_plays_a_before_and_after(console):
+    """The front door shows a fix landing: the wine toast and the same six
+    seconds re-rendered compliant, side by side, in lockstep. The clips are
+    the project's own footage, edited by the product's own method."""
+    client, _store, _launched, _jobs = console
+    page = client.get("/").text
+    assert "fix-before.mp4" in page and "fix-after.mp4" in page
+    assert "data-lockstep" in page and "Loi" in page
+    from pathlib import Path
+    static = Path("src/customs/static")
+    assert (static / "fix-before.mp4").stat().st_size > 100_000
+    assert (static / "fix-after.mp4").stat().st_size > 100_000
