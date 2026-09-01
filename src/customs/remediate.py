@@ -55,7 +55,8 @@ from google.genai import types
 
 from customs import costs, media
 from customs.config import settings
-from customs.genai_client import (OmniQuota, VeoBlocked, VeoRefusedInput,
+from customs.genai_client import (OmniQuota, OmniRefusedInput,
+                                  VeoBlocked, VeoRefusedInput,
                                   client, generate_bridge, generate_json,
                                   generate_json_image, generate_omni_edit)
 from customs.media import Shot
@@ -969,7 +970,7 @@ def _omni_span(base: Path, finding: Finding, replacement: str | None,
     try:
         edited = generate_omni_edit(instruction, clip,
                                     workdir / f"omni_{finding.id}_out.mp4")
-    except OmniQuota as exc:
+    except (OmniQuota, OmniRefusedInput) as exc:
         raise RemediationError(str(exc)) from exc
 
     # Charged only for footage that exists, like the bridge.

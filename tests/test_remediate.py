@@ -1183,3 +1183,27 @@ def test_omni_quota_refusal_is_honest_and_charges_nothing(monkeypatch, tmp_path)
                              tmp_path / "out.mp4",
                              spend=lambda: ran.__setitem__("charged", 1))
     assert ran["charged"] == 0
+
+
+def test_omni_content_refusal_is_honest_and_charges_nothing(monkeypatch, tmp_path):
+    """Omni refused a famous-cartoon reel on the way in: 400
+    prohibited_content, "interests of third-party content providers".
+    Zero seconds ran, so the operator hears why and pays nothing."""
+    from customs import remediate
+    from customs.genai_client import OmniRefusedInput
+    lead, _ = _two_findings_one_shot()
+
+    ran = {"charged": 0}
+    monkeypatch.setattr(remediate.media, "cut_span",
+                        lambda base, t0, t1, out: pathlib.Path(out))
+    def refuse(instruction, clip, out):
+        raise OmniRefusedInput("Omni's content filter refused the input "
+                               "footage itself (third-party content). "
+                               "Nothing was charged.")
+    monkeypatch.setattr(remediate, "generate_omni_edit", refuse)
+
+    with pytest.raises(remediate.RemediationError, match="third-party"):
+        remediate._omni_span(tmp_path / "b.mp4", lead, None, tmp_path,
+                             tmp_path / "out.mp4",
+                             spend=lambda: ran.__setitem__("charged", 1))
+    assert ran["charged"] == 0
