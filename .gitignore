@@ -18,6 +18,8 @@ media/cache/
 scripts/.cache/
 *.mp4
 !docs/samples/*.mp4
+# the landing page's before/after loops ship with the app
+!src/customs/static/*.mp4
 service-account*.json
 grafana-token*
 # mcp-grafana release binary (v1.1.0, darwin arm64), 50MB, redownloadable
