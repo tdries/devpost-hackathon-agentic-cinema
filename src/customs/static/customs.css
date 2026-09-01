@@ -2395,3 +2395,42 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
 .mx2-key { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
 .mx2-key span { display: inline-flex; align-items: center; gap: 6px; }
 .mx2-key .sw { width: 11px; height: 11px; border-radius: 2px; display: inline-block; }
+
+/* ---------- the merged grid: our axes, Grafana's body -------------------
+   The console draws what Grafana cannot -- the taxonomy icons down the side
+   and each scene's opening frame across the top -- and the live status
+   history sits between them as the body. Columns are weighted by scene
+   duration, so a column's share of the width is its share of the film,
+   which is exactly what the panel's hidden time axis is.
+
+   ponytail: the iframe's plot has a few px of its own padding, so alignment
+   is close rather than pixel-exact. Grafana gives no way to zero it from
+   outside, and the alternative is not embedding Grafana at all. */
+.mg { display: grid; grid-template-columns: 150px 1fr;
+      grid-template-rows: auto 1fr; column-gap: 8px; row-gap: 4px; }
+.mg-corner { align-self: end; padding-bottom: 6px; font-size: 9.5px; }
+.mg-strip { display: grid; grid-template-columns: var(--cols); gap: 2px; }
+.mg-scene { display: grid; gap: 2px; text-decoration: none; min-width: 0; }
+.mg-scene img, .mg-noframe { width: 100%; aspect-ratio: 16 / 9; object-fit: cover;
+  display: block; border: 1px solid var(--line); border-radius: 2px;
+  background: var(--well); }
+.mg-scene:hover img { border-color: var(--signal); }
+.mg-t { font-size: 8px; color: var(--ink-3); text-align: center;
+  overflow: hidden; white-space: nowrap; }
+.mg-labels { display: grid; align-content: stretch; }
+.mg-dim { display: flex; align-items: center; gap: 7px; font-size: 11px;
+  color: var(--ink-2); height: 44px; }
+.mg-dim .ic { width: 15px; height: 15px; flex: none; }
+.mg-dim span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mg-live { width: 100%; border: 0; display: block; background: transparent; }
+/* the console's own body, when no viewer is deployed */
+.mg-cells { display: grid; grid-template-columns: var(--cols); gap: 2px; }
+.mg-cell { display: grid; place-items: center; height: 40px; border-radius: 3px;
+  border: 1px solid var(--line); font-family: var(--mono); font-size: 11px;
+  text-decoration: none; }
+.mg-empty { border-color: transparent; }
+.mg-clean { background: var(--well); opacity: 0.5; }
+.mg-fixed { background: rgba(52, 168, 83, 0.16); border-color: rgba(52, 168, 83, 0.55); }
+.mg-hot { background: rgba(251, 188, 5, 0.18); border-color: var(--g-yellow); color: var(--g-yellow); }
+.mg-hot.mg-block { background: rgba(234, 67, 53, 0.18); border-color: var(--blocked); color: var(--blocked); }
+.mg-working { background: rgba(66, 133, 244, 0.16); border-color: var(--g-blue); }

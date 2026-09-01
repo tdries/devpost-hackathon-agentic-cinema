@@ -1055,7 +1055,7 @@ def test_the_timeline_shows_where_it_goes_wrong(client, tmp_path):
 
     page = test_client.get(f"/runs/{run.id}/timeline")
     assert page.status_code == 200
-    assert 'class="mx2"' in page.text                      # the grid
+    assert 'class="mg"' in page.text                       # the grid
     assert "alcohol tobacco drugs" in page.text            # its y axis
     assert f"/runs/{run.id}/evidence/obs_shot_0_000" in page.text  # its x axis
     assert "wine glasses" in page.text                     # the rationale
@@ -2377,11 +2377,12 @@ def test_the_timeline_draws_the_matrix_with_launch_cells(console):
     client, store, _launched, _jobs = console
     run = _judged_run(store)
     page = client.get(f"/runs/{run.id}/timeline").text
-    assert 'class="mx2"' in page, "occurrence types by scenes"
+    assert 'class="mg"' in page, "occurrence types by scenes"
     assert "alcohol tobacco drugs" in page
+    # with no viewer the console draws the body itself, cells and all
     assert f"/launch/remediate?run={run.id}&finding=" in page, \
         "a hot cell is a launch button"
-    assert "--cols:" in page, "columns are sized to fit, never scrolled"
+    assert "--cols:" in page and "fr" in page, "columns are weighted by scene length"
 
 
 def test_the_board_frames_live_grafana_when_the_viewer_is_deployed(console, monkeypatch):
@@ -2415,11 +2416,13 @@ def test_the_timeline_pairs_its_matrix_with_the_live_grafana(console, monkeypatc
     run = _judged_run(store)
 
     page = client.get(f"/runs/{run.id}/timeline").text
-    assert 'class="mx2"' in page and "<iframe" not in page
+    assert 'class="mg"' in page and "<iframe" not in page
 
     monkeypatch.setattr(app_module, "settings", dataclasses.replace(
         app_module.settings, grafana_viewer_url="https://viewer.example.run.app"))
     page = client.get(f"/runs/{run.id}/timeline").text
-    assert 'class="mx2"' in page, "the grid stays"
-    assert "https://viewer.example.run.app/d/customs-grid/the-grid" in page
-    assert "drawn by Grafana" in page
+    assert 'class="mg"' in page, "the console keeps drawing the axes"
+    # ... and Grafana's squares become the body between them
+    assert "https://viewer.example.run.app/d-solo/customs-grid/the-grid" in page
+    assert "panelId=1" in page and 'class="mg-live"' in page
+    assert 'class="mg-cells"' not in page, "the console body steps aside"

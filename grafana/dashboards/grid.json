@@ -44,7 +44,7 @@
  "panels": [
   {
    "type": "status-history",
-   "title": "The same coordinates, drawn by Grafana",
+   "title": "",
    "gridPos": {
     "h": 15,
     "w": 24,
@@ -70,8 +70,8 @@
    ],
    "options": {
     "showValue": "never",
-    "rowHeight": 0.92,
-    "colWidth": 0.92,
+    "rowHeight": 0.9,
+    "colWidth": 0.9,
     "legend": {
      "displayMode": "list",
      "placement": "bottom",
@@ -106,7 +106,13 @@
      },
      "custom": {
       "fillOpacity": 85,
-      "lineWidth": 1
+      "lineWidth": 1,
+      "axisPlacement": "hidden",
+      "hideFrom": {
+       "legend": true,
+       "tooltip": false,
+       "viz": false
+      }
      },
      "min": 0,
      "max": 100,
