@@ -2411,7 +2411,12 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
 .mg-corner { align-self: end; padding-bottom: 6px; font-size: 9.5px; }
 .mg-strip { display: grid; grid-template-columns: var(--cols); gap: 2px; }
 .mg-scene { display: grid; gap: 2px; text-decoration: none; min-width: 0; }
-.mg-scene img, .mg-noframe { width: 100%; aspect-ratio: 16 / 9; object-fit: cover;
+/* One height for every still, whatever its column is worth. The columns are
+   weighted by scene length so they line up with Grafana's squares, and an
+   aspect-ratio on top of that gave a ten second scene a tall thumbnail and a
+   two second scene a stub -- a ragged strip. Fixed height, cover the width:
+   same size everywhere, still over the right square. */
+.mg-scene img, .mg-noframe { width: 100%; height: 42px; object-fit: cover;
   display: block; border: 1px solid var(--line); border-radius: 2px;
   background: var(--well); }
 .mg-scene:hover img { border-color: var(--signal); }
