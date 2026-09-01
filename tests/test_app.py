@@ -2320,9 +2320,11 @@ def test_the_landing_page_plays_a_before_and_after(console):
     the project's own footage, edited by the product's own method."""
     client, _store, _launched, _jobs = console
     page = client.get("/").text
-    assert "fix-before.mp4" in page and "fix-after.mp4" in page
-    assert "data-lockstep" in page and "Loi" in page
+    for key in ("wine", "smoke", "skirt"):
+        assert f"fix-{key}-before.mp4" in page and f"fix-{key}-after.mp4" in page
+    assert page.count("data-lockstep") == 6 and "Loi" in page
     from pathlib import Path
     static = Path("src/customs/static")
-    assert (static / "fix-before.mp4").stat().st_size > 100_000
-    assert (static / "fix-after.mp4").stat().st_size > 100_000
+    for key in ("wine", "smoke", "skirt"):
+        assert (static / f"fix-{key}-before.mp4").stat().st_size > 100_000
+        assert (static / f"fix-{key}-after.mp4").stat().st_size > 100_000

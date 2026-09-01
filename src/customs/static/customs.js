@@ -141,15 +141,22 @@
      the comparison stays honest. */
 
   (function () {
-    var pair = document.querySelectorAll("video[data-lockstep]");
-    if (pair.length !== 2) { return; }
-    var lead = pair[0], follow = pair[1];
-    window.setInterval(function () {
-      if (lead.paused || follow.paused) { return; }
-      if (Math.abs(follow.currentTime - lead.currentTime) > 0.12) {
-        follow.currentTime = lead.currentTime;
-      }
-    }, 500);
+    var groups = {};
+    document.querySelectorAll("video[data-lockstep]").forEach(function (v) {
+      var key = v.getAttribute("data-lockstep") || "pair";
+      (groups[key] = groups[key] || []).push(v);
+    });
+    Object.keys(groups).forEach(function (key) {
+      var pair = groups[key];
+      if (pair.length !== 2) { return; }
+      var lead = pair[0], follow = pair[1];
+      window.setInterval(function () {
+        if (lead.paused || follow.paused) { return; }
+        if (Math.abs(follow.currentTime - lead.currentTime) > 0.12) {
+          follow.currentTime = lead.currentTime;
+        }
+      }, 500);
+    });
   })();
 
 
