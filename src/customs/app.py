@@ -1747,6 +1747,8 @@ def all_runs(request: Request):
         runs = [r for r in runs if r.id in set(mine)]
     rows = [{"run": run, "states": (st := market_states(run)),
              "groups": pill_groups(run, st),
+             "busy": run.status in ("created", "running")
+                     or any(v["working"] for v in st.values()),
              "gauge": clearance_gauge(st)}
             for run in runs]
     return _page(request, "runs.html", rows=rows, screen="runs", scoped=scoped,
@@ -1838,6 +1840,8 @@ def frame_board(request: Request, run_id: str):
         scene["findings"] += len(row["findings"])
         scene["markets"].update(row["markets"])
     for scene in scenes:
+        scene["working"] = any(f.status == "remediating"
+                               for r in scene["rows"] for f in r["findings"])
         framed = [r for r in scene["rows"] if r["frame"]]
         scene["hero"] = framed[0] if framed else None
         # "from screenshot to screenshot": the last kept frame closes the
@@ -1880,15 +1884,18 @@ def ops_busy():
     deploy while this answers busy (FORCE_DEPLOY=1 overrides).
     """
     db = store()
-    running, remediating = [], []
+    running, remediating, fixing = [], [], []
     for run in db.recent_runs(100):
         if run.status in ("created", "running"):
             running.append(run.id)
         for f in db.findings(run.id):
             if f.status == "remediating":
                 remediating.append(f.id)
+                if run.id not in fixing:
+                    fixing.append(run.id)
     return {"busy": bool(running or remediating),
-            "running_runs": running, "remediating_findings": remediating}
+            "running_runs": running, "remediating_findings": remediating,
+            "remediating_runs": fixing}
 
 
 @app.get("/runs/{run_id}/status")

@@ -2282,3 +2282,44 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 .ba-cell video { width: 100%; display: block; border: 1px solid var(--line); border-radius: 4px; background: var(--well); }
 .ba-cell figcaption { display: flex; align-items: center; gap: 10px; margin-top: 9px; font-size: 12.5px; color: var(--ink-2); }
 @media (max-width: 760px) { .landfix .ba { grid-template-columns: 1fr; } }
+
+/* ---------- the sparkle: work in flight, visible from anywhere ----------
+   One treatment for everything that is currently running: an uploading
+   master, a run mid-analysis, a fix in the making. A rotating ring of the
+   four brand colours behind the element (the element's own background
+   keeps the centre clean), plus one twinkle. Reduced motion gets the ring
+   without the spin. */
+@property --spk { syntax: "<angle>"; initial-value: 0deg; inherits: false; }
+@keyframes spk-spin { to { --spk: 360deg; } }
+@keyframes spk-twinkle { 0%, 100% { opacity: 0.2; transform: scale(0.8); }
+                         50% { opacity: 1; transform: scale(1.15); } }
+.sparkle, [data-busy] { position: relative; z-index: 0; }
+.sparkle::before, [data-busy]::before {
+  content: ""; position: absolute; inset: -3px; z-index: -1;
+  border-radius: 6px;
+  background: conic-gradient(from var(--spk),
+    #4285F4, #EA4335, #FBBC05, #34A853, #4285F4);
+  animation: spk-spin 2.6s linear infinite;
+  filter: blur(0.5px);
+}
+.sparkle::after, [data-busy]::after {
+  content: "\2726"; position: absolute; top: -9px; right: -6px; z-index: 2;
+  font-size: 12px; color: #FBBC05; pointer-events: none;
+  animation: spk-twinkle 1.3s ease-in-out infinite;
+  text-shadow: 0 0 6px rgba(251, 188, 5, 0.6);
+}
+tr.sparkle::before, tr.sparkle::after { content: none; }
+tr.sparkle td { background: rgba(251, 188, 5, 0.06); }
+.lc-current .ic { animation: spk-twinkle 1.8s ease-in-out infinite; }
+.beacon {
+  display: inline-flex; align-items: center; gap: 7px; padding: 4px 11px;
+  border-radius: 999px; background: var(--panel); border: 1px solid var(--line);
+  font-size: 11px; color: var(--ink-2); text-decoration: none;
+}
+.beacon::before { border-radius: 999px; }
+.beacon .ic { width: 13px; height: 13px; }
+.beacon[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .sparkle::before, [data-busy]::before, .sparkle::after,
+  [data-busy]::after, .lc-current .ic { animation: none; }
+}

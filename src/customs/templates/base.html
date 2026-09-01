@@ -89,6 +89,10 @@ try {
       <span class="brand-sub">LAUNCH CONTROL</span>
     </a>
     <div class="topbar-right">
+      {# The activity beacon: wherever you are, whatever is running shows
+         here. customs.js polls /ops/busy and lights it with the sparkle;
+         clicking it lands on the busiest run. #}
+      <a id="beacon" class="beacon" href="/runs" hidden></a>
       <span class="mode-switch" role="group" aria-label="Mode">
         <a class="{{ 'on' if screen == 'agent' }}" href="/agent"><svg class="ic"><use href="#i-adjudicator"/></svg>Agent</a>
         {# Studio lands on Recent runs, not the upload form: entering the

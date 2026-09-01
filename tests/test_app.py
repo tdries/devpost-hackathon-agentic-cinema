@@ -2051,7 +2051,9 @@ def test_a_judge_gets_the_archive_and_a_visitor_gets_a_clean_slate(console):
     response = _upload(client)
     assert response.status_code == 303
     mine = client.get("/runs")
-    assert mine.text.count('class="runrow"') == 1, "their own run, and only theirs"
+    # class="runrow" or class="runrow sparkle" -- a just-uploaded run is in
+    # flight, and in-flight work wears the sparkle everywhere
+    assert mine.text.count('class="runrow') == 1, "their own run, and only theirs"
 
 
 def test_a_lane_is_never_shorter_than_the_glyph_that_labels_it():
@@ -2257,6 +2259,7 @@ def test_ops_busy_reports_what_a_deploy_would_destroy(console):
     body = client.get("/ops/busy").json()
     assert body["busy"] is True
     assert body["remediating_findings"] == ["fnd_FR_FR-ALC-01_obs_shot_0_000"]
+    assert body["remediating_runs"] == [run.id], "the beacon needs a run to link to"
 
     store.update_finding_status("fnd_FR_FR-ALC-01_obs_shot_0_000",
                                 "open", run_id=run.id)
