@@ -878,6 +878,30 @@ def embeds(run) -> dict[str, str]:
                                   second n, so this window is the ad's own
                                   timecode and nothing else.
     """
+    # The embeddable viewer's own URLs, when it is deployed. Same dashboards,
+    # same data (its datasources proxy through this very stack), but framed
+    # rather than rendered -- so the panel in the console is the live one you
+    # can hover, zoom and click. kiosk drops Grafana's chrome; the theme is
+    # pinned dark to sit inside Mission.
+    # ponytail: dark always. A theme-following iframe means re-sourcing it
+    # on every toggle, for a panel that already reads fine in both.
+    viewer = {}
+    if settings.grafana_viewer_url:
+        base = settings.grafana_viewer_url
+        asset_v = quote(Path(run.asset_path).stem or run.asset_path)
+        common = f"var-asset={asset_v}&var-run={quote(run.id)}&kiosk&theme=dark"
+        if run.t0 is not None:
+            span = asset_duration(run)
+            lo, hi = int((run.t0 - 5) * 1000), int((run.t0 + span + 5) * 1000)
+            window = f"from={lo}&to={hi}"
+        else:
+            window = "from=now-3h&to=now"
+        viewer = {
+            "lanes": f"{base}/d/customs-lanes/customs?{common}&{window}",
+            "timeline": f"{base}/d/customs-timeline/customs?{common}&{window}",
+            "overview": f"{base}/d/customs-overview/customs?{common}&from=now-6h&to=now",
+        }
+
     overview = f"{settings.grafana_public_overview}?from=now-6h&to=now"
     # The lane panel is not one of the two public pages, so this one lands on
     # the stack itself and asks the operator to be logged in. It was a
@@ -890,7 +914,7 @@ def embeds(run) -> dict[str, str]:
     if run.t0 is None:
         return {"overview": overview,
                 "timeline": f"{settings.grafana_public_timeline}?from=now-3h&to=now",
-                "lanes": lanes}
+                "lanes": lanes, "viewer": viewer}
     duration = asset_duration(run)
     start_ms = int((run.t0 - 5) * 1000)
     end_ms = int((run.t0 + duration + 5) * 1000)
@@ -898,6 +922,7 @@ def embeds(run) -> dict[str, str]:
         "overview": overview,
         "timeline": f"{settings.grafana_public_timeline}?from={start_ms}&to={end_ms}",
         "lanes": f"{lanes}&from={start_ms}&to={end_ms}",
+        "viewer": viewer,
     }
 
 # --- the instrument panel ------------------------------------------------
