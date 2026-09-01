@@ -2400,3 +2400,22 @@ def test_the_board_frames_live_grafana_when_the_viewer_is_deployed(console, monk
     assert "https://viewer.example.run.app/d/customs-lanes/customs" in page
     assert "kiosk" in page and "var-run=" in page, "framed without chrome, on this run"
     assert "<iframe" in page and "/lanes.png" not in page
+
+
+def test_the_timeline_pairs_its_matrix_with_the_live_grafana(console, monkeypatch):
+    """The matrix is the console's -- no Grafana panel puts screenshots on an
+    axis -- so the page shows both: our grid, and the same coordinates drawn
+    by Grafana itself, where a click launches the same workflow."""
+    import dataclasses
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    page = client.get(f"/runs/{run.id}/timeline").text
+    assert 'class="mx"' in page and "<iframe" not in page
+
+    monkeypatch.setattr(app_module, "settings", dataclasses.replace(
+        app_module.settings, grafana_viewer_url="https://viewer.example.run.app"))
+    page = client.get(f"/runs/{run.id}/timeline").text
+    assert 'class="mx"' in page, "the matrix stays"
+    assert "https://viewer.example.run.app/d/customs-lanes/customs" in page
+    assert "drawn by Grafana" in page

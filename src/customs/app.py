@@ -1941,7 +1941,7 @@ def timeline(request: Request, run_id: str):
         matrix.append({"dimension": dim, "cells": row})
 
     return _page(request, "timeline.html", run=run, lanes=lanes, ticks=ticks,
-                 scenes=scenes, matrix=matrix,
+                 scenes=scenes, matrix=matrix, embeds=embeds(run),
                  duration=duration, screen="timeline")
 
 @app.get("/runs/{run_id}/frames", response_class=HTMLResponse)
