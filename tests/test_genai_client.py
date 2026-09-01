@@ -78,3 +78,41 @@ def test_support_codes_are_decoded_to_names():
         "child", "sexual")
     assert _refusal_categories("no codes here") == ()
     assert _refusal_categories("Support codes: 99999999") == ()
+
+
+def test_a_stale_interactions_token_gets_one_fresh_client(monkeypatch, tmp_path):
+    """The SDK's Interactions layer snapshots its bearer token at client
+    construction and never refreshes it: on a long-lived container the
+    first omni call after the first hour died 401 ACCESS_TOKEN_EXPIRED
+    while every classic API kept working. One narrow retry on a rebuilt
+    client; any other error still raises."""
+    import base64
+    from types import SimpleNamespace
+    from customs import genai_client
+
+    clip = tmp_path / "clip.mp4"
+    clip.write_bytes(b"mp4")
+
+    class Stale:
+        class interactions:
+            @staticmethod
+            def create(**kw):
+                raise RuntimeError("Error code: 401 - ACCESS_TOKEN_EXPIRED")
+
+    video = SimpleNamespace(type="video", data=base64.b64encode(b"edited").decode(),
+                            uri=None)
+    done = SimpleNamespace(status="completed", outputs=[],
+                           output_video=video)
+
+    class Fresh:
+        class interactions:
+            @staticmethod
+            def create(**kw):
+                return done
+
+    clients = [Stale, Fresh]
+    monkeypatch.setattr(genai_client, "client", lambda: clients.pop(0))
+
+    out = genai_client.generate_omni_edit("edit it", clip, tmp_path / "out.mp4")
+    assert out.read_bytes() == b"edited"
+    assert clients == [], "the stale client was replaced exactly once"

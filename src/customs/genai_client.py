@@ -183,14 +183,33 @@ def generate_omni_edit(instruction: str, clip_path, out_path,
     from pathlib import Path as _P
 
     clip = _P(clip_path)
-    try:
-        interaction = client().interactions.create(
+
+    def _create():
+        return client().interactions.create(
             model=settings.model_omni,
             input=[
                 {"type": "video", "mime_type": "video/mp4",
                  "data": _b64.b64encode(clip.read_bytes()).decode()},
                 {"type": "text", "text": instruction},
             ])
+
+    global _client
+    try:
+        try:
+            interaction = _create()
+        except Exception as stale:  # noqa: BLE001 -- one narrow retry
+            message = str(stale)
+            if "ACCESS_TOKEN_EXPIRED" not in message and \
+                    not message.startswith("Error code: 401"):
+                raise
+            # The SDK's Interactions layer is generated code that snapshots
+            # its bearer token at client construction and never refreshes
+            # it -- so on a long-lived container the first omni call after
+            # the first hour died 401 while every classic API kept working
+            # (seen live 2026-09-01, ACCESS_TOKEN_EXPIRED on
+            # CreateInteractionHttp). A fresh client mints a fresh token.
+            _client = None
+            interaction = _create()
     except Exception as exc:  # noqa: BLE001 -- classify, then re-raise
         message = str(exc)
         if "429" in message or "Quota exceeded" in message:
