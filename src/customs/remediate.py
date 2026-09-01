@@ -629,6 +629,28 @@ def _land_edit(base: Path, before: Path, edited: Path, finding: Finding,
     return "freeze"
 
 
+def _group_box(finding: Finding, siblings: list, before: Path, store=None) -> list:
+    """One box covering everything the grouped instruction may change.
+
+    A grouped edit shares one instruction but used to land through only the
+    lead finding's box: the model was told to swap the cigar AND clear the
+    smoke puff, did both, and the composite clipped the cigar -- which sat
+    in the SIBLING's box -- back to the original (seen live on the cartoon
+    reel, chg_4d721195d178, verifier honestly NOT-fixed). The union of every
+    box the group can locate; [] when none can be found, which lands as the
+    freeze it always was.
+    """
+    boxes = []
+    for f in (finding, *(siblings or [])):
+        box = _box_for(f, before, store)
+        if box:
+            boxes.append(box)
+    if not boxes:
+        return []
+    return [min(b[0] for b in boxes), min(b[1] for b in boxes),
+            max(b[2] for b in boxes), max(b[3] for b in boxes)]
+
+
 def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str | None,
                      before: Path, workdir: Path, out_path: Path,
                      intent: str | None = None, store=None,
@@ -653,7 +675,7 @@ def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str
         edited = media.fit_image(edited_raw, base,
                                  before.with_name(f"{before.stem}_edited.png"))
         _land_edit(base, before, edited, finding, workdir, out_path,
-                   _box_for(finding, before, store), landing=landing)
+                   _group_box(finding, siblings, before, store), landing=landing)
         return edited, instruction
     if replacement is None and \
             METHOD_BY_DIMENSION.get(_dimension_of(finding, None)) != method:
@@ -688,7 +710,7 @@ def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str
     edited = media.fit_image(edited_raw, base, before.with_name(f"{before.stem}_edited.png"))
 
     _land_edit(base, before, edited, finding, workdir, out_path,
-               _box_for(finding, before, store), landing=landing)
+               _group_box(finding, siblings, before, store), landing=landing)
     return edited, instruction
 
 _GENERIC_EDIT = (

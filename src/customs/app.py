@@ -991,6 +991,10 @@ def generated_clip(run_id: str, change_id: str):
     changes = run_dir(run) / "changes"
     clip = changes / f"{change_id}_bridge.mp4"
     if not clip.is_file():
+        # the Omni rewrite keeps its clip under its own suffix
+        omni = changes / f"{change_id}_omni.mp4"
+        if omni.is_file():
+            return FileResponse(omni, media_type="video/mp4")
         # Bridges written before 2026-08-25 all landed on one hidden file,
         # ".chg_bridge.mp4", because the name came from the staged master
         # rather than the change record. Only the newest survives per run,
@@ -1788,6 +1792,7 @@ def generated_items(run) -> list[dict]:
             "before": _still_name(run_dir(run), change.before_frame),
             "after": _still_name(run_dir(run), change.after_frame),
             "generated": (directory / f"{change.id}_bridge.mp4").is_file()
+                         or (directory / f"{change.id}_omni.mp4").is_file()
                          or (directory / ".chg_bridge.mp4").is_file(),
             "anchors": [{"tag": tag, "file": name} for tag, name in anchors
                         if (directory / name).is_file()],
@@ -2016,7 +2021,8 @@ def cutting_room(request: Request, run_id: str):
             "before": _still_name(directory, change.before_frame),
             "after": _still_name(directory, change.after_frame),
             # only a bridge leaves generated footage behind
-            "generated": (directory / "changes" / f"{change.id}_bridge.mp4").is_file(),
+            "generated": (directory / "changes" / f"{change.id}_bridge.mp4").is_file()
+                         or (directory / "changes" / f"{change.id}_omni.mp4").is_file(),
         })
     localized = [m for m in run.markets
                  if (directory / f"localized_{m}.mp4").exists()]
