@@ -2191,3 +2191,30 @@ def test_the_pickers_word_is_law(console, monkeypatch, tmp_path):
         assert app_module._remediate_and_verify(
             run.id, fid, "FR", tmp_path, method=method) is True, method
         assert got[-1] == expected, method
+
+
+def test_boot_sweeps_statuses_no_thread_can_own(console, monkeypatch, tmp_path):
+    """A deploy replaces the single container, killing any remediation
+    thread mid-edit: the finding it moved to "remediating" showed a
+    "Working" row in the market room forever (observed live), and a run
+    killed mid-pipeline polled at "running" for good. At boot nothing can
+    own either status, so the sweep puts them back honestly."""
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    fid = "fnd_FR_FR-ALC-01_obs_shot_0_000"
+    store.update_finding_status(fid, "remediating", run_id=run.id)
+    dead = store.create_run(asset_path=ASSET, markets=["FR"])
+    store.set_run_status(dead.id, "running")
+
+    monkeypatch.setattr(app_module.persist, "state_dir", lambda: tmp_path)
+    app_module._sweep_orphaned_work()
+
+    assert {f.id: f.status for f in store.findings(run.id, "FR")}[fid] == "open"
+    assert store.get_run(dead.id).status == "error"
+    assert any("service restarted" in m for _i, _t, _a, m
+               in store.events_since(run.id, 0))
+    # without a state dir (dev, tests) the sweep must be a no-op
+    store.update_finding_status(fid, "remediating", run_id=run.id)
+    monkeypatch.setattr(app_module.persist, "state_dir", lambda: None)
+    app_module._sweep_orphaned_work()
+    assert {f.id: f.status for f in store.findings(run.id, "FR")}[fid] == "remediating"

@@ -654,15 +654,27 @@ def _edit_frame_onto(base: Path, finding: Finding, method: str, replacement: str
         _land_edit(base, before, edited, finding, workdir, out_path,
                    _box_for(finding, before, store), landing=landing)
         return edited, instruction
-    if replacement is None:
-        subject = _DEFAULT_REPLACEMENT[method].format(market_name=market_name)
-    elif method == "relettering":
-        subject = f'the text "{replacement}"'
+    if replacement is None and \
+            METHOD_BY_DIMENSION.get(_dimension_of(finding, None)) != method:
+        # The method fell back here from an unmapped dimension, and this
+        # path then reached for _DEFAULT_REPLACEMENT[method] -- the alcohol
+        # substitution -- which is how a modesty finding was sent "replace
+        # each alcoholic drink": once as the green can, and again, live, on
+        # the 1984 runner the day prop_swap became the fallback method.
+        # _frame_instruction walks the honest ladder instead: the intent's
+        # directive, the dimension's own suggested remedy, then a generic
+        # change-what-the-market-objects-to edit.
+        instruction = _frame_instruction(finding, None, intent, market_name)
     else:
-        subject = replacement
-    instruction = _EDIT_INSTRUCTIONS[method].format(replacement=subject)
-    if method == "prop_swap" and market_name not in instruction:
-        instruction = f"{instruction} The market is {market_name}."
+        if replacement is None:
+            subject = _DEFAULT_REPLACEMENT[method].format(market_name=market_name)
+        elif method == "relettering":
+            subject = f'the text "{replacement}"'
+        else:
+            subject = replacement
+        instruction = _EDIT_INSTRUCTIONS[method].format(replacement=subject)
+        if method == "prop_swap" and market_name not in instruction:
+            instruction = f"{instruction} The market is {market_name}."
     if siblings:
         instruction = _combined_directive(finding, siblings, replacement,
                                           intent, market_name)

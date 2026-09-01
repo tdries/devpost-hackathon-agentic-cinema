@@ -349,3 +349,35 @@ def test_confirm_leaves_a_bystander_open_when_it_still_fires(
         "the targeted fix worked and must be reported as working"
     assert by_id[bystander.id].status == "open", "the untouched violation stands"
     assert result is True, "a bystander that still fires is not a failure of this change"
+
+
+def test_confirm_releases_a_remediating_sibling_instead_of_stranding_it(
+        remediated, monkeypatch, no_telemetry, tmp_path):
+    """_apply_locked moves a shot's siblings to "remediating" when a grouped
+    edit starts. The bystander sweep only admitted status "open", so a swept
+    sibling was invisible to the one pass meant to rule on it and sat at
+    "Working" in the market room forever -- live, on the 1984 runner's
+    thighs finding. Both outcomes must release it."""
+    store, run, finding, change, master = remediated
+    sibling = _finding(
+        id="fnd_FR_FR-ALC-01_obs_shot_0_000", run_id=run.id,
+        rule_id="FR-ALC-01", rationale="A glass of wine", status="remediating")
+    store.add_findings([sibling])
+
+    monkeypatch.setattr(pipeline, "observe_shot", lambda *a, **k: [_observation()])
+    # the wine is still there after the edit
+    still = _finding(id="fresh_alc", run_id=run.id, rule_id="FR-ALC-01",
+                     rationale="A glass of wine", status="open")
+    monkeypatch.setattr(pipeline, "judge", _fake_judge_returning([still]))
+
+    verify.confirm(run, "FR", [change], store, tmp_path / "work")
+    by_id = {f.id: f for f in store.findings(run.id, "FR")}
+    assert by_id[sibling.id].status == "open", \
+        "still fires -> released back to open, never stranded at remediating"
+
+    # and when the group edit really cleared it, it resolves
+    store.update_finding_status(sibling.id, "remediating", run_id=run.id)
+    monkeypatch.setattr(pipeline, "judge", _fake_judge_returning([]))
+    verify.confirm(run, "FR", [change], store, tmp_path / "work")
+    by_id = {f.id: f for f in store.findings(run.id, "FR")}
+    assert by_id[sibling.id].status == "resolved"

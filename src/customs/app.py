@@ -139,6 +139,41 @@ def store() -> Store:
         _store_singleton = Store(settings.db_path)
     return _store_singleton
 
+
+def _sweep_orphaned_work() -> None:
+    """Statuses no thread can own after a boot, put back where they belong.
+
+    This service is one container, and a deploy replaces it: any
+    remediation thread dies with the old revision, and the finding it had
+    moved to "remediating" stays there -- a "Working" row in the market
+    room that never stops working. Same for a clearance run killed
+    mid-pipeline: status "running", progress bar at 99, forever. At boot,
+    by construction, nothing owns either status, so both are stale and
+    both are swept honestly: the finding back to open (the alert stays
+    up, which is true), the run to error with a stage error saying why.
+
+    Gated on the state dir exactly like persist.restore above: without it
+    there is no cross-boot store to sweep, and tests importing this module
+    must never mutate a developer's local runs.
+    """
+    if persist.state_dir() is None:
+        return
+    db = store()
+    for run in db.recent_runs(500):
+        for f in db.findings(run.id):
+            if f.status == "remediating":
+                db.update_finding_status(f.id, "open", run_id=run.id)
+                db.emit(run.id, "remediator",
+                        f"stage_error: remediate: the service restarted while "
+                        f"{f.id} was being remediated; finding back to open")
+        if run.status in ("created", "running"):
+            db.set_run_status(run.id, "error")
+            db.emit(run.id, "pipeline",
+                    "stage_error: run: the service restarted mid-run")
+
+
+_sweep_orphaned_work()
+
 def remediate_and_verify(run_id: str, finding_id: str, market: str,
                          workdir=None, *, method: str = "auto",
                          replacement: str | None = None,
