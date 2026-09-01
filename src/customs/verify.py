@@ -145,9 +145,16 @@ def confirm(run, market: str, changes: list[ChangeRecord], store, workdir) -> bo
         obs = observations.get(finding.observation_id)
         return obs.shot_id if obs else getattr(finding, "shot_id", "") or None
 
+    # "open" OR "remediating": _apply_locked moves a shot's siblings to
+    # "remediating" when a grouped edit starts, and the release comment
+    # below always promised to put them back -- but this filter only ever
+    # admitted "open", so a swept sibling was invisible to the one pass
+    # meant to rule on it and sat at "Working" forever. Any "remediating"
+    # finding in this market IS this operation's own group: confirm runs
+    # under the same market lock the edit held.
     bystanders = [
         f for f in findings
-        if f.id not in targeted and f.status == "open"
+        if f.id not in targeted and f.status in ("open", "remediating")
         and _shot_of(f) in touched_shot_ids
     ]
     if bystanders:

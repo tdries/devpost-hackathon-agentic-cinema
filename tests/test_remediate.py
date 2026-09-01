@@ -1086,3 +1086,41 @@ def test_the_anchor_check_judges_the_whole_group(monkeypatch, tmp_path):
 
     assert "bare thighs" in prompts[0], "the sibling's problem is in the check"
     assert "most conservative reviewer" in prompts[0], "and the bar is strict"
+
+
+def test_the_patch_path_never_sends_the_alcohol_default_to_an_unmapped_dimension(
+        monkeypatch, tmp_path):
+    """The green can, third appearance: the day prop_swap became the fallback
+    method, the patch path's replacement-None branch reached for
+    _DEFAULT_REPLACEMENT["prop_swap"] and told a modesty finding to "replace
+    each alcoholic drink" -- observed live on the 1984 runner. An unmapped
+    dimension now walks _frame_instruction's ladder instead."""
+    from customs import remediate
+    from customs.schema import Finding
+
+    seen = {}
+    monkeypatch.setattr(remediate, "_edit_image",
+                        lambda instruction, image_bytes, mime_type="image/png",
+                               reference=None:
+                        seen.setdefault("instruction", instruction) and b"x" or b"x")
+    monkeypatch.setattr(remediate.media, "fit_image",
+                        lambda a, b, c: pathlib.Path(c))
+    monkeypatch.setattr(remediate, "_land_edit", lambda *a, **k: "freeze")
+    monkeypatch.setattr(remediate, "_box_for", lambda *a, **k: [])
+
+    finding = Finding(id="f", run_id="r", observation_id="o", market="AE",
+                      rule_id="AE-MOD-01", klass="legal", severity=80,
+                      t_start=1.0, t_end=2.0,
+                      rationale="a sleeveless top exposes shoulders",
+                      citation_ref="", citation_url="", sourced=True,
+                      remediable=True, remediation_blocked=False,
+                      blocked_reason="")
+    before = tmp_path / "before.png"
+    before.write_bytes(b"png")
+
+    remediate._edit_frame_onto(tmp_path / "b.mp4", finding, "prop_swap", None,
+                               before, tmp_path, tmp_path / "out.mp4")
+
+    assert "alcoholic" not in seen["instruction"], seen["instruction"]
+    assert "cover" in seen["instruction"].lower() or \
+           "clothing" in seen["instruction"].lower(), seen["instruction"]
