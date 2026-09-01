@@ -1755,6 +1755,64 @@ def all_runs(request: Request):
                  showcase=_showcase(store()),
                  packs_total=len(market_packs()), dims_total=len(packs.taxonomy()))
 
+@app.get("/launch/remediate")
+def launch_remediate(run: str, background: BackgroundTasks,
+                     finding: str = "", dimension: str = "", t: float = -1.0,
+                     method: str = "omni"):
+    """A remediation launched by a CLICK on a visualization.
+
+    Two callers: the console's scene-by-dimension matrix (which knows the
+    finding id outright), and a data link on the crew's own Grafana lanes
+    dashboard -- which can only navigate a URL, and which hands back the
+    click's COORDINATE: y is the dimension (the series label), x is the
+    mapped clock, where wall second t0+n IS film second n. That pair plus
+    the run is enough to name the open finding under the click, which is
+    the whole test: a Veo or Omni process, started from a Grafana panel.
+
+    Same guards as the console button: the finding must be open, the guard
+    must not have blocked it, and the method must be affordable today.
+    Lands on the market room's scene section, where the work sparkles.
+    """
+    rec = _run_or_404(run)
+    db = store()
+    if method not in {m.key for m in costs.METHODS}:
+        raise HTTPException(status_code=400, detail=f"unknown method: {method}")
+    obs_by_id = {o.id: o for o in db.observations(rec.id)}
+    if finding:
+        target = next((f for f in db.findings(rec.id)
+                       if f.id == finding and f.status == "open"), None)
+    else:
+        tt = t
+        if tt > 1e9:  # Grafana hands epoch milliseconds on the mapped clock
+            tt = tt / 1000.0 - (rec.t0 or 0.0)
+        cands = [
+            f for f in db.findings(rec.id)
+            if f.status == "open" and f.remediable and not f.remediation_blocked
+            and (obs := obs_by_id.get(f.observation_id)) is not None
+            and obs.dimension == dimension
+            and (tt < 0 or f.t_start - 0.75 <= tt <= f.t_end + 0.75)
+        ]
+        target = max(cands, key=lambda f: f.severity, default=None)
+    if target is None or target.remediation_blocked or not target.remediable:
+        raise HTTPException(status_code=404,
+                            detail="no open, remediable finding at that coordinate")
+    span = max(0.0, target.t_end - target.t_start)
+    ok, why = costs.available(method, span, db.spent_today())
+    if not ok:
+        raise HTTPException(status_code=409, detail=why)
+    db.emit(rec.id, "remediator",
+            f"viz click requested remediation: {target.rule_id} "
+            f"({target.market}) -> {target.id} "
+            f"[{method}, {costs.estimate(method, span):.2f} EUR]")
+    background.add_task(remediate_and_verify, rec.id, target.id, target.market,
+                        method=method)
+    shot = getattr(target, "shot_id", "") or         (obs_by_id[target.observation_id].shot_id
+         if target.observation_id in obs_by_id else "")
+    anchor = f"#mk-{shot}" if shot else ""
+    return RedirectResponse(
+        f"/runs/{rec.id}/markets/{target.market}{anchor}", status_code=303)
+
+
 @app.get("/runs/{run_id}/timeline", response_class=HTMLResponse)
 def timeline(request: Request, run_id: str):
     """Market x timecode: where the commercial goes wrong, per country.
@@ -1786,7 +1844,79 @@ def timeline(request: Request, run_id: str):
                       "segs": segs})
     ticks = [{"t": t, "left": round(t / duration * 100, 2)}
              for t in range(0, int(duration) + 1, 5)]
+
+    # The matrix: occurrence types down, scenes across, one cell per pair.
+    # A cell with an open finding IS a launch button -- the same workflow a
+    # Grafana data link on the lanes dashboard fires by coordinate.
+    scenes = []
+    scene_map: dict[str, dict] = {}
+    for obs in sorted(observations.values(), key=lambda o: (o.t_start, o.id)):
+        sid = obs.shot_id or obs.id
+        sc = scene_map.get(sid)
+        if sc is None:
+            sc = scene_map[sid] = {"shot_id": sid, "t_start": obs.t_start,
+                                   "t_end": obs.t_end, "hero": None}
+            scenes.append(sc)
+        sc["t_start"] = min(sc["t_start"], obs.t_start)
+        sc["t_end"] = max(sc["t_end"], obs.t_end)
+        if sc["hero"] is None and obs.id in live:
+            sc["hero"] = obs.id
+    scenes.sort(key=lambda sc: sc["t_start"])
+    order = {sc["shot_id"]: i for i, sc in enumerate(scenes)}
+
+    all_findings = db.findings(run.id)
+    dims_present = []
+    cells: dict[tuple[str, str], dict] = {}
+    for obs in observations.values():
+        if obs.dimension and obs.dimension != "none":
+            if obs.dimension not in dims_present:
+                dims_present.append(obs.dimension)
+            key = (obs.dimension, obs.shot_id or obs.id)
+            cells.setdefault(key, {"obs": 0, "open": 0, "resolved": 0,
+                                   "working": 0, "worst": 0, "best": None})
+            cells[key]["obs"] += 1
+    for f in all_findings:
+        obs = observations.get(f.observation_id)
+        if obs is None or not obs.dimension or obs.dimension == "none":
+            continue
+        cell = cells.setdefault(
+            (obs.dimension, obs.shot_id or obs.id),
+            {"obs": 0, "open": 0, "resolved": 0, "working": 0,
+             "worst": 0, "best": None})
+        cell["worst"] = max(cell["worst"], f.severity)
+        if f.status == "resolved":
+            cell["resolved"] += 1
+        elif f.status == "remediating":
+            cell["working"] += 1
+        elif f.status == "open" and f.remediable and not f.remediation_blocked:
+            cell["open"] += 1
+            best = cell["best"]
+            if best is None or f.severity > best.severity:
+                cell["best"] = f
+    dims_present.sort()
+    matrix = []
+    for dim in dims_present:
+        row = []
+        for sc in scenes:
+            cell = cells.get((dim, sc["shot_id"]))
+            entry = None
+            if cell:
+                best = cell["best"]
+                entry = {
+                    "obs": cell["obs"], "open": cell["open"],
+                    "resolved": cell["resolved"], "working": cell["working"],
+                    "worst": cell["worst"],
+                    "finding": best.id if best else "",
+                    "market": best.market if best else "",
+                    "eur": costs.estimate(
+                        "omni", max(0.0, best.t_end - best.t_start))
+                    if best else 0.0,
+                }
+            row.append(entry)
+        matrix.append({"dimension": dim, "cells": row})
+
     return _page(request, "timeline.html", run=run, lanes=lanes, ticks=ticks,
+                 scenes=scenes, matrix=matrix,
                  duration=duration, screen="timeline")
 
 @app.get("/runs/{run_id}/frames", response_class=HTMLResponse)

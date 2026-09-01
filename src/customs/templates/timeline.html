@@ -9,6 +9,63 @@
   <p class="subline">One lane per market on the commercial's own clock. Hover a segment for the triggering frame and the infraction behind it; click through for the market room. Green segments were violations the crew fixed and the verifier confirmed.</p>
 </section>
 
+{% if matrix %}
+<section style="border-top:none;padding-top:0">
+  <div class="rule-row"><span class="label">The matrix</span></div>
+  <p class="subline" style="max-width:96ch;font-size:13.5px">
+    Every occurrence type against every scene, on the run's own coordinates:
+    the scene's place on the mapped clock is x, the dimension is y &mdash; the
+    same pair a click on the crew's Grafana lanes dashboard hands back. A hot
+    cell is a launch button: one click starts the Omni rewrite for that exact
+    scene, the same workflow a Grafana data link fires.
+  </p>
+  <div class="mxwrap">
+    <table class="mx">
+      <thead><tr>
+        <th class="mx-corner"></th>
+        {% for sc in scenes %}
+        <th class="mx-scene">
+          <a href="/runs/{{ run.id }}/frames#sc-{{ sc.shot_id }}" title="{{ sc.shot_id.replace('_',' ') }} &middot; {{ sc.t_start | timecode }}">
+            {% if sc.hero %}<img src="/runs/{{ run.id }}/evidence/{{ sc.hero }}" alt="" loading="lazy">
+            {% else %}<span class="ss-blank label">no frame</span>{% endif %}
+            <span class="mono ss-t">{{ sc.t_start | timecode }}</span>
+          </a>
+        </th>
+        {% endfor %}
+      </tr></thead>
+      <tbody>
+        {% for row in matrix %}
+        <tr>
+          <th class="mx-dim">
+            <svg class="ic"><use href="#d-{{ row.dimension }}"/></svg>
+            <span>{{ row.dimension.replace('_', ' ') }}</span>
+          </th>
+          {% for cell in row.cells %}
+          {% if cell is none %}
+          <td class="mx-cell mx-empty"></td>
+          {% elif cell.working %}
+          <td class="mx-cell"><span class="mx-box mx-working sparkle" title="a fix is running here">{{ cell.working }}</span></td>
+          {% elif cell.open %}
+          <td class="mx-cell">
+            <a class="mx-box mx-hot {{ 'mx-block' if cell.worst >= 70 }}"
+               href="/launch/remediate?run={{ run.id }}&finding={{ cell.finding }}&method=omni"
+               title="Remediate now &middot; Omni rewrite &middot; {{ '%.2f'|format(cell.eur) }} EUR &middot; {{ cell.market }}">
+              <b>{{ cell.open }}</b><i>remediate<br>now</i></a>
+          </td>
+          {% elif cell.resolved %}
+          <td class="mx-cell"><span class="mx-box mx-fixed" title="fixed and verified"><svg class="ic"><use href="#i-cleared"/></svg></span></td>
+          {% else %}
+          <td class="mx-cell"><span class="mx-box mx-clean" title="looked at, nothing objected"></span></td>
+          {% endif %}
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
 <section style="border-top:none;padding-top:0">
   <div class="tl">
     <div class="tl-row">

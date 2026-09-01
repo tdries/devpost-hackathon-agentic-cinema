@@ -2331,3 +2331,50 @@ def test_the_landing_page_plays_a_before_and_after(console):
     for key in ("wine", "smoke", "skirt"):
         assert (static / f"fix-{key}-before.mp4").stat().st_size > 100_000
         assert (static / f"fix-{key}-after.mp4").stat().st_size > 100_000
+
+
+def test_a_viz_click_launches_a_remediation_by_coordinate(console):
+    """The Grafana test: a data link can only navigate, and what it carries
+    is the click's coordinate -- the dimension series and the mapped-clock
+    timestamp. That pair plus the run resolves to the open finding under
+    the click, and the workflow starts."""
+    client, store, _launched, jobs = console
+    run = _judged_run(store)
+
+    # by coordinate, film seconds
+    r = client.get(f"/launch/remediate?run={run.id}"
+                   f"&dimension=alcohol_tobacco_drugs&t=1.5&method=omni",
+                   follow_redirects=False)
+    assert r.status_code == 303 and f"/runs/{run.id}/markets/FR" in r.headers["location"]
+    assert "#mk-shot_0" in r.headers["location"]
+    assert len(jobs) == 1 and jobs[0][1] == "fnd_FR_FR-ALC-01_obs_shot_0_000"
+
+    # by coordinate, Grafana's epoch milliseconds on the mapped clock
+    ms = (store.get_run(run.id).t0 + 1.5) * 1000
+    r = client.get(f"/launch/remediate?run={run.id}"
+                   f"&dimension=alcohol_tobacco_drugs&t={ms}&method=omni",
+                   follow_redirects=False)
+    assert r.status_code == 303 and len(jobs) == 2
+
+    # by finding id, the console matrix's direct route
+    r = client.get(f"/launch/remediate?run={run.id}"
+                   f"&finding=fnd_FR_FR-ALC-01_obs_shot_0_000&method=omni",
+                   follow_redirects=False)
+    assert r.status_code == 303 and len(jobs) == 3
+
+    # nothing at that coordinate -> honest 404, nothing launched
+    r = client.get(f"/launch/remediate?run={run.id}"
+                   f"&dimension=children_and_minors&t=1.5",
+                   follow_redirects=False)
+    assert r.status_code == 404 and len(jobs) == 3
+
+
+def test_the_timeline_draws_the_matrix_with_launch_cells(console):
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    page = client.get(f"/runs/{run.id}/timeline").text
+    assert 'class="mx"' in page, "occurrence types by scenes"
+    assert "alcohol tobacco drugs" in page
+    assert f"/launch/remediate?run={run.id}&finding=" in page, \
+        "a hot cell is a launch button"
+    assert "remediate<br>now" in page.lower() or "remediate" in page.lower()
