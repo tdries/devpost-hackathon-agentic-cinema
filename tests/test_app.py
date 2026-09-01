@@ -937,20 +937,20 @@ def test_every_page_offers_both_style_modes(client):
         assert "customs-theme" in page.text
 
 
-def test_a_phone_gets_studio_unless_it_asked_for_mission(client):
-    """Mission is built for a dark room and a big screen. It is the wrong
-    thing to hand someone reading outdoors, so a phone with no stored choice
-    starts in Studio.
+def test_studio_is_the_default_everywhere_and_mission_must_be_asked_for(client):
+    """The console is read in daylight, printed, screenshotted and put in
+    front of people, so the light theme is the default on every screen size
+    -- not just phones, which is what it used to be.
 
     The half that is easy to get wrong: an explicit Mission has to be stored
-    AS "mission". If it were stored as a missing key -- which is how it used
-    to work -- then on a phone it would be indistinguishable from never
-    having chosen, and the next page load would silently revert to Studio.
+    AS "mission". If it were stored as a missing key, it would be
+    indistinguishable from never having chosen, and the next page load would
+    silently revert to Studio.
     """
     test_client, _, _run, _ = client
     head = test_client.get("/").text.split("</head>")[0]
-    assert 'matchMedia("(max-width: 900px)")' in head
-    assert '_t = "studio"' in head
+    assert '_t !== "mission"' in head, "anything but an explicit mission is light"
+    assert 'setAttribute("data-theme", "studio")' in head
     assert '_t !== "studio" && _t !== "mission"' in head
 
     # scoped to the theme switch: the card/list view switches have their own
@@ -961,15 +961,15 @@ def test_a_phone_gets_studio_unless_it_asked_for_mission(client):
     assert "removeItem" not in theme_block
 
 
-def test_a_browser_holding_a_deleted_mode_falls_back_to_mission(client):
+def test_a_browser_holding_a_deleted_mode_falls_back_to_studio(client):
     """A stored "spectrum" would otherwise set data-theme with no CSS behind
     it, leaving that browser on a half-styled page nothing could undo: the
-    button that cleared it is gone. The boot script drops anything but
-    studio instead of trusting what it reads."""
+    button that cleared it is gone. The boot script drops anything it does
+    not recognise and lands on Studio, the default."""
     test_client, _, _run, _ = client
     head = test_client.get("/").text.split("</head>")[0]
     assert 'localStorage.removeItem("customs-theme")' in head
-    assert '_t === "studio"' in head
+    assert 'setAttribute("data-theme", "studio")' in head
 
 
 # -- the youtube way in --
@@ -1040,8 +1040,10 @@ def test_the_archive_lists_every_run(client):
 
 
 def test_the_timeline_shows_where_it_goes_wrong(client, tmp_path):
-    """One lane per market, one segment per finding at its timecode span,
-    and the hover card carries the triggering frame and the infraction."""
+    """The page is one grid now, not three charts: occurrence types down the
+    side, the scene's own opening frame across the top, and a cell wherever
+    the two meet. The market Gantt it replaced said the same things one
+    market at a time, and every one of them is still in the market rooms."""
     test_client, store, run, _ = client
     frame = tmp_path / "kf.png"
     frame.write_bytes(b"\x89PNG fake")
@@ -1053,12 +1055,14 @@ def test_the_timeline_shows_where_it_goes_wrong(client, tmp_path):
 
     page = test_client.get(f"/runs/{run.id}/timeline")
     assert page.status_code == 200
-    assert 'class="seg ' in page.text                      # a drawn segment
-    assert "FR-ALC-01" in page.text                        # naming its rule
-    assert f"/runs/{run.id}/evidence/obs_shot_0_000" in page.text  # the frame
+    assert 'class="mx2"' in page.text                      # the grid
+    assert "alcohol tobacco drugs" in page.text            # its y axis
+    assert f"/runs/{run.id}/evidence/obs_shot_0_000" in page.text  # its x axis
     assert "wine glasses" in page.text                     # the rationale
-    # both markets get a lane, findings or not
-    assert 'data-lane="FR"' in page.text and 'data-lane="SA"' in page.text
+    assert "FR-ALC-01 (FR)" in page.text                   # naming its rule
+    # the market is in the cell that fired, not in a lane of its own: a
+    # market with nothing to say cost a whole empty row in the old Gantt
+    assert 'data-lane=' not in page.text
 
     assert test_client.get("/runs/nope/timeline").status_code == 404
 
@@ -2373,11 +2377,11 @@ def test_the_timeline_draws_the_matrix_with_launch_cells(console):
     client, store, _launched, _jobs = console
     run = _judged_run(store)
     page = client.get(f"/runs/{run.id}/timeline").text
-    assert 'class="mx"' in page, "occurrence types by scenes"
+    assert 'class="mx2"' in page, "occurrence types by scenes"
     assert "alcohol tobacco drugs" in page
     assert f"/launch/remediate?run={run.id}&finding=" in page, \
         "a hot cell is a launch button"
-    assert "remediate<br>now" in page.lower() or "remediate" in page.lower()
+    assert "--cols:" in page, "columns are sized to fit, never scrolled"
 
 
 def test_the_board_frames_live_grafana_when_the_viewer_is_deployed(console, monkeypatch):
@@ -2411,11 +2415,11 @@ def test_the_timeline_pairs_its_matrix_with_the_live_grafana(console, monkeypatc
     run = _judged_run(store)
 
     page = client.get(f"/runs/{run.id}/timeline").text
-    assert 'class="mx"' in page and "<iframe" not in page
+    assert 'class="mx2"' in page and "<iframe" not in page
 
     monkeypatch.setattr(app_module, "settings", dataclasses.replace(
         app_module.settings, grafana_viewer_url="https://viewer.example.run.app"))
     page = client.get(f"/runs/{run.id}/timeline").text
-    assert 'class="mx"' in page, "the matrix stays"
+    assert 'class="mx2"' in page, "the grid stays"
     assert "https://viewer.example.run.app/d/customs-lanes/customs" in page
     assert "drawn by Grafana" in page
