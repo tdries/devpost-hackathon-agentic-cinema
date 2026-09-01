@@ -122,6 +122,7 @@ gcloud services enable \
     IFS= read -r DEPLOY_IMAGEN_MODEL
     IFS= read -r DEPLOY_VEO_MODEL
     IFS= read -r DEPLOY_TTS_MODEL
+    IFS= read -r DEPLOY_GRAFANA_VIEWER_URL
 } < <(PYTHONPATH="$ROOT/src" "$PY" - "$ENV_FILE" <<'PYEOF'
 import sys
 from customs.config import Settings
@@ -130,7 +131,7 @@ s = Settings.load(sys.argv[1])
 for value in (s.grafana_url, s.grafana_stack_id, s.grafana_sa_token,
               s.grafana_cloud_token, s.otlp_url, s.loki_push_url, s.loki_user,
               s.model_vision, s.model_text, s.model_image, s.model_video,
-              s.model_tts):
+              s.model_tts, s.grafana_viewer_url):
     print(value)
 PYEOF
 )
@@ -235,6 +236,9 @@ if [[ -n "$DEPLOY_GEMINI_MODEL_TEXT" ]]; then env_pairs+=("GEMINI_MODEL_TEXT=${D
 if [[ -n "$DEPLOY_IMAGEN_MODEL" ]]; then env_pairs+=("IMAGEN_MODEL=${DEPLOY_IMAGEN_MODEL}"); fi
 if [[ -n "$DEPLOY_VEO_MODEL" ]]; then env_pairs+=("VEO_MODEL=${DEPLOY_VEO_MODEL}"); fi
 if [[ -n "$DEPLOY_TTS_MODEL" ]]; then env_pairs+=("TTS_MODEL=${DEPLOY_TTS_MODEL}"); fi
+# The embeddable viewer (scripts/deploy_viewer.sh). Unset means the board
+# keeps rendering Grafana's panels as PNGs, which is the old behaviour.
+if [[ -n "$DEPLOY_GRAFANA_VIEWER_URL" ]]; then env_pairs+=("GRAFANA_VIEWER_URL=${DEPLOY_GRAFANA_VIEWER_URL}"); fi
 if [[ ${#YT_COOKIES_ENV[@]} -gt 0 ]]; then env_pairs+=("${YT_COOKIES_ENV[@]}"); fi
 
 joined="$(IFS=';'; echo "${env_pairs[*]}")"

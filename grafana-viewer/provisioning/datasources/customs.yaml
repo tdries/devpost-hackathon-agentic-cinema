@@ -1,14 +1,14 @@
-# The same data, through the same door the app already uses.
+# The same data the crew writes, read directly from Grafana Cloud.
 #
-# url is the Cloud stack's own datasource proxy -- exactly the path
-# grafana_ops.loki_lines calls (/api/datasources/proxy/uid/<uid>/...), so a
-# Loki datasource appending /loki/api/v1/query_range and a Prometheus one
-# appending /api/v1/query_range both land where they should. Verified live
-# against this stack: 200, real streams, real series.
+# NOT through the stack's datasource proxy: that works (verified), but it
+# would mean carrying the stack's ADMIN service account token inside a
+# public, anonymous Grafana. These credentials are a purpose-minted access
+# policy instead -- logs:read + metrics:read only, pinned by labelPolicy to
+# {app="customs"}, and refused (401) by grafana.com's account API.
 #
-# The UIDs are deliberately Cloud's own. Every dashboard JSON in this repo
-# names grafanacloud-logs and grafanacloud-prom, so keeping them means the
-# crew's dashboards provision here unmodified.
+# The UIDs are Cloud's own on purpose: every dashboard JSON in this repo
+# names grafanacloud-logs (14x) and grafanacloud-prom (27x), so keeping the
+# UIDs means the crew's dashboards provision here unmodified.
 apiVersion: 1
 
 datasources:
@@ -16,22 +16,23 @@ datasources:
     uid: grafanacloud-logs
     type: loki
     access: proxy
-    url: ${STACK_URL}/api/datasources/proxy/uid/grafanacloud-logs
+    url: ${LOKI_URL}
+    basicAuth: true
+    basicAuthUser: ${LOKI_USER}
     editable: false
-    jsonData:
-      httpHeaderName1: Authorization
     secureJsonData:
-      httpHeaderValue1: Bearer ${SA_TOKEN}
+      basicAuthPassword: ${VIEWER_TOKEN}
 
   - name: Mimir
     uid: grafanacloud-prom
     type: prometheus
     access: proxy
-    url: ${STACK_URL}/api/datasources/proxy/uid/grafanacloud-prom
+    url: ${PROM_URL}
+    basicAuth: true
+    basicAuthUser: ${PROM_USER}
     isDefault: true
     editable: false
     jsonData:
       httpMethod: GET
-      httpHeaderName1: Authorization
     secureJsonData:
-      httpHeaderValue1: Bearer ${SA_TOKEN}
+      basicAuthPassword: ${VIEWER_TOKEN}
