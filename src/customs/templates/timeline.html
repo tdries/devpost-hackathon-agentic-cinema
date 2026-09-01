@@ -65,16 +65,18 @@
   {% if embeds and embeds.viewer %}
   <div class="rule-row" style="margin-top:26px">
     <span class="label">The same thing, drawn by Grafana</span>
-    <a class="chip" href="{{ embeds.viewer.lanes }}" target="_blank" rel="noreferrer">open it full size</a>
+    <a class="chip" href="{{ embeds.viewer.grid }}" target="_blank" rel="noreferrer">open it full size</a>
   </div>
   <p class="subline" style="max-width:96ch;font-size:13.5px">
-    Live and interactive, not a picture: the crew's own lanes dashboard, in a
-    Grafana that reads this stack. Hover a segment for its values &mdash; and
-    click one to remediate the scene beneath it, which is the same workflow the
-    cells above launch, fired from inside a Grafana panel.
+    Squares, not bars: a status history of the same observation stream, live in
+    a Grafana that reads this stack. Its row labels are text because no Grafana
+    panel can put an image on an axis &mdash; that is what the grid above is
+    for. Hover a square for its values, and click one to remediate the scene
+    beneath it: the same workflow the cells above launch, fired from inside a
+    Grafana panel.
   </p>
-  <iframe class="boardlanes live" src="{{ embeds.viewer.lanes }}"
-          title="Problem lanes, live from Grafana" loading="lazy"></iframe>
+  <iframe class="boardlanes live" src="{{ embeds.viewer.grid }}"
+          title="The same coordinates, live from Grafana" loading="lazy"></iframe>
   {% endif %}
 </section>
 {% endif %}

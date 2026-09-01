@@ -1,0 +1,141 @@
+{
+ "uid": "customs-grid",
+ "title": "The grid",
+ "tags": [
+  "customs"
+ ],
+ "timezone": "utc",
+ "editable": true,
+ "time": {
+  "from": "now-24h",
+  "to": "now"
+ },
+ "templating": {
+  "list": [
+   {
+    "name": "asset",
+    "type": "query",
+    "datasource": {
+     "type": "loki",
+     "uid": "grafanacloud-logs"
+    },
+    "query": {
+     "label": "asset",
+     "refId": "asset",
+     "stream": "{app=\"customs\", kind=\"observation\"}",
+     "type": 1
+    },
+    "refresh": 1,
+    "includeAll": false,
+    "definition": "label_values({app=\"customs\", kind=\"observation\"}, asset)"
+   },
+   {
+    "name": "run",
+    "type": "textbox",
+    "query": "",
+    "current": {
+     "text": "",
+     "value": ""
+    },
+    "label": "run id"
+   }
+  ]
+ },
+ "panels": [
+  {
+   "type": "status-history",
+   "title": "The same coordinates, drawn by Grafana",
+   "gridPos": {
+    "h": 15,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   },
+   "datasource": {
+    "type": "loki",
+    "uid": "grafanacloud-logs"
+   },
+   "targets": [
+    {
+     "expr": "max by (dimension) (max_over_time({app=\"customs\", kind=\"observation\", asset=\"$asset\"} | json | run_id=\"$run\" | unwrap max_severity [$__interval]))",
+     "queryType": "range",
+     "refId": "A",
+     "legendFormat": "{{dimension}}",
+     "datasource": {
+      "type": "loki",
+      "uid": "grafanacloud-logs"
+     },
+     "interval": "4s"
+    }
+   ],
+   "options": {
+    "showValue": "never",
+    "rowHeight": 0.92,
+    "colWidth": 0.92,
+    "legend": {
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": false
+    },
+    "tooltip": {
+     "mode": "single",
+     "sort": "none"
+    }
+   },
+   "fieldConfig": {
+    "defaults": {
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "#34A853",
+        "value": null
+       },
+       {
+        "color": "#FBBC05",
+        "value": 40
+       },
+       {
+        "color": "#EA4335",
+        "value": 70
+       }
+      ]
+     },
+     "color": {
+      "mode": "thresholds"
+     },
+     "custom": {
+      "fillOpacity": 85,
+      "lineWidth": 1
+     },
+     "min": 0,
+     "max": 100,
+     "unit": "short",
+     "mappings": [
+      {
+       "type": "value",
+       "options": {
+        "0": {
+         "text": "seen, nobody objected",
+         "index": 0
+        }
+       }
+      }
+     ],
+     "links": [
+      {
+       "title": "Remediate now (Omni rewrite)",
+       "url": "https://customs-app-akap4ao72a-ew.a.run.app/launch/remediate?run=${run}&dimension=${__field.labels.dimension}&t=${__value.time}&method=omni",
+       "targetBlank": true
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "id": 1,
+   "interval": "4s"
+  }
+ ],
+ "schemaVersion": 39,
+ "description": "Squares, not bars: the same observation stream the lanes dashboard draws, as a status history -- one square per dimension per interval, coloured by worst severity. Built to sit under the console's own grid, whose axes carry the scene stills and the taxonomy icons Grafana cannot draw."
+}

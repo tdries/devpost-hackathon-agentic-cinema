@@ -898,6 +898,8 @@ def embeds(run) -> dict[str, str]:
         else:
             window = "from=now-3h&to=now"
         viewer = {
+            # squares, to sit under the console's own grid
+            "grid": f"{base}/d/customs-grid/the-grid?{common}&{window}",
             "lanes": f"{base}/d/customs-lanes/customs?{common}&{window}",
             "timeline": f"{base}/d/customs-timeline/customs?{common}&{window}",
             "overview": f"{base}/d/customs-overview/customs?{common}&from=now-6h&to=now",
