@@ -1254,7 +1254,13 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   background: var(--panel);
 }
 .sc.hit { border-left: 3px solid var(--g-yellow); }
-.sc-frames { display: grid; gap: 12px; align-content: start; }
+/* Opens and closes, side by side. Stacked, a scene card was as tall as two
+   frames and the reading beside it floated in the middle of the whitespace;
+   the pair is also how you actually read a shot -- what it started as, what
+   it ended as. */
+.sc-frames { display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  align-content: start; }
+.sc-frames:has(> :only-child) { grid-template-columns: 1fr; }
 .sc-read { display: grid; gap: 10px; align-content: start; min-width: 0; }
 .sc-head { padding-bottom: 4px; }
 .sc-obs { border-top: 1px solid var(--line); padding-top: 9px; display: grid; gap: 7px; }
@@ -2439,3 +2445,12 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
 .mg-hot { background: rgba(251, 188, 5, 0.18); border-color: var(--g-yellow); color: var(--g-yellow); }
 .mg-hot.mg-block { background: rgba(234, 67, 53, 0.18); border-color: var(--blocked); color: var(--blocked); }
 .mg-working { background: rgba(66, 133, 244, 0.16); border-color: var(--g-blue); }
+
+/* the market room's scene header: its opening and closing frame, then what
+   the scene is */
+.scene-row td { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.sc-pair { display: inline-flex; gap: 4px; }
+.sc-pair img { height: 44px; width: auto; display: block; border: 1px solid var(--line);
+  border-radius: 2px; }
+.sc-pair a:hover img { border-color: var(--signal); }
+.sc-meta { display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; }

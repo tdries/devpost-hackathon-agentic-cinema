@@ -2459,3 +2459,30 @@ def test_an_evidence_frame_can_be_asked_for_small(console, monkeypatch, tmp_path
     monkeypatch.setattr(app_module.media, "thumbnail",
                         lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no ffmpeg")))
     assert client.get(f"/runs/{run.id}/evidence/obs_thumb?w=160").status_code == 200
+
+
+def test_a_market_scene_shows_how_it_opens_and_how_it_closes(console, tmp_path):
+    """The market room clustered its findings by scene but never showed the
+    scene: one thumbnail at best, and only if a finding happened to carry
+    it. Now each scene header opens with the shot's own first and last kept
+    frame, side by side, whether or not a finding sits on them."""
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    # two kept frames in the same shot: the scene opens on one, closes on
+    # the other, and neither carries a finding of its own
+    head, tail = tmp_path / "a.png", tmp_path / "b.png"
+    for f in (head, tail):
+        f.write_bytes(b"\x89PNG frame")
+    store.add_observations(run.id, [
+        Observation(id="obs_shot_0_010", shot_id="shot_0", t_start=0.2, t_end=1.0,
+                    dimension="text_legibility", statement="opens",
+                    evidence_frame=str(head), confidence=0.5),
+        Observation(id="obs_shot_0_011", shot_id="shot_0", t_start=6.0, t_end=7.0,
+                    dimension="text_legibility", statement="closes",
+                    evidence_frame=str(tail), confidence=0.5)])
+
+    page = client.get(f"/runs/{run.id}/markets/FR").text
+    assert 'class="sc-pair"' in page, "the scene shows itself"
+    assert f"/runs/{run.id}/evidence/obs_shot_0_010?w=320" in page, "how it opens"
+    assert f"/runs/{run.id}/evidence/obs_shot_0_011?w=320" in page, "how it closes"
