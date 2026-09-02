@@ -69,6 +69,7 @@ import asyncio
 import json
 import logging
 import re
+import shutil
 import threading
 import time
 import uuid
@@ -1627,6 +1628,49 @@ def run_by_asset(asset: str = ""):
     return RedirectResponse("/runs", status_code=303)
 
 
+@app.post("/runs/{run_id}/delete")
+def delete_run(request: Request, run_id: str):
+    """Remove a run: its store rows, its artifacts, its mirrored copy.
+
+    Answers, and nothing else:
+      404  no such run, or a visitor asking about someone else's -- the same
+           answer either way, so this never reveals that a run exists.
+      409  the showcase run, which the archive pins for judges and the
+           landing page links to, or a run with work in flight. Deleting
+           either would break a page or strand a paid edit half-done.
+
+    The day's spend ledger is deliberately left alone: euros that were
+    spent stay spent, and deleting a run is not a way to buy another
+    generation.
+    """
+    run = _run_or_404(run_id)
+    if _role(request) == "visitor" and run.id not in set(_mine(request)):
+        raise HTTPException(status_code=404, detail="no such run")
+    if run.id == SHOWCASE_RUN:
+        raise HTTPException(
+            status_code=409,
+            detail="This is the run the archive pins and the front door links "
+                   "to. Unpin it in app.py before deleting it.")
+    db = store()
+    if run.status in ("created", "running") or any(
+            f.status == "remediating" for f in db.findings(run.id)):
+        raise HTTPException(
+            status_code=409,
+            detail="Something is still running on this run. Wait for it to "
+                   "finish, or the work is thrown away half-done.")
+    directory = run_dir(run)
+    db.delete_run(run.id)
+    # The artifacts, then the mirror. Either can fail without leaving the
+    # store inconsistent -- the run is already gone from it, and what is
+    # left behind is unreferenced bytes rather than a half-deleted run.
+    for target in (directory, (persist.state_dir() / directory.name
+                               if persist.state_dir() else None)):
+        if target is not None:
+            shutil.rmtree(target, ignore_errors=True)
+    log.info("deleted run %s", run.id)
+    return RedirectResponse("/runs", status_code=303)
+
+
 # -- the launch board --
 
 @app.get("/runs/{run_id}", response_class=HTMLResponse)
@@ -1804,6 +1848,11 @@ def all_runs(request: Request):
              # them survivable: only the cards near the viewport ever boot
              # a Grafana, and they share one cached bundle.
              "live_lanes": (embeds(run).get("viewer") or {}).get("squares", ""),
+             # The row labels Grafana cannot draw. Same set and same order
+             # the panel resolves from Loki -- both come from this run's
+             # observations -- so the icons line up with the squares.
+             "dims": sorted({o.dimension for o in store().observations(run.id)
+                             if o.dimension and o.dimension != "none"}),
              "gauge": clearance_gauge(st)}
             for run in runs]
     # One live panel, not thirty-five. Every card carries its own charts as

@@ -2466,3 +2466,24 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
 
 /* the card's still is a video now; it keeps the shape the image had */
 video.runthumb { object-fit: cover; background: var(--well); }
+
+/* The card's live lanes, with the row labels Grafana cannot draw.
+   Same device as the timeline's merged grid, at card size: the icons are a
+   fixed column, the panel is the body, and the icon rows divide the panel's
+   own height so the two line up. */
+.cardgrid { display: grid; grid-template-columns: 18px 1fr; gap: 6px;
+  align-items: stretch; margin: 6px 0 4px; }
+.cardgrid-keys { display: grid; grid-auto-rows: calc(96px / var(--rows));
+  align-items: center; justify-items: center; }
+.cardgrid-keys .ic { width: 13px; height: 13px; opacity: 0.85; }
+.runlist.as-rows .cardgrid { display: none; }
+
+/* deleting a run: a quiet control that only shows itself on approach */
+.runcard { position: relative; display: block; }
+.runkill { position: absolute; top: 8px; right: 8px; z-index: 2; margin: 0;
+  opacity: 0; transition: opacity .15s ease; }
+.runcard:hover .runkill, .runkill:focus-within { opacity: 1; }
+.runkill button { border: 1px solid var(--line-2); background: var(--panel);
+  color: var(--ink-3); border-radius: 3px; width: 22px; height: 22px;
+  line-height: 1; cursor: pointer; font-size: 14px; padding: 0; }
+.runkill button:hover { border-color: var(--blocked); color: var(--blocked); }
