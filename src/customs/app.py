@@ -1799,6 +1799,11 @@ def all_runs(request: Request):
              "groups": pill_groups(run, st),
              "busy": run.status in ("created", "running")
                      or any(v["working"] for v in st.values()),
+             # The card's lanes, live from the viewer when there is one.
+             # loading="lazy" on the iframe is what makes thirty-five of
+             # them survivable: only the cards near the viewport ever boot
+             # a Grafana, and they share one cached bundle.
+             "live_lanes": (embeds(run).get("viewer") or {}).get("squares", ""),
              "gauge": clearance_gauge(st)}
             for run in runs]
     # One live panel, not thirty-five. Every card carries its own charts as
