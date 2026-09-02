@@ -375,7 +375,11 @@
         var fill = document.getElementById("progress-fill");
         var pct = document.getElementById("progress-pct");
         var stage = document.getElementById("progress-stage");
-        if (fill) { fill.style.width = data.progress.pct + "%"; }
+        if (fill) {
+          fill.style.width = data.progress.pct + "%";
+          /* the colours stop flowing when the run does */
+          fill.classList.toggle("done", !!data.done);
+        }
         if (pct) { pct.textContent = data.progress.pct + "%"; }
         if (stage) { stage.textContent = data.progress.stage; }
 
