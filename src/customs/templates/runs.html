@@ -27,6 +27,23 @@
   </div>
 </section>
 
+{% if live_history %}
+<section style="border-top:none;padding-top:0">
+  <div class="rule-row">
+    <span class="label">Every clearance, live from Grafana</span>
+    <a class="chip" href="{{ live_history }}" target="_blank" rel="noreferrer">open the panel</a>
+  </div>
+  <p class="subline" style="max-width:96ch;font-size:13.5px">
+    Findings per asset across the week, read back out of the Loki stream the
+    crew wrote. Hover a line for its counts, and click one to open that
+    asset's newest clearance. One panel rather than one per card: a page of
+    thirty-five live Grafanas is a page nobody can load.
+  </p>
+  <iframe class="archlive" src="{{ live_history }}"
+          title="Findings per asset, live from Grafana" loading="lazy"></iframe>
+</section>
+{% endif %}
+
 <div class="rule-row" style="margin:22px 0 14px">
   <span class="label">Campaign history</span>
   <span class="right view-switch" role="group" aria-label="Runs view">

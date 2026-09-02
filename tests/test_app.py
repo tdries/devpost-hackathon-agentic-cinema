@@ -2486,3 +2486,40 @@ def test_a_market_scene_shows_how_it_opens_and_how_it_closes(console, tmp_path):
     assert 'class="sc-pair"' in page, "the scene shows itself"
     assert f"/runs/{run.id}/evidence/obs_shot_0_010?w=320" in page, "how it opens"
     assert f"/runs/{run.id}/evidence/obs_shot_0_011?w=320" in page, "how it closes"
+
+
+def test_the_archive_carries_one_live_panel_not_thirty_five(console, monkeypatch):
+    """Every card draws its own charts as SVG because building them inline
+    once took this page past a two minute timeout -- and an iframe per card
+    would be thirty-five Grafana applications in one browser. So the archive
+    gets a single instance-wide panel, and a visitor scoped to their own runs
+    gets none, because it is not their view to see."""
+    import dataclasses
+    client, store, _launched, _jobs = console
+    _judged_run(store)
+
+    assert "<iframe" not in client.get("/runs").text, "no viewer, no panel"
+
+    monkeypatch.setattr(app_module, "settings", dataclasses.replace(
+        app_module.settings, grafana_viewer_url="https://viewer.example.run.app"))
+    page = client.get("/runs").text
+    assert page.count("<iframe") == 1, "exactly one"
+    assert "d-solo/customs-history/customs?panelId=1" in page
+
+    client.get("/enter/visitor")
+    assert "<iframe" not in client.get("/runs").text, "not on a scoped archive"
+
+
+def test_a_click_on_the_live_panel_opens_that_assets_newest_run(console):
+    """The panel's series are labelled by asset, because that is what the crew
+    writes to Loki, and an asset can have been cleared more than once."""
+    client, store, _launched, _jobs = console
+    old = _judged_run(store)
+    new = _judged_run(store)   # same asset, cleared again
+
+    r = client.get(f"/runs/by-asset?asset={Path(ASSET).stem}", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == f"/runs/{new.id}"
+    assert old.id != new.id, "newest wins"
+
+    r = client.get("/runs/by-asset?asset=never-cleared", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/runs"
