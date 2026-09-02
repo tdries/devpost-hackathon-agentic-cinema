@@ -2460,8 +2460,8 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
   border-radius: 3px; background: var(--well); display: block; }
 
 /* the card's live lanes: squares, no axes, small enough for a card */
-.cardlanes.live { width: 100%; height: 96px; border: 0; display: block;
-  background: transparent; }
+.cardlanes.live { width: 100%; border: 0; display: block;
+  background: transparent; height: var(--panel-h, 180px); }
 .runlist.as-rows .cardlanes.live { display: none; }
 
 /* the card's still is a video now; it keeps the shape the image had */
@@ -2471,11 +2471,23 @@ video.runthumb { object-fit: cover; background: var(--well); }
    Same device as the timeline's merged grid, at card size: the icons are a
    fixed column, the panel is the body, and the icon rows divide the panel's
    own height so the two line up. */
-.cardgrid { display: grid; grid-template-columns: 18px 1fr; gap: 6px;
-  align-items: stretch; margin: 6px 0 4px; }
-.cardgrid-keys { display: grid; grid-auto-rows: calc(96px / var(--rows));
-  align-items: center; justify-items: center; }
-.cardgrid-keys .ic { width: 13px; height: 13px; opacity: 0.85; }
+/* Every card is the same height, so the archive reads as a grid rather
+   than a ragged column -- which means the panel cannot grow with the run.
+   It is a fixed 180px on every card, Grafana divides that by however many
+   dimensions the run has, and the icon column divides it the same way. The
+   icons then shrink to fit rather than overlapping, which is what a fixed
+   13px did at ten rows in 96px. */
+.cardgrid { --panel-h: 180px; display: grid; grid-template-columns: 18px 1fr;
+  gap: 6px; align-items: stretch; margin: 6px 0 4px; }
+.cardgrid-keys { display: grid;
+  grid-auto-rows: calc(var(--panel-h) / var(--rows));
+  align-items: center; justify-items: center;
+  /* the plot keeps a few pixels of its own inset; this is the closest a
+     document can get to it from outside the frame */
+  padding: 5px 0; }
+.cardgrid-keys .ic { opacity: 0.85;
+  width: min(14px, calc(var(--panel-h) / var(--rows) - 4px));
+  height: min(14px, calc(var(--panel-h) / var(--rows) - 4px)); }
 .runlist.as-rows .cardgrid { display: none; }
 
 /* deleting a run: a quiet control that only shows itself on approach */
@@ -2487,3 +2499,15 @@ video.runthumb { object-fit: cover; background: var(--well); }
   color: var(--ink-3); border-radius: 3px; width: 22px; height: 22px;
   line-height: 1; cursor: pointer; font-size: 14px; padding: 0; }
 .runkill button:hover { border-color: var(--blocked); color: var(--blocked); }
+
+/* One height for every card, across every row of the archive -- not just
+   within a row, which is all the default stretch gives. grid-auto-rows: 1fr
+   makes every row as tall as the tallest card on the page, and the cards
+   fill it. What varied was the flag list: a run cleared for two markets and
+   one cleared for twelve are otherwise the same card, so that list is
+   capped and the rest of the card keeps its shape. */
+.runlist:not(.as-rows) { grid-auto-rows: 1fr; }
+.runlist:not(.as-rows) .runcard,
+.runlist:not(.as-rows) .runrow { height: 100%; }
+.runlist:not(.as-rows) .runrow .flags { max-height: 54px; overflow: hidden;
+  align-content: flex-start; }
