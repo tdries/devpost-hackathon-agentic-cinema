@@ -2461,7 +2461,7 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
 
 /* the card's live lanes: squares, no axes, small enough for a card */
 .cardlanes.live { width: 100%; border: 0; display: block;
-  background: transparent; height: var(--panel-h, 180px); }
+  background: transparent; height: var(--panel-h, 252px); }
 .runlist.as-rows .cardlanes.live { display: none; }
 
 /* the card's still is a video now; it keeps the shape the image had */
@@ -2473,11 +2473,13 @@ video.runthumb { object-fit: cover; background: var(--well); }
    own height so the two line up. */
 /* Every card is the same height, so the archive reads as a grid rather
    than a ragged column -- which means the panel cannot grow with the run.
-   It is a fixed 180px on every card, Grafana divides that by however many
+   It is a fixed 252px on every card, Grafana divides that by however many
    dimensions the run has, and the icon column divides it the same way. The
    icons then shrink to fit rather than overlapping, which is what a fixed
-   13px did at ten rows in 96px. */
-.cardgrid { --panel-h: 180px; display: grid; grid-template-columns: 18px 1fr;
+   13px did at ten rows in 96px. 252 rather than 180: at ten dimensions
+   that is 25px a row instead of 18, which is the difference between icons
+   that clear each other and icons that merely do not overlap. */
+.cardgrid { --panel-h: 252px; display: grid; grid-template-columns: 18px 1fr;
   gap: 6px; align-items: stretch; margin: 6px 0 4px; }
 .cardgrid-keys { display: grid;
   grid-auto-rows: calc(var(--panel-h) / var(--rows));
