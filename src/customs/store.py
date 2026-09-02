@@ -397,6 +397,29 @@ class Store:
         return cur.lastrowid
 
     @_locked
+    @_locked
+    def delete_run(self, run_id: str) -> bool:
+        """Erase one run and everything hung off it.
+
+        Every table keyed by run_id, in one transaction, so a half-deleted
+        run cannot exist: an orphaned finding would still count toward a
+        market's clearance and an orphaned event would still narrate a run
+        the archive no longer shows. The caller removes the artifacts on
+        disk; this is only the store.
+        """
+        with self._conn:
+            gone = self._conn.execute(
+                "DELETE FROM runs WHERE id = ?", (run_id,)).rowcount
+            for table in ("observations", "findings", "changes", "events"):
+                self._conn.execute(f"DELETE FROM {table} WHERE run_id = ?", (run_id,))
+        return bool(gone)
+
+    # NOT spend. That table is the day's budget ledger, and euros that were
+    # actually spent stay spent: deleting a run must not be a way to buy
+    # another Veo generation. Its rows keep the run id they were charged
+    # against, which is now a run that no longer exists, and that is the
+    # honest record of what happened.
+
     def events_since(self, run_id: str, after_id: int) -> list[tuple]:
         return self._conn.execute(
             "SELECT id, ts, agent, message FROM events "

@@ -2538,7 +2538,9 @@ def test_a_run_card_plays_itself_on_hover(console, tmp_path, monkeypatch):
 
     page = client.get("/runs").text
     assert 'class="runthumb" data-hoverplay' in page
-    assert 'preload="none"' in page and "/preview.mp4" in page
+    # metadata, not none: a clip with nothing buffered took too long to
+    # start when a lazy Grafana was booting beside every card
+    assert 'preload="metadata"' in page and "/preview.mp4" in page
     assert f'poster="/runs/{run.id}/poster.jpg"' in page, "it paints as it did"
 
     made = []
@@ -2553,3 +2555,38 @@ def test_a_run_card_plays_itself_on_hover(console, tmp_path, monkeypatch):
     monkeypatch.setattr(app_module.media, "preview_clip",
                         lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no ffmpeg")))
     assert client.get(f"/runs/{run.id}/preview.mp4").status_code == 404
+
+
+def test_a_run_can_be_removed_but_not_the_load_bearing_ones(console, monkeypatch):
+    """Deleting a run erases its rows and its artifacts. What it must never
+    erase is the day's spend ledger -- euros that were spent stay spent, or
+    deleting a run becomes a way to buy another Veo generation."""
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    store.record_spend("bridge", 3.68, run.id, "fnd_x")
+    spent_before = store.spent_today()
+
+    assert client.post(f"/runs/{run.id}/delete",
+                       follow_redirects=False).status_code == 303
+    assert store.get_run(run.id) is None
+    assert store.findings(run.id) == [] and store.observations(run.id) == []
+    assert store.spent_today() == spent_before, "the ledger is not a refund"
+
+    # the pinned showcase is refused: the archive and the front door link to it
+    keep = _judged_run(store)
+    monkeypatch.setattr(app_module, "SHOWCASE_RUN", keep.id)
+    r = client.post(f"/runs/{keep.id}/delete", follow_redirects=False)
+    assert r.status_code == 409 and "pins" in r.json()["detail"]
+    assert store.get_run(keep.id) is not None
+
+    # and so is a run with work in flight
+    busy = _judged_run(store)
+    store.set_run_status(busy.id, "running")
+    r = client.post(f"/runs/{busy.id}/delete", follow_redirects=False)
+    assert r.status_code == 409 and "still running" in r.json()["detail"]
+
+    # a visitor cannot delete a run that is not theirs, and is not told it exists
+    other = _judged_run(store)
+    client.get("/enter/visitor")
+    assert client.post(f"/runs/{other.id}/delete",
+                       follow_redirects=False).status_code == 404
