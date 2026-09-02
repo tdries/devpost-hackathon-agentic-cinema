@@ -1510,20 +1510,21 @@ def test_the_agent_can_discover_the_schema_and_query_it(client):
     assert "flagged" in src and "no rows" in src
 
 
-def test_a_run_card_charts_grafanas_numbers_without_an_iframe(client):
-    """Grafana Cloud sends x-frame-options: deny, so a card cannot embed it.
+def test_a_run_card_draws_its_own_lanes_when_there_is_no_viewer(client):
+    """Grafana Cloud sends frame-ancestors 'none', so a card cannot embed
+    IT. Where the viewer is deployed the card frames that instead; where it
+    is not, the numbers still come from Mimir and the drawing happens here,
+    as inline SVG in the product's own hex.
 
-    A rendered PNG is also wrong for something card-sized: fixed width,
-    fixed theme, second round trip. The numbers come from Mimir, the
-    drawing happens here, and the result is inline SVG in the product's
-    own hex that follows whichever style mode is on.
+    The severity sparkline that used to sit above the lanes is gone: two
+    charts on one card said the same thing twice.
     """
     test_client, _, run, _ = client
     body = test_client.get("/runs").text
-    assert 'class="runspark"' in body
-    assert "/spark.svg" in body
+    assert 'class="runspark"' not in body, "one chart per card, not two"
+    assert 'class="cardlanes"' in body and "/lanes.svg" in body
     assert "onerror=\"this.remove()\"" in body, "a run with no series just has no chart"
-    # and nothing anywhere tries to iframe Grafana
+    # and with no viewer configured, nothing tries to iframe Grafana
     assert "<iframe" not in body
 
 
@@ -2503,8 +2504,11 @@ def test_the_archive_carries_one_live_panel_not_thirty_five(console, monkeypatch
     monkeypatch.setattr(app_module, "settings", dataclasses.replace(
         app_module.settings, grafana_viewer_url="https://viewer.example.run.app"))
     page = client.get("/runs").text
-    assert page.count("<iframe") == 1, "exactly one"
-    assert "d-solo/customs-history/customs?panelId=1" in page
+    assert "d-solo/customs-history/customs?panelId=1" in page, "the one at the top"
+    # the cards frame their own lanes too, but lazily -- only what is near
+    # the viewport ever boots a Grafana
+    assert page.count('class="cardlanes live"') >= 1
+    assert page.count('loading="lazy"') >= page.count("<iframe") - 1
 
     client.get("/enter/visitor")
     assert "<iframe" not in client.get("/runs").text, "not on a scoped archive"

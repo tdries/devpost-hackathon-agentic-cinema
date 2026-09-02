@@ -73,16 +73,17 @@
     {% for item in rows %}
     <a class="runrow{{ ' sparkle' if item.busy }}" href="/runs/{{ item.run.id }}">
       <img class="runthumb" src="/runs/{{ item.run.id }}/poster.jpg" alt="" loading="lazy" onerror="this.remove()">
-      {# Grafana's numbers, drawn in our own hex. Its own URL so the list
-         paints immediately and one slow Grafana cannot hold up the
-         archive; it removes itself when a run has no series. #}
-      <img class="runspark" src="/runs/{{ item.run.id }}/spark.svg" alt="Severity across this run"
-           loading="lazy" onerror="this.remove()">
-      {# What was found and WHEN, a lane per category. Inline rather than an
-         image so a dot can still show the frame it came from -- the same
-         reason the full version on the launch board is inline. #}
+      {# What was found and WHEN, a lane per category -- live from Grafana
+         where the viewer is deployed, and the app's own drawing where it is
+         not. The severity sparkline that used to sit above this is gone: two
+         charts on a card said one thing twice. #}
+      {% if item.live_lanes %}
+      <iframe class="cardlanes live" src="{{ item.live_lanes }}"
+              title="What this run found, live from Grafana" loading="lazy"></iframe>
+      {% else %}
       <img class="cardlanes" src="/runs/{{ item.run.id }}/lanes.svg" alt=""
            loading="lazy" onerror="this.remove()">
+      {% endif %}
       {# Open items before clearance. Inline because the archive already
          counted them -- fetching them back over the network would be a
          round trip to learn what we were holding. #}

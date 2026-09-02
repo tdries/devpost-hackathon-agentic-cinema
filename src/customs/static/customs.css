@@ -2458,3 +2458,8 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
 /* the archive's one live panel */
 .archlive { width: 100%; height: 260px; border: 1px solid var(--line);
   border-radius: 3px; background: var(--well); display: block; }
+
+/* the card's live lanes: squares, no axes, small enough for a card */
+.cardlanes.live { width: 100%; height: 96px; border: 0; display: block;
+  background: transparent; }
+.runlist.as-rows .cardlanes.live { display: none; }
