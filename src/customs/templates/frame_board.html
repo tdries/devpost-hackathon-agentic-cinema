@@ -20,7 +20,7 @@
     <a class="ss{{ ' hit' if sc.findings }}{{ ' sparkle' if sc.working }}" href="#sc-{{ sc.shot_id }}"
        title="{{ sc.shot_id.replace('_', ' ') }} &middot; {{ sc.t_start | timecode }}{{ ' &middot; %d finding(s)' % sc.findings if sc.findings }}">
       {% if sc.hero %}
-      <img src="/runs/{{ run.id }}/evidence/{{ sc.hero.obs.id }}" alt="" loading="lazy">
+      <img src="/runs/{{ run.id }}/evidence/{{ sc.hero.obs.id }}?w=160" alt="" loading="lazy">
       {% else %}
       <span class="ss-blank label">no frame</span>
       {% endif %}
@@ -42,7 +42,7 @@
              burned into the file would be treated as part of the picture. #}
           <div class="fb-shot" data-box-for="{{ r.obs.id }}" data-run="{{ run.id }}">
             <a href="/runs/{{ run.id }}/evidence/{{ r.obs.id }}" target="_blank" title="Open the full frame">
-              <img src="/runs/{{ run.id }}/evidence/{{ r.obs.id }}" alt="Frame at {{ r.obs.t_start | timecode }}" loading="lazy">
+              <img src="/runs/{{ run.id }}/evidence/{{ r.obs.id }}?w=480" alt="Frame at {{ r.obs.t_start | timecode }}" loading="lazy">
             </a>
             <svg class="fb-box" viewBox="0 0 1000 1000" preserveAspectRatio="none" hidden aria-hidden="true"></svg>
           </div>

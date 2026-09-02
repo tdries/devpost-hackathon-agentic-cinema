@@ -130,6 +130,11 @@
      ],
      "links": [
       {
+       "title": "Show me this scene",
+       "url": "https://customs-app-akap4ao72a-ew.a.run.app/runs/${run}/scene?t=${__value.time}",
+       "targetBlank": true
+      },
+      {
        "title": "Remediate now (Omni rewrite)",
        "url": "https://customs-app-akap4ao72a-ew.a.run.app/launch/remediate?run=${run}&dimension=${__field.labels.dimension}&t=${__value.time}&method=omni",
        "targetBlank": true

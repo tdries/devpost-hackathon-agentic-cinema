@@ -180,6 +180,24 @@ def detect_flashes(path) -> list[FlashWindow]:
         ))
     return windows
 
+def thumbnail(src, width: int, out_path) -> Path:
+    """A small JPEG of an evidence frame, made once and kept.
+
+    The frames the analyst keeps are full-resolution PNGs -- over a
+    megabyte each -- and the console draws them as 42 pixel strips. The
+    scene grid alone was pulling twenty megabytes to paint a row of
+    thumbnails. This is the same picture at the size it is actually shown.
+    """
+    out = Path(out_path)
+    if out.is_file() and out.stat().st_size:
+        return out
+    out.parent.mkdir(parents=True, exist_ok=True)
+    _run(["ffmpeg", "-y", "-v", "error", "-i", str(src),
+          "-vf", f"scale={int(width)}:-2", "-q:v", "5", str(out)],
+         timeout=_TIMEOUT)
+    return out
+
+
 def fit_image(png, video_path, out_path) -> Path:
     """Rescale a PNG to the exact pixel size of video_path's video stream.
 
