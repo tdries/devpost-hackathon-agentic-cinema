@@ -2290,8 +2290,20 @@ def market_room(request: Request, run_id: str, market: str):
             sc["open"] += 1
         if sc["hero"] is None and f.observation_id in evidence:
             sc["hero"] = f.observation_id
+    # How the scene opens and how it closes, from the SHOT's own kept
+    # frames rather than from the findings' -- a market that objected once,
+    # halfway through, would otherwise show that one frame as the whole
+    # scene. Same pair the frame board shows, and the tail is dropped when
+    # it is the same still as the head.
+    by_shot: dict[str, list] = {}
+    for obs in sorted(obs_by_id.values(), key=lambda o: (o.t_start, o.id)):
+        if obs.id in evidence:
+            by_shot.setdefault(obs.shot_id or obs.id, []).append(obs.id)
     for sc in scenes:
         sc["findings"].sort(key=lambda f: (-f.severity, f.t_start))
+        kept = by_shot.get(sc["shot_id"], [])
+        sc["head"] = kept[0] if kept else sc["hero"]
+        sc["tail"] = kept[-1] if len(kept) > 1 else None
 
     return _page(request, "market_room.html", run=run, market=market,
                  scenes=scenes,

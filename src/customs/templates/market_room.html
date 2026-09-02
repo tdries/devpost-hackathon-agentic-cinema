@@ -111,9 +111,21 @@
       <tbody>
       {% for sc in scenes %}
       <tr class="scene-row" id="mk-{{ sc.shot_id }}"><td colspan="8">
-        <span class="label">{{ sc.shot_id.replace('_', ' ') }}</span>
-        <span class="mono fb-time">{{ sc.t_start | timecode }} to {{ sc.t_end | timecode }}</span>
-        <span class="label">{{ sc.findings | length }} finding{{ '' if sc.findings | length == 1 else 's' }}{{ ' · %d open' % sc.open if sc.open }}</span>
+        {# How the scene opens and how it closes, side by side, so the row
+           below is read against the seconds it is about. #}
+        <span class="sc-pair">
+          {% for oid in [sc.head, sc.tail] if oid %}
+          <a href="/runs/{{ run.id }}/evidence/{{ oid }}" target="_blank"
+             title="{{ 'opens' if loop.first else 'closes' }} at {{ sc.t_start if loop.first else sc.t_end | timecode }}">
+            <img src="/runs/{{ run.id }}/evidence/{{ oid }}?w=320" alt="" loading="lazy">
+          </a>
+          {% endfor %}
+        </span>
+        <span class="sc-meta">
+          <span class="label">{{ sc.shot_id.replace('_', ' ') }}</span>
+          <span class="mono fb-time">{{ sc.t_start | timecode }} to {{ sc.t_end | timecode }}</span>
+          <span class="label">{{ sc.findings | length }} finding{{ '' if sc.findings | length == 1 else 's' }}{{ ' · %d open' % sc.open if sc.open }}</span>
+        </span>
       </td></tr>
       {% for finding in sc.findings %}
       <tr{{ ' class="sparkle"' | safe if finding.status == 'remediating' }}>
