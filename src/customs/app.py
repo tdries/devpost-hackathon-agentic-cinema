@@ -1610,6 +1610,23 @@ def add_analysis(run_id: str, markets: list[str] = Form(default=[])):
                      name=f"analysis-{run.id}", daemon=True).start()
     return RedirectResponse(f"/runs/{run.id}", status_code=303)
 
+@app.get("/runs/by-asset")
+def run_by_asset(asset: str = ""):
+    """The newest clearance of a given asset, by its file stem.
+
+    What a click on the archive's live panel needs: its series are labelled
+    by asset, because that is what the crew writes to Loki, and an asset can
+    have been cleared more than once. Newest wins, which is what someone
+    clicking a line on a chart of the last day means.
+    """
+    want = (asset or "").strip()
+    if want:
+        for run in store().recent_runs(500):
+            if (Path(run.asset_path).stem or run.asset_path) == want:
+                return RedirectResponse(f"/runs/{run.id}", status_code=303)
+    return RedirectResponse("/runs", status_code=303)
+
+
 # -- the launch board --
 
 @app.get("/runs/{run_id}", response_class=HTMLResponse)
@@ -1784,8 +1801,17 @@ def all_runs(request: Request):
                      or any(v["working"] for v in st.values()),
              "gauge": clearance_gauge(st)}
             for run in runs]
+    # One live panel, not thirty-five. Every card carries its own charts as
+    # SVG for a reason -- building them inline once took this page past a two
+    # minute timeout -- and an iframe per card would be thirty-five Grafana
+    # applications booting in one browser. So the archive gets a single
+    # instance-wide panel, live, and the cards stay drawings.
+    live_history = ""
+    if settings.grafana_viewer_url and not scoped:
+        live_history = (f"{settings.grafana_viewer_url}/d-solo/customs-history/"
+                        f"customs?panelId=1&kiosk&theme=light&from=now-7d&to=now")
     return _page(request, "runs.html", rows=rows, screen="runs", scoped=scoped,
-                 showcase=_showcase(store()),
+                 showcase=_showcase(store()), live_history=live_history,
                  packs_total=len(market_packs()), dims_total=len(packs.taxonomy()))
 
 @app.get("/runs/{run_id}/scene")

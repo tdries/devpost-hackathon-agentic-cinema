@@ -1,349 +1,356 @@
 {
-  "uid": "customs-history",
-  "title": "Customs: Campaign History",
-  "description": "Across assets and time. Which assets tripped which rules, and how often, over the last thirty days.",
-  "tags": [
-    "customs"
-  ],
-  "schemaVersion": 39,
-  "version": 0,
-  "editable": true,
-  "graphTooltip": 1,
-  "liveNow": false,
-  "refresh": "1m",
-  "timezone": "browser",
-  "fiscalYearStartMonth": 0,
-  "weekStart": "",
-  "time": {
-    "from": "now-30d",
-    "to": "now"
-  },
-  "timepicker": {},
-  "annotations": {
-    "list": [
-      {
-        "name": "Customs findings",
-        "datasource": {
-          "type": "grafana",
-          "uid": "-- Grafana --"
-        },
-        "enable": true,
-        "hide": false,
-        "iconColor": "red",
-        "type": "dashboard",
-        "target": {
-          "type": "tags",
-          "matchAny": false,
-          "tags": [
-            "customs"
-          ],
-          "limit": 100
-        }
-      }
-    ]
-  },
-  "templating": {
-    "list": []
-  },
-  "panels": [
-    {
-      "id": 1,
-      "type": "timeseries",
-      "title": "Findings per asset, rolling 24 hours",
-      "description": "count_over_time over a rolling day, grouped by asset. A run appears here at the next step boundary and stays for 24 hours; the table below shows it immediately.",
-      "datasource": {
-        "type": "loki",
-        "uid": "grafanacloud-logs"
-      },
-      "gridPos": {
-        "h": 9,
-        "w": 24,
-        "x": 0,
-        "y": 0
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "loki",
-            "uid": "grafanacloud-logs"
-          },
-          "expr": "sum by (asset) (count_over_time({app=\"customs\", kind!=\"observation\", asset=~\".+\"}[1d]))",
-          "queryType": "range",
-          "editorMode": "code",
-          "maxLines": 500,
-          "legendFormat": "{{asset}}"
-        }
-      ],
-      "options": {
-        "legend": {
-          "calcs": [],
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "tooltip": {
-          "mode": "multi",
-          "sort": "desc",
-          "hideZeros": false
-        }
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "fixed",
-            "fixedColor": "#4285F4"
-          },
-          "custom": {
-            "axisBorderShow": false,
-            "axisCenteredZero": false,
-            "axisColorMode": "text",
-            "axisLabel": "",
-            "axisPlacement": "auto",
-            "barAlignment": 0,
-            "barWidthFactor": 0.9,
-            "drawStyle": "line",
-            "fillOpacity": 25,
-            "gradientMode": "opacity",
-            "hideFrom": {
-              "legend": false,
-              "tooltip": false,
-              "viz": false
-            },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 2,
-            "pointSize": 5,
-            "scaleDistribution": {
-              "type": "linear"
-            },
-            "showPoints": "auto",
-            "spanNulls": false,
-            "stacking": {
-              "group": "A",
-              "mode": "normal"
-            },
-            "thresholdsStyle": {
-              "mode": "off"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "#34A853",
-                "value": null
-              }
-            ]
-          },
-          "unit": "none",
-          "min": 0
-        },
-        "overrides": []
-      },
-      "maxDataPoints": 200
+ "uid": "customs-history",
+ "title": "Customs: Campaign History",
+ "description": "Across assets and time. Which assets tripped which rules, and how often, over the last thirty days.",
+ "tags": [
+  "customs"
+ ],
+ "schemaVersion": 39,
+ "version": 0,
+ "editable": true,
+ "graphTooltip": 1,
+ "liveNow": false,
+ "refresh": "1m",
+ "timezone": "browser",
+ "fiscalYearStartMonth": 0,
+ "weekStart": "",
+ "time": {
+  "from": "now-30d",
+  "to": "now"
+ },
+ "timepicker": {},
+ "annotations": {
+  "list": [
+   {
+    "name": "Customs findings",
+    "datasource": {
+     "type": "grafana",
+     "uid": "-- Grafana --"
     },
-    {
-      "id": 2,
-      "type": "table",
-      "title": "Every finding, newest first",
-      "description": "All assets, all markets. Filter the table headers to ask whether a brand has tripped a given rule before.",
-      "datasource": {
-        "type": "loki",
-        "uid": "grafanacloud-logs"
-      },
-      "gridPos": {
-        "h": 13,
-        "w": 17,
-        "x": 0,
-        "y": 9
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "loki",
-            "uid": "grafanacloud-logs"
-          },
-          "expr": "{app=\"customs\", kind!=\"observation\"} | json severity=\"severity\", sourced=\"sourced\", citation=\"citation_ref\", rationale=\"rationale\", status=\"status\", t_start=\"t_start\"",
-          "queryType": "range",
-          "editorMode": "code",
-          "maxLines": 500
-        }
-      ],
-      "transformations": [
-        {
-          "id": "extractFields",
-          "options": {
-            "source": "labels",
-            "replace": false
-          }
-        },
-        {
-          "id": "convertFieldType",
-          "options": {
-            "fields": {},
-            "conversions": [
-              {
-                "targetField": "severity",
-                "destinationType": "number"
-              }
-            ]
-          }
-        },
-        {
-          "id": "filterFieldsByName",
-          "options": {
-            "include": {
-              "names": [
-                "Time",
-                "asset",
-                "market",
-                "rule_id",
-                "severity",
-                "sourced",
-                "citation"
-              ]
-            }
-          }
-        },
-        {
-          "id": "organize",
-          "options": {
-            "excludeByName": {},
-            "indexByName": {
-              "Time": 0,
-              "asset": 1,
-              "market": 2,
-              "rule_id": 3,
-              "severity": 4,
-              "sourced": 5,
-              "citation": 6
-            },
-            "renameByName": {
-              "rule_id": "rule"
-            }
-          }
-        }
-      ],
-      "options": {
-        "showHeader": true,
-        "cellHeight": "sm",
-        "footer": {
-          "show": false,
-          "reducer": [
-            "sum"
-          ],
-          "countRows": false,
-          "fields": "",
-          "enablePagination": false
-        },
-        "sortBy": [
-          {
-            "displayName": "Time",
-            "desc": true
-          }
-        ]
-      },
-      "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": "auto",
-            "inspect": false,
-            "filterable": true,
-            "cellOptions": {
-              "type": "auto"
-            }
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "text",
-                "value": null
-              }
-            ]
-          }
-        },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "severity"
-            },
-            "properties": [
-              {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-background",
-                  "mode": "gradient"
-                }
-              },
-              {
-                "id": "thresholds",
-                "value": {
-                  "mode": "absolute",
-                  "steps": [
-                    {
-                      "color": "#34A853",
-                      "value": null
-                    },
-                    {
-                      "color": "#FBBC05",
-                      "value": 40
-                    },
-                    {
-                      "color": "#FBBC05",
-                      "value": 60
-                    },
-                    {
-                      "color": "#EA4335",
-                      "value": 70
-                    }
-                  ]
-                }
-              },
-              {
-                "id": "color",
-                "value": {
-                  "mode": "thresholds"
-                }
-              },
-              {
-                "id": "custom.width",
-                "value": 90
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "id": 3,
-      "type": "text",
-      "title": "The read path",
-      "description": "",
-      "datasource": {
-        "type": "datasource",
-        "uid": "grafana"
-      },
-      "gridPos": {
-        "h": 13,
-        "w": 7,
-        "x": 17,
-        "y": 9
-      },
-      "options": {
-        "mode": "markdown",
-        "code": {
-          "language": "plaintext",
-          "showLineNumbers": false,
-          "showMiniMap": false
-        },
-        "content": "### Has this brand tripped this rule before\n\nThis page is the read path. Before the Remediator touches a shot it asks Grafana what happened last time: grafana_ops.query_history runs a Loki range query over the last thirty days for the same brand and the same rule_id, and hands the prior findings and what was done about them to the agent.\n\nThe same query is what fills the panels here, so what an operator reads on this page and what the agent reads before acting are the same rows."
-      }
+    "enable": true,
+    "hide": false,
+    "iconColor": "red",
+    "type": "dashboard",
+    "target": {
+     "type": "tags",
+     "matchAny": false,
+     "tags": [
+      "customs"
+     ],
+     "limit": 100
     }
+   }
   ]
+ },
+ "templating": {
+  "list": []
+ },
+ "panels": [
+  {
+   "id": 1,
+   "type": "timeseries",
+   "title": "Findings per asset, rolling 24 hours",
+   "description": "count_over_time over a rolling day, grouped by asset. A run appears here at the next step boundary and stays for 24 hours; the table below shows it immediately.",
+   "datasource": {
+    "type": "loki",
+    "uid": "grafanacloud-logs"
+   },
+   "gridPos": {
+    "h": 9,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "loki",
+      "uid": "grafanacloud-logs"
+     },
+     "expr": "sum by (asset) (count_over_time({app=\"customs\", kind!=\"observation\", asset=~\".+\"}[1d]))",
+     "queryType": "range",
+     "editorMode": "code",
+     "maxLines": 500,
+     "legendFormat": "{{asset}}"
+    }
+   ],
+   "options": {
+    "legend": {
+     "calcs": [],
+     "displayMode": "list",
+     "placement": "bottom",
+     "showLegend": true
+    },
+    "tooltip": {
+     "mode": "multi",
+     "sort": "desc",
+     "hideZeros": false
+    }
+   },
+   "fieldConfig": {
+    "defaults": {
+     "color": {
+      "mode": "fixed",
+      "fixedColor": "#4285F4"
+     },
+     "custom": {
+      "axisBorderShow": false,
+      "axisCenteredZero": false,
+      "axisColorMode": "text",
+      "axisLabel": "",
+      "axisPlacement": "auto",
+      "barAlignment": 0,
+      "barWidthFactor": 0.9,
+      "drawStyle": "line",
+      "fillOpacity": 25,
+      "gradientMode": "opacity",
+      "hideFrom": {
+       "legend": false,
+       "tooltip": false,
+       "viz": false
+      },
+      "insertNulls": false,
+      "lineInterpolation": "linear",
+      "lineWidth": 2,
+      "pointSize": 5,
+      "scaleDistribution": {
+       "type": "linear"
+      },
+      "showPoints": "auto",
+      "spanNulls": false,
+      "stacking": {
+       "group": "A",
+       "mode": "normal"
+      },
+      "thresholdsStyle": {
+       "mode": "off"
+      }
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "#34A853",
+        "value": null
+       }
+      ]
+     },
+     "unit": "none",
+     "min": 0,
+     "links": [
+      {
+       "title": "Open this asset's newest clearance",
+       "url": "https://customs-app-akap4ao72a-ew.a.run.app/runs/by-asset?asset=${__field.labels.asset}",
+       "targetBlank": true
+      }
+     ]
+    },
+    "overrides": []
+   },
+   "maxDataPoints": 200
+  },
+  {
+   "id": 2,
+   "type": "table",
+   "title": "Every finding, newest first",
+   "description": "All assets, all markets. Filter the table headers to ask whether a brand has tripped a given rule before.",
+   "datasource": {
+    "type": "loki",
+    "uid": "grafanacloud-logs"
+   },
+   "gridPos": {
+    "h": 13,
+    "w": 17,
+    "x": 0,
+    "y": 9
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "datasource": {
+      "type": "loki",
+      "uid": "grafanacloud-logs"
+     },
+     "expr": "{app=\"customs\", kind!=\"observation\"} | json severity=\"severity\", sourced=\"sourced\", citation=\"citation_ref\", rationale=\"rationale\", status=\"status\", t_start=\"t_start\"",
+     "queryType": "range",
+     "editorMode": "code",
+     "maxLines": 500
+    }
+   ],
+   "transformations": [
+    {
+     "id": "extractFields",
+     "options": {
+      "source": "labels",
+      "replace": false
+     }
+    },
+    {
+     "id": "convertFieldType",
+     "options": {
+      "fields": {},
+      "conversions": [
+       {
+        "targetField": "severity",
+        "destinationType": "number"
+       }
+      ]
+     }
+    },
+    {
+     "id": "filterFieldsByName",
+     "options": {
+      "include": {
+       "names": [
+        "Time",
+        "asset",
+        "market",
+        "rule_id",
+        "severity",
+        "sourced",
+        "citation"
+       ]
+      }
+     }
+    },
+    {
+     "id": "organize",
+     "options": {
+      "excludeByName": {},
+      "indexByName": {
+       "Time": 0,
+       "asset": 1,
+       "market": 2,
+       "rule_id": 3,
+       "severity": 4,
+       "sourced": 5,
+       "citation": 6
+      },
+      "renameByName": {
+       "rule_id": "rule"
+      }
+     }
+    }
+   ],
+   "options": {
+    "showHeader": true,
+    "cellHeight": "sm",
+    "footer": {
+     "show": false,
+     "reducer": [
+      "sum"
+     ],
+     "countRows": false,
+     "fields": "",
+     "enablePagination": false
+    },
+    "sortBy": [
+     {
+      "displayName": "Time",
+      "desc": true
+     }
+    ]
+   },
+   "fieldConfig": {
+    "defaults": {
+     "custom": {
+      "align": "auto",
+      "inspect": false,
+      "filterable": true,
+      "cellOptions": {
+       "type": "auto"
+      }
+     },
+     "mappings": [],
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "text",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": [
+     {
+      "matcher": {
+       "id": "byName",
+       "options": "severity"
+      },
+      "properties": [
+       {
+        "id": "custom.cellOptions",
+        "value": {
+         "type": "color-background",
+         "mode": "gradient"
+        }
+       },
+       {
+        "id": "thresholds",
+        "value": {
+         "mode": "absolute",
+         "steps": [
+          {
+           "color": "#34A853",
+           "value": null
+          },
+          {
+           "color": "#FBBC05",
+           "value": 40
+          },
+          {
+           "color": "#FBBC05",
+           "value": 60
+          },
+          {
+           "color": "#EA4335",
+           "value": 70
+          }
+         ]
+        }
+       },
+       {
+        "id": "color",
+        "value": {
+         "mode": "thresholds"
+        }
+       },
+       {
+        "id": "custom.width",
+        "value": 90
+       }
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "id": 3,
+   "type": "text",
+   "title": "The read path",
+   "description": "",
+   "datasource": {
+    "type": "datasource",
+    "uid": "grafana"
+   },
+   "gridPos": {
+    "h": 13,
+    "w": 7,
+    "x": 17,
+    "y": 9
+   },
+   "options": {
+    "mode": "markdown",
+    "code": {
+     "language": "plaintext",
+     "showLineNumbers": false,
+     "showMiniMap": false
+    },
+    "content": "### Has this brand tripped this rule before\n\nThis page is the read path. Before the Remediator touches a shot it asks Grafana what happened last time: grafana_ops.query_history runs a Loki range query over the last thirty days for the same brand and the same rule_id, and hands the prior findings and what was done about them to the agent.\n\nThe same query is what fills the panels here, so what an operator reads on this page and what the agent reads before acting are the same rows."
+   }
+  }
+ ]
 }

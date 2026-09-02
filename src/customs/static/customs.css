@@ -2454,3 +2454,7 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
   border-radius: 2px; }
 .sc-pair a:hover img { border-color: var(--signal); }
 .sc-meta { display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* the archive's one live panel */
+.archlive { width: 100%; height: 260px; border: 1px solid var(--line);
+  border-radius: 3px; background: var(--well); display: block; }
