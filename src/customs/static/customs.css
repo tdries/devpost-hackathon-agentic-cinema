@@ -2463,3 +2463,6 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
 .cardlanes.live { width: 100%; height: 96px; border: 0; display: block;
   background: transparent; }
 .runlist.as-rows .cardlanes.live { display: none; }
+
+/* the card's still is a video now; it keeps the shape the image had */
+video.runthumb { object-fit: cover; background: var(--well); }
