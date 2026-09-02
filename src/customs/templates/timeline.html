@@ -35,7 +35,7 @@
       {% for sc in scenes %}
       <a class="mg-scene" href="/runs/{{ run.id }}/frames#sc-{{ sc.shot_id }}"
          title="{{ sc.shot_id.replace('_',' ') }} &middot; {{ sc.t_start | timecode }}">
-        {% if sc.hero %}<img src="/runs/{{ run.id }}/evidence/{{ sc.hero }}" alt="" loading="lazy">
+        {% if sc.hero %}<img src="/runs/{{ run.id }}/evidence/{{ sc.hero }}?w=160" alt="" loading="lazy">
         {% else %}<span class="mg-noframe"></span>{% endif %}
         <span class="mono mg-t">{{ sc.t_start | timecode }}</span>
       </a>

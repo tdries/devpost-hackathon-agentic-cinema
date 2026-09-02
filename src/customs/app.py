@@ -1788,6 +1788,31 @@ def all_runs(request: Request):
                  showcase=_showcase(store()),
                  packs_total=len(market_packs()), dims_total=len(packs.taxonomy()))
 
+@app.get("/runs/{run_id}/scene")
+def scene_at(run_id: str, t: float = -1.0):
+    """The scene playing at a moment, as a redirect to its frames.
+
+    The other half of a click on a Grafana square. The panel can only
+    navigate a URL and all it knows is the coordinate -- the dimension and
+    the instant on the mapped clock -- so this turns the instant into the
+    shot it falls inside and lands on that scene's card, where the frames,
+    the analyst's sentences and the findings all are.
+    """
+    run = _run_or_404(run_id)
+    tt = t
+    if tt > 1e9:  # Grafana hands epoch milliseconds
+        tt = tt / 1000.0 - (run.t0 or 0.0)
+    shots = {}
+    for obs in store().observations(run.id):
+        sid = obs.shot_id or obs.id
+        lo, hi = shots.get(sid, (obs.t_start, obs.t_end))
+        shots[sid] = (min(lo, obs.t_start), max(hi, obs.t_end))
+    hit = next((sid for sid, (lo, hi) in sorted(shots.items(), key=lambda kv: kv[1])
+                if lo - 0.5 <= tt <= hi + 0.5), "")
+    anchor = f"#sc-{hit}" if hit else ""
+    return RedirectResponse(f"/runs/{run.id}/frames{anchor}", status_code=303)
+
+
 @app.get("/launch/remediate")
 def launch_remediate(run: str, background: BackgroundTasks,
                      finding: str = "", dimension: str = "", t: float = -1.0,
@@ -2448,7 +2473,7 @@ def media_localized(run_id: str, market: str):
                         filename=f"{run.id}_localized_{market}.mp4")
 
 @app.get("/runs/{run_id}/evidence/{observation_id}")
-def evidence_frame(run_id: str, observation_id: str):
+def evidence_frame(run_id: str, observation_id: str, w: int = 0):
     """The keyframe that made the analyst write the observation a finding cites.
 
     The path served is the one the analyst itself recorded on the observation
@@ -2464,6 +2489,18 @@ def evidence_frame(run_id: str, observation_id: str):
     path = Path(obs.evidence_frame)
     if not path.is_file():
         raise HTTPException(status_code=404, detail="no evidence frame")
+    if w:
+        # A strip of 42px thumbnails has no business pulling megabytes of
+        # PNG. Widths are clamped to a short list so the cache cannot be
+        # filled by asking for every integer.
+        want = min((c for c in (160, 320, 480, 640) if c >= w), default=640)
+        thumb = path.with_name(f"{path.stem}_w{want}.jpg")
+        try:
+            return FileResponse(media.thumbnail(path, want, thumb),
+                                media_type="image/jpeg",
+                                headers={"Cache-Control": "public, max-age=86400"})
+        except Exception as exc:  # noqa: BLE001 -- a thumb is an optimisation
+            log.warning("thumbnail failed for %s: %s", observation_id, exc)
     media_type = "image/jpeg" if path.suffix.lower() in (".jpg", ".jpeg") else "image/png"
     return FileResponse(path, media_type=media_type)
 

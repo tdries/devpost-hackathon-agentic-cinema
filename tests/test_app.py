@@ -2426,3 +2426,36 @@ def test_the_timeline_pairs_its_matrix_with_the_live_grafana(console, monkeypatc
     assert "https://viewer.example.run.app/d-solo/customs-grid/the-grid" in page
     assert "panelId=1" in page and 'class="mg-live"' in page
     assert 'class="mg-cells"' not in page, "the console body steps aside"
+
+
+def test_an_evidence_frame_can_be_asked_for_small(console, monkeypatch, tmp_path):
+    """The kept frames are full-resolution PNGs over a megabyte each, and the
+    scene grid draws eighteen of them as a 42px strip -- twenty megabytes to
+    paint a row of thumbnails. A width asks for the size actually shown, and
+    widths are clamped to a short list so the cache cannot be filled by
+    asking for every integer."""
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    frame = tmp_path / "kf.png"
+    frame.write_bytes(b"\x89PNG full size")
+    store.add_observations(run.id, [Observation(
+        id="obs_thumb", shot_id="shot_9", t_start=1.0, t_end=2.0,
+        dimension="text_legibility", statement="text", evidence_frame=str(frame),
+        confidence=0.5)])
+
+    asked = []
+    monkeypatch.setattr(app_module.media, "thumbnail",
+                        lambda src, width, out: asked.append(width) or frame)
+
+    assert client.get(f"/runs/{run.id}/evidence/obs_thumb").status_code == 200
+    assert asked == [], "no width asked, no thumbnail made"
+
+    client.get(f"/runs/{run.id}/evidence/obs_thumb?w=160")
+    client.get(f"/runs/{run.id}/evidence/obs_thumb?w=99")
+    client.get(f"/runs/{run.id}/evidence/obs_thumb?w=9999")
+    assert asked == [160, 160, 640], "clamped to the allowed sizes"
+
+    # a thumbnail that cannot be made still serves the real frame
+    monkeypatch.setattr(app_module.media, "thumbnail",
+                        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no ffmpeg")))
+    assert client.get(f"/runs/{run.id}/evidence/obs_thumb?w=160").status_code == 200
