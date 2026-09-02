@@ -72,7 +72,13 @@
   <div class="runlist" id="runlist">
     {% for item in rows %}
     <a class="runrow{{ ' sparkle' if item.busy }}" href="/runs/{{ item.run.id }}">
-      <img class="runthumb" src="/runs/{{ item.run.id }}/poster.jpg" alt="" loading="lazy" onerror="this.remove()">
+      {# The still is the video's poster, so the card paints exactly as it
+         did; preload="none" means the clip itself is not fetched until a
+         pointer actually lands on the card. #}
+      <video class="runthumb" data-hoverplay muted loop playsinline preload="none"
+             poster="/runs/{{ item.run.id }}/poster.jpg"
+             src="/runs/{{ item.run.id }}/preview.mp4"
+             aria-label="A few seconds of {{ item.run.asset_path.split('/')[-1] }}"></video>
       {# What was found and WHEN, a lane per category -- live from Grafana
          where the viewer is deployed, and the app's own drawing where it is
          not. The severity sparkline that used to sit above this is gone: two

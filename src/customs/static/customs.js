@@ -199,6 +199,27 @@
   })();
 
 
+  /* ---------- 1a5. a run card plays itself on hover ----------
+     The clip is preload="none", so nothing is fetched until a pointer
+     lands on the card; leaving rewinds it so the next hover starts at the
+     top. A card whose master is gone answers 404 and simply keeps its
+     poster. */
+
+  document.querySelectorAll("video[data-hoverplay]").forEach(function (video) {
+    var card = video.closest("a") || video;
+    var stop = function () {
+      video.pause();
+      try { video.currentTime = 0; } catch (e) {}
+    };
+    card.addEventListener("mouseenter", function () {
+      var playing = video.play();
+      if (playing && playing.catch) { playing.catch(function () {}); }
+    });
+    card.addEventListener("mouseleave", stop);
+    /* a phone has no hover: tapping the card navigates, so leave it alone */
+  });
+
+
   /* ---------- 1b. the mission feed's two tabs ---------- */
 
   (function () {

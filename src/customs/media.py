@@ -180,6 +180,30 @@ def detect_flashes(path) -> list[FlashWindow]:
         ))
     return windows
 
+def preview_clip(src, out_path, width: int = 320, seconds: float = 5.0) -> Path:
+    """The whole film in a few seconds, small, silent, made once and kept.
+
+    What a card plays when you hover it. Not the master -- that is tens of
+    megabytes and thirty-five of them would be a page nobody can load --
+    and not the first five seconds either, which shows a title card and
+    nothing else. A timelapse instead: the speed-up is derived from the
+    asset's own duration, so a 20 second spot and a two minute one both
+    come back about `seconds` long and both show all of themselves.
+    """
+    out = Path(out_path)
+    if out.is_file() and out.stat().st_size:
+        return out
+    out.parent.mkdir(parents=True, exist_ok=True)
+    duration = max(1.0, probe_duration(src))
+    factor = max(0.02, min(1.0, seconds / duration))   # PTS multiplier
+    _run(["ffmpeg", "-y", "-v", "error", "-i", str(src), "-an",
+          "-vf", f"setpts={factor:.4f}*PTS,scale={int(width)}:-2,fps=15",
+          "-c:v", "libx264", "-preset", "veryfast", "-crf", "30",
+          "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out)],
+         timeout=_encode_timeout(duration))
+    return out
+
+
 def thumbnail(src, width: int, out_path) -> Path:
     """A small JPEG of an evidence frame, made once and kept.
 

@@ -2527,3 +2527,29 @@ def test_a_click_on_the_live_panel_opens_that_assets_newest_run(console):
 
     r = client.get("/runs/by-asset?asset=never-cleared", follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"] == "/runs"
+
+
+def test_a_run_card_plays_itself_on_hover(console, tmp_path, monkeypatch):
+    """The card's still is the poster of a video that is not fetched until a
+    pointer lands on it -- preload="none" is what makes thirty-five of them
+    free. The clip itself is the whole film in a few seconds, built once."""
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    page = client.get("/runs").text
+    assert 'class="runthumb" data-hoverplay' in page
+    assert 'preload="none"' in page and "/preview.mp4" in page
+    assert f'poster="/runs/{run.id}/poster.jpg"' in page, "it paints as it did"
+
+    made = []
+    clip = tmp_path / "preview.mp4"
+    clip.write_bytes(b"mp4")
+    monkeypatch.setattr(app_module.media, "preview_clip",
+                        lambda src, out, **kw: made.append(str(out)) or clip)
+    assert client.get(f"/runs/{run.id}/preview.mp4").status_code == 200
+    assert made, "built on first ask"
+
+    # a run whose master is gone keeps its poster instead of 500ing
+    monkeypatch.setattr(app_module.media, "preview_clip",
+                        lambda *a, **k: (_ for _ in ()).throw(RuntimeError("no ffmpeg")))
+    assert client.get(f"/runs/{run.id}/preview.mp4").status_code == 404

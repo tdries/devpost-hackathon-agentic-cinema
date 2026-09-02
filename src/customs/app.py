@@ -2613,6 +2613,28 @@ def run_poster(run_id: str, at: float = 1.0):
     return FileResponse(cached, media_type="image/jpeg",
                         headers={"Cache-Control": "public, max-age=86400"})
 
+@app.get("/runs/{run_id}/preview.mp4")
+def run_preview(run_id: str):
+    """A few seconds of the whole film, for a card to play on hover.
+
+    Built on the first hover and served from disk after that. The card asks
+    for it with preload="none", so thirty-five of these cost nothing until
+    somebody actually points at one.
+    """
+    run = _run_or_404(run_id)
+    source = Path(run.asset_path)
+    if not source.is_file():
+        raise HTTPException(status_code=404, detail="the master is gone")
+    cached = run_dir(run) / "preview.mp4"
+    try:
+        made = media.preview_clip(source, cached)
+    except Exception as exc:  # noqa: BLE001 -- a card without a preview is fine
+        log.warning("preview failed for %s: %s", run.id, exc)
+        raise HTTPException(status_code=404, detail="no preview") from exc
+    return FileResponse(made, media_type="video/mp4",
+                        headers={"Cache-Control": "public, max-age=86400"})
+
+
 @app.get("/runs/{run_id}/spark.svg")
 def run_spark(run_id: str):
     """This run's severity profile, drawn from Grafana's own numbers.
