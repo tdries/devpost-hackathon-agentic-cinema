@@ -2590,3 +2590,37 @@ def test_a_run_can_be_removed_but_not_the_load_bearing_ones(console, monkeypatch
     client.get("/enter/visitor")
     assert client.post(f"/runs/{other.id}/delete",
                        follow_redirects=False).status_code == 404
+
+
+def test_the_mission_feed_sparkles_on_the_stage_it_is_in(console):
+    """The sparkle is the app's one word for "this is running" -- an
+    uploading master, a card mid-analysis, a frame being fixed. The mission
+    feed is the screen people watch while a run works, so the stage it is
+    in wears it too. A finished run wears nothing."""
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    store.set_run_status(run.id, "running")
+    page = client.get(f"/runs/{run.id}/mission").text
+    assert 'class="grp live"' in page or ' live" data-agent' in page, \
+        "the newest stage is the live one"
+
+    css = client.get("/static/customs.css").text
+    assert ".grp.live > summary::before" in css, "and the live one sparkles"
+
+    store.set_run_status(run.id, "done")
+    page = client.get(f"/runs/{run.id}/mission").text
+    assert " live" not in page.split("</head>")[1], "a finished run is still"
+
+
+def test_the_progress_bar_flows_while_the_run_does(client):
+    """The bar sits on one percentage for a minute at a time -- the analyst
+    reads every shot, and that is most of the wall clock -- so it flows in
+    the same four colours as everything else that is working, and stops
+    when the run stops."""
+    test_client, _store, _run, _ = client
+    css = test_client.get("/static/customs.css").text
+    assert "@keyframes spk-flow" in css
+    assert ".progress-track span.done { animation: none;" in css
+    js = test_client.get("/static/customs.js").text
+    assert 'fill.classList.toggle("done", !!data.done)' in js
