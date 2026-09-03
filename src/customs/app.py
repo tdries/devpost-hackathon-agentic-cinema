@@ -1737,6 +1737,7 @@ def agent_mode(request: Request, run: str = ""):
     recent = store().recent_runs(8)
     current = run or (recent[0].id if recent else "")
     return _page(request, "agent.html", runs=recent, run_id=current,
+                 tools=agentmode.TOOL_NAMES,
                  budget_left=max(0.0, costs.DAILY_BUDGET_EUR - store().spent_today()),
                  screen="agent")
 

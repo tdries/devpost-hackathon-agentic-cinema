@@ -658,6 +658,8 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
         tools=[FunctionTool(f) for f in (chart, list_runs, markets, findings,
                                          fix_options, library, show,
                                          data_schema, query, build_dashboard)],
+        # (the same ten are named in TOOL_NAMES below, for the console to
+        # show; keep them together)
     )
 
 
@@ -688,3 +690,10 @@ async def ask(store: Store, message: str, session_id: str,
         await runner.close()
     turn.reply = turn.reply.strip()
     return turn
+
+
+# What agent mode advertises on screen. Derived from the registration above
+# rather than retyped in a template, because a console that lies about what
+# its agent can reach is worse than one that says nothing.
+TOOL_NAMES = ("chart", "list_runs", "markets", "findings", "fix_options",
+              "library", "show", "data_schema", "query", "build_dashboard")
