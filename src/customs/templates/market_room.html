@@ -88,10 +88,18 @@
   {# The scenescroll, same device as the frame board: one still per scene
      that has findings HERE, open ones badged, each an anchor jump to the
      scene's rows below. #}
-  <nav class="scenescroll" aria-label="Jump to a scene">
+  <nav class="scenescroll" id="mk-scenes" aria-label="Filter by scene">
+    <button type="button" class="ss ss-all on" data-scene="">
+      <span class="ss-allmark">All</span>
+      <span class="mono ss-t">{{ scenes | length }} scenes</span>
+    </button>
     {% for sc in scenes %}
+    {# A scene still resolves to its anchor with JavaScript off; with it,
+       customs.js turns the click into a filter, which is what someone
+       scanning a market for one shot actually wants. #}
     <a class="ss{{ ' hit' if sc.open }}" href="#mk-{{ sc.shot_id }}"
-       title="{{ sc.shot_id.replace('_', ' ') }} &middot; {{ sc.t_start | timecode }}{{ ' &middot; %d open' % sc.open if sc.open }}">
+       data-scene="{{ sc.shot_id }}"
+       title="Show only {{ sc.shot_id.replace('_', ' ') }} &middot; {{ sc.t_start | timecode }}{{ ' &middot; %d open' % sc.open if sc.open }}">
       {% if sc.hero %}
       <img src="/runs/{{ run.id }}/evidence/{{ sc.hero }}?w=160" alt="" loading="lazy">
       {% else %}

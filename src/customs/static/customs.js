@@ -253,6 +253,48 @@
   });
 
 
+  /* ---------- 1a7. the market room's scene filter ----------
+     The strip used to jump to an anchor, which on a long market meant
+     scrolling back up to pick the next one. Clicking a scene now shows
+     only that scene, opened; clicking it again, or All, shows everything.
+     Without JavaScript the anchors still jump, which is why they are
+     anchors. */
+
+  (function () {
+    var strip = document.getElementById("mk-scenes");
+    if (!strip) { return; }
+    var panels = document.querySelectorAll("tbody.mkscene");
+    var chips = strip.querySelectorAll("[data-scene]");
+    var current = "";
+
+    var apply = function (scene) {
+      current = scene;
+      chips.forEach(function (c) {
+        c.classList.toggle("on", (c.getAttribute("data-scene") || "") === scene);
+      });
+      panels.forEach(function (body) {
+        var row = body.querySelector(".scene-row");
+        var id = row ? (row.id || "").replace(/^mk-/, "") : "";
+        var show = !scene || id === scene;
+        body.hidden = !show;
+        /* a filtered-to scene opens itself: you asked for exactly it */
+        if (scene && show) {
+          body.setAttribute("data-open", "");
+          if (row) { row.setAttribute("aria-expanded", "true"); }
+        }
+      });
+    };
+
+    chips.forEach(function (chip) {
+      chip.addEventListener("click", function (e) {
+        e.preventDefault();
+        var scene = chip.getAttribute("data-scene") || "";
+        apply(scene === current ? "" : scene);
+      });
+    });
+  })();
+
+
   /* ---------- 1b. the mission feed's two tabs ---------- */
 
   (function () {
