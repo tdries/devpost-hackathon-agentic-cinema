@@ -59,6 +59,14 @@
      {% else %}
        <img src="/runs/{{ run.id }}/poster.jpg" alt="A frame from {{ run.asset_path.split('/')[-1] }}" loading="lazy">
      {% endif %}
+     {# The stills rotate on their own, which is what this had; pointing at
+        it plays the film instead. Inside the stack, which is the positioned
+        box, so it covers the picture and not the caption -- and layered
+        over rather than replacing, so the idle state is still the rotation
+        and a run whose master is gone just keeps rotating. #}
+     <video class="board-preview" data-hoverplay muted loop playsinline
+            preload="metadata" src="/runs/{{ run.id }}/preview.mp4"
+            aria-label="A few seconds of {{ run.asset_path.split('/')[-1] }}"></video>
    </span>
    <span class="board-poster-cap">
      <svg class="ic"><use href="#n-cut"/></svg>{{ duration | timecode }}
