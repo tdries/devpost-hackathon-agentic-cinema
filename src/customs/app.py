@@ -78,10 +78,11 @@ from pathlib import Path
 from urllib.parse import quote
 
 from fastapi import (BackgroundTasks, FastAPI, File, Form, HTTPException,
-                     Request, UploadFile)
+                     Query, Request, UploadFile)
 from fastapi import Response
-from fastapi.responses import (FileResponse, HTMLResponse, PlainTextResponse,
-                               RedirectResponse, StreamingResponse)
+from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
+                               PlainTextResponse, RedirectResponse,
+                               StreamingResponse)
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -1352,6 +1353,40 @@ def _mine(request: Request) -> list[str]:
     return [r for r in (x.strip() for x in raw.split(",")) if r]
 
 
+def _safe_next(path: str) -> str:
+    """Where the door may send you afterwards: a path on this console.
+
+    An absolute URL here would make the door an open redirect, and
+    "//evil.example/x" is an absolute URL wearing a path's clothes.
+    Anything else is dropped and the door falls back to its own landing.
+    """
+    p = (path or "").strip()
+    if not p.startswith("/") or p.startswith("//") or "\\" in p:
+        return ""
+    return p
+
+
+def _needs_word(request: Request, back: str) -> RedirectResponse | None:
+    """The door, enforced. None when they are already through one.
+
+    Reading is never gated: the landing page, the archive, every run,
+    market room, statute, chart and frame stays open to anyone with the
+    link. What is gated is everything that SPENDS or DESTROYS -- starting
+    a clearance, judging more markets, remediating, asking the agent,
+    deleting a run -- because those are models being called on a real card
+    and rows that do not come back, and a submission link travels a great
+    deal further than the people it was sent to.
+
+    Having the word is not being someone: it is the speed bump, and the
+    ceiling behind it (VISITOR_DAILY_EUR) is what actually bounds a
+    stranger's spend.
+    """
+    if _role(request):
+        return None
+    return RedirectResponse(f"/enter/visitor?next={quote(back, safe='/')}",
+                            status_code=303)
+
+
 @app.get("/", response_class=HTMLResponse)
 def landing(request: Request):
     """The front door: what this is, before what it does.
@@ -1382,7 +1417,8 @@ def _visitor_spent(request: Request) -> float:
 
 
 @app.get("/enter/{role}", response_class=HTMLResponse)
-def enter_form(request: Request, role: str, wrong: int = 0):
+def enter_form(request: Request, role: str, wrong: int = 0,
+               next_: str = Query("", alias="next")):
     """The door, which asks for its word first.
 
     Not authentication: one shared password per door, carried in a cookie,
@@ -1393,7 +1429,7 @@ def enter_form(request: Request, role: str, wrong: int = 0):
     if role not in ROLES:
         raise HTTPException(status_code=404, detail=f"unknown door: {role}")
     return _page(request, "enter.html", role=role, wrong=bool(wrong),
-                 screen="landing",
+                 screen="landing", next=_safe_next(next_),
                  blurb=("The archive, the findings and every run this instance has "
                         "performed." if role == "judge" else
                         "Clear your own commercial. Generation is capped at "
@@ -1401,20 +1437,27 @@ def enter_form(request: Request, role: str, wrong: int = 0):
 
 
 @app.post("/enter/{role}")
-def enter(role: str, password: str = Form("")):
+def enter(role: str, password: str = Form(""),
+          next_: str = Form("", alias="next")):
     """Check the word and remember the door.
 
     A judge lands on the archive, because the work is already done and the
     interesting thing is reading it. A visitor lands on the form, because
-    the interesting thing is watching it happen to their own ad.
+    the interesting thing is watching it happen to their own ad. Unless
+    they were on their way somewhere specific when the door stopped them,
+    in which case they land there instead and finish what they started.
     """
     if role not in ROLES:
         raise HTTPException(status_code=404, detail=f"unknown door: {role}")
     want = (settings.judge_password if role == "judge"
             else settings.visitor_password)
+    back = _safe_next(next_)
     if password.strip() != want:
-        return RedirectResponse(f"/enter/{role}?wrong=1", status_code=303)
-    target = "/runs" if role == "judge" else "/new"
+        again = f"/enter/{role}?wrong=1"
+        if back:
+            again += f"&next={quote(back, safe='/')}"
+        return RedirectResponse(again, status_code=303)
+    target = back or ("/runs" if role == "judge" else "/new")
     response = RedirectResponse(target, status_code=303)
     response.set_cookie("customs-role", role, max_age=60 * 60 * 24 * 30,
                         samesite="lax", httponly=False)
@@ -1433,6 +1476,13 @@ def home(request: Request):
     It used to be at /, which is now the page that explains the product
     to someone who has never seen it.
     """
+    # The form is the start of the one thing here that costs money, so it
+    # asks for the word before it is filled in rather than after: being
+    # bounced having already chosen markets and picked a file is a worse
+    # way to meet a door.
+    door = _needs_word(request, "/new")
+    if door is not None:
+        return door
     return _page(request, "home.html", groups=pack_groups(), screen="home",
                  showcase=_showcase(store()))
 
@@ -1462,6 +1512,11 @@ async def create_run(request: Request,
     The crew then runs on a thread. See this module's docstring for why that
     is a thread and not a BackgroundTask.
     """
+    # Before the upload is read, let alone written: this is the expensive
+    # door, and a stranger's file should not reach the disk.
+    door = _needs_word(request, "/new")
+    if door is not None:
+        return door
     known = set(market_packs())
     chosen = [m for m in markets if m]
     if not chosen:
@@ -1616,7 +1671,8 @@ def _add_analysis_job(run_id: str, markets: list[str], duration: float) -> None:
         db.emit(run_id, "pipeline", f"stage_error: add analysis: {exc!r}")
 
 @app.post("/runs/{run_id}/analysis")
-def add_analysis(run_id: str, markets: list[str] = Form(default=[])):
+def add_analysis(request: Request, run_id: str,
+                 markets: list[str] = Form(default=[])):
     """Clear an existing run against more markets, reusing its observations.
 
     The screenshots, the transcript and the analyst's reading of them are
@@ -1624,6 +1680,9 @@ def add_analysis(run_id: str, markets: list[str] = Form(default=[])):
     starts at the adjudicator: no download, no shot detection, no keyframes,
     no vision calls. See pipeline.judge_more.
     """
+    door = _needs_word(request, f"/runs/{run_id}")
+    if door is not None:
+        return door
     run = _run_or_404(run_id)
     if not store().observations(run.id):
         return PlainTextResponse(
@@ -1677,8 +1736,15 @@ def delete_run(request: Request, run_id: str):
     spent stay spent, and deleting a run is not a way to buy another
     generation.
     """
+    door = _needs_word(request, f"/runs/{run_id}")
+    if door is not None:
+        return door
     run = _run_or_404(run_id)
-    if _role(request) == "visitor" and run.id not in set(_mine(request)):
+    # Anyone who is not the judge may only delete their own. "Not the
+    # judge" rather than "is the visitor" on purpose: an unrecognised word
+    # in the role cookie is a stranger, and a stranger is held to the
+    # narrower rule, not the wider one.
+    if _role(request) != "judge" and run.id not in set(_mine(request)):
         raise HTTPException(status_code=404, detail="no such run")
     if run.id == SHOWCASE_RUN:
         raise HTTPException(
@@ -1768,6 +1834,12 @@ def agent_mode(request: Request, run: str = ""):
     the console's own reads and actions, so anything it says can be checked
     by looking at what it opened beside it.
     """
+    # A turn with the agent is a model call, so this screen is behind the
+    # door even though everything it shows you afterwards is readable
+    # without one.
+    door = _needs_word(request, "/agent")
+    if door is not None:
+        return door
     recent = store().recent_runs(8)
     current = run or (recent[0].id if recent else "")
     return _page(request, "agent.html", runs=recent, run_id=current,
@@ -1777,8 +1849,8 @@ def agent_mode(request: Request, run: str = ""):
 
 
 @app.post("/agent/ask")
-async def agent_ask(message: str = Form(...), session: str = Form("default"),
-                    run: str = Form("")):
+async def agent_ask(request: Request, message: str = Form(...),
+                    session: str = Form("default"), run: str = Form("")):
     """One turn with the console's agent.
 
     Answers with what it said and what it opened, never with a rendered
@@ -1786,6 +1858,16 @@ async def agent_ask(message: str = Form(...), session: str = Form("default"),
     reported rather than swallowed, because an agent that silently answers
     nothing is worse than one that says it could not.
     """
+    # The one place the door answers in JSON rather than a redirect: this
+    # is fetched, and a 303 to an HTML page would arrive at the chat log
+    # as a turn that failed for no stated reason. 403 with the shape the
+    # page already knows how to draw says it in the log instead.
+    if _needs_word(request, "/agent") is not None:
+        return JSONResponse(status_code=403, content={
+            "reply": "", "reply_html": "", "error":
+            "Come in through a door first -- the agent costs money per turn. "
+            "Open /enter/visitor and say the word.",
+            "view": "", "view_label": "", "view_external": False, "calls": []})
     text = (message or "").strip()
     if not text:
         raise HTTPException(status_code=400, detail="say something")
@@ -2465,13 +2547,18 @@ def remediate_now(request: Request, run_id: str, finding_id: str,
            saying "this one needs a human" leaks nothing and is the honest
            answer to a button the page deliberately draws as disabled.
     """
+    door = _needs_word(request, f"/runs/{run_id}")
+    if door is not None:
+        return door
     run = _run_or_404(run_id)
     finding = next((f for f in store().findings(run.id) if f.id == finding_id), None)
     if finding is None or finding.status != "open":
         raise HTTPException(status_code=404, detail="no open finding with that id")
     # A visitor has their own ceiling. The instance budget stops the day
     # running away; this stops one visitor spending everyone else's.
-    if _role(request) == "visitor":
+    # Everyone who is not the judge is held to it, so an unrecognised word
+    # in the role cookie buys no more than the visitor door does.
+    if _role(request) != "judge":
         spent = _visitor_spent(request)
         if spent >= VISITOR_DAILY_EUR:
             raise HTTPException(

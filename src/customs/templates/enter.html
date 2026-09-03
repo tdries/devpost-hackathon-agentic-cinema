@@ -10,6 +10,7 @@
   <p class="subline" style="max-width:60ch">{{ blurb }}</p>
 
   <form class="enter-form" method="post" action="/enter/{{ role }}">
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
     <label class="label" for="pw">Password</label>
     <input class="urlin" type="password" name="password" id="pw" autofocus
            autocomplete="current-password" placeholder="Enter the password">
