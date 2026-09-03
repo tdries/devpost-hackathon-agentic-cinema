@@ -37,7 +37,7 @@ choice, it is where the model actually decides something:
   and because a wandering publisher is not an interesting demo. What the
   model actually owns is everything the order does not settle: it issues each
   call itself, chooses every argument, reads every result, decides what to do
-  when one fails, judges whether all six dashboards came back, and composes
+  when one fails, judges whether every dashboard came back, and composes
   the prose it writes into the overview dashboard's description. That last
   step is a real MCP write, on every run, in words no template produced.
 
@@ -632,7 +632,7 @@ Publish this run, in this order:
    per-market status series, the Loki finding logs and the finding
    annotations.
 2. Call ensure_dashboards exactly once, so the Customs dashboards exist.
-3. Call search_dashboards with the query "customs" and check that all six of
+3. Call search_dashboards with the query "customs" and check that all of
    {dashboards} are present. Name any that are missing.
 4. Call get_dashboard_by_uid for "{overview_uid}" and read its current
    description.
@@ -641,7 +641,7 @@ Publish this run, in this order:
    the existing one and then states, in one sentence: latest run {run_id},
    asset {asset}, and the per-market clearance above.
 
-Then stop and report in at most three lines: what you pushed, whether all six
+Then stop and report in at most three lines: what you pushed, whether all the
 dashboards were found, and the description you wrote. Never invent a
 clearance status or a finding count: use only the numbers given above. If a
 tool fails, say so plainly and carry on with the remaining steps."""

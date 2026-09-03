@@ -98,7 +98,7 @@ def _default_mcp_binary() -> Path:
     return _CONTAINER_MCP_BINARY
 
 # Alert rules and dashboards live in their own folder so the alert rule group
-# (which is folder-scoped) has somewhere to be and the six dashboards are not
+# (which is folder-scoped) has somewhere to be and the dashboards are not
 # scattered through the stack's default folder.
 FOLDER_UID = "customs"
 FOLDER_TITLE = "Customs"
