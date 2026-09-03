@@ -2093,10 +2093,16 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 
 /* Six steps, read as a strip rather than a numbered list, because the
    order matters but the reading order does not have to be vertical. */
+/* Three across, twice down. auto-fit put all six in one row on a wide
+   screen, or five and an orphan, and either way each step was a column of
+   two-word lines with the crew's story running sideways. Six things that
+   happen in order read as two rows of three. */
 .landsteps {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  display: grid; grid-template-columns: repeat(3, 1fr);
   gap: 12px; margin-top: 16px;
 }
+@media (max-width: 1040px) { .landsteps { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 620px) { .landsteps { grid-template-columns: 1fr; } }
 .landstep {
   position: relative; padding: 18px 18px 16px; border-radius: 12px;
   border: 1px solid var(--line); background: var(--panel);
@@ -2320,6 +2326,27 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
    comparison is the whole point and stacking it would break it. */
 .landfix .strip { display: grid; grid-template-columns: repeat(3, 1fr);
   gap: 18px; align-items: start; }
+
+/* The rotator. Everything under .fixshow.on only applies once customs.js
+   has said it is driving: without it the three lanes stay side by side,
+   the tabs stay hidden, and the page is what it was. */
+.fixtabs { display: none; }
+.fixshow.on .fixtabs {
+  display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px;
+}
+.fixtab {
+  font: inherit; font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  padding: 6px 11px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--panel); color: var(--ink-3);
+}
+.fixtab:hover { border-color: var(--line-2); color: var(--ink-2); }
+.fixtab.on { border-color: var(--g-blue); color: var(--ink); background: rgba(66, 133, 244, .08); }
+.fixshow.on .strip { grid-template-columns: 1fr; max-width: 1080px; }
+.fixshow.on .lane.off { display: none; }
+.fixshow.on .ba { gap: 10px; }
+.fixshow.on .ba-tag { font-size: 11px; }
+.fixshow.on .ba-cell figcaption { font-size: 11.5px; }
+.fixshow.on .lane-note { font-size: 13.5px; max-width: 92ch; }
 .landfix .lane { min-width: 0; }
 .landfix .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
 .ba-cell { margin: 0; min-width: 0; }
@@ -2328,8 +2355,11 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   border-radius: 3px; background: var(--well); }
 .ba-cell figcaption { display: flex; align-items: center; gap: 6px; margin-top: 6px;
   font-size: 10px; color: var(--ink-3); }
+/* The pill IS the caption's only span, so the rule that used to hide
+   "span:last-child" here (to save height when three pairs shared a row)
+   was hiding the before/after labels themselves -- on the one comparison
+   where which side is which is the whole point. */
 .ba-cell figcaption .pill { flex: none; }
-.ba-cell figcaption span:last-child { display: none; }
 .lane-note { margin: 7px 0 0; font-size: 11.5px; color: var(--ink-2); line-height: 1.5; }
 @media (max-width: 980px) { .landfix .strip { grid-template-columns: 1fr; } }
 

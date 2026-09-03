@@ -161,6 +161,74 @@
   })();
 
 
+  /* ---------- 1a3b. the landing's fix rotator ----------
+     One fix on screen at a time, large enough to judge. It advances every
+     seven seconds and stops for good the moment somebody picks a tab,
+     because a slide that moves while you are reading it is worse than one
+     that never moves. Hovering pauses it too.
+
+     It also pauses the videos it is not showing: six autoplaying loops on
+     the front page is four more decoders than anyone is looking at. And a
+     lane restarts from zero when it comes round, so before and after are
+     always compared from the same frame. */
+
+  (function () {
+    var show = document.getElementById("fixshow");
+    if (!show) { return; }
+    var lanes = [].slice.call(show.querySelectorAll(".lane"));
+    var tabs = [].slice.call(show.querySelectorAll(".fixtab"));
+    if (lanes.length < 2 || tabs.length !== lanes.length) { return; }
+
+    var EVERY = 7000;
+    var at = -1, timer = null, taken = false;
+    var calm = window.matchMedia
+      && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    var paint = function (want) {
+      var next = (want + lanes.length) % lanes.length;
+      if (next === at) { return; }
+      at = next;
+      lanes.forEach(function (lane, n) {
+        var on = n === at;
+        lane.classList.toggle("off", !on);
+        lane.querySelectorAll("video").forEach(function (v) {
+          if (!on) { v.pause(); return; }
+          try { v.currentTime = 0; } catch (e) { /* not seekable yet */ }
+          var playing = v.play();
+          if (playing && playing.catch) { playing.catch(function () {}); }
+        });
+      });
+      tabs.forEach(function (tab, n) {
+        tab.classList.toggle("on", n === at);
+        tab.setAttribute("aria-selected", n === at ? "true" : "false");
+      });
+    };
+
+    var stop = function () {
+      if (timer) { window.clearInterval(timer); timer = null; }
+    };
+    var start = function () {
+      if (calm || taken || timer) { return; }
+      timer = window.setInterval(function () { paint(at + 1); }, EVERY);
+    };
+
+    tabs.forEach(function (tab, n) {
+      tab.addEventListener("click", function () {
+        taken = true;
+        stop();
+        paint(n);
+      });
+    });
+    show.addEventListener("mouseenter", stop);
+    show.addEventListener("mouseleave", start);
+    show.addEventListener("focusin", stop);
+
+    show.classList.add("on");
+    paint(0);
+    start();
+  })();
+
+
   /* ---------- 1a4. the activity beacon ----------
      Wherever you are in the console, whatever is running shows in the
      topbar: runs mid-analysis, fixes in the making. Fed by /ops/busy,
