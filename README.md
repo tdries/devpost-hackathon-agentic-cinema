@@ -158,18 +158,18 @@ Five stages, in order, from [`src/customs/crew.py`](src/customs/crew.py). The st
 
 | | Stage | Agent | What it does | What it writes |
 |---|---|---|---|---|
-| <img src="docs/media/icons/i-ingest.svg" width="72"> | **1 · ingest** | `IngestAgent` | ffmpeg shot detection, one Gemini audio call per shot, and a **measured** flash sweep — a strobe is a property of the sequence, not of any frame, so it is counted rather than asked about | shots, transcripts, photosensitivity observations |
-| <img src="docs/media/icons/i-analyst.svg" width="72"> | **2 · analyst** | `AnalystAgent` | one Gemini vision call per shot, keyframes as image parts, the 18-dimension taxonomy in the prompt. Neutral sentences only — no verdicts | observations + bounding boxes + evidence frames |
-| <img src="docs/media/icons/i-adjudicator.svg" width="72"> | **3 · adjudicators** | `AdjudicatorAgent` × N in an ADK `ParallelAgent` | a pure dimension join against each market's YAML pack, then **one** batched Gemini call and **one** grounded Google Search citation per triggered rule. N markets cost one market's latency | a verdict for every candidate pairing, cleared ones included |
-| <img src="docs/media/icons/i-guard.svg" width="72"> | **4 · guard** | `GuardAgent` | reads the matched rule's metadata and nothing else — never the rationale, never a model-authored field. Runs after the fan-out joins, which makes it the single findings write | findings (the one write, on one thread) |
-| <img src="docs/media/icons/i-publisher.svg" width="72"> | **5 · publisher** | `PublisherAgent` — the only `LlmAgent` | issues five tool calls itself, three of them live Grafana MCP, reads every result, decides what to do when one fails, and composes the prose it writes into the overview dashboard | Mimir series, Loki lines, annotations, dashboards, alert rules |
+| <img src="docs/media/icons/i-ingest.svg" width="88" height="88"> | **1 · ingest** | `IngestAgent` | ffmpeg shot detection, one Gemini audio call per shot, and a **measured** flash sweep — a strobe is a property of the sequence, not of any frame, so it is counted rather than asked about | shots, transcripts, photosensitivity observations |
+| <img src="docs/media/icons/i-analyst.svg" width="88" height="88"> | **2 · analyst** | `AnalystAgent` | one Gemini vision call per shot, keyframes as image parts, the 18-dimension taxonomy in the prompt. Neutral sentences only — no verdicts | observations + bounding boxes + evidence frames |
+| <img src="docs/media/icons/i-adjudicator.svg" width="88" height="88"> | **3 · adjudicators** | `AdjudicatorAgent` × N in an ADK `ParallelAgent` | a pure dimension join against each market's YAML pack, then **one** batched Gemini call and **one** grounded Google Search citation per triggered rule. N markets cost one market's latency | a verdict for every candidate pairing, cleared ones included |
+| <img src="docs/media/icons/i-guard.svg" width="88" height="88"> | **4 · guard** | `GuardAgent` | reads the matched rule's metadata and nothing else — never the rationale, never a model-authored field. Runs after the fan-out joins, which makes it the single findings write | findings (the one write, on one thread) |
+| <img src="docs/media/icons/i-publisher.svg" width="88" height="88"> | **5 · publisher** | `PublisherAgent` — the only `LlmAgent` | issues five tool calls itself, three of them live Grafana MCP, reads every result, decides what to do when one fails, and composes the prose it writes into the overview dashboard | Mimir series, Loki lines, annotations, dashboards, alert rules |
 
 And two more the crew meets only when something has to change:
 
 | | Stage | What it does |
 |---|---|---|
-| <img src="docs/media/icons/i-remediator.svg" width="72"> | **remediator** | woken by a Grafana alert. Plans the cheapest edit that would satisfy the rule, prices it, and changes only the seconds objected to |
-| <img src="docs/media/icons/i-verifier.svg" width="72"> | **verifier** | re-runs the real analyst pass over the changed shots — same instrument that found the problem — and rules on whether it is gone and nothing new broke |
+| <img src="docs/media/icons/i-remediator.svg" width="88" height="88"> | **remediator** | woken by a Grafana alert. Plans the cheapest edit that would satisfy the rule, prices it, and changes only the seconds objected to |
+| <img src="docs/media/icons/i-verifier.svg" width="88" height="88"> | **verifier** | re-runs the real analyst pass over the changed shots — same instrument that found the problem — and rules on whether it is gone and nothing new broke |
 
 
 <details>
