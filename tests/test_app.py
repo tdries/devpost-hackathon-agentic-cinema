@@ -2624,3 +2624,22 @@ def test_the_progress_bar_flows_while_the_run_does(client):
     assert ".progress-track span.done { animation: none;" in css
     js = test_client.get("/static/customs.js").text
     assert 'fill.classList.toggle("done", !!data.done)' in js
+
+
+def test_the_board_poster_plays_the_film_on_hover(client, tmp_path, monkeypatch):
+    """The archive's cards play themselves; the board -- the screen people
+    land on -- only rotated stills. It plays too now, layered over the
+    rotation so a run whose master is gone still has something to show."""
+    test_client, store, run, _ = client
+    monkeypatch.setattr(app_module, "poster_available", lambda r: True)
+
+    page = test_client.get(f"/runs/{run.id}").text
+    assert 'class="board-preview" data-hoverplay' in page
+    assert f'src="/runs/{run.id}/preview.mp4"' in page
+    # inside the stack, which is the positioned box: over the picture, not
+    # over the caption
+    stack = page.split('board-poster-stack')[1].split('</span>')[0]
+    assert "board-preview" in stack
+
+    css = test_client.get("/static/customs.css").text
+    assert ".board-poster:hover .board-preview { opacity: 1; }" in css
