@@ -337,9 +337,14 @@ def _enter(client, role):
                        follow_redirects=False)
 
 
-def _judged_run(store):
-    """A finished run holding the fixture's findings and stage error."""
-    run = store.create_run(asset_path=ASSET, markets=list(MARKETS))
+def _judged_run(store, asset=ASSET):
+    """A finished run holding the fixture's findings and stage error.
+
+    `asset` varies because the archive groups by film: two runs of the same
+    path are one card with a dated link under it, which is the point, and a
+    test about anything else needs two different films.
+    """
+    run = store.create_run(asset_path=asset, markets=list(MARKETS))
     store.set_run_t0(run.id, time.time())
     # observations as well as findings: a finding says a market objected,
     # an observation says what was seen and when, and the lane chart is
@@ -1032,6 +1037,65 @@ def test_a_refused_link_is_a_400_with_the_reason(console, monkeypatch):
         data={"youtube_url": "https://youtu.be/dQw4w9WgXcQ", "markets": ["FR"]})
     assert reply.status_code == 400
     assert "300 seconds" in reply.text
+
+
+def test_a_film_this_store_has_already_watched_is_not_watched_again(console):
+    """The same master, uploaded twice, used to buy a second shot
+    detection, a second set of keyframes and a second vision pass to reach
+    facts already in the store. It says so instead, and offers the cheap
+    door: the markets that run has not been judged for, starting at the
+    adjudicator."""
+    client, store, launched, _jobs = console
+    twin = _judged_run(store, asset="runs/uploads/abcdef012345/ad.mp4")
+    before = len(store.recent_runs(50))
+
+    page = _upload(client, markets=["FR", "US", "BE"], name="ad.mp4")
+
+    assert page.status_code == 200
+    assert "already been analysed" in page.text
+    assert launched == [], "and no crew was started"
+    assert len(store.recent_runs(50)) == before, "and no second run was created"
+    # the markets that run has not seen are the offer, the ones it has are context
+    assert f'action="/runs/{twin.id}/analysis"' in page.text
+    assert '<input type="hidden" name="markets" value="BE">' in page.text
+    assert "Judge it for BE" in page.text
+    # ...and the film itself is still on disk, named for the way back
+    assert 'name="pending"' in page.text and 'name="force" value="1"' in page.text
+
+
+def test_clearing_it_again_on_purpose_reuses_the_upload_already_here(console):
+    """The expensive door is still open, because a different film can share
+    a name and because sometimes the whole pass IS what you want. It hands
+    back the file the page was about rather than sending anyone to their
+    file picker a second time."""
+    import re as _re
+    client, store, launched, _jobs = console
+    _judged_run(store, asset="runs/uploads/abcdef012345/ad.mp4")
+    page = _upload(client, markets=["FR"], name="ad.mp4")
+    pending = _re.search(r'name="pending" value="([^"]+)"', page.text).group(1)
+
+    again = client.post("/runs", data={"pending": pending, "force": "1",
+                                       "markets": ["FR"]},
+                        follow_redirects=False)
+
+    assert again.status_code == 303 and "/runs/run_" in again.headers["location"]
+    assert len(launched) == 1, "the crew really ran this time"
+    assert launched[0][1].endswith("/ad.mp4")
+
+
+def test_a_pending_upload_is_a_shape_not_a_path(console):
+    """It arrives in a form, so it is trusted the way a path from a form
+    should be: the exact shape this handler writes, resolved, and inside
+    the uploads directory. Anything else is no file at all, which is a
+    400 asking for a master rather than a traversal."""
+    client, _store, _launched, _jobs = console
+    for forged in ("../../../etc/passwd", "/etc/passwd", "abcdef012345/../../x",
+                   "nothex/ad.mp4", "abcdef012345/ad.mp4"):
+        reply = client.post("/runs", data={"pending": forged, "force": "1",
+                                           "markets": ["FR"]},
+                            follow_redirects=False)
+        assert reply.status_code == 400, forged
+        assert "upload a file or paste a YouTube link" in reply.text, forged
 
 
 def test_neither_file_nor_link_is_a_400(console):
@@ -2057,8 +2121,8 @@ def test_a_judge_gets_the_archive_and_a_visitor_gets_a_clean_slate(console):
     why the list of "mine" can live in a cookie rather than in the store.
     """
     client, store, _launched, _jobs = console
-    _judged_run(store)
-    _judged_run(store)
+    _judged_run(store, asset="runs/uploads/a/one.mp4")
+    _judged_run(store, asset="runs/uploads/b/two.mp4")
 
     # no door used at all -- a direct link, a bookmark -- sees everything
     plain = client.get("/runs")
@@ -2739,6 +2803,32 @@ def test_agent_mode_says_what_it_can_do_before_you_type(client):
     assert f"its {len(agentmode.TOOL_NAMES)} tools" in page
 
 
+def test_the_archive_is_one_card_per_film_not_per_run(console):
+    """Clearing the same master three times in an afternoon is what happens
+    while a pack is being written, and it filled the archive with three
+    identical thumbnails whose newest was the only one anyone wanted. The
+    newest is the card; the earlier ones are dated links under it, so
+    nothing is hidden and nothing is repeated."""
+    client, store, _launched, _jobs = console
+    same = "runs/uploads/x/Ready_When_You_Are.mp4"
+    old_run = _judged_run(store, asset=same)
+    mid_run = _judged_run(store, asset=same)
+    new_run = _judged_run(store, asset=same)
+    other = _judged_run(store, asset="runs/uploads/y/another.mp4")
+
+    page = client.get("/runs").text
+
+    assert page.count('class="runrow"') == 2, "two films, two cards"
+    assert f'href="/runs/{new_run.id}"' in page, "the newest run is the card"
+    assert f'href="/runs/{other.id}"' in page
+    # the earlier two are still reachable, as chips under the card
+    assert page.count('class="runolder"') == 1
+    for earlier in (old_run, mid_run):
+        assert f'<a class="chip" href="/runs/{earlier.id}"' in page, earlier.id
+    # and the count says runs AND films, because both are true
+    assert "4 runs" in page and "2 films" in page
+
+
 def test_the_archive_caps_how_many_grafanas_it_boots(console, monkeypatch):
     """loading="lazy" was supposed to make one live panel per card
     survivable. Measured against the real page it was not: thirty-nine
@@ -2747,8 +2837,8 @@ def test_the_archive_caps_how_many_grafanas_it_boots(console, monkeypatch):
     at get the live panel; the rest keep the SVG they always had."""
     import dataclasses
     client, store, _launched, _jobs = console
-    for _ in range(app_module.LIVE_LANE_CARDS + 3):
-        _judged_run(store)
+    for n in range(app_module.LIVE_LANE_CARDS + 3):
+        _judged_run(store, asset=f"runs/uploads/{n}/film_{n}.mp4")
     monkeypatch.setattr(app_module, "settings", dataclasses.replace(
         app_module.settings, grafana_viewer_url="https://viewer.example.run.app"))
 
