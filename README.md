@@ -392,16 +392,17 @@ Everything that is *working* wears one mark: a rotating ring of the four brand c
 
 ## Remediation, and the loop that stops it wasting money
 
-Six methods live in [`remediate.py`](src/customs/remediate.py); five are offered in the console picker. `plan()` chooses by the *observation's* dimension, and it is a pure function — no model call.
+Five methods are offered in the console picker, each one a different amount of footage to disturb. The mark beside each is the gesture it performs.
 
-| Method | What it touches | Price |
-|---|---|---|
-| `omni` | Gemini Omni rewrites the whole span as video-to-video | €0.10 × span (≤ 10 s) |
-| `bridge` | **both ends of the span edited, and Veo 3.1 generates the motion between them** | €1.88 – €3.68 |
-| `relettering` | one Gemini image edit of one keyframe, landed onto the span | €0.04 |
-| `prop_swap` | the same, for an object — a bottle, a cigarette, a logo | €0.04 |
-| `revoice` | the audio span, re-spoken with TTS | €0.04 |
-| `per_frame` | a repaint of every frame in the span | €0.04 × ⌈span × 12⌉ |
+| | Method | What it touches | Price |
+|---|---|---|---|
+| <img src="docs/media/icons/m-omni.svg" width="26"> | `omni` | Gemini Omni rewrites the whole span as video-to-video | €0.10 × span (≤ 10 s) |
+| <img src="docs/media/icons/m-bridge.svg" width="26"> | `bridge` | **both ends of the span edited, and Veo 3.1 generates the motion between them** | €1.88 – €3.68 |
+| <img src="docs/media/icons/m-overlay.svg" width="26"> | `overlay` | one Gemini image edit of one keyframe, held over the span | €0.04 |
+| <img src="docs/media/icons/m-track.svg" width="26"> | `track` | the same edit, its lighting divided out and multiplied into every live frame | €0.04 |
+| <img src="docs/media/icons/m-per_frame.svg" width="26"> | `per_frame` | a repaint of every frame in the span | €0.04 × ⌈span × 12⌉ |
+
+Automatic fixes name themselves by what they change rather than by how much they disturb: `relettering` for on-screen text, `prop_swap` for an object, `revoice` for a spoken line. The first two land through the picker's own two patch paths — a relight propagated into every live frame when the finding's box can be located, a freeze over the span when it cannot — and `revoice` replaces the audio span with TTS. `plan()` chooses among them by the *observation's* dimension, and it is a pure function: no model call.
 
 `bridge` is never chosen automatically. It regenerates pixels and costs real money, so it only ever runs because an operator picked it — or clicked a data link on a Grafana panel — and the day's budget allowed it. The budget is **€45/day**, system-wide, which buys somewhere between 12 and 23 bridges.
 

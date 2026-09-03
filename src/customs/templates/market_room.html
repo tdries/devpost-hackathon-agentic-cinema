@@ -202,6 +202,7 @@
               {% for o in fix.options %}
               <label class="fix-opt{{ ' off' if not o.available }}" title="{{ o.why_not or o.caveat or o.best_for }}">
                 <input type="radio" name="method" value="{{ o.key }}" {{ 'checked' if o.key == 'overlay' }} {{ 'disabled' if not o.available }}>
+                <svg class="ic ic-m" aria-hidden="true"><use href="#m-{{ o.key }}"/></svg>
                 <span class="fix-m">
                   <b>{{ o.name }}</b>
                   <span class="fix-why">{{ o.why_not or o.best_for }}</span>
