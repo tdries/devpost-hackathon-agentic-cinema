@@ -9,7 +9,7 @@
 <img src="docs/media/powered-by-grafana.png" alt="Powered by Grafana" width="150">
 
 [![Live instance](https://img.shields.io/badge/live-customs--app.run.app-4285F4?style=flat-square)](https://customs-app-akap4ao72a-ew.a.run.app)
-[![Tests](https://img.shields.io/badge/tests-532_passing-34A853?style=flat-square)](#tests)
+[![Tests](https://img.shields.io/badge/tests-533_passing-34A853?style=flat-square)](#tests)
 [![Jurisdictions](https://img.shields.io/badge/jurisdictions-98-FBBC05?style=flat-square)](#the-jurisdiction-ladder)
 [![Rules](https://img.shields.io/badge/rules-128_with_citations-EA4335?style=flat-square)](#the-jurisdiction-ladder)
 [![Grafana](https://img.shields.io/badge/Grafana-MCP_at_runtime-F46800?style=flat-square)](#grafana-is-a-participant-not-a-picture)
@@ -518,10 +518,10 @@ Needs `ffmpeg` on PATH, a Google Cloud project with Vertex AI enabled, and a Gra
 
 ```bash
 .venv/bin/python -m pytest -q
-# 532 passed, 8 deselected
+# 533 passed, 8 deselected
 ```
 
-**532 offline tests across 22 files**, no network, no API keys, no Grafana. The eight deselected ones are live-API probes you opt into explicitly.
+**533 offline tests across 22 files**, no network, no API keys, no Grafana. The eight deselected ones are live-API probes you opt into explicitly.
 
 The suite exists because most of this system's failure modes are silent: a guard that stops refusing, a citation that stops resolving, a craft gate that accepts a master that lost its soundtrack, a green can appearing in a modesty fix because a default leaked across dimensions. Every one of those has a test, and several of them have a test *because it happened*.
 
