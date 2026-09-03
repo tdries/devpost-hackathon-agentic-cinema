@@ -2363,6 +2363,24 @@ def test_the_landing_page_plays_a_before_and_after(console):
         assert (static / f"fix-{key}-after.mp4").stat().st_size > 100_000
 
 
+def test_the_three_fixes_are_a_rotator_that_still_works_without_javascript(console):
+    """One fix at a time, big enough to judge a hemline by -- but the page
+    is served with all three lanes in it and the tabs inert. customs.js adds
+    the class that turns the strip into a slideshow, so with scripting off
+    the section is the side-by-side strip it always was."""
+    client, _store, _launched, _jobs = console
+    page = client.get("/").text
+
+    assert page.count('class="fixtab"') == 3, "one tab per fix"
+    for key in ("wine", "smoke", "skirt"):
+        assert f'id="fix-{key}"' in page and f'aria-controls="fix-{key}"' in page
+    # the served page never hides a lane: only the script does that
+    assert 'class="lane off"' not in page and 'class="fixshow on"' not in page
+    # and the label saying which side is which is not hidden by stylesheet
+    css = (Path("src/customs/static") / "customs.css").read_text()
+    assert "figcaption span:last-child { display: none; }" not in css
+
+
 def test_a_viz_click_launches_a_remediation_by_coordinate(console):
     """The Grafana test: a data link can only navigate, and what it carries
     is the click's coordinate -- the dimension series and the mapped-clock

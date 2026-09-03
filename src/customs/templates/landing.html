@@ -61,19 +61,33 @@
   <div class="rule-row"><span class="label">Watch a fix land</span>
     <span class="right label">three markets &middot; three statutes &middot; three fixes the verifier signed off</span>
   </div>
-  {# Side by side rather than stacked: three full-width pairs were most of
-     this page's scroll for one idea told three times. The pair itself stays
-     before|after, because that comparison is the point. #}
+  {# One at a time, and large enough to see. Three pairs side by side made
+     each clip a sixth of the page, which is a thumbnail of a hemline nobody
+     can judge. The strip rotates instead: seven seconds a fix, and it stops
+     rotating the moment somebody picks one, because a slide that moves
+     while you are reading it is worse than no slide at all.
+
+     The pair itself stays before|after, because that comparison is the
+     point. With JavaScript off, .fixshow never gets its `on` class and all
+     three lanes stay on the page side by side, which is what they were. #}
+  {% set pairs = [
+    {"key": "wine", "tab": "FR · Loi Évin", "tag": "FR · Loi Évin · alcohol",
+     "note": "A toast in red wine, which French law keeps off the air. Re-rendered: the wine is juice, the bottle a carafe."},
+    {"key": "smoke", "tab": "EU · AVMSD art. 9", "tag": "EU · AVMSD art. 9 · tobacco",
+     "note": "A cigarette at a café table, banned outright by the EU directive. Re-rendered: an espresso, and no smoke."},
+    {"key": "skirt", "tab": "AE · Decree-Law 55/2023", "tag": "AE · Decree-Law 55/2023 · modesty",
+     "note": "A hemline that keeps the spot out of Gulf rotation. Re-rendered at the knee — same fabric, same walk."},
+  ] %}
+  <div class="fixshow" id="fixshow">
+  <div class="fixtabs" role="tablist" aria-label="Three fixes">
+    {% for pair in pairs %}
+    <button class="fixtab" type="button" role="tab" aria-controls="fix-{{ pair.key }}"
+            aria-selected="{{ 'true' if loop.first else 'false' }}">{{ pair.tab }}</button>
+    {% endfor %}
+  </div>
   <div class="strip">
-    {% for pair in [
-      {"key": "wine", "tag": "FR · Loi Évin · alcohol",
-       "note": "A toast in red wine, which French law keeps off the air. Re-rendered: the wine is juice, the bottle a carafe."},
-      {"key": "smoke", "tag": "EU · AVMSD art. 9 · tobacco",
-       "note": "A cigarette at a café table, banned outright by the EU directive. Re-rendered: an espresso, and no smoke."},
-      {"key": "skirt", "tag": "AE · Decree-Law 55/2023 · modesty",
-       "note": "A hemline that keeps the spot out of Gulf rotation. Re-rendered at the knee — same fabric, same walk."},
-    ] %}
-    <div class="lane">
+    {% for pair in pairs %}
+    <div class="lane" id="fix-{{ pair.key }}" role="tabpanel">
       <div class="ba-tag label">{{ pair.tag }}</div>
       <div class="ba">
         <figure class="ba-cell">
@@ -88,6 +102,7 @@
       <p class="lane-note">{{ pair.note }}</p>
     </div>
     {% endfor %}
+  </div>
   </div>
 </section>
 
