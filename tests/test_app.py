@@ -45,6 +45,7 @@ def client(tmp_path, monkeypatch):
             (run_id, finding_id, market)),
     )
     with TestClient(app_module.app) as test_client:
+        _enter(test_client, "judge")  # the spending routes are behind a door
         yield test_client, store, run, jobs
 
 def _alert(**label_overrides):
@@ -70,6 +71,19 @@ def test_valid_alert_answers_200_and_enqueues_remediation(client):
     assert response.status_code == 200
     assert response.json()["accepted"] == 1
     assert jobs == [(run.id, "fnd_FR_FR-ALC-01_obs_shot_0_000", "FR")]
+
+def test_the_alert_path_needs_no_word_because_grafana_carries_no_cookie(client):
+    """The doors are for people. The webhook is the product's real trigger,
+    fired by a Grafana alert rule from outside any browser, and putting it
+    behind the same cookie would gate the one path the demo is about."""
+    test_client, _store, run, jobs = client
+    test_client.cookies.clear()
+
+    response = test_client.post("/webhook/alert", json=_alert())
+
+    assert response.status_code == 200
+    assert jobs == [(run.id, "fnd_FR_FR-ALC-01_obs_shot_0_000", "FR")]
+
 
 def test_forged_rule_id_answers_200_and_enqueues_nothing(client):
     test_client, _store, _run, jobs = client
@@ -310,6 +324,7 @@ def console(tmp_path, monkeypatch):
             (run_id, finding_id, market)),
     )
     with TestClient(app_module.app) as test_client:
+        _enter(test_client, "judge")  # the spending routes are behind a door
         yield test_client, store, launched, jobs
 
 
@@ -425,6 +440,7 @@ def test_two_runs_started_together_get_distinct_workdirs(tmp_path, monkeypatch):
     monkeypatch.setattr(crew, "run_clearance", fake_run_clearance)
 
     with TestClient(app_module.app) as client:
+        _enter(client, "judge")
         first = _upload(client)
         second = _upload(client)
 
@@ -1932,9 +1948,9 @@ def test_the_front_door_says_what_this_is_before_what_it_does(console):
 
 
 def test_both_doors_open_and_remember_which_one_you_chose(console):
-    """Not authentication, and not pretending to be: there is no secret
-    and either door opens. It records the choice, which is the hook a
-    reserved budget or a read-only mode would hang off later.
+    """Not authentication, and not pretending to be: one shared word per
+    door, and anyone who has it is that role. It records which door, which
+    is what the visitor ceiling and the archive's scoping hang off.
 
     They land in different places on purpose. A judge wants the work
     already done; a visitor wants to watch it happen to their own ad.
@@ -2721,6 +2737,81 @@ def test_a_door_asks_for_its_word(console):
     assert right.status_code == 303 and right.headers["location"] == "/runs"
 
 
+def test_nothing_that_spends_or_destroys_opens_without_the_word(console):
+    """The gate is only a gate if something is behind it.
+
+    Reading is deliberately open to anyone with the link -- that is the
+    submission. Spending is not: every route below either calls a model on
+    a real card or deletes rows that do not come back, and each one sends a
+    visitor who never met a door back to it rather than doing the work.
+    """
+    client, store, launched, jobs = console
+    client.cookies.clear()  # somebody arriving from a link, not from a door
+    run = _judged_run(store)
+    before = len(store.recent_runs(50))
+
+    form = client.get("/new", follow_redirects=False)
+    assert form.status_code == 303
+    assert form.headers["location"] == "/enter/visitor?next=/new"
+
+    started = _upload(client)
+    assert started.status_code == 303
+    assert started.headers["location"].startswith("/enter/visitor")
+    assert launched == [], "and no crew was started"
+    assert len(store.recent_runs(50)) == before, "and no run was created"
+
+    fid = "fnd_FR_FR-ALC-01_obs_shot_0_000"
+    for path, data in (
+            (f"/runs/{run.id}/findings/{fid}/remediate", {"method": "overlay"}),
+            (f"/runs/{run.id}/analysis", {"markets": ["US"]}),
+            (f"/runs/{run.id}/delete", {}),
+            ("/agent/ask", {"message": "hello"})):
+        reply = client.post(path, data=data, follow_redirects=False)
+        assert reply.status_code in (303, 403), path
+        if reply.status_code == 303:
+            assert reply.headers["location"].startswith("/enter/visitor"), path
+        else:  # the agent answers in the shape its own chat log draws
+            assert "door" in reply.json()["error"]
+    assert jobs == [], "and nothing was enqueued"
+    assert store.get_run(run.id) is not None, "and the run is still there"
+
+    # ...while every reading route stays open to exactly the same person
+    for path in ("/", "/runs", "/library", f"/runs/{run.id}",
+                 f"/runs/{run.id}/markets/FR", f"/runs/{run.id}/frames"):
+        assert client.get(path).status_code == 200, path
+
+
+def test_the_door_returns_you_to_what_you_were_doing(console):
+    """Being stopped at a door and then dropped on a different page is how
+    people lose what they came for. The word is asked for where they were
+    going, and they land there. Anywhere on this console -- and nowhere
+    else, because a door that forwards to any URL it is handed is an open
+    redirect wearing a convenience's clothes."""
+    from customs.config import settings
+    client, *_ = console
+    client.cookies.clear()
+
+    page = client.get("/enter/visitor?next=/runs/run_x/markets/FR")
+    assert '<input type="hidden" name="next" value="/runs/run_x/markets/FR">' in page.text
+
+    # a wrong word keeps the destination rather than dropping it
+    wrong = client.post("/enter/visitor",
+                        data={"password": "letmein", "next": "/agent"},
+                        follow_redirects=False)
+    assert wrong.headers["location"] == "/enter/visitor?wrong=1&next=/agent"
+
+    right = client.post("/enter/visitor",
+                        data={"password": settings.visitor_password,
+                              "next": "/agent"}, follow_redirects=False)
+    assert right.headers["location"] == "/agent"
+
+    for away in ("//evil.example/x", "https://evil.example/x", "javascript:1"):
+        off = client.post("/enter/visitor",
+                          data={"password": settings.visitor_password,
+                                "next": away}, follow_redirects=False)
+        assert off.headers["location"] == "/new", away
+
+
 def test_a_visitor_has_their_own_daily_ceiling(console):
     """The instance budget stops the day running away; this stops one
     visitor spending everyone else's. A visitor's identity is the runs they
@@ -2739,3 +2830,11 @@ def test_a_visitor_has_their_own_daily_ceiling(console):
     assert "generation for today" in r.json()["detail"]
     # and reading is never gated by it
     assert client.get(f"/runs/{run.id}/markets/FR").status_code == 200
+
+    # a cookie is a string anyone can type, so the ceiling is written as
+    # "not the judge" rather than "is the visitor": a made-up role is held
+    # to the narrower rule, not handed the wider one
+    client.cookies.set("customs-role", "producer")
+    made_up = client.post(f"/runs/{run.id}/findings/{fid}/remediate",
+                          data={"method": "overlay"}, follow_redirects=False)
+    assert made_up.status_code == 429
