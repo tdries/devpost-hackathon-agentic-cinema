@@ -1,6 +1,69 @@
 {% extends "base.html" %}
 {% block title %}Agent mode{% endblock %}
+{% block nav %}{% include "_topnav.html" %}{% endblock %}
 {% block main %}
+
+{# Agent mode used to open straight onto two grey panes and a blinking
+   cursor, which tells a first-time visitor nothing about what it can do or
+   what to type. It gets the same hero every other screen has, the agent's
+   real tool list (from agentmode.TOOL_NAMES, so it cannot drift), and three
+   pointers that say what happens when you type. #}
+<section class="agenthero">
+  <div class="swarm" aria-hidden="true">
+    <span class="swarm-row"><svg class="ic"><use href="#i-analyst"/></svg><svg class="ic"><use href="#n-board"/></svg><svg class="ic"><use href="#i-adjudicator"/></svg><svg class="ic"><use href="#n-timeline"/></svg><svg class="ic"><use href="#i-publisher"/></svg><svg class="ic"><use href="#n-market"/></svg><svg class="ic"><use href="#i-remediator"/></svg><svg class="ic"><use href="#n-library"/></svg><svg class="ic"><use href="#i-verifier"/></svg><svg class="ic"><use href="#n-feed"/></svg><svg class="ic"><use href="#i-guard"/></svg><svg class="ic"><use href="#i-frame"/></svg></span>
+    <span class="swarm-row"><svg class="ic"><use href="#i-pipeline"/></svg><svg class="ic"><use href="#i-cleared"/></svg><svg class="ic"><use href="#i-blocked"/></svg><svg class="ic"><use href="#i-human"/></svg><svg class="ic"><use href="#i-sourced"/></svg><svg class="ic"><use href="#n-cut"/></svg><svg class="ic"><use href="#i-legal"/></svg><svg class="ic"><use href="#i-policy"/></svg><svg class="ic"><use href="#i-at-risk"/></svg><svg class="ic"><use href="#i-noted"/></svg><svg class="ic"><use href="#i-ingest"/></svg><svg class="ic"><use href="#i-alert"/></svg></span>
+  </div>
+
+  <div class="agenthero-front">
+    <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+    <span class="agenthero-kicker mono">Agent mode</span>
+    <img class="hero-grafana" src="/static/powered-by-grafana.png?v={{ static_v }}"
+         alt="Powered by Grafana" width="114" height="26">
+    <h1 class="agenthero-title">Ask in sentences.<br>It answers by opening things.</h1>
+    <p class="agenthero-lede">The same crew, a different front door. A Vertex AI agent
+      holds the console's own reads and actions as tools, so nothing it tells you has
+      to be taken on trust &mdash; whatever it claims, it opens beside you.</p>
+
+    <div class="agenthero-stats">
+      <span class="ah-stat"><b>{{ tools | length }}</b> tools it can call</span>
+      <span class="ah-stat"><b>{{ runs | length }}</b> runs it can read</span>
+      <span class="ah-stat"><b>{{ '%.2f'|format(budget_left) }}</b> EUR of fixes left today</span>
+    </div>
+
+    <div class="agenthero-tools">
+      <span class="label">Its tools</span>
+      {% for t in tools %}<code class="ah-tool">{{ t }}</code>{% endfor %}
+    </div>
+  </div>
+</section>
+
+{# Three pointers, because "type something" is not an instruction. #}
+<section class="agentsteps">
+  <div class="ast">
+    <span class="ast-n mono">1</span>
+    <div>
+      <b>Say what you want in plain words</b>
+      <p>&ldquo;What is blocked in France, and what would it cost to fix?&rdquo; No syntax,
+        no run ids &mdash; it knows which run you are looking at.</p>
+    </div>
+  </div>
+  <div class="ast">
+    <span class="ast-n mono">2</span>
+    <div>
+      <b>Watch it open the evidence</b>
+      <p>Every answer lands on the right: a board, a frame, a market room, a
+        timeline &mdash; the same pages Studio mode uses, so you can check it.</p>
+    </div>
+  </div>
+  <div class="ast">
+    <span class="ast-n mono">3</span>
+    <div>
+      <b>Let it price the work before it runs</b>
+      <p>Ask it to fix something and it answers with methods and euro first.
+        Nothing generative starts until you say go.</p>
+    </div>
+  </div>
+</section>
 
 <div class="agent" data-run="{{ run_id }}">
   <div class="agent-side">
@@ -19,6 +82,7 @@
     </div>
 
     <div class="agent-suggest" id="agent-suggest">
+      <span class="sugg-label label">Try one &mdash; or type your own</span>
       <button type="button" class="sugg" data-say="What is the status of this run?"><svg class="ic"><use href="#i-pending"/></svg>Where are we</button>
       <button type="button" class="sugg" data-say="What is blocked right now, and where?"><svg class="ic"><use href="#i-blocked"/></svg>What is blocked</button>
       <button type="button" class="sugg" data-say="Clear this asset for more markets too."><svg class="ic"><use href="#n-market"/></svg>Add markets</button>
@@ -52,8 +116,9 @@
     </div>
     <div class="agent-canvas" id="agent-canvas">
       <div class="empty" style="border:none">
-        <span class="big">The right hand side is the agent's</span>
-        <p>Whatever it opens, builds or looks at appears here, in answer to what you ask on the left.</p>
+        <span class="big">This side is the agent's</span>
+        <p>Whatever it opens, builds or looks at appears here, in answer to what you
+          ask on the left. Nothing is a screenshot &mdash; these are the live pages.</p>
         <div class="agent-hero">
           <span class="ih-title">What it can put here</span>
           <div class="ih-row">
@@ -67,6 +132,7 @@
             <span class="ih-item"><svg class="ic"><use href="#i-remediator"/></svg><span>Priced fix</span></span>
           </div>
         </div>
+        <p class="ih-point mono" aria-hidden="true">&larr; start on the left</p>
       </div>
     </div>
   </div>

@@ -2643,3 +2643,31 @@ def test_the_board_poster_plays_the_film_on_hover(client, tmp_path, monkeypatch)
 
     css = test_client.get("/static/customs.css").text
     assert ".board-poster:hover .board-preview { opacity: 1; }" in css
+
+
+def test_grafana_is_credited_wherever_the_mark_is(client):
+    """Grafana is upstream of the work -- the crew writes to it over MCP
+    before anything reaches the console, and an alert in Grafana is what
+    starts a render -- so it is credited beside the mark on every screen
+    rather than in a footer nobody reaches."""
+    test_client, _store, run, _ = client
+    for path in ("/", "/runs", f"/runs/{run.id}", "/agent"):
+        page = test_client.get(path).text
+        assert "powered-by-grafana.png" in page, f"no Grafana credit on {path}"
+    # and the badge is a real file, not a dead reference
+    assert test_client.get("/static/powered-by-grafana.png").status_code == 200
+
+
+def test_agent_mode_says_what_it_can_do_before_you_type(client):
+    """It used to open onto two grey panes and a blinking cursor. The hero
+    names the tools the agent actually holds -- from agentmode.TOOL_NAMES,
+    so the console cannot advertise a set that has drifted from the code --
+    and three pointers say what happens when you type."""
+    from customs import agentmode
+    test_client, _store, _run, _ = client
+    page = test_client.get("/agent").text
+    assert 'class="agenthero"' in page, "it has a hero like every other screen"
+    assert 'class="agentsteps"' in page and 'class="ast-n mono">1<' in page
+    for tool in agentmode.TOOL_NAMES:
+        assert f'>{tool}</code>' in page, f"{tool} not advertised"
+    assert f"<b>{len(agentmode.TOOL_NAMES)}</b> tools" in page
