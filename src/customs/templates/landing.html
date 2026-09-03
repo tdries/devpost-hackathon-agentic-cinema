@@ -58,37 +58,37 @@
 </section>
 
 <section class="landfix">
-  <div class="rule-row"><span class="label">Watch a fix land</span></div>
-  {% for pair in [
-    {"key": "wine", "tag": "FR · Loi Évin · alcohol",
-     "before": "A toast in red wine. France's Loi Évin keeps this off French air.",
-     "after": "The same seconds, re-rendered by the crew: the wine is juice, the bottle a carafe."},
-    {"key": "smoke", "tag": "EU · AVMSD art. 9 · tobacco",
-     "before": "A cigarette at the table. The EU's audiovisual directive bans tobacco depiction outright.",
-     "after": "Re-rendered: an espresso where the cigarette was, and the smoke is gone."},
-    {"key": "skirt", "tag": "AE · Federal Decree-Law 55/2023 · modesty",
-     "before": "A hemline this short keeps the spot out of Gulf rotation.",
-     "after": "Re-rendered at knee length — same fabric, same walk, same street."},
-  ] %}
-  <div class="ba-tag label">{{ pair.tag }}</div>
-  <div class="ba">
-    <figure class="ba-cell">
-      <video src="/static/fix-{{ pair.key }}-before.mp4?v={{ static_v }}" muted loop playsinline autoplay preload="metadata" data-lockstep="{{ pair.key }}" aria-label="Before: {{ pair.before }}"></video>
-      <figcaption>
-        <span class="pill s-blocked"><svg class="ic"><use href="#i-blocked"/></svg>before</span>
-        <span>{{ pair.before }}</span>
-      </figcaption>
-    </figure>
-    <figure class="ba-cell">
-      <video src="/static/fix-{{ pair.key }}-after.mp4?v={{ static_v }}" muted loop playsinline autoplay preload="metadata" data-lockstep="{{ pair.key }}" aria-label="After: {{ pair.after }}"></video>
-      <figcaption>
-        <span class="pill s-cleared"><svg class="ic"><use href="#i-cleared"/></svg>after</span>
-        <span>{{ pair.after }}</span>
-      </figcaption>
-    </figure>
+  <div class="rule-row"><span class="label">Watch a fix land</span>
+    <span class="right label">three markets &middot; three statutes &middot; three fixes the verifier signed off</span>
   </div>
-  {% endfor %}
-  <p class="subline" style="max-width:88ch">Same terrace, same performers, same light &mdash; only what the market objects to has changed. Every fix is priced in euro before you press, and the same instrument that flagged the shot re-watches it before anything is trusted.</p>
+  {# Side by side rather than stacked: three full-width pairs were most of
+     this page's scroll for one idea told three times. The pair itself stays
+     before|after, because that comparison is the point. #}
+  <div class="strip">
+    {% for pair in [
+      {"key": "wine", "tag": "FR · Loi Évin · alcohol",
+       "note": "A toast in red wine, which French law keeps off the air. Re-rendered: the wine is juice, the bottle a carafe."},
+      {"key": "smoke", "tag": "EU · AVMSD art. 9 · tobacco",
+       "note": "A cigarette at a café table, banned outright by the EU directive. Re-rendered: an espresso, and no smoke."},
+      {"key": "skirt", "tag": "AE · Decree-Law 55/2023 · modesty",
+       "note": "A hemline that keeps the spot out of Gulf rotation. Re-rendered at the knee — same fabric, same walk."},
+    ] %}
+    <div class="lane">
+      <div class="ba-tag label">{{ pair.tag }}</div>
+      <div class="ba">
+        <figure class="ba-cell">
+          <video src="/static/fix-{{ pair.key }}-before.mp4?v={{ static_v }}" muted loop playsinline autoplay preload="metadata" data-lockstep="{{ pair.key }}" aria-label="Before"></video>
+          <figcaption><span class="pill s-blocked"><svg class="ic"><use href="#i-blocked"/></svg>before</span></figcaption>
+        </figure>
+        <figure class="ba-cell">
+          <video src="/static/fix-{{ pair.key }}-after.mp4?v={{ static_v }}" muted loop playsinline autoplay preload="metadata" data-lockstep="{{ pair.key }}" aria-label="After"></video>
+          <figcaption><span class="pill s-cleared"><svg class="ic"><use href="#i-cleared"/></svg>after</span></figcaption>
+        </figure>
+      </div>
+      <p class="lane-note">{{ pair.note }}</p>
+    </div>
+    {% endfor %}
+  </div>
 </section>
 
 <section class="landwhy">
