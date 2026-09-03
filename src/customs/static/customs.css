@@ -2552,6 +2552,28 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
 .sc-meta { display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 
 /* the archive's one live panel */
+/* The earlier runs of a film, as the card's own footer: the card is the
+   newest clearance and these are the way back to the ones it replaced.
+   Attached rather than floating -- one pixel of negative margin eats the
+   card's bottom border so the two read as one object. */
+.runolder {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  margin-top: -1px; padding: 8px 18px 9px;
+  border: 1px solid var(--line); border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--ground-2);
+}
+.runolder .chip { font-size: 10.5px; padding: 2px 7px; }
+/* The card view makes every card the height of the tallest one. With a
+   footer under it that has to be the card AND the footer, or the footer
+   hangs off the bottom of the grid cell. */
+.runlist:not(.as-rows) .runcard { display: flex; flex-direction: column; }
+.runlist:not(.as-rows) .runcard .runrow { height: auto; flex: 1; }
+
+/* The upload that was not needed: two ways forward, side by side, and
+   the expensive one further down the page in its own words. */
+.already-do { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
+
 .archlive { width: 100%; height: 260px; border: 1px solid var(--line);
   border-radius: 3px; background: var(--well); display: block; }
 

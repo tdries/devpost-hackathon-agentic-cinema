@@ -24,7 +24,8 @@
     <p class="subline">{% if scoped %}The clearances you have started in this browser. Open one for
       its board, its timeline and its cutting room.{% else %}Every clearance this instance has
       performed. Open one for its board, its timeline and its cutting room.{% endif %}</p>
-    <span class="runhero-stats mono">{{ rows | length }} run{{ '' if rows | length == 1 else 's' }}
+    <span class="runhero-stats mono">{{ runs_total }} run{{ '' if runs_total == 1 else 's' }}
+      {% if runs_total != rows | length %}of {{ rows | length }} film{{ '' if rows | length == 1 else 's' }}{% endif %}
       &middot; {{ packs_total }} market packs &middot; {{ dims_total }} things watched for</span>
   </div>
 </section>
@@ -136,6 +137,22 @@
         {% endfor %}
       </span>
     </a>
+    {# Earlier clearances of the same film. Outside the anchor, because a
+       link inside a link is not a thing, and as chips rather than a
+       disclosure so the dates are readable without opening anything. #}
+    {% if item.older %}
+    <span class="runolder">
+      <span class="label">also cleared</span>
+      {% for old in item.older[:5] %}
+      {# minutes, not seconds: these are chips, and two of them wrapped a
+         line for a precision nobody reads back #}
+      <a class="chip" href="/runs/{{ old.id }}">{{ (old.t0 | stamp)[:16] }}</a>
+      {% endfor %}
+      {% if item.older | length > 5 %}
+      <span class="label">+{{ item.older | length - 5 }} older</span>
+      {% endif %}
+    </span>
+    {% endif %}
     </span>
     {% endfor %}
   </div>

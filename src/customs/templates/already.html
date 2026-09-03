@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Already analysed{% endblock %}
+{% block nav %}{% include "_topnav.html" %}{% endblock %}
+{% block main %}
+
+{# The upload that was not needed.
+
+   Observations describe the film, not a jurisdiction, so a second
+   clearance of the same master pays for shot detection, keyframes and a
+   vision pass to reach facts this store already holds. This page is the
+   cheap door: judge the markets that run has not seen, starting at the
+   adjudicator. The expensive one is still here, at the bottom, in words
+   rather than as a button competing with it. #}
+
+<section class="already">
+  <h1 class="pagetitle">
+    <svg class="ic"><use href="#i-noted"/></svg>
+    This video has already been analysed
+  </h1>
+  <p class="subline" style="max-width:84ch">
+    <b>{{ asset_name }}</b> was cleared here on {{ twin.t0 | stamp }}, against
+    {{ twin.markets | length }} market{{ '' if twin.markets | length == 1 else 's' }}.
+    What the analyst saw is stored, and it describes the film rather than any
+    one country's law &mdash; so judging it somewhere new starts at the
+    adjudicator: no re-ingest, no shot detection, no vision pass, and nothing
+    to pay for twice.
+  </p>
+
+  {% if seen %}
+  <p class="subline" style="font-size:13px">
+    Already judged on that run:
+    {% for m in seen %}<span class="pill">{{ m }}</span>{% endfor %}
+  </p>
+  {% endif %}
+
+  <div class="already-do">
+    {% if again %}
+    <form method="post" action="/runs/{{ twin.id }}/analysis">
+      {% for m in again %}<input type="hidden" name="markets" value="{{ m }}">{% endfor %}
+      <button class="btn go" type="submit">
+        <svg class="ic"><use href="#n-market"/></svg>
+        Judge it for {{ again | join(', ') }}
+      </button>
+    </form>
+    {% endif %}
+    <a class="btn" href="/runs/{{ twin.id }}">
+      <svg class="ic"><use href="#n-board"/></svg>
+      Open the clearance
+    </a>
+  </div>
+
+  {% if not again %}
+  <p class="fix-why" style="margin-top:10px">
+    Every market you picked has already been judged on that run. Its board
+    has the picker for any of the others.
+  </p>
+  {% endif %}
+
+  <p class="subline" style="max-width:84ch;margin-top:26px;font-size:13px">
+    If this really is a different film that happens to share a name, or you
+    want the whole pass run again on purpose, the upload is still here and
+    nothing has been thrown away.
+  </p>
+  <form method="post" action="/runs">
+    <input type="hidden" name="pending" value="{{ pending }}">
+    <input type="hidden" name="force" value="1">
+    {% for m in chosen %}<input type="hidden" name="markets" value="{{ m }}">{% endfor %}
+    <button class="btn" type="submit">Clear it again from scratch</button>
+  </form>
+</section>
+
+{% endblock %}

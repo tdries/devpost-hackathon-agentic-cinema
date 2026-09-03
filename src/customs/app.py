@@ -1490,7 +1490,9 @@ def home(request: Request):
 async def create_run(request: Request,
                      asset: UploadFile | None = File(None),
                      youtube_url: str = Form(""),
-                     markets: list[str] = Form(default=[])):
+                     markets: list[str] = Form(default=[]),
+                     pending: str = Form(""),
+                     force: int = Form(0)):
     """Accept an asset, create the run, start the crew, redirect to the board.
 
     Order matters here. The upload is streamed to disk with a running byte
@@ -1530,11 +1532,14 @@ async def create_run(request: Request,
 
     url = youtube_url.strip()
     has_file = asset is not None and bool((asset.filename or "").strip())
+    # The file this console is already holding, if this POST came from the
+    # already-analysed page rather than from the form.
+    held = _pending_asset(pending)
     if url and has_file:
         return PlainTextResponse(
             "Provide either an uploaded master or a YouTube link, not both.",
             status_code=400)
-    if not url and not has_file:
+    if not url and not has_file and held is None:
         return PlainTextResponse(
             "Provide a master: upload a file or paste a YouTube link.",
             status_code=400)
@@ -1545,9 +1550,70 @@ async def create_run(request: Request,
     # filename would follow this asset onto the dashboards and into the alert
     # labels as "a1b2c3_spring_launch". The directory carries the uniqueness
     # instead, and two uploads of the same filename still cannot collide.
-    folder = uploads_dir() / uuid.uuid4().hex[:12]
-    folder.mkdir(parents=True, exist_ok=True)
+    if held is not None:
+        target, safe = held, held.name
+    else:
+        folder = uploads_dir() / uuid.uuid4().hex[:12]
+        folder.mkdir(parents=True, exist_ok=True)
+        target, safe = await _receive(asset, url, folder)
+        if isinstance(target, PlainTextResponse):
+            return target
 
+    try:
+        duration = await asyncio.to_thread(probe_duration, str(target))
+    except Exception as exc:  # noqa: BLE001 -- an unreadable upload is a 400, not a 500
+        _discard(target)
+        return PlainTextResponse(
+            f"That file could not be read as video: {exc}", status_code=400)
+    if duration > MAX_DURATION_S:
+        _discard(target)
+        return PlainTextResponse(
+            f"That asset is {duration:.0f} seconds long. Customs clears "
+            f"commercials up to {int(MAX_DURATION_S)} seconds.", status_code=400)
+
+    # Already analysed? An asset is its file stem here, and the observations
+    # of a film describe the film rather than a jurisdiction -- so a second
+    # clearance of the same master would pay for shot detection, keyframes
+    # and a vision pass to arrive at facts this store already holds. Say so,
+    # and offer the cheap door: judge the markets it has not seen yet,
+    # starting at the adjudicator. The upload stays on disk so "again
+    # anyway" is one click rather than another trip to the file picker.
+    db = store()
+    twin = next((r for r in db.recent_runs(500)
+                 if asset_key(r) == (Path(safe).stem or safe)), None)
+    if not force and twin is not None and db.observations(twin.id):
+        judged = set(twin.markets)
+        return _page(request, "already.html", screen="home", twin=twin,
+                     asset_name=safe, duration=duration,
+                     pending=f"{target.parent.name}/{target.name}",
+                     chosen=chosen,
+                     again=[m for m in chosen if m not in judged],
+                     seen=[m for m in chosen if m in judged],
+                     packs=market_packs())
+
+    run = db.create_run(asset_path=str(target), markets=chosen)
+    db.emit(run.id, "pipeline",
+            f"console accepted {safe} ({duration:.1f}s) for "
+            f"{', '.join(chosen)}")
+    threading.Thread(target=_clearance_job, args=(run.id, str(target), chosen),
+                     name=f"clearance-{run.id}", daemon=True).start()
+    response = RedirectResponse(f"/runs/{run.id}", status_code=303)
+    # Newest first, capped: a cookie is not a database and forty run ids
+    # is already more archive than anyone builds in a sitting.
+    remembered = [run.id] + [r for r in _mine(request) if r != run.id]
+    response.set_cookie(MINE_COOKIE, ",".join(remembered[:MINE_MAX]),
+                        max_age=60 * 60 * 24 * 30, samesite="lax")
+    return response
+
+
+async def _receive(asset, url: str, folder: Path):
+    """Get the master onto disk: a YouTube link or an upload stream.
+
+    Returns (path, filename) or, when the master cannot be had, the
+    PlainTextResponse to send instead -- lifted out of create_run so the
+    handler reads as the sequence of decisions it makes rather than as two
+    hundred lines with the interesting part at the bottom.
+    """
     if url:
         # The YouTube way in: fetch.fetch_youtube validates the link, refuses
         # a too-long video before downloading, caps the download, and raises
@@ -1564,8 +1630,8 @@ async def create_run(request: Request,
                 folder.rmdir()
             except OSError:
                 pass
-            return PlainTextResponse(str(exc), status_code=400)
-        safe = target.name
+            return PlainTextResponse(str(exc), status_code=400), ""
+        return target, target.name
     else:
         safe = _SAFE_NAME.sub("_", Path(asset.filename or "asset.mp4").name)[-60:]
         target = folder / safe
@@ -1583,33 +1649,32 @@ async def create_run(request: Request,
             return PlainTextResponse(
                 f"That file is too large. The limit is "
                 f"{MAX_UPLOAD_BYTES // (1024 * 1024)} MB and this upload is over it.",
-                status_code=400)
+                status_code=400), ""
+        return target, safe
 
-    try:
-        duration = await asyncio.to_thread(probe_duration, str(target))
-    except Exception as exc:  # noqa: BLE001 -- an unreadable upload is a 400, not a 500
-        _discard(target)
-        return PlainTextResponse(
-            f"That file could not be read as video: {exc}", status_code=400)
-    if duration > MAX_DURATION_S:
-        _discard(target)
-        return PlainTextResponse(
-            f"That asset is {duration:.0f} seconds long. Customs clears "
-            f"commercials up to {int(MAX_DURATION_S)} seconds.", status_code=400)
+_PENDING_REL = re.compile(r"[0-9a-f]{12}/[A-Za-z0-9._-]{1,80}")
 
-    run = store().create_run(asset_path=str(target), markets=chosen)
-    store().emit(run.id, "pipeline",
-                 f"console accepted {safe} ({duration:.1f}s) for "
-                 f"{', '.join(chosen)}")
-    threading.Thread(target=_clearance_job, args=(run.id, str(target), chosen),
-                     name=f"clearance-{run.id}", daemon=True).start()
-    response = RedirectResponse(f"/runs/{run.id}", status_code=303)
-    # Newest first, capped: a cookie is not a database and forty run ids
-    # is already more archive than anyone builds in a sitting.
-    remembered = [run.id] + [r for r in _mine(request) if r != run.id]
-    response.set_cookie(MINE_COOKIE, ",".join(remembered[:MINE_MAX]),
-                        max_age=60 * 60 * 24 * 30, samesite="lax")
-    return response
+
+def _pending_asset(rel: str) -> Path | None:
+    """An upload this console is already holding, named by the browser.
+
+    "Clear it again anyway" on the already-analysed page hands back the
+    file that page was about rather than making somebody find it on their
+    disk a second time. It arrives as a path in a form, so it is trusted
+    the way any path from a form should be: matched against the exact
+    shape this handler writes (the twelve-hex folder, one plain name),
+    resolved, and required to sit inside the uploads directory and exist.
+    Anything else is treated as no file at all.
+    """
+    rel = (rel or "").strip()
+    if not _PENDING_REL.fullmatch(rel):
+        return None
+    root = uploads_dir().resolve()
+    path = (root / rel).resolve()
+    if root not in path.parents or not path.is_file():
+        return None
+    return path
+
 
 def _discard(target: Path) -> None:
     """Undo a rejected upload: the file, then the directory it was alone in."""
@@ -1704,6 +1769,20 @@ def add_analysis(request: Request, run_id: str,
                      name=f"analysis-{run.id}", daemon=True).start()
     return RedirectResponse(f"/runs/{run.id}", status_code=303)
 
+def asset_key(run) -> str:
+    """What makes two runs runs OF THE SAME FILM.
+
+    The file's stem, which is already the asset's identity everywhere else
+    in this system: telemetry labels every metric and every alert with it,
+    the Grafana panels are keyed by it, and /runs/by-asset resolves it. It
+    is a name, not a hash -- two different files called ad.mp4 read as one
+    asset here. That is the same trade the dashboards already make, and the
+    consequence is a card that groups two things or an "already analysed"
+    page offering the wrong run, both of which cost one click to get past.
+    """
+    return Path(run.asset_path).stem or run.asset_path
+
+
 @app.get("/runs/by-asset")
 def run_by_asset(asset: str = ""):
     """The newest clearance of a given asset, by its file stem.
@@ -1716,7 +1795,7 @@ def run_by_asset(asset: str = ""):
     want = (asset or "").strip()
     if want:
         for run in store().recent_runs(500):
-            if (Path(run.asset_path).stem or run.asset_path) == want:
+            if asset_key(run) == want:
                 return RedirectResponse(f"/runs/{run.id}", status_code=303)
     return RedirectResponse("/runs", status_code=303)
 
@@ -1956,7 +2035,18 @@ def all_runs(request: Request):
     scoped = _role(request) == "visitor"
     if scoped:
         runs = [r for r in runs if r.id in set(mine)]
-    rows = [{"run": run, "states": (st := market_states(run)),
+    # One card per FILM, not per run. Clearing the same master three times
+    # in an afternoon -- which is what happens while a market pack is being
+    # written -- filled the archive with three identical thumbnails, three
+    # identical filenames and three sets of lanes, and the newest one was
+    # the only one anybody wanted. The newest is the card; the others are
+    # dated links under it, so nothing is hidden and nothing is repeated.
+    by_asset: dict[str, list] = {}
+    for run in runs:  # recent_runs is newest first, so [0] is the newest
+        by_asset.setdefault(asset_key(run), []).append(run)
+    newest = [older[0] for older in by_asset.values()]
+    rows = [{"run": run, "older": by_asset[asset_key(run)][1:],
+             "states": (st := market_states(run)),
              "groups": pill_groups(run, st),
              "busy": run.status in ("created", "running")
                      or any(v["working"] for v in st.values()),
@@ -1978,7 +2068,7 @@ def all_runs(request: Request):
              "dims": sorted({o.dimension for o in store().observations(run.id)
                              if o.dimension and o.dimension != "none"}),
              "gauge": clearance_gauge(st)}
-            for i, run in enumerate(runs)]
+            for i, run in enumerate(newest)]
     # One live panel, not thirty-five. Every card carries its own charts as
     # SVG for a reason -- building them inline once took this page past a two
     # minute timeout -- and an iframe per card would be thirty-five Grafana
@@ -1989,6 +2079,7 @@ def all_runs(request: Request):
         live_history = (f"{settings.grafana_viewer_url}/d-solo/customs-history/"
                         f"customs?panelId=1&kiosk&theme=light&from=now-7d&to=now")
     return _page(request, "runs.html", rows=rows, screen="runs", scoped=scoped,
+                 runs_total=len(runs),
                  showcase=_showcase(store()), live_history=live_history,
                  packs_total=len(market_packs()), dims_total=len(packs.taxonomy()))
 
