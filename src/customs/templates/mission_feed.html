@@ -5,8 +5,8 @@
 
 <section class="hero" style="padding-bottom:26px">
   <div class="rule-row"><span class="label">Mission feed</span></div>
-  <h1 class="headline" style="font-size:clamp(26px,3.4vw,38px)">Every move the crew made, in the order it made it.</h1>
-  <p class="subline">Not a spinner. This is the crew's own event log, streamed over server-sent events straight out of the run store. Stage errors are in here too, because a clearance tool that silently skips a shot is worse than one that admits it.</p>
+  <h1 class="pagetitle"><svg class="ic"><use href="#n-feed"/></svg>Mission feed</h1>
+  <p class="subline">Every move the crew made, in the order it made it. Not a spinner. This is the crew's own event log, streamed over server-sent events straight out of the run store. Stage errors are in here too, because a clearance tool that silently skips a shot is worse than one that admits it.</p>
 </section>
 
 <section style="padding-top:0;border-top:none">
@@ -25,13 +25,22 @@
       <input type="checkbox" id="follow" checked style="accent-color:var(--signal)"> Follow tail
     </label>
   </div>
+  {# The same sentences the server rendered above, so a stage that arrives
+     over SSE reads exactly like one that was already on the page. #}
+  <script type="application/json" id="stage-prose">{{ stage_prose | tojson }}</script>
   <div class="feed" id="feed" data-run="{{ run.id }}" data-last="{{ last_id }}" data-running="{{ 1 if running else 0 }}">
     {% for group in groups %}
     <details class="grp{% if group.errored %} err{% endif %}{% if loop.last and running %} live{% endif %}" data-agent="{{ group.agent }}">
       <summary>
         <svg class="ic"><use href="#i-{{ group.agent if group.agent in ('pipeline', 'ingest', 'transcription', 'analyst', 'adjudicator', 'guard', 'publisher', 'remediator', 'verifier') else 'pipeline' }}"/></svg>
+        {# The stage in words a person would use, with the crew's own
+           shorthand kept underneath rather than replaced by it. #}
+        <span class="gtext">
+          <span class="gtitle">{{ group.title }}</span>
+          <span class="gprose">{{ group.prose }}</span>
+          <span class="gm mono">{{ group.last }}</span>
+        </span>
         <span class="ga a-{{ group.agent }}">{{ group.agent }}</span>
-        <span class="gm">{{ group.last }}</span>
         <span class="gc mono">{{ group.count }} event{{ '' if group.count == 1 else 's' }}</span>
         <span class="gt mono">{{ group.ts | clock }}</span>
       </summary>

@@ -85,7 +85,7 @@ from fastapi.responses import (FileResponse, HTMLResponse, PlainTextResponse,
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from customs import (adjudicate, agentmode, analyst, costs, media, packs, replyfmt,
+from customs import (adjudicate, agentmode, analyst, costs, media, narrate, packs, replyfmt,
                      persist, pipeline, remediate, scope as scope_mod, spark,
                      state as state_mod, verify)
 from customs.fetch import FetchError, fetch_youtube
@@ -2267,10 +2267,12 @@ def mission_page(request: Request, run_id: str):
         group["last"] = group["events"][-1]["message"]
         group["ts"] = group["events"][0]["ts"]
         group["errored"] = any("stage_error" in e["message"] for e in group["events"])
+        # what this stage is doing, in words a person would use
+        group["title"], group["prose"] = narrate.stage(group["agent"])
     made = generated_items(run)
     return _page(request, "mission_feed.html", run=run, events=events,
                  groups=groups, running=run.status not in ("done", "error"),
-                 made=made,
+                 stage_prose=narrate.STAGE_PROSE, made=made,
                  last_id=events[-1]["id"] if events else 0, screen="mission")
 
 @app.get("/runs/{run_id}/feed")
@@ -2396,6 +2398,9 @@ def market_room(request: Request, run_id: str, market: str):
         kept = by_shot.get(sc["shot_id"], [])
         sc["head"] = kept[0] if kept else sc["hero"]
         sc["tail"] = kept[-1] if len(kept) > 1 else None
+        # a scene with work in flight opens itself: nobody should have to
+        # go looking for the fix they just started
+        sc["working"] = any(f.status == "remediating" for f in sc["findings"])
 
     return _page(request, "market_room.html", run=run, market=market,
                  scenes=scenes,

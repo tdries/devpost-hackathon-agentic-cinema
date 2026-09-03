@@ -229,6 +229,30 @@
   });
 
 
+  /* ---------- 1a6. the market room's scene panels ----------
+     Closed by default; a scene with a fix already running opens itself
+     server-side. Keyboard reachable, because a table row that acts like a
+     button has to behave like one. */
+
+  document.querySelectorAll("tbody.mkscene > .scene-row").forEach(function (row) {
+    var body = row.parentNode;
+    var toggle = function () {
+      var open = body.hasAttribute("data-open");
+      if (open) { body.removeAttribute("data-open"); }
+      else { body.setAttribute("data-open", ""); }
+      row.setAttribute("aria-expanded", open ? "false" : "true");
+    };
+    row.addEventListener("click", function (e) {
+      /* a click on the frames opens the frame, not the panel */
+      if (e.target.closest("a")) { return; }
+      toggle();
+    });
+    row.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); }
+    });
+  });
+
+
   /* ---------- 1b. the mission feed's two tabs ---------- */
 
   (function () {
@@ -476,6 +500,11 @@
     var AGENTS = { pipeline: 1, ingest: 1, transcription: 1, analyst: 1,
                    adjudicator: 1, guard: 1, publisher: 1, remediator: 1,
                    verifier: 1 };
+    /* The stage sentences, from the server, so a group that arrives over
+       SSE reads exactly like one the server already rendered. */
+    var PROSE = {};
+    try { PROSE = JSON.parse(document.getElementById("stage-prose").textContent); }
+    catch (e) {}
 
     /* One row per stage: consecutive events from the same agent land in the
        row that is already open, and a different agent closes it and starts
@@ -488,12 +517,17 @@
       el.className = "grp live";
       el.setAttribute("data-agent", agent);
       var markId = AGENTS[agent] ? agent : "pipeline";
+      var said = PROSE[agent] || ["Working", "The crew is busy on this run."];
       el.innerHTML =
         '<summary><svg class="ic"><use href="#i-' + markId + '"/></svg>' +
+        '<span class="gtext"><span class="gtitle"></span>' +
+        '<span class="gprose"></span><span class="gm mono"></span></span>' +
         '<span class="ga a-' + agent + '"></span>' +
-        '<span class="gm"></span><span class="gc mono">0 events</span>' +
+        '<span class="gc mono">0 events</span>' +
         '<span class="gt mono"></span></summary>' +
         '<div class="glines"></div><span class="gbar"><i></i></span>';
+      el.querySelector(".gtitle").textContent = said[0];
+      el.querySelector(".gprose").textContent = said[1];
       el.querySelector(".ga").textContent = agent;
       el.querySelector(".gt").textContent = clock;
       feed.appendChild(el);

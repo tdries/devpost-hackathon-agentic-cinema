@@ -35,8 +35,10 @@ def test_the_day_s_budget_closes_the_expensive_option_and_leaves_the_cheap_one()
 
 def test_every_option_is_priced_and_says_what_it_is_for():
     opts = costs.options(3.0, spent_today=0.0)
-    assert [o["key"] for o in opts] == ["overlay", "track", "per_frame",
-                                        "omni", "bridge"]
+    # the two that regenerate pixels lead: they are what actually fixes a
+    # scene whose premise is the violation, and every row carries its price
+    assert [o["key"] for o in opts] == ["omni", "bridge", "overlay",
+                                        "track", "per_frame"]
     for o in opts:
         assert o["eur"] > 0 and o["length"] and o["complexity"] and o["best_for"]
     # track was a promise for most of this project's life and is now the
