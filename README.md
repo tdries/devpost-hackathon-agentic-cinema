@@ -156,21 +156,94 @@ The analyst is forbidden from expressing an opinion. It writes *"a woman raises 
 
 Five stages, in order, from [`src/customs/crew.py`](src/customs/crew.py). The stage names below are the ones the code emits.
 
-| | Stage | Agent | What it does | What it writes |
-|---|---|---|---|---|
-| <img src="docs/media/icons/i-ingest.svg" width="88" height="88"> | **1 · ingest** | `IngestAgent` | ffmpeg shot detection, one Gemini audio call per shot, and a **measured** flash sweep — a strobe is a property of the sequence, not of any frame, so it is counted rather than asked about | shots, transcripts, photosensitivity observations |
-| <img src="docs/media/icons/i-analyst.svg" width="88" height="88"> | **2 · analyst** | `AnalystAgent` | one Gemini vision call per shot, keyframes as image parts, the 18-dimension taxonomy in the prompt. Neutral sentences only — no verdicts | observations + bounding boxes + evidence frames |
-| <img src="docs/media/icons/i-adjudicator.svg" width="88" height="88"> | **3 · adjudicators** | `AdjudicatorAgent` × N in an ADK `ParallelAgent` | a pure dimension join against each market's YAML pack, then **one** batched Gemini call and **one** grounded Google Search citation per triggered rule. N markets cost one market's latency | a verdict for every candidate pairing, cleared ones included |
-| <img src="docs/media/icons/i-guard.svg" width="88" height="88"> | **4 · guard** | `GuardAgent` | reads the matched rule's metadata and nothing else — never the rationale, never a model-authored field. Runs after the fan-out joins, which makes it the single findings write | findings (the one write, on one thread) |
-| <img src="docs/media/icons/i-publisher.svg" width="88" height="88"> | **5 · publisher** | `PublisherAgent` — the only `LlmAgent` | issues five tool calls itself, three of them live Grafana MCP, reads every result, decides what to do when one fails, and composes the prose it writes into the overview dashboard | Mimir series, Loki lines, annotations, dashboards, alert rules |
+<table><tr>
+<td width="110" align="center"><img src="docs/media/icons/i-ingest.svg" width="88" height="88"></td>
+<td>
 
-And two more the crew meets only when something has to change:
+**1 · ingest** — `IngestAgent`
 
-| | Stage | What it does |
-|---|---|---|
-| <img src="docs/media/icons/i-remediator.svg" width="88" height="88"> | **remediator** | woken by a Grafana alert. Plans the cheapest edit that would satisfy the rule, prices it, and changes only the seconds objected to |
-| <img src="docs/media/icons/i-verifier.svg" width="88" height="88"> | **verifier** | re-runs the real analyst pass over the changed shots — same instrument that found the problem — and rules on whether it is gone and nothing new broke |
+ffmpeg cuts the film into its own shots, one Gemini audio call per shot writes the transcript, and a **measured** flash sweep counts luminance edges — a strobe is a property of the sequence, not of any frame, so it is counted rather than asked about.
 
+*Writes:* shots, transcripts, photosensitivity observations
+
+</td>
+</tr></table>
+
+<table><tr>
+<td width="110" align="center"><img src="docs/media/icons/i-analyst.svg" width="88" height="88"></td>
+<td>
+
+**2 · analyst** — `AnalystAgent`
+
+One Gemini vision call per shot: keyframes as image parts, the 18-dimension taxonomy in the prompt, and neutral sentences out. No verdicts allowed — it writes *“a woman raises a glass of red wine”*, never *“this violates French law”*.
+
+*Writes:* observations, bounding boxes, evidence frames
+
+</td>
+</tr></table>
+
+<table><tr>
+<td width="110" align="center"><img src="docs/media/icons/i-adjudicator.svg" width="88" height="88"></td>
+<td>
+
+**3 · adjudicators** — `AdjudicatorAgent` × N in an ADK `ParallelAgent`
+
+A pure dimension join against each market's YAML pack, then **one** batched Gemini call and **one** grounded Google Search citation per triggered rule. N markets cost one market's latency, not N.
+
+*Writes:* a verdict for every candidate pairing, cleared ones included
+
+</td>
+</tr></table>
+
+<table><tr>
+<td width="110" align="center"><img src="docs/media/icons/i-guard.svg" width="88" height="88"></td>
+<td>
+
+**4 · guard** — `GuardAgent`
+
+Reads the matched rule's metadata and nothing else — never the rationale, never a model-authored field, never a model. Which is what makes it un-promptable. It runs after the fan-out joins, so it is also the single findings write.
+
+*Writes:* findings (the one write, on one thread)
+
+</td>
+</tr></table>
+
+<table><tr>
+<td width="110" align="center"><img src="docs/media/icons/i-publisher.svg" width="88" height="88"></td>
+<td>
+
+**5 · publisher** — `PublisherAgent` — the only `LlmAgent`
+
+Issues five tool calls itself, three of them live Grafana MCP. It reads every result, decides what to do when one fails, and composes the prose it writes into the overview dashboard's description — a real MCP write, every run, in words no template produced.
+
+*Writes:* Mimir series, Loki lines, annotations, dashboards, alert rules
+
+</td>
+</tr></table>
+
+And two the crew meets only when something has to change:
+
+<table><tr>
+<td width="110" align="center"><img src="docs/media/icons/i-remediator.svg" width="88" height="88"></td>
+<td>
+
+**remediator**
+
+Woken by a Grafana alert. Works out the cheapest edit that would satisfy the rule, prices it in euro, and changes only the seconds that were objected to — sweeping every other open finding on the same shot into one combined edit.
+
+</td>
+</tr></table>
+
+<table><tr>
+<td width="110" align="center"><img src="docs/media/icons/i-verifier.svg" width="88" height="88"></td>
+<td>
+
+**verifier**
+
+Re-runs the real analyst pass over the changed shots — the same instrument that found the problem — to confirm the violation is gone *and* that nothing new broke.
+
+</td>
+</tr></table>
 
 <details>
 <summary><b>Stage by stage, with the file that does it</b></summary>
