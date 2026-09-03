@@ -2113,6 +2113,29 @@ def test_a_lane_is_never_shorter_than_the_glyph_that_labels_it():
     assert height >= ys[-1] + 38
 
 
+def test_every_method_the_picker_offers_has_its_own_mark(console):
+    """Five choices, three lines of prose each, and nothing to tell them
+    apart at a glance. Each method now carries the gesture it performs --
+    in the sprite the console draws from, as a file the README can show,
+    and in the picker row itself. A method added without one is a row that
+    looks like the row above it."""
+    from customs import costs
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    sprite = Path("src/customs/templates/base.html").read_text()
+    icons = Path("docs/media/icons")
+    readme = Path("README.md").read_text()
+    for method in costs.METHODS:
+        assert f'id="m-{method.key}"' in sprite, method.key
+        assert (icons / f"m-{method.key}.svg").is_file(), method.key
+        assert f"m-{method.key}.svg" in readme, method.key
+
+    room = client.get(f"/runs/{run.id}/markets/FR").text
+    for method in costs.METHODS:
+        assert f'href="#m-{method.key}"' in room, method.key
+
+
 def test_every_method_the_picker_offers_is_a_method_the_route_accepts():
     """A method the console offers and the route rejects is a dead button.
 

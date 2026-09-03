@@ -1153,6 +1153,10 @@ html[data-theme="studio"] .grp > summary:hover { background: rgba(23, 34, 44, 0.
 }
 .fix-opt:hover { border-color: var(--line-2); }
 .fix-opt input { accent-color: var(--g-blue); }
+/* The method's own mark. Five choices described in three lines each is a
+   wall of prose; the glyph is what tells them apart at a glance. */
+.fix-opt .ic-m { width: 22px; height: 22px; }
+.fix-opt.off .ic-m { filter: grayscale(1); }
 .fix-opt:has(input:checked) { border-color: var(--g-blue); background: rgba(66, 133, 244, 0.08); }
 .fix-opt.off { opacity: 0.45; cursor: not-allowed; }
 /* min-width: 0 or the grid child refuses to shrink and its text runs
