@@ -17,7 +17,7 @@ protected-basis remediation, scope still refuses a patch it cannot support,
 and the day's generation budget still governs Veo.
 
 One tool is new rather than borrowed: build_dashboard. The Publisher already
-writes the six dashboards a run needs, but "show me the errors by dimension"
+writes the dashboards a run needs, but "show me the errors by dimension"
 is a question nobody wrote a dashboard for in advance, so the agent composes
 one from the labels the run already pushed to Loki and hands back its URL.
 That is the difference between a dashboard product and an agent with a
