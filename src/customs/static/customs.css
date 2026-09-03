@@ -1447,7 +1447,8 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 
   /* mission feed: no fixed columns */
   .grp > summary { grid-template-columns: 1fr auto; gap: 8px 12px; }
-  .grp > summary .gm { grid-column: 1 / -1; white-space: normal; }
+  .grp > summary .gtext { grid-column: 1 / -1; }
+  .grp > summary .gm { white-space: normal; }
   .grp .gt { display: none; }
   .glines { padding-left: 20px; }
   .feed { height: auto; max-height: 70vh; }
@@ -1917,11 +1918,15 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 
    The summary grid's first column has to grow with them or the icon
    overflows its cell and the agent name shifts. */
-.grp > summary { grid-template-columns: 34px 118px 1fr auto auto; }
+/* icon · the sentences · agent · count · clock -- the sentences take the
+   1fr track. This rule is what the browser actually applies (it comes
+   after the base one), so the column order lives here too. */
+.grp > summary { grid-template-columns: 34px 1fr 108px auto auto; }
 .grp > summary > .ic { width: 30px; height: 30px; }
 .feed .ev .ic, .feed .line .ic { width: 22px; height: 22px; }
 @media (max-width: 720px) {
   .grp > summary { grid-template-columns: 28px 1fr auto; }
+  .grp > summary .ga { display: none; }
   .grp > summary > .ic { width: 26px; height: 26px; }
 }
 
@@ -2685,8 +2690,7 @@ video.runthumb { object-fit: cover; background: var(--well); }
    underneath so nothing is paraphrased away. */
 .gtext { display: grid; gap: 3px; min-width: 0; }
 .gtitle { font-size: 13.5px; font-weight: 600; color: var(--ink); }
-.gprose { font-size: 12.5px; color: var(--ink-2); line-height: 1.5;
-  max-width: 100ch; }
+.gprose { font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
 .grp .gm { font-size: 10.5px; color: var(--ink-3); overflow: hidden;
   text-overflow: ellipsis; white-space: nowrap; }
 .grp.live .gtitle::after { content: "…"; color: var(--ink-3); }
