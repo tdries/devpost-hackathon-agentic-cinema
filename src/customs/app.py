@@ -1370,20 +1370,50 @@ def landing(request: Request):
                  runs_total=len(store().recent_runs(500)))
 
 
-@app.get("/enter/{role}")
-def enter(role: str):
-    """Come in as one or the other, and be remembered for it.
+# A visitor's own ceiling, separate from the instance's. The generation
+# budget is real money on a real card, and a link posted somewhere public
+# should not be able to spend it: a visitor gets one euro of generation a
+# day, counted over the runs they started.
+VISITOR_DAILY_EUR = 1.0
 
-    Not authentication and not pretending to be: there is no secret, and
-    either door opens. It records which one you chose, which is the hook
-    a budget split or a read-only mode would hang off later.
 
-    A judge lands on the archive, because the work is already done and
-    the interesting thing is reading it. A visitor lands on the form,
-    because the interesting thing is watching it happen to their own ad.
+def _visitor_spent(request: Request) -> float:
+    return store().spent_today_on(_mine(request))
+
+
+@app.get("/enter/{role}", response_class=HTMLResponse)
+def enter_form(request: Request, role: str, wrong: int = 0):
+    """The door, which asks for its word first.
+
+    Not authentication: one shared password per door, carried in a cookie,
+    and anyone who has the word is that role. What it is for is narrower --
+    the generation budget is real money, and a submission link travels
+    further than the people it was sent to.
     """
     if role not in ROLES:
         raise HTTPException(status_code=404, detail=f"unknown door: {role}")
+    return _page(request, "enter.html", role=role, wrong=bool(wrong),
+                 screen="landing",
+                 blurb=("The archive, the findings and every run this instance has "
+                        "performed." if role == "judge" else
+                        "Clear your own commercial. Generation is capped at "
+                        f"{VISITOR_DAILY_EUR:.2f} EUR a day per visitor."))
+
+
+@app.post("/enter/{role}")
+def enter(role: str, password: str = Form("")):
+    """Check the word and remember the door.
+
+    A judge lands on the archive, because the work is already done and the
+    interesting thing is reading it. A visitor lands on the form, because
+    the interesting thing is watching it happen to their own ad.
+    """
+    if role not in ROLES:
+        raise HTTPException(status_code=404, detail=f"unknown door: {role}")
+    want = (settings.judge_password if role == "judge"
+            else settings.visitor_password)
+    if password.strip() != want:
+        return RedirectResponse(f"/enter/{role}?wrong=1", status_code=303)
     target = "/runs" if role == "judge" else "/new"
     response = RedirectResponse(target, status_code=303)
     response.set_cookie("customs-role", role, max_age=60 * 60 * 24 * 30,
@@ -2416,7 +2446,8 @@ def market_room(request: Request, run_id: str, market: str):
                  screen="market")
 
 @app.post("/runs/{run_id}/findings/{finding_id}/remediate")
-def remediate_now(run_id: str, finding_id: str, background: BackgroundTasks,
+def remediate_now(request: Request, run_id: str, finding_id: str,
+                  background: BackgroundTasks,
                   method: str = Form("auto"), intent: str = Form(""),
                   replacement: str = Form("")):
     """Remediate one finding by hand. The demo's affordance, not the trigger.
@@ -2438,6 +2469,17 @@ def remediate_now(run_id: str, finding_id: str, background: BackgroundTasks,
     finding = next((f for f in store().findings(run.id) if f.id == finding_id), None)
     if finding is None or finding.status != "open":
         raise HTTPException(status_code=404, detail="no open finding with that id")
+    # A visitor has their own ceiling. The instance budget stops the day
+    # running away; this stops one visitor spending everyone else's.
+    if _role(request) == "visitor":
+        spent = _visitor_spent(request)
+        if spent >= VISITOR_DAILY_EUR:
+            raise HTTPException(
+                status_code=429,
+                detail=(f"You have used your {VISITOR_DAILY_EUR:.2f} EUR of "
+                        f"generation for today ({spent:.2f} EUR). The findings, "
+                        f"the statutes and every run already here stay open to "
+                        f"read."))
     if finding.remediation_blocked or not finding.remediable:
         raise HTTPException(
             status_code=409,

@@ -313,6 +313,14 @@ def console(tmp_path, monkeypatch):
         yield test_client, store, launched, jobs
 
 
+def _enter(client, role):
+    """Walk through a door with its password, the way a person does."""
+    from customs.config import settings
+    word = settings.judge_password if role == "judge" else settings.visitor_password
+    return client.post(f"/enter/{role}", data={"password": word},
+                       follow_redirects=False)
+
+
 def _judged_run(store):
     """A finished run holding the fixture's findings and stage error."""
     run = store.create_run(asset_path=ASSET, markets=list(MARKETS))
@@ -1937,12 +1945,12 @@ def test_both_doors_open_and_remember_which_one_you_chose(console):
     assert 'href="/enter/judge"' in body
     assert 'href="/enter/visitor"' in body
 
-    judge = client.get("/enter/judge", follow_redirects=False)
+    judge = _enter(client, "judge")
     assert judge.status_code == 303
     assert judge.headers["location"] == "/runs"
     assert judge.cookies["customs-role"] == "judge"
 
-    visitor = client.get("/enter/visitor", follow_redirects=False)
+    visitor = _enter(client, "visitor")
     assert visitor.status_code == 303
     assert visitor.headers["location"] == "/new"
     assert visitor.cookies["customs-role"] == "visitor"
@@ -2040,12 +2048,12 @@ def test_a_judge_gets_the_archive_and_a_visitor_gets_a_clean_slate(console):
     assert plain.text.count('class="runrow"') == 2
 
     # the judge's door: same
-    client.get("/enter/judge")
+    _enter(client, "judge")
     assert client.get("/runs").text.count('class="runrow"') == 2
 
     # the visitor's door: their own runs, of which there are none yet
     client.cookies.clear()
-    client.get("/enter/visitor")
+    _enter(client, "visitor")
     fresh = client.get("/runs")
     assert fresh.text.count('class="runrow"') == 0
     assert "Nothing cleared yet" in fresh.text
@@ -2510,7 +2518,7 @@ def test_the_archive_carries_one_live_panel_not_thirty_five(console, monkeypatch
     assert page.count('class="cardlanes live"') >= 1
     assert page.count('loading="lazy"') >= page.count("<iframe") - 1
 
-    client.get("/enter/visitor")
+    _enter(client, "visitor")
     assert "<iframe" not in client.get("/runs").text, "not on a scoped archive"
 
 
@@ -2587,7 +2595,7 @@ def test_a_run_can_be_removed_but_not_the_load_bearing_ones(console, monkeypatch
 
     # a visitor cannot delete a run that is not theirs, and is not told it exists
     other = _judged_run(store)
-    client.get("/enter/visitor")
+    _enter(client, "visitor")
     assert client.post(f"/runs/{other.id}/delete",
                        follow_redirects=False).status_code == 404
 
@@ -2691,3 +2699,43 @@ def test_the_archive_caps_how_many_grafanas_it_boots(console, monkeypatch):
     drawn = page.count('class="cardlanes"')
     assert live == app_module.LIVE_LANE_CARDS, f"{live} live panels"
     assert drawn >= 3, "the rest still draw their own lanes"
+
+
+def test_a_door_asks_for_its_word(console):
+    """One shared password per door, kept in a cookie. Not an account and
+    not encryption -- it is there because generation costs real money and a
+    submission link travels further than the people it was sent to."""
+    from customs.config import settings
+    client, _store, _launched, _jobs = console
+
+    page = client.get("/enter/judge")
+    assert page.status_code == 200 and 'name="password"' in page.text
+
+    wrong = client.post("/enter/judge", data={"password": "letmein"},
+                        follow_redirects=False)
+    assert wrong.status_code == 303 and "wrong=1" in wrong.headers["location"]
+    assert "customs-role" not in wrong.cookies
+
+    right = client.post("/enter/judge", data={"password": settings.judge_password},
+                        follow_redirects=False)
+    assert right.status_code == 303 and right.headers["location"] == "/runs"
+
+
+def test_a_visitor_has_their_own_daily_ceiling(console):
+    """The instance budget stops the day running away; this stops one
+    visitor spending everyone else's. A visitor's identity is the runs they
+    started, so their spend is the ledger summed over exactly those."""
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    _enter(client, "visitor")
+    client.cookies.set("customs-mine", run.id)
+
+    fid = "fnd_FR_FR-ALC-01_obs_shot_0_000"
+    store.record_spend("bridge", app_module.VISITOR_DAILY_EUR + 0.01, run.id, fid)
+
+    r = client.post(f"/runs/{run.id}/findings/{fid}/remediate",
+                    data={"method": "overlay"}, follow_redirects=False)
+    assert r.status_code == 429
+    assert "generation for today" in r.json()["detail"]
+    # and reading is never gated by it
+    assert client.get(f"/runs/{run.id}/markets/FR").status_code == 200

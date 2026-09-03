@@ -260,10 +260,13 @@
      Without JavaScript the anchors still jump, which is why they are
      anchors. */
 
-  (function () {
-    var strip = document.getElementById("mk-scenes");
+  /* Both strips behave the same way: the market room filters its scene
+     panels, the frame board filters its scene cards. */
+  [["mk-scenes", "tbody.mkscene", ".scene-row", /^mk-/],
+   ["fb-scenes", ".fb > .sc", null, /^sc-/]].forEach(function (spec) {
+    var strip = document.getElementById(spec[0]);
     if (!strip) { return; }
-    var panels = document.querySelectorAll("tbody.mkscene");
+    var panels = document.querySelectorAll(spec[1]);
     var chips = strip.querySelectorAll("[data-scene]");
     var current = "";
 
@@ -272,14 +275,14 @@
       chips.forEach(function (c) {
         c.classList.toggle("on", (c.getAttribute("data-scene") || "") === scene);
       });
-      panels.forEach(function (body) {
-        var row = body.querySelector(".scene-row");
-        var id = row ? (row.id || "").replace(/^mk-/, "") : "";
+      panels.forEach(function (panel) {
+        var row = spec[2] ? panel.querySelector(spec[2]) : panel;
+        var id = row ? (row.id || "").replace(spec[3], "") : "";
         var show = !scene || id === scene;
-        body.hidden = !show;
+        panel.hidden = !show;
         /* a filtered-to scene opens itself: you asked for exactly it */
-        if (scene && show) {
-          body.setAttribute("data-open", "");
+        if (scene && show && spec[2]) {
+          panel.setAttribute("data-open", "");
           if (row) { row.setAttribute("aria-expanded", "true"); }
         }
       });
@@ -292,7 +295,7 @@
         apply(scene === current ? "" : scene);
       });
     });
-  })();
+  });
 
 
   /* ---------- 1b. the mission feed's two tabs ---------- */

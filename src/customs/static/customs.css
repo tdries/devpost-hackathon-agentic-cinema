@@ -2716,3 +2716,11 @@ video.runthumb { object-fit: cover; background: var(--well); }
   cursor: pointer; color: var(--ink-2); }
 .ss-allmark { font-size: 12px; font-weight: 600; }
 tbody.mkscene[hidden] { display: none; }
+
+/* the two doors */
+.enter { max-width: 560px; padding: 36px 0; }
+.enter-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  margin: 16px 0 10px; }
+.enter-form .label { width: 100%; }
+.enter-form .urlin { flex: 1; min-width: 220px; }
+.fb > .sc[hidden] { display: none; }
