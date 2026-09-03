@@ -2483,7 +2483,12 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
 
 /* the market room's scene header: its opening and closing frame, then what
    the scene is */
-.scene-row td { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+/* The row stays a table cell -- display:flex on a <td> stops it being one,
+   which silently kills colspan and squeezes the whole scene into column
+   one. The flexing happens on a span inside it. */
+.scene-row td { padding: 10px 14px; }
+.scene-row-in { display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  width: 100%; }
 .sc-pair { display: inline-flex; gap: 4px; }
 .sc-pair img { height: 44px; width: auto; display: block; border: 1px solid var(--line);
   border-radius: 2px; }

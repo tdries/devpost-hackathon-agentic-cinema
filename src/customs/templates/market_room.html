@@ -116,6 +116,7 @@
       <tbody class="mkscene"{{ ' data-open' | safe if sc.working }}>
       <tr class="scene-row" id="mk-{{ sc.shot_id }}" tabindex="0" role="button"
           aria-expanded="{{ 'true' if sc.working else 'false' }}"><td colspan="8">
+        <span class="scene-row-in">
         {# How the scene opens and how it closes, side by side, so the row
            below is read against the seconds it is about. #}
         <span class="sc-pair">
@@ -132,6 +133,7 @@
           <span class="label">{{ sc.findings | length }} finding{{ '' if sc.findings | length == 1 else 's' }}{{ ' · %d open' % sc.open if sc.open }}</span>
         </span>
         <span class="sc-chev" aria-hidden="true">&rsaquo;</span>
+        </span>
       </td></tr>
       {% for finding in sc.findings %}
       <tr{{ ' class="sparkle"' | safe if finding.status == 'remediating' }}>
