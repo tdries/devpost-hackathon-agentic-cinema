@@ -6,6 +6,8 @@
 
 **An AI crew watches your commercial once, judges it against 98 jurisdictions in parallel, builds its own Grafana instrument panel — and re-renders the shots that fail.**
 
+<img src="docs/media/powered-by-grafana.png" alt="Powered by Grafana" width="150">
+
 [![Live instance](https://img.shields.io/badge/live-customs--app.run.app-4285F4?style=flat-square)](https://customs-app-akap4ao72a-ew.a.run.app)
 [![Tests](https://img.shields.io/badge/tests-524_passing-34A853?style=flat-square)](#tests)
 [![Jurisdictions](https://img.shields.io/badge/jurisdictions-98-FBBC05?style=flat-square)](#the-jurisdiction-ladder)

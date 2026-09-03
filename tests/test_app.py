@@ -2671,3 +2671,23 @@ def test_agent_mode_says_what_it_can_do_before_you_type(client):
     for tool in agentmode.TOOL_NAMES:
         assert f'>{tool}</code>' in page, f"{tool} not advertised"
     assert f"<b>{len(agentmode.TOOL_NAMES)}</b> tools" in page
+
+
+def test_the_archive_caps_how_many_grafanas_it_boots(console, monkeypatch):
+    """loading="lazy" was supposed to make one live panel per card
+    survivable. Measured against the real page it was not: thirty-nine
+    frames and thirty-nine videos kept a browser from reaching
+    domcontentloaded in thirty seconds. The cards a visitor actually looks
+    at get the live panel; the rest keep the SVG they always had."""
+    import dataclasses
+    client, store, _launched, _jobs = console
+    for _ in range(app_module.LIVE_LANE_CARDS + 3):
+        _judged_run(store)
+    monkeypatch.setattr(app_module, "settings", dataclasses.replace(
+        app_module.settings, grafana_viewer_url="https://viewer.example.run.app"))
+
+    page = client.get("/runs").text
+    live = page.count('class="cardlanes live"')
+    drawn = page.count('class="cardlanes"')
+    assert live == app_module.LIVE_LANE_CARDS, f"{live} live panels"
+    assert drawn >= 3, "the rest still draw their own lanes"

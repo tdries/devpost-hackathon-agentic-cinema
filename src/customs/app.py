@@ -719,6 +719,10 @@ def _kinds_found(findings) -> list[str]:
 # the launcher link it -- because the run that proves the product was
 # otherwise sitting unmarked at position six of thirty-five.
 # ponytail: hardcoded id, becomes a computed best-run when the archive churns
+# How many archive cards frame a live Grafana panel. Beyond this they use
+# the app's own SVG: see the note in the archive route.
+LIVE_LANE_CARDS = 6
+
 SHOWCASE_RUN = "run_c61fa291681f"
 
 
@@ -1844,18 +1848,25 @@ def all_runs(request: Request):
              "groups": pill_groups(run, st),
              "busy": run.status in ("created", "running")
                      or any(v["working"] for v in st.values()),
-             # The card's lanes, live from the viewer when there is one.
-             # loading="lazy" on the iframe is what makes thirty-five of
-             # them survivable: only the cards near the viewport ever boot
-             # a Grafana, and they share one cached bundle.
-             "live_lanes": (embeds(run).get("viewer") or {}).get("squares", ""),
+             # The card's lanes, live from the viewer -- but only for the
+             # first few. loading="lazy" was supposed to make one per card
+             # survivable; measured, it was not. Thirty-nine frames and
+             # thirty-nine videos kept a real browser from reaching
+             # domcontentloaded in thirty seconds, because a lazy iframe
+             # still loads the moment it is anywhere near the viewport and
+             # every one of them boots a Grafana. The cards a visitor
+             # actually looks at get the live panel; the rest keep the SVG,
+             # which is what every card had before and is indistinguishable
+             # at that size.
+             "live_lanes": ((embeds(run).get("viewer") or {}).get("squares", "")
+                            if i < LIVE_LANE_CARDS else ""),
              # The row labels Grafana cannot draw. Same set and same order
              # the panel resolves from Loki -- both come from this run's
              # observations -- so the icons line up with the squares.
              "dims": sorted({o.dimension for o in store().observations(run.id)
                              if o.dimension and o.dimension != "none"}),
              "gauge": clearance_gauge(st)}
-            for run in runs]
+            for i, run in enumerate(runs)]
     # One live panel, not thirty-five. Every card carries its own charts as
     # SVG for a reason -- building them inline once took this page past a two
     # minute timeout -- and an iframe per card would be thirty-five Grafana
