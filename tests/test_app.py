@@ -2670,7 +2670,7 @@ def test_agent_mode_says_what_it_can_do_before_you_type(client):
     assert 'class="agentsteps"' in page and 'class="ast-n mono">1<' in page
     for tool in agentmode.TOOL_NAMES:
         assert f'>{tool}</code>' in page, f"{tool} not advertised"
-    assert f"<b>{len(agentmode.TOOL_NAMES)}</b> tools" in page
+    assert f"its {len(agentmode.TOOL_NAMES)} tools" in page
 
 
 def test_the_archive_caps_how_many_grafanas_it_boots(console, monkeypatch):

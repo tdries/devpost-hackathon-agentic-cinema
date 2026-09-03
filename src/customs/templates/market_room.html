@@ -108,9 +108,14 @@
       <thead><tr>
         <th>Rule</th><th>Citation</th><th>Evidence</th><th>Class</th><th>Severity</th><th>Window</th><th>Status</th><th></th>
       </tr></thead>
-      <tbody>
+      {# One panel per scene. Closed, a scene is its opening and closing
+         frame and a count; opened, it is every finding written against it.
+         Flat, a market with twenty-five findings was one long ladder in
+         which the same shot appeared five times. #}
       {% for sc in scenes %}
-      <tr class="scene-row" id="mk-{{ sc.shot_id }}"><td colspan="8">
+      <tbody class="mkscene"{{ ' data-open' | safe if sc.working }}>
+      <tr class="scene-row" id="mk-{{ sc.shot_id }}" tabindex="0" role="button"
+          aria-expanded="{{ 'true' if sc.working else 'false' }}"><td colspan="8">
         {# How the scene opens and how it closes, side by side, so the row
            below is read against the seconds it is about. #}
         <span class="sc-pair">
@@ -126,6 +131,7 @@
           <span class="mono fb-time">{{ sc.t_start | timecode }} to {{ sc.t_end | timecode }}</span>
           <span class="label">{{ sc.findings | length }} finding{{ '' if sc.findings | length == 1 else 's' }}{{ ' · %d open' % sc.open if sc.open }}</span>
         </span>
+        <span class="sc-chev" aria-hidden="true">&rsaquo;</span>
       </td></tr>
       {% for finding in sc.findings %}
       <tr{{ ' class="sparkle"' | safe if finding.status == 'remediating' }}>
@@ -219,8 +225,8 @@
         </td>
       </tr>
       {% endfor %}
-      {% endfor %}
       </tbody>
+      {% endfor %}
     </table>
   </div></div>
   <p class="subline" style="font-size:13px;color:var(--ink-3)">The real trigger for a remediation is a Grafana alert rule firing into the webhook, which is what makes Grafana upstream of the work rather than a report about it. The button above is the same job, started by hand, for when you want to watch it happen.</p>

@@ -1124,14 +1124,20 @@ html[data-theme="studio"] .grp > summary:hover { background: rgba(23, 34, 44, 0.
 .fixer > summary { list-style: none; cursor: pointer; }
 .fixer > summary::-webkit-details-marker { display: none; }
 .fixer[open] > summary { border-color: var(--g-blue); color: var(--ink); }
+/* A dropdown, not a popover. Floating over the table it covered the rows
+   underneath, closed itself on an outside click, and had to guess which
+   side of the viewport it was on. In flow it just pushes the table down,
+   which is what a person expects a disclosure to do. */
+.fixer { display: block; }
 .fixer form {
-  position: absolute; right: 0; top: calc(100% + 8px); z-index: 30;
-  width: 460px; max-width: calc(100vw - 48px); padding: 14px;
-  max-height: 72vh; overflow-y: auto;
+  margin: 8px 0 4px; padding: 14px;
   border: 1px solid var(--line-2); border-radius: var(--radius);
-  background: var(--panel); box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
-  text-align: left;
+  background: var(--well); text-align: left;
 }
+.fixer > summary { display: inline-flex; align-items: center; gap: 6px; }
+.fixer > summary::after { content: "\203A"; font-size: 17px; line-height: 1;
+  transition: transform .15s ease; }
+.fixer[open] > summary::after { transform: rotate(90deg); }
 .fix-h { display: block; margin: 4px 0 8px; }
 .fix-h + .fix-opt { margin-top: 0; }
 .fix-opt {
@@ -2596,7 +2602,7 @@ video.runthumb { object-fit: cover; background: var(--well); }
    It used to open onto two grey panes and a blinking cursor, which tells a
    first-time visitor nothing. Same hero device as the landing and archive,
    then three numbered pointers, then the two panes. */
-.agenthero { position: relative; overflow: hidden; padding: 34px 0 26px;
+.agenthero { position: relative; overflow: hidden; padding: 18px 0 14px;
   border-bottom: 1px solid var(--line); }
 .agenthero .swarm { position: absolute; inset: 0; display: grid; gap: 26px;
   align-content: center; opacity: 0.05; pointer-events: none;
@@ -2607,19 +2613,21 @@ video.runthumb { object-fit: cover; background: var(--well); }
   color: var(--ink-3); display: block; margin-bottom: 6px; }
 .agenthero-title { font-size: clamp(26px, 3.6vw, 40px); line-height: 1.12;
   margin: 6px 0 12px; letter-spacing: -0.015em; }
-.agenthero-lede { max-width: 76ch; font-size: 15px; color: var(--ink-2);
-  line-height: 1.6; margin: 0 0 18px; }
-.agenthero-stats { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 16px; }
+.agenthero-lede { max-width: 74ch; font-size: 13px; color: var(--ink-2);
+  line-height: 1.55; margin: 0 0 12px; }
+.agenthero-stats { display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
+  margin-bottom: 0; }
+.ah-grafana { height: 20px; width: auto; opacity: 0.85; margin-left: auto; }
 .ah-stat { font-size: 12.5px; color: var(--ink-2); }
-.ah-stat b { font-family: var(--mono); font-size: 17px; color: var(--ink);
-  margin-right: 5px; }
+.ah-stat b { font-family: var(--mono); font-size: 14px; color: var(--ink);
+  margin-right: 4px; }
 .agenthero-tools { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .ah-tool { font-family: var(--mono); font-size: 10.5px; padding: 2px 7px;
   border: 1px solid var(--line); border-radius: 3px; color: var(--ink-3);
   background: var(--panel); }
 
-.agentsteps { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 18px; padding: 22px 0 4px; }
+.agentsteps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px; padding: 14px 0 2px; }
 .ast { display: flex; gap: 12px; align-items: flex-start; }
 .ast-n { flex: none; width: 24px; height: 24px; border-radius: 50%;
   display: grid; place-items: center; font-size: 12px;
@@ -2630,3 +2638,46 @@ video.runthumb { object-fit: cover; background: var(--well); }
 .sugg-label { display: block; width: 100%; margin-bottom: 2px; }
 .ih-point { margin-top: 14px; font-size: 11px; color: var(--ink-3);
   letter-spacing: 0.12em; }
+
+/* ---------- page titles ----------
+   In-app screens name themselves; they do not narrate. The editorial
+   sentence each of these used to shout at 38px now leads its subline,
+   where it reads as explanation rather than as a headline. */
+.pagetitle { display: flex; align-items: center; gap: 9px;
+  font-size: clamp(17px, 1.9vw, 21px); font-weight: 600; letter-spacing: -0.01em;
+  margin: 2px 0 8px; }
+.pagetitle .ic { width: 19px; height: 19px; flex: none; }
+.runhero-h1 { font-size: clamp(24px, 3vw, 34px); }
+
+/* the agent's tool list, folded: checkable, not shouted */
+.ah-tools > summary { cursor: pointer; list-style: none; }
+.ah-tools > summary::-webkit-details-marker { display: none; }
+.ah-tools > summary::after { content: " ▸"; }
+.ah-tools[open] > summary::after { content: " ▾"; }
+.ah-toolrow { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 7px; }
+
+/* ---------- the mission feed, in words ----------
+   The feed is watched live by someone waiting to learn whether their
+   commercial can air. It used to show only the crew's shorthand; now each
+   stage leads with what is happening and why, and keeps the shorthand
+   underneath so nothing is paraphrased away. */
+.gtext { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.gtitle { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.gprose { font-size: 12px; color: var(--ink-2); line-height: 1.45; }
+.grp .gm { font-size: 10.5px; color: var(--ink-3); overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.grp.live .gtitle::after { content: "…"; color: var(--ink-3); }
+
+/* ---------- the market room, one panel per scene ----------
+   Flat, a market with twenty-five findings was one long ladder in which the
+   same shot appeared five times. Closed, a scene is how it opens, how it
+   closes, and a count; opened, it is every finding written against it. A
+   scene with a fix in flight opens itself. */
+.mkscene tr:not(.scene-row) { display: none; }
+.mkscene[data-open] tr:not(.scene-row) { display: table-row; }
+.scene-row { cursor: pointer; }
+.scene-row:hover td { background: var(--ground-2); }
+.scene-row:focus-visible td { outline: 2px solid var(--signal); outline-offset: -2px; }
+.sc-chev { margin-left: auto; font-size: 20px; color: var(--ink-3); line-height: 1;
+  transition: transform .15s ease; }
+.mkscene[data-open] .sc-chev { transform: rotate(90deg); }

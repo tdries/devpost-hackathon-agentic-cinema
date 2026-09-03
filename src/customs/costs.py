@@ -61,7 +61,20 @@ class Method:
     best_for: str
 
 
+# Ordered as an operator would choose, not as the pipeline grew: the two
+# that regenerate pixels lead, because they are the ones that actually fix a
+# scene whose premise is the violation, and the patch methods follow for the
+# shots that barely move. Price is on every row, so leading with the
+# expensive ones costs nobody anything.
 METHODS = (
+    Method("omni", "Rewrite with Omni",
+           "Hands the span itself to Gemini Omni, which edits the footage "
+           "in place: same shots, same motion, only what you name changes.",
+           "high", "any span up to 10 seconds where the footage should stay "
+                   "the brand's own instead of being regenerated"),
+    Method("bridge", "Regenerate with Veo",
+           "Edits both ends of the span and generates the motion between them.",
+           "high", "genuine 3D motion, where a patch cannot hold"),
     Method("overlay", "Patch one frame",
            "Edits a single frame and holds it over the span.",
            "low", "a locked-off shot, where nothing moves"),
@@ -77,14 +90,6 @@ METHODS = (
            "high", "a target that deforms or is occluded, where one edit "
                    "cannot be propagated: a bottle travelling to a mouth, a "
                    "garment on a moving body"),
-    Method("omni", "Rewrite with Omni",
-           "Hands the span itself to Gemini Omni, which edits the footage "
-           "in place: same shots, same motion, only what you name changes.",
-           "high", "any span up to 10 seconds where the footage should stay "
-                   "the brand's own instead of being regenerated"),
-    Method("bridge", "Regenerate with Veo",
-           "Edits both ends of the span and generates the motion between them.",
-           "high", "genuine 3D motion, where a patch cannot hold"),
 )
 
 _BY_KEY = {m.key: m for m in METHODS}
