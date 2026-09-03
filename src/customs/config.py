@@ -54,6 +54,8 @@ class Settings:
     grafana_public_overview: str
     grafana_public_timeline: str
     grafana_viewer_url: str
+    judge_password: str
+    visitor_password: str
 
     @classmethod
     def load(cls, env_file: Path | str | None = ".env") -> "Settings":
@@ -97,6 +99,12 @@ class Settings:
             # it is not deployed, and every screen falls back to the
             # server-rendered PNGs it used before.
             grafana_viewer_url=g("GRAFANA_VIEWER_URL", "").rstrip("/"),
+            # The two doors. Not real authentication -- there is one shared
+            # word per door and it travels in a cookie -- but enough that a
+            # link posted somewhere public does not hand a stranger the
+            # generation budget.
+            judge_password=g("JUDGE_PASSWORD", "DEVPOST"),
+            visitor_password=g("VISITOR_PASSWORD", "VISITOR"),
         )
 
 settings = Settings.load()

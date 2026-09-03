@@ -15,9 +15,14 @@
   {# The scenescroll: every scene's opening still in one strip, so the whole
      film is scannable at a glance and a flagged scene is one click away.
      Plain anchors -- the browser does the jumping. #}
-  <nav class="scenescroll" aria-label="Jump to a scene">
+  <nav class="scenescroll" id="fb-scenes" aria-label="Filter by scene">
+    <button type="button" class="ss ss-all on" data-scene="">
+      <span class="ss-allmark">All</span>
+      <span class="mono ss-t">{{ scenes | length }} scenes</span>
+    </button>
     {% for sc in scenes %}
     <a class="ss{{ ' hit' if sc.findings }}{{ ' sparkle' if sc.working }}" href="#sc-{{ sc.shot_id }}"
+       data-scene="{{ sc.shot_id }}"
        title="{{ sc.shot_id.replace('_', ' ') }} &middot; {{ sc.t_start | timecode }}{{ ' &middot; %d finding(s)' % sc.findings if sc.findings }}">
       {% if sc.hero %}
       <img src="/runs/{{ run.id }}/evidence/{{ sc.hero.obs.id }}?w=160" alt="" loading="lazy">

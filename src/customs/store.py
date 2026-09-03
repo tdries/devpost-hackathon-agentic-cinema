@@ -141,6 +141,26 @@ class Store:
             "SELECT COALESCE(SUM(eur), 0) FROM spend WHERE day = ?", (day,)).fetchone()
         return float(row[0] or 0.0)
 
+    def spent_today_on(self, run_ids, now: float | None = None) -> float:
+        """What today's generation cost, counting only these runs.
+
+        A visitor is capped separately from the instance, and the only
+        identity a visitor has is the list of runs they started (kept in
+        their own cookie). Summing the ledger over that list attributes
+        spend to them without a schema change and without asking anyone to
+        log in.
+        """
+        ids = [r for r in run_ids if r]
+        if not ids:
+            return 0.0
+        stamp = time.time() if now is None else now
+        day = time.strftime("%Y-%m-%d", time.gmtime(stamp))
+        marks = ",".join("?" * len(ids))
+        row = self._conn.execute(
+            f"SELECT COALESCE(SUM(eur), 0) FROM spend WHERE day = ? "
+            f"AND run_id IN ({marks})", (day, *ids)).fetchone()
+        return float(row[0] or 0.0)
+
     @_locked
     def create_run(self, asset_path: str, markets: list[str]) -> RunRecord:
         run = RunRecord(

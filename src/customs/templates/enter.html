@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Come in as {{ role }}{% endblock %}
+{% block main %}
+
+<section class="enter">
+  <h1 class="pagetitle">
+    <svg class="ic"><use href="#i-{{ 'legal' if role == 'judge' else 'human' }}"/></svg>
+    Come in as {{ role }}
+  </h1>
+  <p class="subline" style="max-width:60ch">{{ blurb }}</p>
+
+  <form class="enter-form" method="post" action="/enter/{{ role }}">
+    <label class="label" for="pw">Password</label>
+    <input class="urlin" type="password" name="password" id="pw" autofocus
+           autocomplete="current-password" placeholder="Enter the password">
+    <button class="btn go" type="submit">Come in</button>
+  </form>
+
+  {% if wrong %}
+  <p class="fix-why" role="alert" style="color:var(--blocked)">
+    That is not the password for this door.</p>
+  {% endif %}
+
+  <p class="subline" style="font-size:12.5px;color:var(--ink-3);max-width:62ch">
+    One shared password per door, kept in a cookie. It is not an account and
+    it is not encryption; it is there because generation costs real money and
+    a link travels further than the people it was sent to.
+  </p>
+</section>
+
+{% endblock %}
