@@ -2018,7 +2018,7 @@ def scene_at(run_id: str, t: float = -1.0):
 
 
 @app.get("/launch/remediate")
-def launch_remediate(run: str, background: BackgroundTasks,
+def launch_remediate(request: Request, run: str, background: BackgroundTasks,
                      finding: str = "", dimension: str = "", t: float = -1.0,
                      method: str = "omni"):
     """A remediation launched by a CLICK on a visualization.
@@ -2035,6 +2035,15 @@ def launch_remediate(run: str, background: BackgroundTasks,
     must not have blocked it, and the method must be affordable today.
     Lands on the market room's scene section, where the work sparkles.
     """
+    # A GET that spends: this is the one route where a click somewhere else
+    # entirely -- a data link on a Grafana panel -- starts a paid edit. The
+    # door carries the whole click back with it, query and all, so saying
+    # the word finishes the launch the panel asked for rather than dropping
+    # the operator on a board and making them find the square again.
+    here = request.url.path + (f"?{request.url.query}" if request.url.query else "")
+    door = _needs_word(request, here)
+    if door is not None:
+        return door
     rec = _run_or_404(run)
     db = store()
     if method not in {m.key for m in costs.METHODS}:

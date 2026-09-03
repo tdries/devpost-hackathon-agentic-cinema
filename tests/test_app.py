@@ -262,6 +262,7 @@ def test_two_alerts_for_one_market_serialize_end_to_end(tmp_path, monkeypatch):
 # without a four minute Vertex run.
 
 import asyncio
+import html
 import json
 import os
 import re
@@ -2779,6 +2780,36 @@ def test_nothing_that_spends_or_destroys_opens_without_the_word(console):
     for path in ("/", "/runs", "/library", f"/runs/{run.id}",
                  f"/runs/{run.id}/markets/FR", f"/runs/{run.id}/frames"):
         assert client.get(path).status_code == 200, path
+
+
+def test_a_click_on_a_grafana_panel_meets_the_door_and_then_lands(console):
+    """/launch/remediate is a GET that spends -- the click on a Grafana data
+    link IS the launch. So the door has to carry the whole click back, query
+    and all: a judge who says the word should get the edit the panel asked
+    for, not a board and a puzzle about which square they pressed."""
+    from customs.config import settings
+    client, store, _launched, jobs = console
+    client.cookies.clear()
+    run = _judged_run(store)
+    fid = "fnd_FR_FR-ALC-01_obs_shot_0_000"
+    click = f"/launch/remediate?run={run.id}&finding={fid}&method=overlay"
+
+    stopped = client.get(click, follow_redirects=False)
+    assert stopped.status_code == 303
+    assert jobs == [], "and nothing was launched on the way past"
+    door = stopped.headers["location"]
+    assert door.startswith("/enter/visitor?next=")
+
+    page = client.get(door)
+    # escaped in the attribute, which is what a browser posts back verbatim
+    assert f'value="{html.escape(click)}"' in page.text
+
+    said = client.post("/enter/visitor",
+                       data={"password": settings.visitor_password, "next": click},
+                       follow_redirects=False)
+    assert said.headers["location"] == click
+    client.get(click, follow_redirects=False)
+    assert jobs == [(run.id, fid, "FR")], "and now the click does what it said"
 
 
 def test_the_door_returns_you_to_what_you_were_doing(console):
