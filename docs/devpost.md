@@ -42,8 +42,8 @@ python, google-gemini, google-adk, grafana, grafana-cloud, mcp, veo, google-clou
 
 ## Links
 
-- GitHub repo: https://github.com/tdries/td-devpost-agentic-cinema
-- Live instance: https://customs-app-akap4ao72a-ew.a.run.app
+- GitHub repo: https://github.com/tdries/devpost-hackathon-agentic-cinema
+- Live instance: https://customs-app-akap4ao72a-ew.a.run.app (the judge door's password is DEVPOST; reading needs nothing)
 - Demo video: https://youtu.be/YOUTUBE_VIDEO_ID (record and replace)
 
 ## Track

@@ -99,7 +99,7 @@ ul.plain li::before { content: "◆"; position: absolute; left: 0; top: 0.2mm; c
 <section class="cover">
   <img class="diamond" src="../../src/customs/static/logo.png" alt="">
   <h1>THE MEDIA CUSTOMS</h1>
-  <div class="sub">Operator manual. An agentic launch command center that clears your commercial for fifteen markets, cites the statute behind every finding, and re-renders what fails.</div>
+  <div class="sub">Operator manual. An agentic launch command center that clears your commercial for ninety-eight jurisdictions, cites the statute behind every finding, and re-renders what fails.</div>
   <div class="meta">
     <span>v1.0 / AUGUST 2026</span>
     <span>AGENTIC CINEMA / GRAFANA LABS TRACK</span>
@@ -137,7 +137,7 @@ ul.plain li::before { content: "◆"; position: absolute; left: 0; top: 0.2mm; c
   <p>The unregulated half costs more. Pepsi and Kendall Jenner. Dolce &amp; Gabbana in China. H&amp;M's "coolest monkey" hoodie. Burger King Vietnam eating with chopsticks. Every one of those was caught by the public rather than by a process, at a cost measured in tens of millions.</p>
   <table>
     <tr><th></th><th>Today</th><th>With Customs</th></tr>
-    <tr><td>Coverage</td><td>A handful of markets, manually</td><td>15 markets in one run, extensible by YAML</td></tr>
+    <tr><td>Coverage</td><td>A handful of markets, manually</td><td>98 jurisdictions in one run, extensible by YAML</td></tr>
     <tr><td>Evidence</td><td>A consultant's opinion</td><td>A statute citation on every finding, checked live</td></tr>
     <tr><td>Timeline</td><td>Days to weeks</td><td>Minutes</td></tr>
     <tr><td>Monitoring</td><td>A PDF report</td><td>A Grafana panel the crew builds and updates itself</td></tr>
@@ -160,7 +160,7 @@ ul.plain li::before { content: "◆"; position: absolute; left: 0; top: 0.2mm; c
   </div>
   <div class="cards">
     <div class="card"><div class="n">5/6</div><div class="d">planted landmines caught at the milestone gate, zero empty rationales, zero false positives on control shots</div></div>
-    <div class="card"><div class="n">339</div><div class="d">offline tests green; a live suite runs the same checks against real Gemini and a real Grafana stack</div></div>
+    <div class="card"><div class="n">532</div><div class="d">offline tests green; a live suite runs the same checks against real Gemini and a real Grafana stack</div></div>
     <div class="card"><div class="n">3</div><div class="d">directions of Grafana traffic: the crew writes in, Grafana triggers the crew, the crew reads back</div></div>
   </div>
   <h2>The demo asset failed by its own maker</h2>
@@ -229,7 +229,7 @@ Grafana alert ──> webhook ──> REMEDIATOR ──> VERIFIER ──> metric
   <div class="eyebrow">05 / Walkthrough</div>
   <h1>Launch Board</h1>
   <p class="lead">The front door. Upload an ad, pick markets, and the board is the campaign's go or no-go.</p>
-  <img class="screenshot" src="../screenshots/04-launch-board-final.png" alt="Launch Board">
+  <img class="screenshot" src="assets/04-launch-board-final.png" alt="Launch Board">
   <div class="caption">A finished FR / SA / US run: one cleared, two blocked, verdict NO GO.</div>
   <ul class="plain">
     <li><strong>Verdict and headline.</strong> "Cleared for launch in 1 of 3 markets" is derived from findings, never modelled: any unresolved legal finding at severity 70 or above blocks a market; policy findings at 70+ mark it at risk.</li>
@@ -244,7 +244,7 @@ Grafana alert ──> webhook ──> REMEDIATOR ──> VERIFIER ──> metric
   <div class="eyebrow">06 / Walkthrough</div>
   <h1>Mission Feed</h1>
   <p class="lead">Every move the crew made, in the order it made it, streamed over server-sent events straight out of the run store. Not a spinner.</p>
-  <img class="screenshot" src="../screenshots/05-mission-feed.png" alt="Mission Feed">
+  <img class="screenshot" src="assets/05-mission-feed.png" alt="Mission Feed">
   <div class="caption">Adjudicator citation checks, clearance verdicts, MCP tool calls, the remediation instruction, the Verifier's re-observation.</div>
   <ul class="plain">
     <li><strong>Real tool calls.</strong> <code>mcp update_dashboard('customs-overview')</code> and <code>push_run_telemetry</code> are the actual operations, not decoration.</li>
@@ -258,7 +258,7 @@ Grafana alert ──> webhook ──> REMEDIATOR ──> VERIFIER ──> metric
   <div class="eyebrow">07 / Walkthrough</div>
   <h1>Market Room</h1>
   <p class="lead">One market in full: regulator, pre-clearance regime, every finding with its statute and a live citation link, and the Guard's blocked items presented as human decisions.</p>
-  <img class="screenshot" src="../screenshots/06-market-room-sa.png" alt="Market Room for Saudi Arabia">
+  <img class="screenshot" src="assets/06-market-room-sa.png" alt="Market Room for Saudi Arabia">
   <div class="caption">Saudi Arabia: 11 findings, and the Guard holding SA-LGBT-01 for a human, with the regulation cited.</div>
   <ul class="plain">
     <li><strong>Human decision required.</strong> SA-LGBT-01 fires on a same-sex couple holding hands. The rule's basis targets a protected characteristic, so the Guard blocks auto-remediation and offers three honest actions: remediate anyway (a human choice), send to legal review, accept the risk.</li>
@@ -272,7 +272,7 @@ Grafana alert ──> webhook ──> REMEDIATOR ──> VERIFIER ──> metric
   <div class="eyebrow">08 / Walkthrough</div>
   <h1>Cutting Room</h1>
   <p class="lead">The original, the localized master, and what moved between them. One edited master per market, written by the Remediator and confirmed by the Verifier.</p>
-  <img class="screenshot" src="../screenshots/07-cutting-room.png" alt="Cutting Room">
+  <img class="screenshot" src="assets/07-cutting-room.png" alt="Cutting Room">
   <div class="caption">FR master beside the original; both players open on the second that changed, with the change record underneath.</div>
   <ul class="plain">
     <li><strong>Nothing is edited silently.</strong> Every edit produces a change record with the source finding, the method, the frames touched, and before and after stills.</li>
@@ -288,11 +288,11 @@ Grafana alert ──> webhook ──> REMEDIATOR ──> VERIFIER ──> metric
   <p class="lead">The French pack flags the handwritten English tagline under the Toubon law (FR-LANG-01). What happens next is the whole product in one loop.</p>
   <div class="two-col">
     <div>
-      <img class="screenshot" src="../screenshots/02-remediation-before.png" alt="Before remediation">
+      <img class="screenshot" src="assets/02-remediation-before.png" alt="Before remediation">
       <div class="caption">BEFORE / "Happiness is one sip away", English only.</div>
     </div>
     <div>
-      <img class="screenshot" src="../screenshots/03-remediation-after.png" alt="After remediation">
+      <img class="screenshot" src="assets/03-remediation-after.png" alt="After remediation">
       <div class="caption">AFTER / re-lettered in French, same paper, same light.</div>
     </div>
   </div>
@@ -365,7 +365,7 @@ rules:
   <div class="eyebrow">12 / Setup and deployment</div>
   <h1>Cold clone to running instance</h1>
   <p><strong>Prerequisites:</strong> Python 3.12; ffmpeg on PATH; a Google Cloud project with Vertex AI enabled and <code>gcloud auth application-default login</code> done; a Grafana Cloud stack (free tier) with a service-account token (Admin) and an access-policy token (<code>metrics:write</code>, <code>logs:write</code>); the mcp-grafana v1.1.0 release binary at <code>bin/mcp-grafana</code>.</p>
-  <pre>git clone https://github.com/tdries/td-devpost-agentic-cinema.git &amp;&amp; cd td-devpost-agentic-cinema
+  <pre>git clone https://github.com/tdries/devpost-hackathon-agentic-cinema.git &amp;&amp; cd devpost-hackathon-agentic-cinema
 
 <span class="c"># 1. environment</span>
 python3.12 -m venv .venv
@@ -400,12 +400,12 @@ PYTHONPATH=src .venv/bin/uvicorn customs.app:app --reload
     <li><strong>Unsourced findings are capped.</strong> No live citation means severity capped at 40, no remediation, no market block. Hallucination is rendered as a visible quality signal, not a hidden risk.</li>
     <li><strong>Input caps.</strong> 120 seconds and 200 MB per upload, enforced at the door.</li>
     <li><strong>Single instance by design.</strong> SQLite, in-process locks, Cloud Run <code>--max-instances 1</code>. Demo-grade persistence, stated tradeoff.</li>
-    <li><strong>15 markets, not 195.</strong> The pack format is the extension point, and the packs are data.</li>
+    <li><strong>98 jurisdictions, not 195 countries.</strong> The pack format is the extension point, and the packs are data.</li>
   </ul>
   <h2>Resources</h2>
   <table>
     <tr><th>Resource</th><th>Where</th></tr>
-    <tr><td>Repository</td><td>github.com/tdries/td-devpost-agentic-cinema</td></tr>
+    <tr><td>Repository</td><td>github.com/tdries/devpost-hackathon-agentic-cinema</td></tr>
     <tr><td>Live instance</td><td>customs-app-akap4ao72a-ew.a.run.app</td></tr>
     <tr><td>Design document</td><td><code>docs/superpowers/specs/2026-08-23-customs-design.md</code></td></tr>
     <tr><td>Milestone gate report</td><td><code>docs/superpowers/plans/milestone1-gate.md</code></td></tr>
@@ -415,9 +415,9 @@ PYTHONPATH=src .venv/bin/uvicorn customs.app:app --reload
     <tr><td>License</td><td>Apache-2.0, <code>LICENSE</code></td></tr>
   </table>
   <h2>Repository layout</h2>
-  <pre>src/customs/     agents, console, telemetry, store   markets/    15 packs + taxonomy
+  <pre>src/customs/     agents, console, telemetry, store   markets/    21 packs + taxonomy
 grafana/         dashboard definitions               scripts/    pipeline, provision, deploy
-tests/           339 offline + live suite            docs/       spec, plan, screenshots, manual</pre>
+tests/           532 offline + live suite            docs/       spec, plan, screenshots, manual</pre>
   <div class="footer"><span>THE MEDIA CUSTOMS OPERATOR MANUAL</span><span>15</span></div>
 </div>
 
@@ -426,7 +426,7 @@ tests/           339 offline + live suite            docs/       spec, plan, scr
   <img class="diamond" src="../../src/customs/static/logo.png" alt="">
   <div class="tagline">A statute behind every finding.<br>A master that can actually ship.</div>
   <div class="links">
-    <strong>github.com/tdries/td-devpost-agentic-cinema</strong><br>
+    <strong>github.com/tdries/devpost-hackathon-agentic-cinema</strong><br>
     customs-app-akap4ao72a-ew.a.run.app<br>
     Agentic Cinema 2026 / Grafana Labs track / Apache-2.0
   </div>
