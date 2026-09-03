@@ -2315,9 +2315,22 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 @keyframes spk-spin { to { --spk: 360deg; } }
 @keyframes spk-twinkle { 0%, 100% { opacity: 0.2; transform: scale(0.8); }
                          50% { opacity: 1; transform: scale(1.15); } }
-.sparkle, [data-busy] { position: relative; z-index: 0; }
+/* The ring is MASKED to the ring, not tucked behind the element. Putting
+   z-index:0 on the sparkle made it its own stacking context, which means a
+   ::before at z-index:-1 paints above that element's own background rather
+   than beneath it -- so on anything that carries its own background, like a
+   run card, the ring became a fill and the content sat on a rainbow. The
+   two-layer mask cuts the middle out of the gradient instead, which needs
+   no stacking games and works wherever the class lands. */
+.sparkle, [data-busy] { position: relative; }
 .sparkle::before, [data-busy]::before {
-  content: ""; position: absolute; inset: -3px; z-index: -1;
+  content: ""; position: absolute; inset: -3px; z-index: 1;
+  pointer-events: none;
+  padding: 3px;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
   border-radius: 6px;
   background: conic-gradient(from var(--spk),
     #4285F4, #EA4335, #FBBC05, #34A853, #4285F4);
