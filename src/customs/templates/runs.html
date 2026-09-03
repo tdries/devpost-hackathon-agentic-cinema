@@ -87,11 +87,13 @@
       {# The still is the video's poster, so the card paints exactly as it
          did; preload="none" means the clip itself is not fetched until a
          pointer actually lands on the card. #}
-      {# metadata, not none: with a lazy Grafana booting beside every card,
-         a clip with nothing buffered took long enough to start that the
-         hover felt dead on all but the warm one. The head of a 100 KB file
-         is a few KB, and thirty-nine of those is cheaper than one panel. #}
-      <video class="runthumb" data-hoverplay muted loop playsinline preload="metadata"
+      {# none, and warmed on approach. "metadata" made the hover responsive
+         but cost thirty-nine range requests up front, serialised over six
+         connections -- enough that a browser could not reach
+         domcontentloaded in sixty seconds while a fix was running. The JS
+         sets preload="auto" on pointerenter instead, so a card costs
+         nothing until you go near it. #}
+      <video class="runthumb" data-hoverplay muted loop playsinline preload="none"
              poster="/runs/{{ item.run.id }}/poster.jpg"
              src="/runs/{{ item.run.id }}/preview.mp4"
              aria-label="A few seconds of {{ item.run.asset_path.split('/')[-1] }}"></video>

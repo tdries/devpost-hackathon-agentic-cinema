@@ -211,7 +211,16 @@
       video.pause();
       try { video.currentTime = 0; } catch (e) {}
     };
+    /* Warm it as the pointer approaches the card, not when the page loads:
+       thirty-nine clips fetching metadata up front is thirty-nine range
+       requests over six connections, and the archive stopped loading. */
+    var warm = function () {
+      if (video.preload !== "auto") { video.preload = "auto"; video.load(); }
+    };
+    card.addEventListener("pointerenter", warm);
+    card.addEventListener("focusin", warm);
     card.addEventListener("mouseenter", function () {
+      warm();
       var playing = video.play();
       if (playing && playing.catch) { playing.catch(function () {}); }
     });

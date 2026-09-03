@@ -2538,9 +2538,9 @@ def test_a_run_card_plays_itself_on_hover(console, tmp_path, monkeypatch):
 
     page = client.get("/runs").text
     assert 'class="runthumb" data-hoverplay' in page
-    # metadata, not none: a clip with nothing buffered took too long to
-    # start when a lazy Grafana was booting beside every card
-    assert 'preload="metadata"' in page and "/preview.mp4" in page
+    # none, and warmed on pointerenter: thirty-nine clips fetching metadata
+    # up front stopped the archive loading at all
+    assert 'preload="none"' in page and "/preview.mp4" in page
     assert f'poster="/runs/{run.id}/poster.jpg"' in page, "it paints as it did"
 
     made = []
