@@ -116,6 +116,36 @@ flowchart LR
     style F fill:#e8f0fe,stroke:#4285F4,color:#17222c
 ```
 
+<details>
+<summary><b>The 18 dimensions, and what each watches for</b></summary>
+
+One fixed vocabulary. The analyst may only emit these, and every one of the
+128 rules is written against one of them — which is what makes the join
+between a fact and a market's opinion a lookup rather than an argument.
+
+| | Dimension | What it watches for |
+|---|---|---|
+| <img src="docs/media/icons/d-alcohol_tobacco_drugs.svg" width="24"> | **alcohol tobacco drugs** | drink, smoke and substances on screen |
+| <img src="docs/media/icons/d-religious_symbols_practices.svg" width="24"> | **religious symbols practices** | faith, ritual and sacred imagery |
+| <img src="docs/media/icons/d-modesty_dress_body.svg" width="24"> | **modesty dress body** | how much skin a market allows |
+| <img src="docs/media/icons/d-gesture_body_language.svg" width="24"> | **gesture body language** | a gesture that means something else here |
+| <img src="docs/media/icons/d-food_and_animals.svg" width="24"> | **food and animals** | what may be eaten, and what may not be shown |
+| <img src="docs/media/icons/d-gender_portrayal.svg" width="24"> | **gender portrayal** | roles, stereotypes and objectification |
+| <img src="docs/media/icons/d-sexual_orientation_gender_id.svg" width="24"> | **sexual orientation gender id** | who may be shown together |
+| <img src="docs/media/icons/d-children_and_minors.svg" width="24"> | **children and minors** | advertising to, and with, children |
+| <img src="docs/media/icons/d-national_symbols_politics.svg" width="24"> | **national symbols politics** | flags, anthems, leaders, borders |
+| <img src="docs/media/icons/d-health_claims_pharma.svg" width="24"> | **health claims pharma** | medicinal and nutritional promises |
+| <img src="docs/media/icons/d-gambling_and_finance.svg" width="24"> | **gambling and finance** | betting, credit and financial promotion |
+| <img src="docs/media/icons/d-violence_and_weapons.svg" width="24"> | **violence and weapons** | force, threat and weaponry |
+| <img src="docs/media/icons/d-language_profanity_idiom.svg" width="24"> | **language profanity idiom** | words that do not travel |
+| <img src="docs/media/icons/d-humour_irony_satire.svg" width="24"> | **humour irony satire** | jokes that land differently |
+| <img src="docs/media/icons/d-superstition_number_colour.svg" width="24"> | **superstition number colour** | numbers, colours and omens |
+| <img src="docs/media/icons/d-photosensitivity_sensory.svg" width="24"> | **photosensitivity sensory** | flashing, strobing and sensory risk |
+| <img src="docs/media/icons/d-text_legibility.svg" width="24"> | **text legibility** | on-screen text, language and readability |
+| <img src="docs/media/icons/d-comparative_claims.svg" width="24"> | **comparative claims** | superiority, firsts and head-to-heads |
+
+</details>
+
 A finding is always a **join**: *this observation* × *that market's rule* × *a citation that resolves*. Which makes "is this fact wrong?" and "is this rule wrong?" separable questions — and that is the whole reason findings are cheap, parallel and defensible.
 
 The analyst is forbidden from expressing an opinion. It writes *"a woman raises a glass of red wine"*, never *"this violates French law"*. Ninety-eight adjudicators then argue about that one sentence, simultaneously, each holding a different rulebook.
@@ -126,13 +156,20 @@ The analyst is forbidden from expressing an opinion. It writes *"a woman raises 
 
 Five stages, in order, from [`src/customs/crew.py`](src/customs/crew.py). The stage names below are the ones the code emits.
 
-| # | Stage | Agent | What it does | What it writes |
+| | Stage | Agent | What it does | What it writes |
 |---|---|---|---|---|
-| 1 | `ingest` | `IngestAgent` | ffmpeg shot detection, one Gemini audio call per shot, and a **measured** flash sweep — a strobe is a property of the sequence, not of any frame, so it is counted rather than asked about | shots, transcripts, photosensitivity observations |
-| 2 | `analyst` | `AnalystAgent` | one Gemini vision call per shot, keyframes as image parts, the 18-dimension taxonomy in the prompt. Neutral sentences only — no verdicts | observations + bounding boxes + evidence frames |
-| 3 | `adjudicators` | `AdjudicatorAgent` × N inside an ADK `ParallelAgent` | a pure dimension join against each market's YAML pack, then **one** batched Gemini call and **one** grounded Google Search citation per triggered rule. N markets cost one market's latency | a verdict for every candidate pairing, cleared ones included |
-| 4 | `guard` | `GuardAgent` | reads the matched rule's metadata and nothing else — never the rationale, never a model-authored field. Runs after the fan-out joins, which makes it the single findings write | findings (the one write, on one thread) |
-| 5 | `publisher` | `PublisherAgent` — the only `LlmAgent` | issues five tool calls itself, three of them live Grafana MCP, reads every result, decides what to do when one fails, and composes the prose it writes into the overview dashboard | Mimir series, Loki lines, annotations, dashboards, alert rules |
+| <img src="docs/media/icons/i-ingest.svg" width="26"> | **1 · ingest** | `IngestAgent` | ffmpeg shot detection, one Gemini audio call per shot, and a **measured** flash sweep — a strobe is a property of the sequence, not of any frame, so it is counted rather than asked about | shots, transcripts, photosensitivity observations |
+| <img src="docs/media/icons/i-analyst.svg" width="26"> | **2 · analyst** | `AnalystAgent` | one Gemini vision call per shot, keyframes as image parts, the 18-dimension taxonomy in the prompt. Neutral sentences only — no verdicts | observations + bounding boxes + evidence frames |
+| <img src="docs/media/icons/i-adjudicator.svg" width="26"> | **3 · adjudicators** | `AdjudicatorAgent` × N in an ADK `ParallelAgent` | a pure dimension join against each market's YAML pack, then **one** batched Gemini call and **one** grounded Google Search citation per triggered rule. N markets cost one market's latency | a verdict for every candidate pairing, cleared ones included |
+| <img src="docs/media/icons/i-guard.svg" width="26"> | **4 · guard** | `GuardAgent` | reads the matched rule's metadata and nothing else — never the rationale, never a model-authored field. Runs after the fan-out joins, which makes it the single findings write | findings (the one write, on one thread) |
+| <img src="docs/media/icons/i-publisher.svg" width="26"> | **5 · publisher** | `PublisherAgent` — the only `LlmAgent` | issues five tool calls itself, three of them live Grafana MCP, reads every result, decides what to do when one fails, and composes the prose it writes into the overview dashboard | Mimir series, Loki lines, annotations, dashboards, alert rules |
+
+And two more the crew meets only when something has to change:
+
+| | Stage | What it does |
+|---|---|---|
+| <img src="docs/media/icons/i-remediator.svg" width="26"> | **remediator** | woken by a Grafana alert. Plans the cheapest edit that would satisfy the rule, prices it, and changes only the seconds objected to |
+| <img src="docs/media/icons/i-verifier.svg" width="26"> | **verifier** | re-runs the real analyst pass over the changed shots — same instrument that found the problem — and rules on whether it is gone and nothing new broke |
 
 
 <details>
@@ -206,58 +243,73 @@ The crew still writes to Grafana Cloud over MCP. The viewer is a second pair of 
 
 ## The console
 
-<table>
-<tr>
-<td width="50%" valign="top">
+Nine screens, each one a way of asking the same question at a different distance.
 
-**Launch board** — the verdict, market by market, flipping live as adjudicators return.
+### <img src="docs/media/icons/n-new.svg" width="22"> The front door
+
+Hand it a file or a YouTube link, pick the markets, and watch it clear customs live.
+
+<img src="docs/media/01-landing.png" alt="The front door" width="100%">
+
+### <img src="docs/media/icons/n-board.svg" width="22"> Archive
+
+Every clearance this instance has performed. Hover a card and the whole film plays as a five-second timelapse; the squares beneath it are live Grafana.
+
+<img src="docs/media/02-archive.png" alt="Archive" width="100%">
+
+### <img src="docs/media/icons/i-frame.svg" width="22"> Launch board
+
+The verdict, market by market, flipping in place as each adjudicator returns.
 
 <img src="docs/media/03-launch-board.png" alt="Launch board" width="100%">
 
-</td>
-<td width="50%" valign="top">
+And on the same page, the crew's own lanes dashboard — live, framed, and clickable:
 
-**Mission feed** — every agent's own words, grouped by stage, streamed over SSE.
+<img src="docs/media/03b-board-grafana.png" alt="The lanes dashboard, live from Grafana" width="100%">
+
+### <img src="docs/media/icons/n-timeline.svg" width="22"> Timeline
+
+One grid drawn by two systems: our icons down the side and each scene's opening frame across the top, Grafana's live status history as the body between them. Click a square to start the Omni rewrite for that scene.
+
+<img src="docs/media/04-timeline-grid.png" alt="The merged grid" width="100%">
+
+### <img src="docs/media/icons/n-feed.svg" width="22"> Mission feed
+
+Every move the crew made, in the order it made them — each stage saying in plain words what it is doing, with its own shorthand underneath.
 
 <img src="docs/media/05-mission-feed.png" alt="Mission feed" width="100%">
 
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
+### <img src="docs/media/icons/i-frame.svg" width="22"> Frame board
 
-**Frame board** — every scene the crew looked at, how it opens and closes, and what it made of each.
+Every scene the crew looked at, how it opens and closes, and the neutral sentences it wrote before any market saw them.
 
 <img src="docs/media/06-frame-board.png" alt="Frame board" width="100%">
 
-</td>
-<td width="50%" valign="top">
+### <img src="docs/media/icons/n-market.svg" width="22"> Market room
 
-**Market room** — the statute behind every finding, its severity, and the priced fix options.
+One panel per scene. Closed, a scene is its first and last frame and a count; opened, every finding written against it, each with the statute behind it and a priced fix.
 
-<img src="docs/media/07-market-room.png" alt="Market room" width="100%">
+<img src="docs/media/07-market-room.png" alt="Market room, scenes closed" width="100%">
 
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
+<img src="docs/media/07b-market-open.png" alt="Market room, a scene opened" width="100%">
 
-**Library** — every rule, filed under the observation that can trigger it.
+### <img src="docs/media/icons/n-cut.svg" width="22"> Cutting room
 
-<img src="docs/media/10-library.png" alt="Rule library" width="100%">
+The original and the localized master, playing in lockstep on the second that changed.
 
-</td>
-<td width="50%" valign="top">
+<img src="docs/media/08-cutting-room.png" alt="Cutting room" width="100%">
 
-**Agent mode** — a second ADK surface: one `LlmAgent` with ten tools, for asking the archive questions.
+### <img src="docs/media/icons/i-adjudicator.svg" width="22"> Agent mode
+
+A second ADK surface: one `LlmAgent` with ten tools. Ask in sentences; it answers by opening the evidence beside you and pricing any fix before it runs.
 
 <img src="docs/media/09-agent-mode.png" alt="Agent mode" width="100%">
 
-</td>
-</tr>
-</table>
+### <img src="docs/media/icons/n-library.svg" width="22"> Rule library
 
-Not shown: the **cutting room**, where the original and the localized master play in lockstep on the second that changed — the three loops at the top of this page are what it looks like.
+Every rule, filed under the observation that can trigger it.
+
+<img src="docs/media/10-library.png" alt="Rule library" width="100%">
 
 Everything that is *working* wears one mark: a rotating ring of the four brand colours. An uploading master, a run mid-analysis, a market tile whose fix is landing, the exact frame being repaired, the stage narrating it, and a beacon in the topbar that says what is running wherever you are.
 
@@ -269,12 +321,12 @@ Six methods live in [`remediate.py`](src/customs/remediate.py); five are offered
 
 | Method | What it touches | Price |
 |---|---|---|
+| `omni` | Gemini Omni rewrites the whole span as video-to-video | €0.10 × span (≤ 10 s) |
+| `bridge` | **both ends of the span edited, and Veo 3.1 generates the motion between them** | €1.88 – €3.68 |
 | `relettering` | one Gemini image edit of one keyframe, landed onto the span | €0.04 |
-| `prop_swap` | same, for an object — a bottle, a cigarette, a logo | €0.04 |
+| `prop_swap` | the same, for an object — a bottle, a cigarette, a logo | €0.04 |
 | `revoice` | the audio span, re-spoken with TTS | €0.04 |
 | `per_frame` | a repaint of every frame in the span | €0.04 × ⌈span × 12⌉ |
-| `omni` | Gemini Omni rewrites the span as video-to-video | €0.10 × span (≤ 10 s) |
-| `bridge` | **both ends of the span edited, and Veo 3.1 generates the motion between them** | €1.88 – €3.68 |
 
 `bridge` is never chosen automatically. It regenerates pixels and costs real money, so it only ever runs because an operator picked it — or clicked a data link on a Grafana panel — and the day's budget allowed it. The budget is **€45/day**, system-wide, which buys somewhere between 12 and 23 bridges.
 
