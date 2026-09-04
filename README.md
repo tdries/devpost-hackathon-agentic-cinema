@@ -394,13 +394,39 @@ Everything that is *working* wears one mark: a rotating ring of the four brand c
 
 Five methods are offered in the console picker, each one a different amount of footage to disturb. The mark beside each is the gesture it performs.
 
-| | Method | What it touches | Price |
-|---|---|---|---|
-| <img src="docs/media/icons/m-omni.svg" width="26"> | `omni` | Gemini Omni rewrites the whole span as video-to-video | €0.10 × span (≤ 10 s) |
-| <img src="docs/media/icons/m-bridge.svg" width="26"> | `bridge` | **both ends of the span edited, and Veo 3.1 generates the motion between them** | €1.88 – €3.68 |
-| <img src="docs/media/icons/m-overlay.svg" width="26"> | `overlay` | one Gemini image edit of one keyframe, held over the span | €0.04 |
-| <img src="docs/media/icons/m-track.svg" width="26"> | `track` | the same edit, its lighting divided out and multiplied into every live frame | €0.04 |
-| <img src="docs/media/icons/m-per_frame.svg" width="26"> | `per_frame` | a repaint of every frame in the span | €0.04 × ⌈span × 12⌉ |
+<table>
+<tr><th></th><th align="left">Method</th><th align="left">What it touches</th><th align="left">Price</th></tr>
+<tr>
+<td width="96" align="center"><img src="docs/media/icons/m-omni.svg" width="78" height="78"></td>
+<td><code>omni</code></td>
+<td>Gemini Omni rewrites the whole span as video-to-video</td>
+<td>€0.10 × span (≤ 10 s)</td>
+</tr>
+<tr>
+<td width="96" align="center"><img src="docs/media/icons/m-bridge.svg" width="78" height="78"></td>
+<td><code>bridge</code></td>
+<td><b>both ends of the span edited, and Veo 3.1 generates the motion between them</b></td>
+<td>€1.88 – €3.68</td>
+</tr>
+<tr>
+<td width="96" align="center"><img src="docs/media/icons/m-overlay.svg" width="78" height="78"></td>
+<td><code>overlay</code></td>
+<td>one Gemini image edit of one keyframe, held over the span</td>
+<td>€0.04</td>
+</tr>
+<tr>
+<td width="96" align="center"><img src="docs/media/icons/m-track.svg" width="78" height="78"></td>
+<td><code>track</code></td>
+<td>the same edit, its lighting divided out and multiplied into every live frame</td>
+<td>€0.04</td>
+</tr>
+<tr>
+<td width="96" align="center"><img src="docs/media/icons/m-per_frame.svg" width="78" height="78"></td>
+<td><code>per_frame</code></td>
+<td>a repaint of every frame in the span</td>
+<td>€0.04 × ⌈span × 12⌉</td>
+</tr>
+</table>
 
 Automatic fixes name themselves by what they change rather than by how much they disturb: `relettering` for on-screen text, `prop_swap` for an object, `revoice` for a spoken line. The first two land through the picker's own two patch paths — a relight propagated into every live frame when the finding's box can be located, a freeze over the span when it cannot — and `revoice` replaces the audio span with TTS. `plan()` chooses among them by the *observation's* dimension, and it is a pure function: no model call.
 
