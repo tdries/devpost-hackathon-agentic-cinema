@@ -224,7 +224,7 @@ def test_a_number_the_model_invented_is_not_a_frame(monkeypatch):
     ops = FakeOps([line("An animated rabbit.", obs="o1")])
     monkeypatch.setattr(search, "generate_json_for_test", None, raising=False)
 
-    def fake_generate(model, parts, schema):
+    def fake_generate(model, parts, schema, thinking_budget=None):
         return {"matches": [0, 77]}
 
     monkeypatch.setattr(search, "route", lambda *a, **k: [])
