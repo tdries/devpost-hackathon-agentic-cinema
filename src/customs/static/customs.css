@@ -2555,6 +2555,23 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
    the expensive one further down the page in its own words. */
 .already-do { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
 
+/* ---------- the Grafana resources page ----------
+   An inventory reads as tables, so it is built from the console's own
+   .grid table with three concessions: a query needs a monospace cell that
+   can wrap anywhere, the secondary columns need to be smaller than the
+   sentence beside them, and the counts under the title are a line rather
+   than the band of numerals the front page used to carry. */
+.gcount { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 16px 0 0;
+  font-size: 12px; color: var(--ink-3); }
+.gcount b { color: var(--ink); font-size: 14px; margin-right: 5px; }
+.gtable td { vertical-align: top; }
+.gsmall { font-size: 11.5px; line-height: 1.5; color: var(--ink-2); }
+.gq { font-family: var(--mono); font-size: 11.5px; overflow-wrap: anywhere;
+  background: var(--well); border: 1px solid var(--line); border-radius: 4px;
+  padding: 2px 5px; display: inline-block; color: var(--ink-2); }
+.gboard summary .libcount .mono { font-size: 11px; color: var(--ink-3); }
+.gwhere { padding: 10px 16px 14px; margin: 0; font-size: 12px; }
+
 .archlive { width: 100%; height: 260px; border: 1px solid var(--line);
   border-radius: 3px; background: var(--well); display: block; }
 
