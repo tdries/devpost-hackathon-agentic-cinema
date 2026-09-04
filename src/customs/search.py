@@ -28,6 +28,7 @@ otherwise count a rule named RABBIT-01 as a rabbit on screen:
 from __future__ import annotations
 
 import json
+import logging
 import re
 from collections import Counter
 
@@ -38,6 +39,7 @@ from customs.config import settings
 # for free: "bunn|rabbit|hare" is a legitimate and useful thing to ask,
 # which is the whole point of not making this a menu.
 _MAX_PATTERN = 200
+_log = logging.getLogger(__name__)
 
 
 class SearchError(ValueError):
@@ -305,7 +307,10 @@ def frames(ops, text: str = "", dimension: str = "", market: str = "",
             # obvious matches, and the caller is told which one answered.
             fallback = _compile(re.escape(wanted))
             hits = [h for h in hits if fallback.search(h["statement"])]
-            mode = f"literal (semantic failed: {type(exc).__name__})"
+            # The message, not just the class: "RuntimeError" costs an hour
+            # and "429 quota exceeded" costs nothing.
+            mode = f"literal (semantic failed: {type(exc).__name__}: {exc})"[:220]
+            _log.warning("semantic match failed: %r", exc)
             reason = {}
         else:
             hits = [dict(h, why=reason.get(i, "")) for i, h in enumerate(hits)
