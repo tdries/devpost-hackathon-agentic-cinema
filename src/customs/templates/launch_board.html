@@ -86,7 +86,7 @@
   <p class="subline" style="max-width:92ch;font-size:13.5px">
     One lane per category the analyst can see, across this film's own clock. Coloured where a
     market objected, flat where we looked and nobody minded. The axis is the run's mapped
-    clock &mdash; wall second t0+n <em>is</em> film second n.
+    clock: wall second t0+n <em>is</em> film second n.
   </p>
   {% if embeds.viewer %}
   {# Live, and framed: this is the crew's own lanes dashboard, running in a
@@ -157,7 +157,7 @@
         <img src="/runs/{{ run.id }}/panels/clearance.png" alt="Market clearance status, from Grafana">
       </a>
       {% endif %}
-      <div class="embed-note">Market clearance status for every asset this instance is tracking, on the current clock &mdash; not just this run. It moves again every time a remediation resolves a finding. <a class="cite" href="{{ embeds.overview }}" target="_blank" rel="noreferrer">Open the overview</a></div>
+      <div class="embed-note">Market clearance status for every asset this instance is tracking, on the current clock, not just this run. It moves again every time a remediation resolves a finding. <a class="cite" href="{{ embeds.overview }}" target="_blank" rel="noreferrer">Open the overview</a></div>
     </div>
     <div class="embed">
       <a href="{{ embeds.timeline }}" target="_blank" rel="noreferrer">

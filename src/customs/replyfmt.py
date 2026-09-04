@@ -29,7 +29,10 @@ from customs.state import colour_for_severity
 # --- what we can recognise -------------------------------------------------
 
 _RULE = re.compile(r"\b([A-Z]{2}(?:-[A-Z0-9]{1,8})*-[A-Z]{3,6}-\d{2})\b")
-_TIME = re.compile(r"\b(\d{1,2}:\d{2}(?:\.\d)?|\d{1,3}\.\d\s?[-–]\s?\d{1,3}\.\d\s?s|\d{1,3}\.\d\s?s)\b")
+# The en dash in the range is READ, never written: the agent's own prose is
+# a model's, and a model writes "1.5 - 3.0s" with either kind of dash.
+# Recognising both is what turns either into a timecode chip.  # dash: parsed
+_TIME = re.compile(r"\b(\d{1,2}:\d{2}(?:\.\d)?|\d{1,3}\.\d\s?[-–]\s?\d{1,3}\.\d\s?s|\d{1,3}\.\d\s?s)\b")  # dash: parsed
 _SEV = re.compile(r"\bseverity\s+(\d{1,3})\b", re.I)
 _CODE = re.compile(r"`([^`\n]{1,200})`")
 _BOLD = re.compile(r"\*\*([^*\n]{1,300})\*\*")

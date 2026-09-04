@@ -2,7 +2,7 @@
 
 **Where to send it:** https://grafana.com/orgs/<your-org>/support (logged in as the
 account that owns the stack), or the "Support" item in the Grafana Cloud portal.
-Free-tier accounts may only get the community forum — if there is no ticket
+Free-tier accounts may only get the community forum, and if there is no ticket
 option, post the same text at https://community.grafana.com under "Grafana Cloud".
 
 **What we are asking for:** Grafana's own embedding guide says authenticated
@@ -31,9 +31,9 @@ display live, interactive dashboards in an iframe.
 
 Context: the application is an agentic ad-clearance console built for the Agentic
 Cinema hackathon (Grafana Labs track). Its agents write to this stack over the
-official grafana/mcp-grafana server — metrics to Mimir over OTLP, finding detail
+official grafana/mcp-grafana server: metrics to Mimir over OTLP, finding detail
 to Loki, and dashboards, annotations and alert rules created by the agents
-themselves — and an alert rule on one of those dashboards webhooks back into the
+themselves, and an alert rule on one of those dashboards webhooks back into the
 app to trigger automated remediation. The console currently renders your panels
 server-side as PNGs via the render endpoint, because
 `Content-Security-Policy: frame-ancestors 'none'` is returned on every dashboard

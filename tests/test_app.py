@@ -2179,6 +2179,39 @@ def test_a_lane_is_never_shorter_than_the_glyph_that_labels_it():
     assert height >= ys[-1] + 38
 
 
+def test_nothing_a_reader_sees_is_punctuated_with_an_em_dash():
+    """The house style, enforced rather than remembered.
+
+    Em dashes read as machine-written, and this project's copy is meant to
+    read as though a person wrote it, so the punctuation that carries the
+    aside is a comma, a colon, a bracket or a full stop. They had crept
+    back into sixty-three places in the README alone.
+
+    One exception, and it is quoted: Grafana's own documentation says
+    "authenticates users interactively -- there is no service-account or
+    machine-token option", and repunctuating somebody else's sentence
+    inside quotation marks would be a misquote. A line marked
+    "# dash: parsed" is exempt for the other honest reason: it recognises a
+    dash in a model's own prose rather than writing one.
+    """
+    QUOTED = "authenticates users interactively"
+    # A pattern that RECOGNISES an en dash in a model's prose is not copy.
+    PARSED = "# dash: parsed"
+    surfaces = [Path("README.md"), Path("docs/devpost.md"),
+                Path("src/customs/static/customs.js")]
+    surfaces += sorted(Path("src/customs/templates").glob("*.html"))
+    surfaces += sorted(Path("src/customs").glob("*.py"))
+
+    offenders = []
+    for path in surfaces:
+        for n, line in enumerate(path.read_text().splitlines(), 1):
+            if QUOTED in line or PARSED in line:
+                continue
+            if "\u2014" in line or "\u2013" in line or "&mdash;" in line or "&ndash;" in line:
+                offenders.append(f"{path}:{n}: {line.strip()[:80]}")
+    assert not offenders, "em dash in copy a reader sees:\n" + "\n".join(offenders)
+
+
 def test_every_method_the_picker_offers_has_its_own_mark(console):
     """Five choices, three lines of prose each, and nothing to tell them
     apart at a glance. Each method now carries the gesture it performs --

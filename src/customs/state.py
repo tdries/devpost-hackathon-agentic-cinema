@@ -8,10 +8,10 @@ place and red in the other. Both read this.
 from __future__ import annotations
 
 # The brand's four, exact. Nothing else may name a hex.
-SIGNAL = "#4285F4"     # blue    — the accent, and "needs a human"
-BLOCKED = "#EA4335"    # red     — a market that will not take the film
-AT_RISK = "#FBBC05"    # yellow  — cleared, with findings still open
-CLEARED = "#34A853"    # green   — cleared and clean
+SIGNAL = "#4285F4"     # blue    is the accent, and "needs a human"
+BLOCKED = "#EA4335"    # red     is a market that will not take the film
+AT_RISK = "#FBBC05"    # yellow  is cleared, with findings still open
+CLEARED = "#34A853"    # green   is cleared and clean
 
 # adjudicate.CLEARANCE_SEVERITY_THRESHOLD is the blocking line; these are
 # the display bands, and they must not contradict it.
