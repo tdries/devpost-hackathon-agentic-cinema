@@ -4,12 +4,12 @@
 
 ### One asset, every market, before it ships.
 
-**An AI crew watches your commercial once, judges it against 98 jurisdictions in parallel, builds its own Grafana instrument panel — and re-renders the shots that fail.**
+**An AI crew watches your commercial once, judges it against 98 jurisdictions in parallel, builds its own Grafana instrument panel, and re-renders the shots that fail.**
 
 <img src="docs/media/powered-by-grafana.png" alt="Powered by Grafana" width="150">
 
 [![Live instance](https://img.shields.io/badge/live-customs--app.run.app-4285F4?style=flat-square)](https://customs-app-akap4ao72a-ew.a.run.app)
-[![Tests](https://img.shields.io/badge/tests-539_passing-34A853?style=flat-square)](#tests)
+[![Tests](https://img.shields.io/badge/tests-540_passing-34A853?style=flat-square)](#tests)
 [![Jurisdictions](https://img.shields.io/badge/jurisdictions-98-FBBC05?style=flat-square)](#the-jurisdiction-ladder)
 [![Rules](https://img.shields.io/badge/rules-128_with_citations-EA4335?style=flat-square)](#the-jurisdiction-ladder)
 [![Grafana](https://img.shields.io/badge/Grafana-MCP_at_runtime-F46800?style=flat-square)](#grafana-is-a-participant-not-a-picture)
@@ -25,7 +25,7 @@ Judges, the word at the door is **`DEVPOST`**.
 
 ## Watch a fix land
 
-Three violations, found and repaired by the system itself. Left is what was uploaded; right is what came back. Every clip below is footage this project generated and then fixed with its own methods — no stock, no borrowed IP.
+Three violations, found and repaired by the system itself. Left is what was uploaded; right is what came back. Every clip below is footage this project generated and then fixed with its own methods: no stock, no borrowed IP.
 
 <table>
 <tr><td width="100%">
@@ -52,7 +52,7 @@ Three violations, found and repaired by the system itself. Left is what was uplo
 </table>
 
 > [!NOTE]
-> These are the *marketing* clips, and they were held to the product's own standard. The first take of the skirt pair came back with legible Chanel storefronts in the background — third-party branding, on the homepage of a rights-clearance tool — so it was thrown away and regenerated with brands banned.
+> These are the *marketing* clips, and they were held to the product's own standard. The first take of the skirt pair came back with legible Chanel storefronts in the background (third-party branding, on the homepage of a rights-clearance tool), so it was thrown away and regenerated with brands banned.
 
 ---
 
@@ -60,7 +60,7 @@ Three violations, found and repaired by the system itself. Left is what was uplo
 
 A global brand ships one commercial into forty markets and checks maybe six of them.
 
-The regulated half of the risk already carries an invoice: France bans TV alcohol advertising under Loi Évin, Quebec bans advertising aimed at children under 13, the UK pre-clears every TV ad through Clearcast, Nigeria requires ARCON vetting before air. The unregulated half costs more — Pepsi and Kendall Jenner, Dolce & Gabbana in China, H&M's hoodie. Every one of those was caught by the public rather than by a process.
+The regulated half of the risk already carries an invoice: France bans TV alcohol advertising under Loi Évin, Quebec bans advertising aimed at children under 13, the UK pre-clears every TV ad through Clearcast, Nigeria requires ARCON vetting before air. The unregulated half costs more: Pepsi and Kendall Jenner, Dolce & Gabbana in China, H&M's hoodie. Every one of those was caught by the public rather than by a process.
 
 Pilots get a pre-flight checklist and an instrument panel. Ad launches get a consultant, a focus group, and luck.
 
@@ -70,7 +70,7 @@ This is the instrument.
 
 ## What it does
 
-Hand it a commercial — a file, or a YouTube link — and a market list, then watch it clear customs in real time.
+Hand it a commercial (a file, or a YouTube link) and a market list, then watch it clear customs in real time.
 
 <div align="center">
 
@@ -82,7 +82,7 @@ The output is two things: **a decision** (can this air here, and on what evidenc
 
 | | |
 |---|---|
-| **98 jurisdictions** | 21 market packs resolving to a global baseline, the EU, 16 countries and 80 broadcasters — 757 market-rule pairings once inheritance resolves |
+| **98 jurisdictions** | 21 market packs resolving to a global baseline, the EU, 16 countries and 80 broadcasters, 757 market-rule pairings once inheritance resolves |
 | **128 rules** | every one naming a real statute, broadcaster code or cultural norm, with a live citation |
 | **18 dimensions** | one fixed taxonomy the analyst emits and every rule is written against |
 | **6 repair methods** | from a €0.04 single-frame patch to a €3.68 Veo-generated bridge, priced in euro before you press |
@@ -122,7 +122,7 @@ flowchart LR
 <summary><b>The 18 dimensions, and what each watches for</b></summary>
 
 One fixed vocabulary. The analyst may only emit these, and every one of the
-128 rules is written against one of them — which is what makes the join
+128 rules is written against one of them, which is what makes the join
 between a fact and a market's opinion a lookup rather than an argument.
 
 | | Dimension | What it watches for |
@@ -148,7 +148,7 @@ between a fact and a market's opinion a lookup rather than an argument.
 
 </details>
 
-A finding is always a **join**: *this observation* × *that market's rule* × *a citation that resolves*. Which makes "is this fact wrong?" and "is this rule wrong?" separable questions — and that is the whole reason findings are cheap, parallel and defensible.
+A finding is always a **join**: *this observation* × *that market's rule* × *a citation that resolves*. Which makes "is this fact wrong?" and "is this rule wrong?" separable questions, and that is the whole reason findings are cheap, parallel and defensible.
 
 The analyst is forbidden from expressing an opinion. It writes *"a woman raises a glass of red wine"*, never *"this violates French law"*. Ninety-eight adjudicators then argue about that one sentence, simultaneously, each holding a different rulebook.
 
@@ -162,9 +162,9 @@ Five stages, in order, from [`src/customs/crew.py`](src/customs/crew.py). The st
 <td width="110" align="center"><img src="docs/media/icons/i-ingest.svg" width="88" height="88"></td>
 <td>
 
-**1 · ingest** — `IngestAgent`
+**1 · ingest**: `IngestAgent`
 
-ffmpeg cuts the film into its own shots, one Gemini audio call per shot writes the transcript, and a **measured** flash sweep counts luminance edges — a strobe is a property of the sequence, not of any frame, so it is counted rather than asked about.
+ffmpeg cuts the film into its own shots, one Gemini audio call per shot writes the transcript, and a **measured** flash sweep counts luminance edges: a strobe is a property of the sequence, not of any frame, so it is counted rather than asked about.
 
 *Writes:* shots, transcripts, photosensitivity observations
 
@@ -175,9 +175,9 @@ ffmpeg cuts the film into its own shots, one Gemini audio call per shot writes t
 <td width="110" align="center"><img src="docs/media/icons/i-analyst.svg" width="88" height="88"></td>
 <td>
 
-**2 · analyst** — `AnalystAgent`
+**2 · analyst**: `AnalystAgent`
 
-One Gemini vision call per shot: keyframes as image parts, the 18-dimension taxonomy in the prompt, and neutral sentences out. No verdicts allowed — it writes *“a woman raises a glass of red wine”*, never *“this violates French law”*.
+One Gemini vision call per shot: keyframes as image parts, the 18-dimension taxonomy in the prompt, and neutral sentences out. No verdicts allowed: it writes *“a woman raises a glass of red wine”*, never *“this violates French law”*.
 
 *Writes:* observations, bounding boxes, evidence frames
 
@@ -188,7 +188,7 @@ One Gemini vision call per shot: keyframes as image parts, the 18-dimension taxo
 <td width="110" align="center"><img src="docs/media/icons/i-adjudicator.svg" width="88" height="88"></td>
 <td>
 
-**3 · adjudicators** — `AdjudicatorAgent` × N in an ADK `ParallelAgent`
+**3 · adjudicators**: `AdjudicatorAgent` × N in an ADK `ParallelAgent`
 
 A pure dimension join against each market's YAML pack, then **one** batched Gemini call and **one** grounded Google Search citation per triggered rule. N markets cost one market's latency, not N.
 
@@ -201,9 +201,9 @@ A pure dimension join against each market's YAML pack, then **one** batched Gemi
 <td width="110" align="center"><img src="docs/media/icons/i-guard.svg" width="88" height="88"></td>
 <td>
 
-**4 · guard** — `GuardAgent`
+**4 · guard**: `GuardAgent`
 
-Reads the matched rule's metadata and nothing else — never the rationale, never a model-authored field, never a model. Which is what makes it un-promptable. It runs after the fan-out joins, so it is also the single findings write.
+Reads the matched rule's metadata and nothing else: never the rationale, never a model-authored field, never a model. Which is what makes it un-promptable. It runs after the fan-out joins, so it is also the single findings write.
 
 *Writes:* findings (the one write, on one thread)
 
@@ -214,9 +214,9 @@ Reads the matched rule's metadata and nothing else — never the rationale, neve
 <td width="110" align="center"><img src="docs/media/icons/i-publisher.svg" width="88" height="88"></td>
 <td>
 
-**5 · publisher** — `PublisherAgent` — the only `LlmAgent`
+**5 · publisher**: `PublisherAgent`, the only `LlmAgent`
 
-Issues five tool calls itself, three of them live Grafana MCP. It reads every result, decides what to do when one fails, and composes the prose it writes into the overview dashboard's description — a real MCP write, every run, in words no template produced.
+Issues five tool calls itself, three of them live Grafana MCP. It reads every result, decides what to do when one fails, and composes the prose it writes into the overview dashboard's description: a real MCP write, every run, in words no template produced.
 
 *Writes:* Mimir series, Loki lines, annotations, dashboards, alert rules
 
@@ -231,7 +231,7 @@ And two the crew meets only when something has to change:
 
 **remediator**
 
-Woken by a Grafana alert. Works out the cheapest edit that would satisfy the rule, prices it in euro, and changes only the seconds that were objected to — sweeping every other open finding on the same shot into one combined edit.
+Woken by a Grafana alert. Works out the cheapest edit that would satisfy the rule, prices it in euro, and changes only the seconds that were objected to, sweeping every other open finding on the same shot into one combined edit.
 
 </td>
 </tr></table>
@@ -242,7 +242,7 @@ Woken by a Grafana alert. Works out the cheapest edit that would satisfy the rul
 
 **verifier**
 
-Re-runs the real analyst pass over the changed shots — the same instrument that found the problem — to confirm the violation is gone *and* that nothing new broke.
+Re-runs the real analyst pass over the changed shots (the same instrument that found the problem) to confirm the violation is gone *and* that nothing new broke.
 
 </td>
 </tr></table>
@@ -250,15 +250,15 @@ Re-runs the real analyst pass over the changed shots — the same instrument tha
 <details>
 <summary><b>Stage by stage, with the file that does it</b></summary>
 
-**1 · ingest** — `crew.IngestAgent`. `media.detect_shots` runs an ffmpeg scene-score ladder, `analyst.merge_micro_shots` folds away sub-second fragments. Then one Gemini audio call per shot for a transcript. Then `media.detect_flashes`, which is the one observation that is *measured* rather than asked of a model: it reads full-frame luminance and every window over 3.0 flashes/second becomes a photosensitivity observation. A vision model cannot see a strobe — a strobe is a property of the *sequence*, not of any frame — and this is exactly how the milestone gate once missed a planted 6 Hz strobe.
+**1 · ingest**: `crew.IngestAgent`. `media.detect_shots` runs an ffmpeg scene-score ladder, `analyst.merge_micro_shots` folds away sub-second fragments. Then one Gemini audio call per shot for a transcript. Then `media.detect_flashes`, which is the one observation that is *measured* rather than asked of a model: it reads full-frame luminance and every window over 3.0 flashes/second becomes a photosensitivity observation. A vision model cannot see a strobe (a strobe is a property of the *sequence*, not of any frame), and this is exactly how the milestone gate once missed a planted 6 Hz strobe.
 
-**2 · analyst** — `crew.AnalystAgent`. One Gemini vision call per shot, keyframes as image parts, the 18-dimension taxonomy interpolated into the prompt. Emits observations with bounding boxes and evidence frames. No verdicts allowed.
+**2 · analyst**: `crew.AnalystAgent`. One Gemini vision call per shot, keyframes as image parts, the 18-dimension taxonomy interpolated into the prompt. Emits observations with bounding boxes and evidence frames. No verdicts allowed.
 
-**3 · adjudicators** — `crew.AdjudicatorAgent` inside an ADK `ParallelAgent`, one per market, each on its own thread. N markets cost one market's latency, not N. Each does a pure dimension-equality join against its YAML pack, then **one** batched Gemini call, then **one** grounded Google Search citation per triggered rule. Severity, `sourced`, the citation, remediability and the finding id are all decided in code — the model may only adjust severity *downward*, clamped to [−20, 0]. An unresolvable citation caps severity at 40 and can never trigger remediation.
+**3 · adjudicators**: `crew.AdjudicatorAgent` inside an ADK `ParallelAgent`, one per market, each on its own thread. N markets cost one market's latency, not N. Each does a pure dimension-equality join against its YAML pack, then **one** batched Gemini call, then **one** grounded Google Search citation per triggered rule. Severity, `sourced`, the citation, remediability and the finding id are all decided in code: the model may only adjust severity *downward*, clamped to [−20, 0]. An unresolvable citation caps severity at 40 and can never trigger remediation.
 
-**4 · guard** — `crew.GuardAgent`. Runs after the parallel branch joins, which makes it the single place findings are written to SQLite, on one thread. See [The Guard](#the-guard).
+**4 · guard**: `crew.GuardAgent`. Runs after the parallel branch joins, which makes it the single place findings are written to SQLite, on one thread. See [The Guard](#the-guard).
 
-**5 · publisher** — `crew.PublisherAgent`, the genuinely agentic stage: a `BaseAgent` wrapping an `LlmAgent` with five tools, three of which are live Grafana MCP calls. It issues each call itself, reads every result, decides what to do when one fails, and composes the prose it writes into the overview dashboard's description. That last step is a real MCP write, on every run, in words no template produced.
+**5 · publisher** is `crew.PublisherAgent`, the genuinely agentic stage: a `BaseAgent` wrapping an `LlmAgent` with five tools, three of which are live Grafana MCP calls. It issues each call itself, reads every result, decides what to do when one fails, and composes the prose it writes into the overview dashboard's description. That last step is a real MCP write, on every run, in words no template produced.
 
 </details>
 
@@ -266,21 +266,21 @@ Re-runs the real analyst pass over the changed shots — the same instrument tha
 
 ## Grafana is a participant, not a picture
 
-This is the [Grafana Labs track](https://agentic-cinema.devpost.com/details/grafana-resources), and the requirement is that the project *actively use the Grafana stack at runtime, primarily through the Grafana Cloud MCP server*. It does — in **three directions**, and you can watch all three happen on the live instance.
+This is the [Grafana Labs track](https://agentic-cinema.devpost.com/details/grafana-resources), and the requirement is that the project *actively use the Grafana stack at runtime, primarily through the Grafana Cloud MCP server*. It does, in **three directions**, and you can watch all three happen on the live instance.
 
 > [!IMPORTANT]
 > The MCP server is the official [`grafana/mcp-grafana`](https://github.com/grafana/mcp-grafana) **v1.1.0**, run as a stdio subprocess with a service-account token. Grafana's own documentation notes the *hosted* Cloud MCP endpoint "authenticates users interactively — there is no service-account or machine-token option." This crew is unattended, so the open-source server is the documented correct choice, not a workaround.
 
 ### 1 · The crew writes into Grafana
 
-The Publisher agent calls MCP tools to build its own instrument panel: **8 dashboards / 23 panels**, an annotation per finding, and the alert rules that will later wake the Remediator. Seven distinct `mcp-grafana` tools are called at runtime — `create_folder`, `update_dashboard`, `alerting_manage_rules`, `get_panel_image`, `query_loki_logs`, `search_dashboards`, `get_dashboard_by_uid`.
+The Publisher agent calls MCP tools to build its own instrument panel: **8 dashboards / 23 panels**, an annotation per finding, and the alert rules that will later wake the Remediator. Seven distinct `mcp-grafana` tools are called at runtime: `create_folder`, `update_dashboard`, `alerting_manage_rules`, `get_panel_image`, `query_loki_logs`, `search_dashboards`, `get_dashboard_by_uid`.
 
 What lands in the stack:
 
 | Store | What |
 |---|---|
-| **Mimir** | 5 metric series — `customs_risk` (on the film's own clock), `customs_market_status`, `customs_blocking`, `customs_stage_error` |
-| **Loki** | 3 line kinds — `kind=finding`, `kind=observation`, `kind=verdict`, each with its own stream labels |
+| **Mimir** | 5 metric series: `customs_risk` (on the film's own clock), `customs_market_status`, `customs_blocking`, `customs_stage_error` |
+| **Loki** | 3 line kinds: `kind=finding`, `kind=observation`, `kind=verdict`, each with its own stream labels |
 | **Annotations** | one per finding, tagged `["customs", asset, market, rule_id, finding_id]` |
 
 The clock trick that makes it read as a timeline: Prometheus rejects backdated samples, so each run maps the film's timecode onto the wall clock at run start. **Video second *n* is written at wall clock t₀ + *n*.** The panel's x-axis reads as the timecode because it *is* the timecode.
@@ -289,7 +289,7 @@ The clock trick that makes it read as a timeline: Prometheus rejects backdated s
 
 Two alert rules evaluate every 30 seconds. When `customs_blocking` crosses 70 for an `{asset, market, rule_id}` triple, Grafana posts to the `customs-webhook` contact point, which is `POST /webhook/alert` on this service. The webhook reads **labels only**, names the finding, and hands off to a worker.
 
-**An alert in Grafana is what starts a Veo render.** Not a cron, not a queue — a threshold in a dashboard the agent built itself.
+**An alert in Grafana is what starts a Veo render.** Not a cron, not a queue: a threshold in a dashboard the agent built itself.
 
 ### 3 · A click on a Grafana panel launches a generative workflow
 
@@ -299,16 +299,16 @@ Two alert rules evaluate every 30 seconds. When `customs_blocking` crosses 70 fo
 
 </div>
 
-That grid is one visual drawn by two systems. The **taxonomy icons down the side and each scene's opening frame across the top are the console's** — no Grafana panel can put an image on an axis, which was verified by reading the renderers, not by guessing. The **squares between them are Grafana's own `status-history` panel**, live, with its row labels and time axis hidden because the console *is* those axes. Columns are as wide as their scenes are long, so a column's share of the width is its share of the film — which is exactly what the panel's hidden time axis measures.
+That grid is one visual drawn by two systems. The **taxonomy icons down the side and each scene's opening frame across the top are the console's**: no Grafana panel can put an image on an axis, which was verified by reading the renderers, not by guessing. The **squares between them are Grafana's own `status-history` panel**, live, with its row labels and time axis hidden because the console *is* those axes. Columns are as wide as their scenes are long, so a column's share of the width is its share of the film, which is exactly what the panel's hidden time axis measures.
 
 Click a square and a data link fires `/launch/remediate` with the click's coordinate. The console resolves which open finding lives there and starts the Omni rewrite for that scene.
 
 <details>
 <summary><b>Why the panels are embedded from a self-hosted viewer</b></summary>
 
-Grafana Cloud will not be framed. Fourteen URL forms were probed with real browser and iframe headers — `/d/`, every `?kiosk` variant, `/d-solo/`, public dashboards, snapshots — and every one returns an enforcing `Content-Security-Policy: frame-ancestors 'none'`. `PUT /api/admin/settings` answers 403, because on Cloud that switch belongs to Grafana: their embedding guide grants it per-tenant, through the account team, as an origin allowlist.
+Grafana Cloud will not be framed. Fourteen URL forms were probed with real browser and iframe headers (`/d/`, every `?kiosk` variant, `/d-solo/`, public dashboards, snapshots), and every one returns an enforcing `Content-Security-Policy: frame-ancestors 'none'`. `PUT /api/admin/settings` answers 403, because on Cloud that switch belongs to Grafana: their embedding guide grants it per-tenant, through the account team, as an origin allowlist.
 
-So [`grafana-viewer/`](grafana-viewer/) is a stock `grafana-oss` with `allow_embedding=true` that holds **no data of its own** — its Loki and Mimir datasources read the same Grafana Cloud stores the crew writes to, at the same datasource UIDs the dashboards name, on a purpose-minted access policy scoped to `logs:read` + `metrics:read` and pinned by label to `{app="customs"}`. It answers `frame-ancestors 'self' <the console>`, so only the console may frame it.
+So [`grafana-viewer/`](grafana-viewer/) is a stock `grafana-oss` with `allow_embedding=true` that holds **no data of its own**: its Loki and Mimir datasources read the same Grafana Cloud stores the crew writes to, at the same datasource UIDs the dashboards name, on a purpose-minted access policy scoped to `logs:read` + `metrics:read` and pinned by label to `{app="customs"}`. It answers `frame-ancestors 'self' <the console>`, so only the console may frame it.
 
 The crew still writes to Grafana Cloud over MCP. The viewer is a second pair of eyes on the same data.
 
@@ -338,7 +338,7 @@ The verdict, market by market, flipping in place as each adjudicator returns.
 
 <img src="docs/media/03-launch-board.png" alt="Launch board" width="100%">
 
-And on the same page, the crew's own lanes dashboard — live, framed, and clickable:
+And on the same page, the crew's own lanes dashboard, live, framed, and clickable:
 
 <img src="docs/media/03b-board-grafana.png" alt="The lanes dashboard, live from Grafana" width="100%">
 
@@ -350,7 +350,7 @@ One grid drawn by two systems: our icons down the side and each scene's opening 
 
 ### <img src="docs/media/icons/n-feed.svg" width="22"> Mission feed
 
-Every move the crew made, in the order it made them — each stage saying in plain words what it is doing, with its own shorthand underneath.
+Every move the crew made, in the order it made them, each stage saying in plain words what it is doing, with its own shorthand underneath.
 
 <img src="docs/media/05-mission-feed.png" alt="Mission feed" width="100%">
 
@@ -406,7 +406,7 @@ Five methods are offered in the console picker, each one a different amount of f
 <td width="96" align="center"><img src="docs/media/icons/m-bridge.svg" width="78" height="78"></td>
 <td><code>bridge</code></td>
 <td><b>both ends of the span edited, and Veo 3.1 generates the motion between them</b></td>
-<td>€1.88 – €3.68</td>
+<td>€1.88 to €3.68</td>
 </tr>
 <tr>
 <td width="96" align="center"><img src="docs/media/icons/m-overlay.svg" width="78" height="78"></td>
@@ -428,11 +428,11 @@ Five methods are offered in the console picker, each one a different amount of f
 </tr>
 </table>
 
-Automatic fixes name themselves by what they change rather than by how much they disturb: `relettering` for on-screen text, `prop_swap` for an object, `revoice` for a spoken line. The first two land through the picker's own two patch paths — a relight propagated into every live frame when the finding's box can be located, a freeze over the span when it cannot — and `revoice` replaces the audio span with TTS. `plan()` chooses among them by the *observation's* dimension, and it is a pure function: no model call.
+Automatic fixes name themselves by what they change rather than by how much they disturb: `relettering` for on-screen text, `prop_swap` for an object, `revoice` for a spoken line. The first two land through the picker's own two patch paths (a relight propagated into every live frame when the finding's box can be located, a freeze over the span when it cannot), and `revoice` replaces the audio span with TTS. `plan()` chooses among them by the *observation's* dimension, and it is a pure function: no model call.
 
-`bridge` is never chosen automatically. It regenerates pixels and costs real money, so it only ever runs because an operator picked it — or clicked a data link on a Grafana panel — and the day's budget allowed it. The budget is **€45/day**, system-wide, which buys somewhere between 12 and 23 bridges.
+`bridge` is never chosen automatically. It regenerates pixels and costs real money, so it only ever runs because an operator picked it (or clicked a data link on a Grafana panel) and the day's budget allowed it. The budget is **€45/day**, system-wide, which buys somewhere between 12 and 23 bridges.
 
-**One shot, one edit.** Before touching a pixel, the Remediator sweeps every *other* open finding this market holds on the same shot into one combined instruction. Fixing them one at a time regenerates the same seconds repeatedly and pays for each — and the second fix would undo the first.
+**One shot, one edit.** Before touching a pixel, the Remediator sweeps every *other* open finding this market holds on the same shot into one combined instruction. Fixing them one at a time regenerates the same seconds repeatedly and pays for each, and the second fix would undo the first.
 
 ### The safety loop
 
@@ -456,7 +456,7 @@ flowchart LR
     style R fill:#e6f4ea,stroke:#34A853,color:#17222c
 ```
 
-The Verifier does not inspect the edit and does not ask the model *"did that work?"*. It re-runs the **real analyst pass** over the changed shots and asks the same instrument that found the problem whether it still sees it. Then it answers the second half of the question — *did anything new break?* — because an edit that removes a bottle can also remove the finding next to it, or introduce one.
+The Verifier does not inspect the edit and does not ask the model *"did that work?"*. It re-runs the **real analyst pass** over the changed shots and asks the same instrument that found the problem whether it still sees it. Then it answers the second half of the question (*did anything new break?*) because an edit that removes a bottle can also remove the finding next to it, or introduce one.
 
 ---
 
@@ -464,9 +464,9 @@ The Verifier does not inspect the edit and does not ask the model *"did that wor
 
 When a rule is written on a protected characteristic, the honest answer is not an edit.
 
-`guard.apply` is a pure function that reads **exactly two things**: the pack rule matched by `rule_id`, and the finding's own class. It never reads the rationale, the severity, or any other model-authored field. It never calls a model. Which means **it is un-promptable** — a crafted finding cannot argue its way past it.
+`guard.apply` is a pure function that reads **exactly two things**: the pack rule matched by `rule_id`, and the finding's own class. It never reads the rationale, the severity, or any other model-authored field. It never calls a model. Which means **it is un-promptable**: a crafted finding cannot argue its way past it.
 
-Two rules in the corpus carry `protected_basis: true` — `AE-LGBT-01` and `SA-LGBT-01`. A finding matching either gets `remediation_blocked` and the verbatim reason *"rule basis targets a protected characteristic; human decision required"*, and the console shows the statute alongside a human decision.
+Two rules in the corpus carry `protected_basis: true`. They are `AE-LGBT-01` and `SA-LGBT-01`. A finding matching either gets `remediation_blocked` and the verbatim reason *"rule basis targets a protected characteristic; human decision required"*, and the console shows the statute alongside a human decision.
 
 The refusal is enforced a second time at the point of action: `remediate._refuse_if_blocked` raises before a frame is touched.
 
@@ -486,7 +486,7 @@ GLOBAL  ── the baseline nobody escapes
           └─ RTL, TF1, VRT …  ── broadcaster codes, stricter than the law
 ```
 
-21 pack files, 128 authored rules, resolving to **98 selectable jurisdictions** (1 global, 1 continental, 16 national, 80 channel) and **757 market-rule pairings**. Every rule names its `basis` in prose and carries a citation. The class split is 94 `legal` / 25 `policy` / 9 `offence` — and class matters: an `offence`-class finding never blocks a market on its own, and never triggers an automatic edit.
+21 pack files, 128 authored rules, resolving to **98 selectable jurisdictions** (1 global, 1 continental, 16 national, 80 channel) and **757 market-rule pairings**. Every rule names its `basis` in prose and carries a citation. The class split is 94 `legal` / 25 `policy` / 9 `offence`, and class matters: an `offence`-class finding never blocks a market on its own, and never triggers an automatic edit.
 
 <details>
 <summary><b>Adding a market</b></summary>
@@ -521,7 +521,7 @@ rules:
 python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt
 cp .env.example .env          # then fill in the Google Cloud + Grafana values
 
-# 2. Provision the Grafana surface — dashboards, both alert rules,
+# 2. Provision the Grafana surface: dashboards, both alert rules,
 #    the webhook contact point, the share links. Idempotent.
 .venv/bin/python scripts/provision_grafana.py
 
@@ -537,7 +537,7 @@ Needs `ffmpeg` on PATH, a Google Cloud project with Vertex AI enabled, and a Gra
 
 ### The test ad
 
-[`docs/samples/test_ad.mp4`](docs/samples/test_ad.mp4) was generated with Veo and deliberately loaded with seven documented landmines plus a clean control shot — so Google's own tools made the ad, and then failed it.
+[`docs/samples/test_ad.mp4`](docs/samples/test_ad.mp4) was generated with Veo and deliberately loaded with seven documented landmines plus a clean control shot, so Google's own tools made the ad, and then failed it.
 
 ---
 
@@ -545,10 +545,10 @@ Needs `ffmpeg` on PATH, a Google Cloud project with Vertex AI enabled, and a Gra
 
 ```bash
 .venv/bin/python -m pytest -q
-# 539 passed, 8 deselected
+# 540 passed, 8 deselected
 ```
 
-**539 offline tests across 22 files**, no network, no API keys, no Grafana. The eight deselected ones are live-API probes you opt into explicitly.
+**540 offline tests across 22 files**, no network, no API keys, no Grafana. The eight deselected ones are live-API probes you opt into explicitly.
 
 The suite exists because most of this system's failure modes are silent: a guard that stops refusing, a citation that stops resolving, a craft gate that accepts a master that lost its soundtrack, a green can appearing in a modesty fix because a default leaked across dimensions. Every one of those has a test, and several of them have a test *because it happened*.
 
@@ -559,9 +559,9 @@ The suite exists because most of this system's failure modes are silent: a guard
 > [!WARNING]
 > This is a hackathon build. The following are known, deliberate, and load-bearing to say out loud.
 
-- **Only Belgium is actually wired into the ladder.** 15 of the 16 national packs declare no `parent`, so they inherit nothing — not even the global baseline. The inheritance machinery works and is tested; the packs simply have not been re-parented yet.
+- **Only Belgium is actually wired into the ladder.** 15 of the 16 national packs declare no `parent`, so they inherit nothing, not even the global baseline. The inheritance machinery works and is tested; the packs simply have not been re-parented yet.
 - **Omni refuses third-party IP.** Gemini Omni declines to edit footage containing recognisable third-party content, which makes the famous-cartoons reel un-editable by that method. The refusal is quoted verbatim in the mission feed and nothing is charged. Patch methods remain the path for that footage.
-- **Veo has a celebrity filter.** A bridge over a shot it reads as depicting a public figure is refused with support code 15236754. Never charged, and a retry cannot help — the footage is the refusal.
+- **Veo has a celebrity filter.** A bridge over a shot it reads as depicting a public figure is refused with support code 15236754. Never charged, and a retry cannot help: the footage is the refusal.
 - **The Omni model id is a deliberately old alias.** `gemini-omni-flash-preview` deprecates 2026-09-30; the newer `1.1` preview is access-gated behind a quota error that granting quota does not clear.
 - **Image-generation quota is 2/min** on this project pending a support case, which is why `per_frame` is slow.
 - **Grafana Cloud cannot be framed**, so live panels come from the self-hosted viewer described above. Annotation markers are blank in the framed panels: they live in the Cloud instance's own database, not in Loki.
@@ -573,17 +573,17 @@ The suite exists because most of this system's failure modes are silent: a guard
 
 ```
 src/customs/
-  crew.py         the ADK SequentialAgent — ingest → analyst → adjudicators → guard → publisher
+  crew.py         the ADK SequentialAgent: ingest → analyst → adjudicators → guard → publisher
   analyst.py      one Gemini vision call per shot, 18-dimension taxonomy, no verdicts
   adjudicate.py   the join: observation × rule × grounded citation, severity decided in code
-  guard.py        un-promptable refusal — reads rule metadata only
+  guard.py        un-promptable refusal, reads rule metadata only
   remediate.py    six methods, priced, group-aware, guarded twice
   verify.py       re-runs the real analyst on the changed shots, rules on bystanders
-  media.py        ffmpeg — shots, flashes, spans, craft gate, thumbnails, previews
+  media.py        ffmpeg: shots, flashes, spans, craft gate, thumbnails, previews
   grafana_ops.py  MCP first, REST where mcp-grafana 1.1.0 has no write tool
   telemetry.py    Mimir over OTLP on the film's own clock, Loki lines, annotations
   costs.py        what each method costs before you press
-  app.py          FastAPI console — SSE, 11 templates, no build step
+  app.py          FastAPI console: SSE, 11 templates, no build step
 markets/          21 packs → 98 jurisdictions → 128 rules
 grafana/dashboards/  8 dashboards, provisioned as JSON
 grafana-viewer/   stock grafana-oss that is allowed to be framed

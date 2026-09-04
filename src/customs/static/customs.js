@@ -79,7 +79,7 @@
         (file && file.size > 30 * 1024 * 1024)
           ? "That file is " + (file.size / (1024 * 1024)).toFixed(0) +
             " MB and this door closes at 30 MB. Paste the ad as a YouTube " +
-            "link instead — the server fetches that itself."
+            "link instead. The server fetches that itself."
           : "";
       if (wrong) {
         event.preventDefault();
@@ -461,7 +461,7 @@
       when.textContent = dot.getAttribute("data-t") + "s";
       var markets = dot.getAttribute("data-markets");
       what.textContent = (dot.getAttribute("data-dim") || "").replace(/_/g, " ")
-        + (markets ? " — " + markets : "");
+        + (markets ? ", " + markets : "");
       var r = dot.getBoundingClientRect(), w = wrap.getBoundingClientRect();
       peek.style.left = (r.left - w.left + wrap.scrollLeft + r.width / 2) + "px";
       peek.style.top = (r.top - w.top - 10) + "px";
@@ -1040,7 +1040,7 @@
           if (!id) { throw new Error("the run started but did not say where"); }
           runId = id;
           document.querySelector(".agent").setAttribute("data-run", id);
-          if (dropText) { dropText.textContent = chosen.name + " — run " + id; }
+          if (dropText) { dropText.textContent = chosen.name + ", run " + id; }
           open("/runs/" + id, "Launch board", "/runs/" + id);
           busy = false;
           ask("I have just uploaded " + chosen.name +
