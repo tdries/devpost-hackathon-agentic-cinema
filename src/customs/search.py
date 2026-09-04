@@ -68,7 +68,11 @@ def _compile(text: str) -> re.Pattern | None:
 def logql(text: str, dimension: str = "", flagged: str = "") -> str:
     """The stream selector plus the line filter, as Loki will see it."""
     selector = ['app="customs"', 'kind="observation"']
-    if dimension:
+    if isinstance(dimension, (list, tuple, set)):
+        names = sorted(d for d in dimension if d)
+        if names:
+            selector.append('dimension=~"' + "|".join(names) + '"')
+    elif dimension:
         selector.append(f'dimension="{dimension}"')
     if flagged in ("yes", "no"):
         selector.append(f'flagged="{flagged}"')
@@ -131,6 +135,50 @@ decided it.
 
 DESCRIPTIONS
 {captions}"""
+
+
+_ROUTE_SCHEMA = {
+    "type": "object",
+    "properties": {"dimensions": {"type": "array", "items": {"type": "string"}}},
+    "required": ["dimensions"],
+}
+
+_ROUTE_PROMPT = """Every frame this system has ever described carries exactly
+one of these labels:
+
+{dimensions}
+
+Which of them could a frame matching this request possibly be filed under?
+
+REQUEST: {question}
+
+Be generous: two or three labels is normal, and leaving out the right one
+means the frame is never looked at. Return an empty list only if the
+request is about none of them. Return the labels exactly as written."""
+
+
+def route(question: str, model: str = "") -> list[str]:
+    """Which observation dimensions a question could possibly be about.
+
+    The analyst files every frame under one of eighteen dimensions, so a
+    question about a rabbit does not need a model to read four thousand
+    captions about hemlines and share prices. One small call narrows the
+    candidates by label first, and the expensive reading happens on what is
+    left. Wrong here is recoverable in one direction only, so the prompt
+    asks for generosity: an extra label costs a few hundred captions, a
+    missing one costs the answer.
+    """
+    from customs import packs
+    from customs.config import settings as live
+    from customs import genai_client
+
+    known = sorted(packs.taxonomy())
+    answer = genai_client.generate_json(
+        model or live.model_text,
+        [_ROUTE_PROMPT.format(dimensions="\n".join(known), question=question)],
+        _ROUTE_SCHEMA)
+    picked = [d for d in (answer or {}).get("dimensions") or [] if d in known]
+    return picked
 
 
 def _match_batch(question: str, batch: list[tuple[int, str]], model: str) -> dict[int, str]:
@@ -264,7 +312,17 @@ def frames(ops, text: str = "", dimension: str = "", market: str = "",
     matcher = _compile(text) if literal else None
     # Semantics has no keyword to give Loki, so the stream selector does
     # the narrowing and the model reads what comes back.
-    query = logql(text if literal else "", dimension, flagged)
+    # Narrow by label before reading anything: a question about a rabbit
+    # has no business being answered by a model reading four thousand
+    # captions about hemlines. Only when the caller did not name one.
+    routed = []
+    if wanted and not literal and not dimension:
+        try:
+            routed = route(wanted, model)
+        except Exception as exc:  # noqa: BLE001 -- narrowing is an optimisation
+            _log.warning("dimension routing failed, reading everything: %r", exc)
+
+    query = logql(text if literal else "", routed or dimension, flagged)
     rows = _all_lines(ops, query, days, limit)
 
     hits = []
@@ -328,6 +386,7 @@ def frames(ops, text: str = "", dimension: str = "", market: str = "",
     return {
         "query": query,
         "mode": mode,
+        "routed": routed,
         "pattern": (text or "").strip(),
         "total": len(hits),
         "scanned": len(rows),
