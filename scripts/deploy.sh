@@ -29,6 +29,14 @@
 #   3. Grants the runtime service account roles/aiplatform.user (Vertex
 #      calls) and roles/secretmanager.secretAccessor on those two secrets
 #      (so --set-secrets below can actually mount them).
+# --no-cpu-throttling, because every long job in this system runs on a
+# BACKGROUND THREAD: a clearance starts after the 303, a remediation after
+# the redirect. Cloud Run's default gives a container CPU only while it is
+# handling a request, so those threads were running at a few percent of a
+# core -- an ffmpeg composite that takes 0.3s on a laptop hit the 60s
+# timeout here, twice, on a four second clip, and the clearance's shot
+# detection did the same. It is not the filter graph and it was never the
+# memory.
 # 4Gi, not 2: a prop_swap composite (720p master, a Gemini-edited PNG
 # looped as a second input, blend + overlay) took the container over 2Gi
 # and Cloud Run SIGKILLed it -- ffmpeg exited -9, the finding went back
@@ -307,7 +315,7 @@ gcloud run deploy "$SERVICE" \
     --allow-unauthenticated \
     --max-instances 1 --min-instances 1 \
     --concurrency 20 \
-    --memory 4Gi --cpu 2 \
+    --memory 4Gi --cpu 2 --no-cpu-throttling \
     --timeout 900 \
     ${deploy_args[@]+"${deploy_args[@]}"} \
     --quiet
