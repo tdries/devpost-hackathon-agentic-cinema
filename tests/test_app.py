@@ -1593,7 +1593,8 @@ def test_the_agent_can_discover_the_schema_and_query_it(client):
     import inspect
     src = inspect.getsource(agentmode)
     assert "def data_schema()" in src and "def query(" in src
-    assert "data_schema, query, build_dashboard" in src, "both must be registered"
+    assert "data_schema, query,\n" in src and "build_dashboard)" in src, \
+        "both must be registered"
     # the schema has to name the observation stream, which is the new half
     assert 'kind="observation"' in src
     assert "flagged" in src and "no rows" in src
