@@ -836,3 +836,31 @@ def test_the_graph_frame_cap_ends_an_encode_fed_by_an_infinite_loop(
 def test_a_graph_that_does_not_end_in_v_is_refused_rather_than_mangled():
     with pytest.raises(media.MediaError):
         media._cap_frames("[0:v]scale=2:2[wrong]", 376)
+
+
+def test_the_relight_matte_is_drawn_once_not_evaluated_per_frame(tmp_path):
+    """The feather was a geq expression: an alpha computed per pixel, per
+    frame, by ffmpeg's single-threaded expression evaluator, for a value
+    that depends only on X and Y. It timed out at 60 seconds on a four
+    second clip and took the container down with it, which killed the
+    unrelated clearance that was running beside it.
+
+    Drawn once as a PNG and merged, the same edit is a fraction of a
+    second. This pins the shape: white in the middle, dark at the edge,
+    and no expression evaluator in the graph.
+    """
+    import inspect
+
+    from PIL import Image
+
+    from customs import media
+
+    mask = media._feather_mask(40, 30, 6, tmp_path / "matte.png")
+    pixels = Image.open(mask).convert("L")
+    assert pixels.size == (40, 30)
+    assert pixels.getpixel((20, 15)) == 255, "opaque in the middle"
+    assert pixels.getpixel((0, 0)) < 90, "and faded at the corner"
+
+    source = inspect.getsource(media.apply_relight)
+    assert "geq=" not in source, "the per-pixel evaluator is what was slow"
+    assert "alphamerge" in source

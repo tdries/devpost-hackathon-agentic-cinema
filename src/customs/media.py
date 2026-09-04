@@ -824,6 +824,28 @@ def relight_ratio(original_png, edited_png, box, out_png, *, floor: int = 8) -> 
     return Path(out_png)
 
 
+def _feather_mask(w: int, h: int, ramp: int, dest) -> Path:
+    """The matte's soft edge, drawn once.
+
+    White inside, fading to black over `ramp` pixels at every edge, which
+    is the same shape the old expression described: alpha rises with the
+    distance to the nearest edge. Nested rectangles rather than a distance
+    transform, because ramp is six pixels and six rectangles is exact
+    enough for an edge nobody can see.
+    """
+    from PIL import Image, ImageDraw
+
+    mask = Image.new("L", (max(w, 1), max(h, 1)), 0)
+    draw = ImageDraw.Draw(mask)
+    for step in range(ramp + 1):
+        value = int(round(255 * min(1.0, (step + 1) / ramp)))
+        draw.rectangle([step, step, max(w - 1 - step, step), max(h - 1 - step, step)],
+                       fill=value)
+    dest = Path(dest)
+    mask.save(dest)
+    return dest
+
+
 def apply_relight(base, ratio_png, box, t_start: float, t_end: float, out_path,
                   *, feather: int = MATTE_FEATHER_PX, crf: int = EDIT_CRF) -> Path:
     """Multiply a live span by a ratio field, inside the matte only.
@@ -842,7 +864,15 @@ def apply_relight(base, ratio_png, box, t_start: float, t_end: float, out_path,
     frame_count = probe_frames(base)
     x, y, w, h = box_to_pixels(box, width, height)
     ramp = max(1, int(feather))
-    alpha = f"clip(min(min(X,{w}-X),min(Y,{h}-Y))/{ramp}*255,0,255)"
+    # The feather used to be a geq expression: an alpha computed per pixel,
+    # per frame, by ffmpeg's expression evaluator, single-threaded. It
+    # depends only on X and Y, so every frame after the first recomputed an
+    # identical mask -- 60 seconds and a timeout on a four second clip,
+    # which took the container down with it and killed whatever else was
+    # running (seen live on voltage_runway, AE modesty). Drawn once as a
+    # PNG and merged, the same fix is a second.
+    mask_png = Path(out_path).with_name(f".{Path(out_path).stem}_matte.png")
+    _feather_mask(w, h, ramp, mask_png)
     # blend=multiply doubles at 255, so the ratio's 128 == 1.0 encoding is
     # undone by multiplying and scaling back up by two.
     filt = (
@@ -850,11 +880,14 @@ def apply_relight(base, ratio_png, box, t_start: float, t_end: float, out_path,
         f"[1:v]scale={w}:{h},format=gbrp[ratio];"
         f"[live][ratio]blend=all_mode=multiply:all_opacity=1,"
         f"lutrgb=r='clip(val*2,0,255)':g='clip(val*2,0,255)':b='clip(val*2,0,255)',"
-        f"format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='{alpha}'[patch];"
+        f"format=rgba[rgb];"
+        f"[2:v]scale={w}:{h},format=gray[matte];"
+        f"[rgb][matte]alphamerge[patch];"
         f"[0:v][patch]overlay={x}:{y}:enable='between(t,{t_start:.3f},{t_end:.3f})'[v]"
     )
     args = [
         "ffmpeg", "-y", "-i", str(base), "-loop", "1", "-i", str(ratio_png),
+        "-loop", "1", "-i", str(mask_png),
         "-filter_complex", _cap_frames(filt, frame_count),
         "-map", "[v]", "-map", "0:a?",
         "-c:v", "libx264", "-preset", "veryfast", "-crf", str(int(crf)),
