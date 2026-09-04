@@ -2179,6 +2179,43 @@ def test_a_lane_is_never_shorter_than_the_glyph_that_labels_it():
     assert height >= ys[-1] + 38
 
 
+def test_the_grafana_tab_shows_the_whole_surface_at_once(console):
+    """The project's claim is that Grafana is upstream of the work, and it
+    was told in fragments: a panel here, a chip there, a paragraph in the
+    README. This tab is the inventory, and it is read from the definitions
+    the crew provisions from rather than from a list somebody typed."""
+    from customs import grafana_map, grafana_ops
+    client, _store, _launched, _jobs = console
+
+    page = client.get("/grafana")
+    assert page.status_code == 200
+    body = page.text
+
+    for board in grafana_map.dashboards():          # every dashboard, by uid
+        assert board.uid in body, board.uid
+        for panel in board.panels:
+            assert panel.kind in body, f"{board.uid}/{panel.kind}"
+    for series in grafana_map.SERIES:               # every metric series
+        assert series["name"] in body, series["name"]
+    for stream in grafana_map.STREAMS:              # every Loki stream
+        assert f'kind="{stream["kind"]}"' in body, stream["kind"]
+    for rule in grafana_ops.ALERT_RULES:            # both alert rules
+        # escaped, because a threshold has a >= in it and this is HTML
+        assert rule["title"] in body and html.escape(rule["expr"]) in body
+    for op in grafana_ops.MAPPING:                  # every write, and how it travels
+        assert op in body, op
+    assert grafana_ops.CONTACT_POINT_NAME in body
+    assert grafana_ops.PROM_UID in body and grafana_ops.LOKI_UID in body
+
+    # and it is reachable from the nav of the pages beside it, on the right
+    # of the library
+    assert body.count('href="/grafana"') >= 1
+    assert 'href="/grafana"' in client.get("/library").text
+    library_at = client.get("/library").text.index('href="/library"')
+    grafana_at = client.get("/library").text.index('href="/grafana"')
+    assert grafana_at > library_at, "the new tab sits to the right of Library"
+
+
 def test_nothing_a_reader_sees_is_punctuated_with_an_em_dash():
     """The house style, enforced rather than remembered.
 

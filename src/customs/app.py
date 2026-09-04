@@ -86,9 +86,9 @@ from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from customs import (adjudicate, agentmode, analyst, costs, media, narrate, packs, replyfmt,
-                     persist, pipeline, remediate, scope as scope_mod, spark,
-                     state as state_mod, verify)
+from customs import (adjudicate, agentmode, analyst, costs, grafana_map, media,
+                     narrate, packs, replyfmt, persist, pipeline, remediate,
+                     scope as scope_mod, spark, state as state_mod, verify)
 from customs.fetch import FetchError, fetch_youtube
 from customs.config import settings
 from customs.media import MediaError, probe_duration
@@ -2006,6 +2006,34 @@ def library(request: Request):
     total = sum(c["count"] for c in cards)
     return _page(request, "library.html", cards=cards, total=total, screen="library",
                  packs_total=len(all_packs))
+
+
+@app.get("/grafana", response_class=HTMLResponse)
+def grafana_resources(request: Request):
+    """The whole Grafana surface, on one page.
+
+    The claim this project makes is that Grafana is upstream of the work
+    rather than a report produced after it, and that claim was only ever
+    told in fragments: a panel on the board, a chip in a market room, a
+    paragraph in the README. This is the inventory behind it.
+
+    Everything on it is read from the definitions the crew provisions
+    from -- the dashboard JSON, the alert rules, the transport table --
+    so the page cannot drift into describing a stack nobody has. No
+    network call: a round trip per section would make the one page whose
+    job is to be legible the slowest in the console.
+    """
+    return _page(request, "grafana.html", screen="grafana",
+                 totals=grafana_map.totals(),
+                 stack=grafana_map.stack(),
+                 datastores=grafana_map.DATASTORES,
+                 dashboards=grafana_map.dashboards(),
+                 metrics=grafana_map.SERIES,
+                 streams=grafana_map.STREAMS,
+                 annotations=grafana_map.ANNOTATIONS,
+                 alerting=grafana_map.alerting(),
+                 operations=grafana_map.operations(),
+                 reads=grafana_map.READS)
 
 
 @app.get("/runs", response_class=HTMLResponse)
