@@ -2030,11 +2030,23 @@ def search_frames(request: Request, q: str = "", dimension: str = "",
     """
     from customs.grafana_ops import GrafanaOps
     try:
-        with GrafanaOps(settings) as ops:
-            result = search.frames(ops, q, dimension=dimension, market=market,
-                                   flagged=flagged, days=max(1, min(days, 90)),
-                                   limit=max(1, min(limit, 12000)),
-                                   mode="literal" if mode == "literal" else "semantic")
+        if q.strip() and mode != "literal":
+            # The fast path: the index answers in milliseconds and the
+            # model reads eighty captions rather than four thousand. It
+            # self-heals a cold index a few hundred at a time, so the first
+            # search after a deploy is slower once rather than wrong.
+            db = store()
+            from customs import vectors
+            if vectors.size(db) == 0:
+                vectors.backfill(db, limit=1200)
+            result = search.indexed(db, q, dimension=dimension, market=market,
+                                    flagged=flagged)
+        else:
+            with GrafanaOps(settings) as ops:
+                result = search.frames(ops, q, dimension=dimension, market=market,
+                                       flagged=flagged, days=max(1, min(days, 90)),
+                                       limit=max(1, min(limit, 12000)),
+                                       mode="literal" if mode == "literal" else "semantic")
     except search.SearchError as exc:
         if format == "json":
             return JSONResponse(status_code=400, content={"error": str(exc)})

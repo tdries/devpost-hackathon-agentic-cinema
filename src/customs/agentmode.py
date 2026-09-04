@@ -534,12 +534,16 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
         turn.calls.append({"tool": "search_frames", "text": text[:80],
                            "dimension": dimension, "flagged": flagged})
         try:
-            with GrafanaOps(settings) as ops:
-                found = frame_search.frames(
-                    ops, text, dimension=dimension, market=market,
-                    flagged=flagged, days=max(1, min(days, 90)),
-                    limit=max(1, min(limit, 12000)),
-                    mode="literal" if mode == "literal" else "semantic")
+            if text.strip() and mode != "literal":
+                found = frame_search.indexed(store, text, dimension=dimension,
+                                             market=market, flagged=flagged)
+            else:
+                with GrafanaOps(settings) as ops:
+                    found = frame_search.frames(
+                        ops, text, dimension=dimension, market=market,
+                        flagged=flagged, days=max(1, min(days, 90)),
+                        limit=max(1, min(limit, 12000)),
+                        mode="literal" if mode == "literal" else "semantic")
         except frame_search.SearchError as exc:
             return f"that pattern will not run: {exc}"
         except Exception as exc:  # noqa: BLE001 -- the agent reports the failure
