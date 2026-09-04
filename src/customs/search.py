@@ -98,21 +98,13 @@ def logql(text: str, dimension: str = "", flagged: str = "") -> str:
 _BATCH = 600
 _MAX_BATCHES = 6
 
+# Numbers, and nothing else. The first version asked for eight words of
+# reasoning per hit and they came back as substrings of the caption printed
+# directly above them: no information, and 27 seconds of output tokens
+# against 240ms of retrieval. The caption IS the reason.
 _MATCH_SCHEMA = {
     "type": "object",
-    "properties": {
-        "matches": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "n": {"type": "integer"},
-                    "why": {"type": "string"},
-                },
-                "required": ["n"],
-            },
-        }
-    },
+    "properties": {"matches": {"type": "array", "items": {"type": "integer"}}},
     "required": ["matches"],
 }
 
@@ -133,8 +125,7 @@ Do not stretch it. Something merely adjacent to the subject is not the
 subject: a carrot is not a rabbit, an ashtray is not a lit cigarette, and a
 bar is not somebody drinking. If nothing matches, return an empty list.
 
-`why` is at most eight words, quoting the part of the description that
-decided it.
+Answer with the numbers alone.
 
 DESCRIPTIONS
 {captions}"""
@@ -203,14 +194,14 @@ def _match_batch(question: str, batch: list[tuple[int, str]], model: str) -> dic
     out = {}
     for hit in (answer or {}).get("matches") or []:
         try:
-            n = int(hit.get("n"))
+            n = int(hit)
         except (TypeError, ValueError):
             continue
         # A number the model invented is a frame nobody has, and a search
         # that answers with one is worse than a search that answers with
         # nothing.
         if n in known:
-            out[n] = (hit.get("why") or "").strip()
+            out[n] = ""
     return out
 
 
