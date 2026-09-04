@@ -185,9 +185,11 @@ ANNOTATIONS = (
 )
 
 DATASTORES = (
-    {"name": "Mimir", "uid": grafana_ops.PROM_UID, "holds": "the four metric "
+    {"name": "Mimir", "logo": "mimir",
+     "uid": grafana_ops.PROM_UID, "holds": "the four metric "
      "series above, pushed over OTLP", "written_with": "OTLP HTTP, not the API"},
-    {"name": "Loki", "uid": grafana_ops.LOKI_UID, "holds": "the three line "
+    {"name": "Loki", "logo": "loki",
+     "uid": grafana_ops.LOKI_UID, "holds": "the three line "
      "kinds above", "written_with": "the Loki push API"},
 )
 

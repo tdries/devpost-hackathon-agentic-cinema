@@ -279,8 +279,8 @@ What lands in the stack:
 
 | Store | What |
 |---|---|
-| **Mimir** | 5 metric series: `customs_risk` (on the film's own clock), `customs_market_status`, `customs_blocking`, `customs_stage_error` |
-| **Loki** | 3 line kinds: `kind=finding`, `kind=observation`, `kind=verdict`, each with its own stream labels |
+| <img src="docs/media/icons/logo-mimir.svg" height="16"> **Mimir** | 5 metric series: `customs_risk` (on the film's own clock), `customs_market_status`, `customs_blocking`, `customs_stage_error` |
+| <img src="docs/media/icons/logo-loki.svg" height="16"> **Loki** | 3 line kinds: `kind=finding`, `kind=observation`, `kind=verdict`, each with its own stream labels |
 | **Annotations** | one per finding, tagged `["customs", asset, market, rule_id, finding_id]` |
 
 The clock trick that makes it read as a timeline: Prometheus rejects backdated samples, so each run maps the film's timecode onto the wall clock at run start. **Video second *n* is written at wall clock t₀ + *n*.** The panel's x-axis reads as the timecode because it *is* the timecode.
