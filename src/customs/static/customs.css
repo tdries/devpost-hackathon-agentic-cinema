@@ -2555,6 +2555,56 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
    the expensive one further down the page in its own words. */
 .already-do { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
 
+/* ---------- the agent, working ----------
+   A bar that says the machine is busy, and a list that says what it is
+   busy WITH. The bar is the four brand colours run through a spectrum and
+   swept, with one twinkle riding it: the console already uses a rotating
+   ring of those colours for work in flight, and this is the same idea laid
+   flat. Reduced motion keeps the colours and drops the movement. */
+.ag-phases { display: grid; gap: 9px; }
+.ag-bar {
+  position: relative; height: 5px; border-radius: 999px; overflow: hidden;
+  background: var(--well);
+}
+.ag-bar i {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg,
+    #4285F4, #34A853, #FBBC05, #EA4335, #4285F4, #34A853, #FBBC05, #EA4335);
+  background-size: 300% 100%;
+  animation: ag-sweep 2.4s linear infinite;
+}
+.ag-bar::after {
+  content: ""; position: absolute; top: -50%; bottom: -50%; width: 42px;
+  background: linear-gradient(90deg, transparent,
+    rgba(255, 255, 255, .95), transparent);
+  animation: ag-spark 1.9s ease-in-out infinite;
+}
+@keyframes ag-sweep { to { background-position: -300% 0; } }
+@keyframes ag-spark {
+  0% { left: -12%; } 60%, 100% { left: 104%; }
+}
+.ag-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.ag-steps li {
+  font-size: 12.5px; line-height: 1.45; color: var(--ink-3);
+  display: flex; align-items: baseline; gap: 7px;
+}
+.ag-steps li::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%; flex: none;
+  background: var(--line-2); transform: translateY(-1px);
+}
+.ag-steps li.done { color: var(--ink-2); }
+.ag-steps li.done::before { background: var(--cleared); }
+.ag-steps li.on { color: var(--ink); }
+.ag-steps li.on::before {
+  background: var(--g-blue);
+  animation: ag-pulse 1.1s ease-in-out infinite;
+}
+@keyframes ag-pulse { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) {
+  .ag-bar i, .ag-bar::after, .ag-steps li.on::before { animation: none; }
+  .ag-bar::after { display: none; }
+}
+
 /* ---------- frame search ----------
    A result is a picture with a sentence under it, so the grid is sized by
    the picture: whatever fits at 300px, as many across as the window has

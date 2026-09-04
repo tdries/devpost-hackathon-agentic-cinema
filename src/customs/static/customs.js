@@ -960,9 +960,38 @@
       busy = true;
       bubble("you", text, "human");
       input.value = "";
+      /* Not a spinner. The agent records every tool call as it makes it,
+         and /agent/progress hands that list back while the turn is still
+         running -- so what the page shows is what is happening, in the
+         order it happened, rather than a word that means "wait". */
       var thinking = bubble("agent", "", "pending");
       thinking.querySelector(".ag-body").innerHTML =
-        '<span class="ag-think"><span class="spin"></span>working</span>';
+        '<div class="ag-phases">' +
+        '  <div class="ag-bar"><i></i></div>' +
+        '  <ol class="ag-steps"><li class="on">reading the question</li></ol>' +
+        '</div>';
+      var steps = thinking.querySelector(".ag-steps");
+      var shown = 0;
+      var watch = window.setInterval(function () {
+        fetch("/agent/progress?session=" + encodeURIComponent(session))
+          .then(function (r) { return r.json(); })
+          .then(function (p) {
+            var phases = (p && p.phases) || [];
+            if (phases.length <= shown) { return; }
+            var live = steps.querySelector("li.on");
+            if (live) { live.classList.remove("on"); live.classList.add("done"); }
+            phases.slice(shown).forEach(function (what, i) {
+              var li = document.createElement("li");
+              li.textContent = what;
+              li.className = (shown + i === phases.length - 1) ? "on" : "done";
+              steps.appendChild(li);
+            });
+            shown = phases.length;
+            log.scrollTop = log.scrollHeight;
+          })
+          .catch(function () {});
+      }, 600);
+      var stopWatching = function () { window.clearInterval(watch); };
 
       var body = new FormData();
       body.append("message", text);
@@ -972,6 +1001,7 @@
       fetch("/agent/ask", { method: "POST", body: body })
         .then(function (r) { return r.json().catch(function () { return null; }); })
         .then(function (data) {
+          stopWatching();
           thinking.remove();
           if (!data) { bubble("agent", "That turn failed to come back.", "error"); return; }
           if (data.error) {
@@ -995,6 +1025,7 @@
           log.scrollTop = log.scrollHeight;
         })
         .catch(function () {
+          stopWatching();
           thinking.remove();
           bubble("agent", "That turn could not be sent.", "error");
         })

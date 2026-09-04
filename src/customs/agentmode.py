@@ -126,6 +126,55 @@ class Turn:
     error: str = ""
 
 
+# Turns in flight, by session, so the console can watch one happen.
+#
+# A spinner that says "working" for forty seconds is the console asking to
+# be trusted. The agent already records every tool call as it makes them,
+# so the honest version is to let the page read that list while the turn is
+# still running: what it looked up, what it asked Grafana, what it built.
+# One process, one dict, cleared when the turn ends -- the same shape as
+# every other piece of state in this demo.
+# ponytail: a dict, not a broker. One Cloud Run instance is the deployment.
+LIVE: dict[str, "Turn"] = {}
+
+# What a tool call is, in words, for somebody watching rather than reading
+# a trace. The tool's own arguments fill in the detail.
+PHRASES = {
+    "data_schema": "reading what Grafana holds",
+    "query": "querying {source}",
+    "search_frames": "searching every caption for {text}",
+    "chart": "building a {types} in Grafana",
+    "build_dashboard": "building a dashboard grouped by {group_by}",
+    "list_runs": "looking through the archive",
+    "markets": "reading this run's markets",
+    "findings": "reading the findings",
+    "fix_options": "pricing the ways to fix it",
+    "library": "opening the rule library",
+    "show": "opening {view} beside you",
+}
+
+
+def phrase(call: dict) -> str:
+    """One tool call, said in words rather than named."""
+    template = PHRASES.get(call.get("tool") or "", "")
+    if not template:
+        return call.get("tool") or "working"
+    detail = dict(call)
+    if detail.get("source"):
+        detail["source"] = ("Loki, for log lines"
+                            if str(detail["source"]).lower().startswith("l")
+                            else "Mimir, for metrics")
+    if "types" in detail:
+        kinds = [t for t in (detail.get("types") or []) if t]
+        detail["types"] = " and ".join(dict.fromkeys(kinds)) or "chart"
+    if "text" in detail:
+        detail["text"] = f'"{detail["text"]}"' if detail["text"] else "everything"
+    try:
+        return template.format(**detail)
+    except (KeyError, IndexError):
+        return call.get("tool") or "working"
+
+
 def _runs(store: Store, limit: int = 12) -> list[dict]:
     out = []
     for run in store.recent_runs(limit):
@@ -760,6 +809,7 @@ async def ask(store: Store, message: str, session_id: str,
     from google.genai import types
 
     turn = Turn()
+    LIVE[session_id] = turn
     agent = build_agent(store, turn, run_id)
     runner = InMemoryRunner(agent=agent, app_name=APP_NAME)
     try:
@@ -777,6 +827,7 @@ async def ask(store: Store, message: str, session_id: str,
         turn.error = f"{type(exc).__name__}: {exc}"
     finally:
         await runner.close()
+        LIVE.pop(session_id, None)
     turn.reply = turn.reply.strip()
     return turn
 

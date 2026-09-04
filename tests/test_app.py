@@ -3073,3 +3073,41 @@ def test_a_visitor_has_their_own_daily_ceiling(console):
     made_up = client.post(f"/runs/{run.id}/findings/{fid}/remediate",
                           data={"method": "overlay"}, follow_redirects=False)
     assert made_up.status_code == 429
+
+
+def test_the_agent_says_what_it_is_doing_while_it_does_it(console, monkeypatch):
+    """A spinner that says "working" for forty seconds is the console
+    asking to be trusted. The agent records every tool call as it makes
+    them, so the page reads that list while the turn is still running and
+    says what it looked up, what it asked Grafana and what it built."""
+    from customs import agentmode
+    client, _store, _launched, _jobs = console
+
+    # nothing in flight: an empty answer, which is how the page stops asking
+    idle = client.get("/agent/progress?session=nobody").json()
+    assert idle == {"running": False, "phases": []}
+
+    turn = agentmode.Turn()
+    monkeypatch.setitem(agentmode.LIVE, "s1", turn)
+    turn.calls.append({"tool": "data_schema"})
+    turn.calls.append({"tool": "search_frames", "text": "bunnies"})
+    turn.calls.append({"tool": "chart", "types": ["barchart", "barchart"]})
+
+    live = client.get("/agent/progress?session=s1").json()
+
+    assert live["running"] is True
+    assert live["phases"] == ["reading what Grafana holds",
+                              'searching every caption for "bunnies"',
+                              "building a barchart in Grafana"]
+
+
+def test_a_phase_is_never_a_stack_trace(console):
+    """Every tool the agent has gets a sentence, and one it does not know
+    falls back to the tool's own name rather than raising inside a poll."""
+    from customs import agentmode
+
+    for tool in agentmode.TOOL_NAMES:
+        said = agentmode.phrase({"tool": tool})
+        assert said and "{" not in said, tool
+    assert agentmode.phrase({"tool": "invented"}) == "invented"
+    assert agentmode.phrase({}) == "working"

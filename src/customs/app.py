@@ -1973,6 +1973,22 @@ async def agent_ask(request: Request, message: str = Form(...),
     }
 
 
+@app.get("/agent/progress")
+def agent_progress(session: str = "default"):
+    """What the turn now running has done so far, in words.
+
+    Polled by agent mode while it waits. The agent records each tool call
+    as it makes it, so this is the real sequence rather than a script: no
+    turn in flight is an empty list, which is exactly what the page needs
+    to stop asking.
+    """
+    turn = agentmode.LIVE.get(session)
+    if turn is None:
+        return {"running": False, "phases": []}
+    return {"running": True,
+            "phases": [agentmode.phrase(call) for call in list(turn.calls)]}
+
+
 @app.get("/library", response_class=HTMLResponse)
 def library(request: Request):
     """What this system actually tests for, by category, across every level.
