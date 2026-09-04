@@ -29,6 +29,12 @@
 #   3. Grants the runtime service account roles/aiplatform.user (Vertex
 #      calls) and roles/secretmanager.secretAccessor on those two secrets
 #      (so --set-secrets below can actually mount them).
+# 4Gi, not 2: a prop_swap composite (720p master, a Gemini-edited PNG
+# looped as a second input, blend + overlay) took the container over 2Gi
+# and Cloud Run SIGKILLed it -- ffmpeg exited -9, the finding went back
+# to open, and the restart aborted an unrelated clearance running beside
+# it. Memory is billed per GiB-second while a request is in flight, so an
+# idle instance costs the same as it did at 2Gi.
 #   4. `gcloud run deploy`: single instance (SQLite + in-process locks do
 #      not survive a second replica -- ponytail tradeoff, not an oversight),
 #      every non-secret config value from .env as a plain env var, the two
@@ -301,12 +307,6 @@ gcloud run deploy "$SERVICE" \
     --allow-unauthenticated \
     --max-instances 1 --min-instances 1 \
     --concurrency 20 \
-    # 4Gi, not 2: a prop_swap composite (720p master, a Gemini-edited PNG
-    # looped as a second input, blend + overlay) took the container over
-    # 2Gi and Cloud Run SIGKILLed it -- ffmpeg exited -9, the finding went
-    # back to open, and the restart aborted an unrelated clearance running
-    # beside it. Memory is billed per GiB-second while a request is in
-    # flight, so idle costs nothing extra.
     --memory 4Gi --cpu 2 \
     --timeout 900 \
     ${deploy_args[@]+"${deploy_args[@]}"} \
