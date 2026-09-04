@@ -1139,6 +1139,13 @@ html[data-theme="studio"] .grp > summary:hover { background: rgba(23, 34, 44, 0.
   border: 1px solid var(--line-2); border-radius: var(--radius);
   background: var(--well); text-align: left;
 }
+/* The panel lives in the findings table's last cell, which is sized for
+   the word "open". Five priced methods with a sentence each rendered as
+   five ribbons one word wide. Opening it widens the column instead: a
+   table shares column widths, so the cell grows, the prose gets a line,
+   and the rest of the row gives up the space it was not using. Only one
+   fixer is ever open. */
+.fixer[open] > form { min-width: min(460px, 46vw); }
 .fixer > summary { display: inline-flex; align-items: center; gap: 6px; }
 .fixer > summary::after { content: "\203A"; font-size: 17px; line-height: 1;
   transition: transform .15s ease; }
