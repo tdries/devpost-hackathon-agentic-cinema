@@ -182,6 +182,7 @@ def test_semantics_finds_the_frame_nobody_could_have_guessed_the_words_for(monke
         seen["captions"] = [c for _, c in batch]
         return {n: "animated rabbit" for n, c in batch if "rabbit" in c}
 
+    monkeypatch.setattr(search, "route", lambda *a, **k: [])
     monkeypatch.setattr(search, "_match_batch", fake_batch)
 
     found = search.frames(ops, "bunnies")
@@ -206,6 +207,7 @@ def test_the_model_never_sees_the_same_caption_twice(monkeypatch):
         batches.append([c for _, c in batch])
         return {n: "" for n, c in batch if "wine" in c}
 
+    monkeypatch.setattr(search, "route", lambda *a, **k: [])
     monkeypatch.setattr(search, "_match_batch", fake_batch)
 
     found = search.frames(ops, "alcohol")
@@ -224,6 +226,7 @@ def test_a_number_the_model_invented_is_not_a_frame(monkeypatch):
     def fake_generate(model, parts, schema):
         return {"matches": [{"n": 0, "why": "rabbit"}, {"n": 77, "why": "invented"}]}
 
+    monkeypatch.setattr(search, "route", lambda *a, **k: [])
     monkeypatch.setattr("customs.genai_client.generate_json", fake_generate)
 
     found = search.frames(ops, "bunnies")
@@ -243,6 +246,7 @@ def test_the_model_being_down_costs_the_reasoning_not_the_search(monkeypatch):
     def explode(question, batch, model):
         raise RuntimeError("vertex is down")
 
+    monkeypatch.setattr(search, "route", lambda *a, **k: [])
     monkeypatch.setattr(search, "_match_batch", explode)
 
     found = search.frames(ops, "rabbit")
@@ -265,3 +269,38 @@ def test_the_search_pages_until_the_stream_is_out_not_until_the_first_page(monke
 
     assert found["total"] == 6, "every page, not just the newest"
     assert ops.pages > 1
+
+
+def test_the_labels_narrow_the_corpus_before_the_model_reads_it(monkeypatch):
+    """Eighteen dimensions, and a question about a rabbit has no business
+    being answered by a model reading four thousand captions about
+    hemlines. The routing call picks the labels, the selector carries them,
+    and only what is left gets read."""
+    ops = FakeOps([line("An animated rabbit.", obs="o1")])
+    monkeypatch.setattr(search, "route",
+                        lambda *a, **k: ["food_and_animals", "humour_irony_satire"])
+    monkeypatch.setattr(search, "_match_batch",
+                        lambda q, batch, m: {n: "" for n, _ in batch})
+
+    found = search.frames(ops, "bunnies")
+
+    assert 'dimension=~"food_and_animals|humour_irony_satire"' in ops.asked
+    assert found["routed"] == ["food_and_animals", "humour_irony_satire"]
+
+
+def test_routing_that_fails_reads_everything_rather_than_nothing(monkeypatch):
+    """Narrowing is an optimisation. If it breaks, the search gets slower,
+    not wrong."""
+    ops = FakeOps([line("An animated rabbit.", obs="o1")])
+
+    def explode(*a, **k):
+        raise RuntimeError("no model")
+
+    monkeypatch.setattr(search, "route", explode)
+    monkeypatch.setattr(search, "_match_batch",
+                        lambda q, batch, m: {n: "" for n, _ in batch})
+
+    found = search.frames(ops, "bunnies")
+
+    assert found["total"] == 1 and found["routed"] == []
+    assert "dimension" not in ops.asked
