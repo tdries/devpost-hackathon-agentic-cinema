@@ -102,6 +102,16 @@ class Store:
             );
             CREATE INDEX IF NOT EXISTS idx_events_run
                 ON events (run_id, id);
+            -- The caption search index. Derived data: dropping it costs a
+            -- backfill, not a run, which is why it is its own table and
+            -- not a column on observations.
+            CREATE TABLE IF NOT EXISTS caption_vectors (
+                observation_id TEXT NOT NULL,
+                run_id TEXT NOT NULL,
+                statement TEXT NOT NULL,
+                vec BLOB NOT NULL,
+                PRIMARY KEY (run_id, observation_id)
+            );
             CREATE TABLE IF NOT EXISTS spend (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 day TEXT NOT NULL,
@@ -121,6 +131,37 @@ class Store:
     # bridge is written down before it runs and the day's total is what the
     # console checks before offering the option. Keyed by UTC date because a
     # budget that resets on local midnight resets twice a year.
+
+    # --- the caption index (see vectors.py) ---
+
+    @_locked
+    def indexed_observations(self, run_id: str) -> set[str]:
+        """Which of this run's observations already have a vector."""
+        rows = self._conn.execute(
+            "SELECT observation_id FROM caption_vectors WHERE run_id = ?",
+            (run_id,)).fetchall()
+        return {r[0] for r in rows}
+
+    @_locked
+    def add_vectors(self, rows) -> None:
+        """(observation_id, run_id, statement, vec) tuples, replacing any
+        that are already there: re-embedding is idempotent by design."""
+        self._conn.executemany(
+            "INSERT OR REPLACE INTO caption_vectors "
+            "(observation_id, run_id, statement, vec) VALUES (?, ?, ?, ?)",
+            list(rows))
+        self._conn.commit()
+
+    @_locked
+    def all_vectors(self) -> list[tuple]:
+        return self._conn.execute(
+            "SELECT observation_id, run_id, statement, vec FROM caption_vectors"
+        ).fetchall()
+
+    @_locked
+    def vector_count(self) -> int:
+        row = self._conn.execute("SELECT COUNT(*) FROM caption_vectors").fetchone()
+        return int(row[0] if row else 0)
 
     @_locked
     def record_spend(self, method: str, eur: float, run_id: str,

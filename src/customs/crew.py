@@ -579,6 +579,14 @@ def _push_run_telemetry(store: Store, state: _RunState, emit) -> dict:
     observations = store.observations(state.run_id)
     pushed = telemetry.push_observations(run, observations, findings)
     emit_obs = f"push_observations -> {pushed} observation(s) to Loki"
+    # ...and into the caption index, so the search does not have to read
+    # them again later. A failure here costs a slow search, never a run.
+    try:
+        from customs import vectors
+        indexed = vectors.index_run(store, run.id)
+        emit_obs += f", {indexed} indexed for search"
+    except Exception as exc:  # noqa: BLE001 -- derived data, never the run
+        emit_obs += f", search index skipped ({type(exc).__name__})"
     store.emit(state.run_id, "publisher", emit_obs)
 
     # One annotation query for the whole run, not one per finding: the

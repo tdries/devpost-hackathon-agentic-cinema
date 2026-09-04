@@ -32,6 +32,8 @@ import logging
 import re
 from collections import Counter
 
+from pathlib import Path
+
 from customs.config import settings
 
 # A caption is a sentence, so the search is a case-insensitive regex over
@@ -248,6 +250,30 @@ def semantic_hits(question: str, captions: list[str], model: str = "") -> dict[i
 # is exhausted or the ceiling is reached, and only then decides.
 _PAGE = 1000
 _MAX_PAGES = 12
+# How many lines the keyword arm may add on top of the routed ones. It is a
+# recall net, not a second search.
+_WORD_ARM = 400
+
+# Words that match everything and mean nothing in a caption.
+_STOPWORDS = {
+    "the", "and", "with", "that", "this", "from", "into", "onto", "over",
+    "have", "has", "are", "was", "were", "show", "shows", "shown", "showing",
+    "frame", "frames", "screenshot", "screenshots", "image", "images",
+    "any", "some", "many", "much", "how", "what", "which", "who", "whom",
+    "there", "their", "them", "they", "his", "her", "its", "for", "not",
+    "person", "people", "somebody", "someone", "something", "anything",
+}
+
+
+def _content_words(question: str) -> list[str]:
+    """The words worth asking Loki about, longest first.
+
+    Short words and stopwords match half the corpus, which would make the
+    net bigger than the sea it is cast in.
+    """
+    words = re.findall(r"[a-zA-Z]{4,}", question or "")
+    keep = [w.lower() for w in words if w.lower() not in _STOPWORDS]
+    return sorted(dict.fromkeys(keep), key=len, reverse=True)[:6]
 
 
 def _all_lines(ops, query: str, days: int, cap: int) -> list[dict]:
@@ -312,9 +338,21 @@ def frames(ops, text: str = "", dimension: str = "", market: str = "",
     matcher = _compile(text) if literal else None
     # Semantics has no keyword to give Loki, so the stream selector does
     # the narrowing and the model reads what comes back.
-    # Narrow by label before reading anything: a question about a rabbit
-    # has no business being answered by a model reading four thousand
-    # captions about hemlines. Only when the caller did not name one.
+    # Narrow before reading: a question about a rabbit has no business
+    # being answered by a model reading four thousand captions about
+    # hemlines. Two arms, because one is not enough on its own.
+    #
+    #   the labels    a dimension says why a frame MATTERS to a regulator,
+    #                 not what is in it -- which is how routing "bunnies" to
+    #                 food_and_animals lost the rabbit holding a cigar,
+    #                 filed under tobacco.
+    #   the words     so the question's own words are also asked of the
+    #                 whole corpus, and anything that says "rabbit" comes
+    #                 back whatever it is filed under.
+    #
+    # Their union is what the model reads. Neither arm decides anything: a
+    # keyword hit still has to survive the reading, so "a bar" does not
+    # become "somebody drinking" by containing the word.
     routed = []
     if wanted and not literal and not dimension:
         try:
@@ -324,6 +362,12 @@ def frames(ops, text: str = "", dimension: str = "", market: str = "",
 
     query = logql(text if literal else "", routed or dimension, flagged)
     rows = _all_lines(ops, query, days, limit)
+    if routed:
+        words = _content_words(wanted)
+        if words:
+            spare = max(0, limit - len(rows))
+            rows += _all_lines(ops, logql("|".join(words), dimension, flagged),
+                               days, min(spare, _WORD_ARM))
 
     hits = []
     seen = set()
@@ -418,3 +462,103 @@ def summary(result: dict) -> str:
             f"{films} film{'' if films == 1 else 's'} match "
             f"{result['pattern'] or 'that filter'!r}; {flagged} of them had at "
             f"least one market object.")
+
+
+# --- the fast path: an index, then a reading ---------------------------------
+
+
+def indexed(store, question: str, dimension: str = "", market: str = "",
+            flagged: str = "", k: int = 80, model: str = "",
+            rerank: bool = True) -> dict:
+    """Answer from the caption index rather than by reading the corpus.
+
+    Two steps and one small model call each:
+
+      1. the question is embedded and the nearest captions come back from
+         SQLite by dot product, which is milliseconds
+      2. those -- eighty, not four thousand -- are read by Gemini, which
+         decides which the question is actually about
+
+    Step 2 is what keeps a carrot from being a rabbit. Nearest is not the
+    same as right, and an index alone would answer "which frames show
+    someone drinking" with every frame that mentions a glass.
+
+    The detail comes from the run store rather than from Loki: it is the
+    same rows, it is local, and a search should not fail because a log
+    query is slow. Literal mode still goes to Loki, and every chart on
+    every other screen still reads Grafana.
+    """
+    from customs import vectors
+
+    near = vectors.nearest(store, question, k=k, model=model or vectors.MODEL)
+    keep = {}
+    for row in near:
+        keep.setdefault(row["run_id"], {})[row["observation_id"]] = row["score"]
+
+    hits = []
+    for run_id, wanted in keep.items():
+        run = store.get_run(run_id)
+        if run is None:
+            continue
+        asset = Path(run.asset_path).stem or run.asset_path
+        by_obs = {}
+        for finding in store.findings(run_id):
+            by_obs.setdefault(finding.observation_id, []).append(finding)
+        for obs in store.observations(run_id):
+            if obs.id not in wanted:
+                continue
+            found = by_obs.get(obs.id, [])
+            if flagged == "yes" and not found:
+                continue
+            if flagged == "no" and found:
+                continue
+            markets = sorted({f.market for f in found})
+            if market and market not in markets:
+                continue
+            if dimension and obs.dimension != dimension:
+                continue
+            hits.append({
+                "run_id": run_id, "observation_id": obs.id, "asset": asset,
+                "statement": (obs.statement or "").strip(),
+                "dimension": obs.dimension or "none",
+                "t_start": float(obs.t_start or 0.0),
+                "t_end": float(obs.t_end or 0.0),
+                "shot_id": obs.shot_id or "",
+                "markets": markets,
+                "rules": sorted({f.rule_id for f in found}),
+                "severity": max((f.severity for f in found), default=0),
+                "confidence": obs.confidence,
+                "score": round(wanted[obs.id], 3),
+                "frame": (f"/runs/{run_id}/evidence/{obs.id}"
+                          if obs.evidence_frame else ""),
+            })
+
+    hits.sort(key=lambda h: -h["score"])
+    mode = "indexed"
+    if rerank and hits:
+        try:
+            reason = semantic_hits(question, [h["statement"] for h in hits], model)
+        except Exception as exc:  # noqa: BLE001 -- the index alone still answers
+            _log.warning("rerank failed, answering from the index: %r", exc)
+            mode = f"indexed, unread ({type(exc).__name__})"
+        else:
+            hits = [dict(h, why=reason.get(i, "")) for i, h in enumerate(hits)
+                    if i in reason]
+    hits.sort(key=lambda h: (h["asset"], h["t_start"]))
+
+    return {
+        "query": f"nearest {k} captions to {question!r}, then read",
+        "mode": mode,
+        "routed": [],
+        "pattern": question,
+        "total": len(hits),
+        "scanned": len(near),
+        "capped": len(near) >= k,
+        "indexed": vectors.size(store),
+        "films": len({h["asset"] for h in hits}),
+        "by_asset": dict(Counter(h["asset"] for h in hits).most_common()),
+        "by_dimension": dict(Counter(h["dimension"] for h in hits).most_common()),
+        "by_market": dict(Counter(m for h in hits for m in h["markets"]).most_common()),
+        "flagged": sum(1 for h in hits if h["markets"]),
+        "hits": hits,
+    }

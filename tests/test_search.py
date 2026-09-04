@@ -21,10 +21,12 @@ class FakeOps:
     def __init__(self, rows):
         self.rows = rows
         self.asked = None
+        self.queries = []
         self.pages = 0
 
     def loki_lines(self, query, days=30, limit=400, end=None, **kw):
         self.asked = query
+        self.queries.append(query)
         self.pages += 1
         rows = self.rows
         if end is not None:
@@ -284,7 +286,11 @@ def test_the_labels_narrow_the_corpus_before_the_model_reads_it(monkeypatch):
 
     found = search.frames(ops, "bunnies")
 
-    assert 'dimension=~"food_and_animals|humour_irony_satire"' in ops.asked
+    labelled = [q for q in ops.queries if "dimension=~" in q]
+    assert labelled and 'dimension=~"food_and_animals|humour_irony_satire"' in labelled[0]
+    # ...and the question's own words are asked of everything else, because
+    # a dimension says why a frame matters, not what is in it
+    assert any("bunnies" in q and "dimension" not in q for q in ops.queries)
     assert found["routed"] == ["food_and_animals", "humour_irony_satire"]
 
 
@@ -304,3 +310,100 @@ def test_routing_that_fails_reads_everything_rather_than_nothing(monkeypatch):
 
     assert found["total"] == 1 and found["routed"] == []
     assert "dimension" not in ops.asked
+
+
+# --- the index: retrieval without a reading ---------------------------------
+
+def test_the_index_answers_from_vectors_and_the_model_only_reads_the_shortlist(
+        tmp_path, monkeypatch):
+    """The point of the index. Eighty captions are read, not four thousand,
+    and the eighty come back from a dot product rather than a model."""
+    from customs import vectors
+    from customs.schema import Observation
+    from customs.store import Store
+
+    store = Store(tmp_path / "s.db")
+    run = store.create_run(asset_path="runs/uploads/a/toon.mp4", markets=["FR"])
+    store.add_observations(run.id, [
+        Observation(id="o1", shot_id="shot_0", t_start=1.0, t_end=2.0,
+                    dimension="food_and_animals",
+                    statement="An animated rabbit in a tuxedo.", confidence=0.9,
+                    evidence_frame="/x/a.png"),
+        Observation(id="o2", shot_id="shot_1", t_start=3.0, t_end=4.0,
+                    dimension="food_and_animals",
+                    statement="A carrot on a chopping board.", confidence=0.9,
+                    evidence_frame="/x/b.png"),
+    ])
+    # a stand-in embedder: "rabbit" points one way, everything else the other
+    def fake_embed(texts, query=False, model=""):
+        out = []
+        for text in texts:
+            near = 1.0 if ("rabbit" in text.lower() or "bunn" in text.lower()) else 0.0
+            out.append(vectors._pack([near, 1.0 - near]))
+        return out
+
+    monkeypatch.setattr(vectors, "embed", fake_embed)
+    assert vectors.index_run(store, run.id) == 2
+    assert vectors.size(store) == 2
+
+    read = {}
+
+    def fake_batch(question, batch, model):
+        read["captions"] = [c for _, c in batch]
+        return {n: "an animated rabbit" for n, c in batch if "rabbit" in c}
+
+    monkeypatch.setattr(search, "_match_batch", fake_batch)
+
+    found = search.indexed(store, "bunnies", k=1)
+
+    assert found["mode"] == "indexed"
+    assert found["total"] == 1
+    assert found["hits"][0]["observation_id"] == "o1"
+    assert found["hits"][0]["why"] == "an animated rabbit"
+    assert read["captions"] == ["An animated rabbit in a tuxedo."], \
+        "the model reads the shortlist, not the corpus"
+
+
+def test_a_second_index_of_the_same_run_embeds_nothing(tmp_path, monkeypatch):
+    """Indexing is idempotent, because it runs at the end of every clearance
+    and again from the backfill, and embedding is the part that costs."""
+    from customs import vectors
+    from customs.schema import Observation
+    from customs.store import Store
+
+    store = Store(tmp_path / "s.db")
+    run = store.create_run(asset_path="runs/uploads/a/toon.mp4", markets=["FR"])
+    store.add_observations(run.id, [
+        Observation(id="o1", shot_id="shot_0", t_start=1.0, t_end=2.0,
+                    dimension="none", statement="A rabbit.", confidence=0.9,
+                    evidence_frame="")])
+    calls = []
+    monkeypatch.setattr(vectors, "embed",
+                        lambda texts, **kw: calls.append(texts) or
+                        [vectors._pack([1.0, 0.0]) for _ in texts])
+
+    assert vectors.index_run(store, run.id) == 1
+    assert vectors.index_run(store, run.id) == 0
+    assert len(calls) == 1
+
+
+def test_an_index_that_cannot_be_built_costs_a_slow_search_not_a_run(
+        tmp_path, monkeypatch):
+    from customs import vectors
+    from customs.schema import Observation
+    from customs.store import Store
+
+    store = Store(tmp_path / "s.db")
+    run = store.create_run(asset_path="runs/uploads/a/toon.mp4", markets=["FR"])
+    store.add_observations(run.id, [
+        Observation(id="o1", shot_id="shot_0", t_start=1.0, t_end=2.0,
+                    dimension="none", statement="A rabbit.", confidence=0.9,
+                    evidence_frame="")])
+
+    def explode(*a, **kw):
+        raise RuntimeError("vertex is down")
+
+    monkeypatch.setattr(vectors, "embed", explode)
+
+    assert vectors.index_run(store, run.id) == 0
+    assert vectors.size(store) == 0
