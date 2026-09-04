@@ -88,7 +88,8 @@ from fastapi.templating import Jinja2Templates
 
 from customs import (adjudicate, agentmode, analyst, costs, grafana_map, media,
                      narrate, packs, replyfmt, persist, pipeline, remediate,
-                     scope as scope_mod, spark, state as state_mod, verify)
+                     scope as scope_mod, search, spark, state as state_mod,
+                     verify)
 from customs.fetch import FetchError, fetch_youtube
 from customs.config import settings
 from customs.media import MediaError, probe_duration
@@ -2006,6 +2007,49 @@ def library(request: Request):
     total = sum(c["count"] for c in cards)
     return _page(request, "library.html", cards=cards, total=total, screen="library",
                  packs_total=len(all_packs))
+
+
+@app.get("/search")
+def search_frames(request: Request, q: str = "", dimension: str = "",
+                  market: str = "", flagged: str = "", days: int = 30,
+                  limit: int = 400, format: str = ""):
+    """Find frames by what the analyst said about them, across every run.
+
+    "Show me the frames with a rabbit in them" is not a screen anybody
+    designed: it is a line filter over the captions already sitting in
+    Loki, rendered as the frames themselves. Which makes it the answer to
+    a question nobody anticipated, which is the only kind worth building a
+    console around.
+
+    Reading, so no door. It costs one Loki query, which is why it is a
+    route somebody asks for rather than something a page does on load.
+
+    format=json answers with the counts and the rows, for the agent: it
+    reasons over the numbers and hands the same URL to the right-hand
+    pane, so what it says and what you see are one query.
+    """
+    from customs.grafana_ops import GrafanaOps
+    try:
+        with GrafanaOps(settings) as ops:
+            result = search.frames(ops, q, dimension=dimension, market=market,
+                                   flagged=flagged, days=max(1, min(days, 90)),
+                                   limit=max(1, min(limit, 2000)))
+    except search.SearchError as exc:
+        if format == "json":
+            return JSONResponse(status_code=400, content={"error": str(exc)})
+        return PlainTextResponse(str(exc), status_code=400)
+    except Exception as exc:  # noqa: BLE001 -- Grafana being down is not a 500 here
+        detail = f"Loki did not answer: {exc}"
+        if format == "json":
+            return JSONResponse(status_code=502, content={"error": detail})
+        return PlainTextResponse(detail, status_code=502)
+
+    if format == "json":
+        return JSONResponse(content=result)
+    return _page(request, "search.html", screen="search", result=result,
+                 summary=search.summary(result), q=q, dimension=dimension,
+                 market=market, flagged=flagged, days=days,
+                 dimensions=sorted(packs.taxonomy()))
 
 
 @app.get("/grafana", response_class=HTMLResponse)

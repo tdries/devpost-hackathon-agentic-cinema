@@ -26,6 +26,7 @@ dashboard product in its hands.
 from __future__ import annotations
 
 import json
+from urllib.parse import urlencode
 import os
 import time
 from dataclasses import dataclass, field
@@ -43,6 +44,15 @@ from memory or invent a finding, a market or a rule id.
 How to work:
 * Answer the question asked, briefly, in plain sentences. No preamble.
 * When something is worth looking at, call show() so it appears beside you.
+* A question about what is IN the footage -- a rabbit, a short skirt, a lit
+  cigarette, a visible logo -- is search_frames(), not show(). It searches
+  every caption the analyst ever wrote, across every run, and puts the
+  matching frames themselves beside you. Never answer "which frames" or
+  "how many frames" from a run page: search, then say the number the tool
+  returned. If a plain word finds nothing, try the synonyms the analyst
+  might have used ("bunn|rabbit|hare") or a proximity pattern for two words
+  that may not be adjacent ("short.{0,30}skirt") before concluding there
+  are none.
 * Numbers come from tools, never from your own arithmetic over prose.
 * When you refuse, say what the system refused and why, in its words.
 * End with what you would do next, as one short line, only when there is a
@@ -485,6 +495,74 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
         turn.calls.append({"tool": "show", "view": view, "url": url})
         return f"showing {label} at {url}"
 
+    def search_frames(text: str = "", dimension: str = "", market: str = "",
+                      flagged: str = "", days: int = 30, limit: int = 400) -> str:
+        """Find individual FRAMES by what the analyst said about them, across
+        every run this instance has ever performed, and show them.
+
+        This is the tool for any question about what is IN the footage:
+        "which frames have a rabbit in them", "how many show a short
+        skirt", "has anything with a cigarette ever cleared France". It
+        searches the analyst's own caption on each keyframe, so it answers
+        with frames rather than with a link to a run.
+
+        text is a case-insensitive REGEX over the caption, anchored at a
+        word boundary so "hare" does not find "share" and "bunn" still
+        finds "bunnies". Use alternation for synonyms the analyst might
+        have chosen instead: "bunn|rabbit|hare". Use a proximity pattern
+        rather than a phrase for two words that may not be adjacent:
+        "short.{0,30}skirt" finds "a short pleated skirt" and "a skirt cut
+        short", where the phrase "short skirt" finds neither. An empty
+        text with a dimension returns everything in that dimension.
+
+        dimension filters on the taxonomy (call library for the list),
+        market on the markets that objected, flagged on "yes" (some market
+        objected) or "no" (nobody minded).
+
+        Returns the counts first -- total, films, per dimension, per market
+        -- so a "how many" question is answered without reading the rows,
+        then the rows themselves. It also opens the same search beside the
+        conversation, so what you say and what the operator sees are one
+        query.
+        """
+        from customs import search as frame_search
+        from customs.grafana_ops import GrafanaOps
+
+        turn.calls.append({"tool": "search_frames", "text": text[:80],
+                           "dimension": dimension, "flagged": flagged})
+        try:
+            with GrafanaOps(settings) as ops:
+                found = frame_search.frames(
+                    ops, text, dimension=dimension, market=market,
+                    flagged=flagged, days=max(1, min(days, 90)),
+                    limit=max(1, min(limit, 2000)))
+        except frame_search.SearchError as exc:
+            return f"that pattern will not run: {exc}"
+        except Exception as exc:  # noqa: BLE001 -- the agent reports the failure
+            return f"the frame search failed: {exc}"
+
+        params = {"q": text, "dimension": dimension, "market": market,
+                  "flagged": flagged}
+        query_string = urlencode({k: v for k, v in params.items() if v})
+        turn.view = "/search" + (f"?{query_string}" if query_string else "")
+        turn.view_label = frame_search.summary(found)
+        # The rows the model reasons over, trimmed: forty captions is
+        # plenty to characterise a set, and the counts above already carry
+        # the shape of all of them.
+        return json.dumps({
+            "summary": frame_search.summary(found),
+            "total": found["total"], "capped": found["capped"],
+            "films": found["films"], "flagged": found["flagged"],
+            "by_film": found["by_asset"], "by_dimension": found["by_dimension"],
+            "by_market": found["by_market"],
+            "query": found["query"],
+            "frames": [{"film": h["asset"], "at": round(h["t_start"], 1),
+                        "said": h["statement"], "dimension": h["dimension"],
+                        "objected": h["markets"], "rules": h["rules"],
+                        "run": h["run_id"], "image": h["frame"]}
+                       for h in found["hits"][:40]],
+        })
+
     def data_schema() -> str:
         """What is queryable in Grafana, and how. Call this before analysing.
 
@@ -657,9 +735,10 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
         instruction=SYSTEM_PROMPT,
         tools=[FunctionTool(f) for f in (chart, list_runs, markets, findings,
                                          fix_options, library, show,
-                                         data_schema, query, build_dashboard)],
-        # (the same ten are named in TOOL_NAMES below, for the console to
-        # show; keep them together)
+                                         search_frames, data_schema, query,
+                                         build_dashboard)],
+        # (the same eleven are named in TOOL_NAMES below, for the console
+        # to show; keep them together)
     )
 
 
@@ -696,4 +775,5 @@ async def ask(store: Store, message: str, session_id: str,
 # rather than retyped in a template, because a console that lies about what
 # its agent can reach is worse than one that says nothing.
 TOOL_NAMES = ("chart", "list_runs", "markets", "findings", "fix_options",
-              "library", "show", "data_schema", "query", "build_dashboard")
+              "library", "show", "search_frames", "data_schema", "query",
+              "build_dashboard")

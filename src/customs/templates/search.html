@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Frame search{% endblock %}
+{% block nav %}{% include "_topnav.html" %}{% endblock %}
+{% block main %}
+
+{# The captions, searched.
+
+   Every keyframe the analyst described is a Loki line carrying its own
+   sentence, so "which frames have a rabbit in them" is a line filter, not
+   a feature somebody had to anticipate. What comes back is the frames
+   themselves, across every run this instance has performed, which is the
+   difference between a search result and a link to a run. #}
+
+<section class="hero" style="padding-bottom:18px">
+  <div class="rule-row"><span class="label">Frame search</span>
+    <span class="right label">across every run &middot; the analyst's own words</span></div>
+  <h1 class="pagetitle"><svg class="ic"><use href="#i-analyst"/></svg>What was seen, and where</h1>
+  <form class="sform" method="get" action="/search">
+    <input class="urlin" type="search" name="q" value="{{ q }}" autofocus
+           placeholder="a rabbit, a lit cigarette, bunn|rabbit|hare">
+    <select class="urlin sdim" name="dimension">
+      <option value="">every dimension</option>
+      {% for dim in dimensions %}
+      <option value="{{ dim }}"{{ ' selected' if dim == dimension }}>{{ dim.replace('_', ' ') }}</option>
+      {% endfor %}
+    </select>
+    <select class="urlin sdim" name="flagged">
+      <option value="">objected to or not</option>
+      <option value="yes"{{ ' selected' if flagged == 'yes' }}>a market objected</option>
+      <option value="no"{{ ' selected' if flagged == 'no' }}>nobody minded</option>
+    </select>
+    <button class="btn go" type="submit">Search</button>
+  </form>
+  <p class="subline" style="max-width:92ch">{{ summary }}</p>
+  {% if result.total %}
+  <p class="gcount mono">
+    <span><b>{{ result.total }}</b> frames</span>
+    <span><b>{{ result.films }}</b> films</span>
+    <span><b>{{ result.flagged }}</b> objected to</span>
+    {% for dim, count in result.by_dimension.items() %}
+    {% if loop.index <= 4 %}<span><b>{{ count }}</b> {{ dim.replace('_', ' ') }}</span>{% endif %}
+    {% endfor %}
+  </p>
+  {% endif %}
+  <p class="gsmall mono" style="margin-top:8px;color:var(--ink-3);overflow-wrap:anywhere">{{ result.query }}</p>
+</section>
+
+{% if result.hits %}
+<section style="border-top:none;padding-top:0">
+  <div class="sgrid">
+    {% for hit in result.hits %}
+    <figure class="scard">
+      {% if hit.frame %}
+      <a href="/runs/{{ hit.run_id }}/frames#sc-{{ hit.shot_id }}">
+        <img src="{{ hit.frame }}?w=480" alt="" loading="lazy" onerror="this.closest('a').remove()">
+      </a>
+      {% endif %}
+      <figcaption>
+        <span class="sstate">
+          <span class="mono">{{ '%.1f'|format(hit.t_start) }}s</span>
+          <svg class="ic" title="{{ hit.dimension.replace('_', ' ') }}"><use href="#d-{{ hit.dimension }}"/></svg>
+          {% if hit.markets %}
+          {% for m in hit.markets %}<span class="pill s-blocked">{{ m }}</span>{% endfor %}
+          {% else %}
+          <span class="pill s-cleared"><svg class="ic"><use href="#i-cleared"/></svg>nobody minded</span>
+          {% endif %}
+        </span>
+        <span class="sstatement">{{ hit.statement }}</span>
+        <span class="smeta label">
+          <a class="cite" href="/runs/{{ hit.run_id }}">{{ hit.asset }}</a>
+          {% if hit.rules %}&middot; {{ hit.rules | join(', ') }}{% endif %}
+        </span>
+      </figcaption>
+    </figure>
+    {% endfor %}
+  </div>
+</section>
+{% endif %}
+
+{% endblock %}

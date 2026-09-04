@@ -9,7 +9,7 @@
 <img src="docs/media/powered-by-grafana.png" alt="Powered by Grafana" width="150">
 
 [![Live instance](https://img.shields.io/badge/live-customs--app.run.app-4285F4?style=flat-square)](https://customs-app-akap4ao72a-ew.a.run.app)
-[![Tests](https://img.shields.io/badge/tests-547_passing-34A853?style=flat-square)](#tests)
+[![Tests](https://img.shields.io/badge/tests-557_passing-34A853?style=flat-square)](#tests)
 [![Jurisdictions](https://img.shields.io/badge/jurisdictions-98-FBBC05?style=flat-square)](#the-jurisdiction-ladder)
 [![Rules](https://img.shields.io/badge/rules-128_with_citations-EA4335?style=flat-square)](#the-jurisdiction-ladder)
 [![Grafana](https://img.shields.io/badge/Grafana-MCP_at_runtime-F46800?style=flat-square)](#grafana-is-a-participant-not-a-picture)
@@ -318,7 +318,7 @@ The crew still writes to Grafana Cloud over MCP. The viewer is a second pair of 
 
 ## The console
 
-Ten screens, each one a way of asking the same question at a different distance.
+Eleven screens, each one a way of asking the same question at a different distance.
 
 ### <img src="docs/media/icons/n-new.svg" width="22"> The front door
 
@@ -385,6 +385,10 @@ A second ADK surface: one `LlmAgent` with ten tools. Ask in sentences; it answer
 Every rule, filed under the observation that can trigger it.
 
 <img src="docs/media/10-library.png" alt="Rule library" width="100%">
+
+### <img src="docs/media/icons/i-analyst.svg" width="22"> Frame search
+
+Every caption the analyst ever wrote is a Loki line, so "which frames have a rabbit in them" is a line filter rather than a feature somebody anticipated, and what comes back is the frames themselves across every run. `text` is a regex over the caption alone, anchored at a word boundary so `hare` does not find *share* and `bunn` still finds *bunnies*; the rule ids and market codes in the same log line cannot inflate the count. The agent has it as `search_frames`, which returns the counts first, so **how many frames show a short skirt** is answered with a number and the pictures beside it.
 
 ### <img src="docs/media/icons/i-publisher.svg" width="22"> Grafana resources
 
@@ -549,10 +553,10 @@ Needs `ffmpeg` on PATH, a Google Cloud project with Vertex AI enabled, and a Gra
 
 ```bash
 .venv/bin/python -m pytest -q
-# 547 passed, 8 deselected
+# 557 passed, 8 deselected
 ```
 
-**547 offline tests across 23 files**, no network, no API keys, no Grafana. The eight deselected ones are live-API probes you opt into explicitly.
+**557 offline tests across 24 files**, no network, no API keys, no Grafana. The eight deselected ones are live-API probes you opt into explicitly.
 
 The suite exists because most of this system's failure modes are silent: a guard that stops refusing, a citation that stops resolving, a craft gate that accepts a master that lost its soundtrack, a green can appearing in a modesty fix because a default leaked across dimensions. Every one of those has a test, and several of them have a test *because it happened*.
 

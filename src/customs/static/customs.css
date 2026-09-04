@@ -2555,6 +2555,24 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
    the expensive one further down the page in its own words. */
 .already-do { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
 
+/* ---------- frame search ----------
+   A result is a picture with a sentence under it, so the grid is sized by
+   the picture: whatever fits at 300px, as many across as the window has
+   room for. */
+.sform { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 12px; }
+.sform .urlin { flex: 1 1 260px; min-width: 0; }
+.sform .sdim { flex: 0 1 200px; }
+.sgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px; }
+.scard { margin: 0; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel); overflow: hidden; display: flex; flex-direction: column; }
+.scard img { width: 100%; display: block; background: var(--well); }
+.scard figcaption { display: grid; gap: 7px; padding: 11px 12px 12px; }
+.sstate { display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  font-size: 11px; color: var(--ink-3); }
+.sstatement { font-size: 13px; line-height: 1.5; color: var(--ink); }
+.smeta { display: block; overflow-wrap: anywhere; }
+
 /* ---------- the Grafana resources page ----------
    An inventory reads as tables, so it is built from the console's own
    .grid table with three concessions: a query needs a monospace cell that
