@@ -170,7 +170,7 @@ def route(question: str, model: str = "") -> list[str]:
     answer = genai_client.generate_json(
         model or live.model_text,
         [_ROUTE_PROMPT.format(dimensions="\n".join(known), question=question)],
-        _ROUTE_SCHEMA)
+        _ROUTE_SCHEMA, thinking_budget=0)
     picked = [d for d in (answer or {}).get("dimensions") or [] if d in known]
     return picked
 
@@ -182,14 +182,16 @@ def _match_batch(question: str, batch: list[tuple[int, str]], model: str) -> dic
     listing = "\n".join(f"{n}. {caption}" for n, caption in batch)
     prompt = [_PROMPT.format(question=question, captions=listing)]
     try:
-        answer = genai_client.generate_json(model, prompt, _MATCH_SCHEMA)
+        answer = genai_client.generate_json(model, prompt, _MATCH_SCHEMA,
+                                            thinking_budget=0)
     except Exception as exc:  # noqa: BLE001 -- one narrow retry
         if "client has been closed" not in str(exc):
             raise
         # Something else reset the shared client mid-flight. Minting a
         # fresh one costs a round trip; failing the search costs the answer.
         genai_client._client = None
-        answer = genai_client.generate_json(model, prompt, _MATCH_SCHEMA)
+        answer = genai_client.generate_json(model, prompt, _MATCH_SCHEMA,
+                                            thinking_budget=0)
     known = {n for n, _ in batch}
     out = {}
     for hit in (answer or {}).get("matches") or []:
