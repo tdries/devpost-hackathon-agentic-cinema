@@ -182,7 +182,7 @@ def test_semantics_finds_the_frame_nobody_could_have_guessed_the_words_for(monke
     def fake_batch(question, batch, model):
         seen["question"] = question
         seen["captions"] = [c for _, c in batch]
-        return {n: "animated rabbit" for n, c in batch if "rabbit" in c}
+        return {n: "" for n, c in batch if "rabbit" in c}
 
     monkeypatch.setattr(search, "route", lambda *a, **k: [])
     monkeypatch.setattr(search, "_match_batch", fake_batch)
@@ -191,7 +191,6 @@ def test_semantics_finds_the_frame_nobody_could_have_guessed_the_words_for(monke
 
     assert found["total"] == 1
     assert found["hits"][0]["observation_id"] == "o1"
-    assert found["hits"][0]["why"] == "animated rabbit"
     assert seen["question"] == "bunnies"
     assert len(seen["captions"]) == 3, "the model sees them all, not a prefiltered set"
     assert found["mode"] == "semantic"
@@ -226,7 +225,7 @@ def test_a_number_the_model_invented_is_not_a_frame(monkeypatch):
     monkeypatch.setattr(search, "generate_json_for_test", None, raising=False)
 
     def fake_generate(model, parts, schema):
-        return {"matches": [{"n": 0, "why": "rabbit"}, {"n": 77, "why": "invented"}]}
+        return {"matches": [0, 77]}
 
     monkeypatch.setattr(search, "route", lambda *a, **k: [])
     monkeypatch.setattr("customs.genai_client.generate_json", fake_generate)
@@ -350,7 +349,7 @@ def test_the_index_answers_from_vectors_and_the_model_only_reads_the_shortlist(
 
     def fake_batch(question, batch, model):
         read["captions"] = [c for _, c in batch]
-        return {n: "an animated rabbit" for n, c in batch if "rabbit" in c}
+        return {n: "" for n, c in batch if "rabbit" in c}
 
     monkeypatch.setattr(search, "_match_batch", fake_batch)
 
@@ -359,7 +358,6 @@ def test_the_index_answers_from_vectors_and_the_model_only_reads_the_shortlist(
     assert found["mode"] == "indexed"
     assert found["total"] == 1
     assert found["hits"][0]["observation_id"] == "o1"
-    assert found["hits"][0]["why"] == "an animated rabbit"
     assert read["captions"] == ["An animated rabbit in a tuxedo."], \
         "the model reads the shortlist, not the corpus"
 

@@ -74,7 +74,6 @@
           {% endif %}
         </span>
         <span class="sstatement">{{ hit.statement }}</span>
-        {% if hit.why %}<span class="swhy label">matched: {{ hit.why }}</span>{% endif %}
         <span class="smeta label">
           <a class="cite" href="/runs/{{ hit.run_id }}">{{ hit.asset }}</a>
           {% if hit.rules %}&middot; {{ hit.rules | join(', ') }}{% endif %}
