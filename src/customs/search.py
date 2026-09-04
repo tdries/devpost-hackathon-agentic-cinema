@@ -82,10 +82,14 @@ def logql(text: str, dimension: str = "", flagged: str = "") -> str:
 
 
 # How many captions go to the model in one call. They are one sentence
-# each, so a few hundred is a small prompt; the batches run together
-# because five serial calls is five times the wait for no benefit.
-_BATCH = 300
-_MAX_BATCHES = 8
+# each, so six hundred is still a small prompt, and fewer larger calls beat
+# more smaller ones here: the batches run one after another on purpose.
+# Running them in threads shared one genai client between them, and that
+# client is a module-level singleton the Omni path sets to None whenever a
+# bearer token expires -- which arrived as "Cannot send a request, as the
+# client has been closed" on some searches and not others.
+_BATCH = 600
+_MAX_BATCHES = 6
 
 _MATCH_SCHEMA = {
     "type": "object",
@@ -131,12 +135,19 @@ DESCRIPTIONS
 
 def _match_batch(question: str, batch: list[tuple[int, str]], model: str) -> dict[int, str]:
     """Which of these captions the question is about, as {index: why}."""
-    from customs.genai_client import generate_json
+    from customs import genai_client
 
     listing = "\n".join(f"{n}. {caption}" for n, caption in batch)
-    answer = generate_json(
-        model, [_PROMPT.format(question=question, captions=listing)],
-        _MATCH_SCHEMA)
+    prompt = [_PROMPT.format(question=question, captions=listing)]
+    try:
+        answer = genai_client.generate_json(model, prompt, _MATCH_SCHEMA)
+    except Exception as exc:  # noqa: BLE001 -- one narrow retry
+        if "client has been closed" not in str(exc):
+            raise
+        # Something else reset the shared client mid-flight. Minting a
+        # fresh one costs a round trip; failing the search costs the answer.
+        genai_client._client = None
+        answer = genai_client.generate_json(model, prompt, _MATCH_SCHEMA)
     known = {n for n, _ in batch}
     out = {}
     for hit in (answer or {}).get("matches") or []:
@@ -159,8 +170,6 @@ def semantic_hits(question: str, captions: list[str], model: str = "") -> dict[i
     the same product sits in nine shots, otherwise pays for the same
     sentence nine times and the model reads it nine times.
     """
-    from concurrent.futures import ThreadPoolExecutor
-
     from customs.config import settings as live
 
     model = model or live.model_text
@@ -174,8 +183,7 @@ def semantic_hits(question: str, captions: list[str], model: str = "") -> dict[i
     if not batches:
         return {}
 
-    with ThreadPoolExecutor(max_workers=len(batches)) as pool:
-        results = list(pool.map(lambda b: _match_batch(question, b, model), batches))
+    results = [_match_batch(question, batch, model) for batch in batches]
 
     by_caption = {}
     for found in results:
