@@ -56,6 +56,19 @@ Three violations, found and repaired by the system itself. Left is what was uplo
 
 ---
 
+## Four moves, end to end
+
+Every frame below is the running console, shot from the deployed instance rather than drawn.
+
+| | |
+|---|---|
+| ![Upload and processing](docs/media/tut-1-upload.gif) | **Hand it a master.** Pick from 98 jurisdictions, and the crew narrates itself stage by stage while it works: shots, transcript, observations, then one adjudicator per market in parallel. |
+| ![Frames and findings](docs/media/tut-2-frames.gif) | **Every frame, as the analyst saw it.** One neutral timecoded sentence each, verdicts forbidden. A finding is that observation joined to one market's rule and a live citation. |
+| ![The fix picker](docs/media/tut-3-fix.gif) | **Five ways to fix it, priced in euro before you press.** What should change, and how much of the footage to disturb. The localized master lands beside the original in the cutting room. |
+| ![A click in Grafana](docs/media/tut-4-grafana.gif) | **A click on a Grafana panel starts a generative fix.** The grid is the crew's own dashboard; clicking a square resolves the scene under it and starts a priced edit on that span. |
+
+---
+
 ## The problem
 
 A global brand ships one commercial into forty markets and checks maybe six of them.
