@@ -495,7 +495,7 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
         return f"showing {label} at {url}"
 
     def search_frames(text: str = "", dimension: str = "", market: str = "",
-                      flagged: str = "", days: int = 30, limit: int = 400,
+                      flagged: str = "", days: int = 30, limit: int = 4000,
                       mode: str = "semantic") -> str:
         """Find individual FRAMES by what the analyst said about them, across
         every run this instance has ever performed, and show them.
@@ -538,7 +538,7 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
                 found = frame_search.frames(
                     ops, text, dimension=dimension, market=market,
                     flagged=flagged, days=max(1, min(days, 90)),
-                    limit=max(1, min(limit, 2000)),
+                    limit=max(1, min(limit, 12000)),
                     mode="literal" if mode == "literal" else "semantic")
         except frame_search.SearchError as exc:
             return f"that pattern will not run: {exc}"

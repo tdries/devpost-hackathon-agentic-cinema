@@ -15,15 +15,21 @@ from customs import search
 
 
 class FakeOps:
-    """Loki, with whatever lines the test wants. Records the query it got."""
+    """Loki, with whatever lines the test wants. Records the query it got,
+    and pages the way the real one does: newest first, `end` walking back."""
 
     def __init__(self, rows):
         self.rows = rows
         self.asked = None
+        self.pages = 0
 
-    def loki_lines(self, query, days=30, limit=400, **kw):
+    def loki_lines(self, query, days=30, limit=400, end=None, **kw):
         self.asked = query
-        return self.rows[:limit]
+        self.pages += 1
+        rows = self.rows
+        if end is not None:
+            rows = [r for r in rows if int(r.get("ts_ns") or 0) <= end * 1e9]
+        return rows[:limit]
 
 
 def line(statement, *, asset="ad", run="run_1", obs="obs_1", dimension="none",
@@ -243,3 +249,19 @@ def test_the_model_being_down_costs_the_reasoning_not_the_search(monkeypatch):
 
     assert found["total"] == 1 and found["hits"][0]["observation_id"] == "o1"
     assert "semantic failed" in found["mode"]
+
+
+def test_the_search_pages_until_the_stream_is_out_not_until_the_first_page(monkeypatch):
+    """Loki answers newest-first, one page at a time. Reading only the first
+    page is how "are there any rabbits" gets a confident no when the rabbits
+    are three weeks old and the last fortnight was busy."""
+    monkeypatch.setattr(search, "_PAGE", 2)
+    rows = [line(f"caption {n}", obs=f"o{n}") for n in range(6)]
+    for n, row in enumerate(rows):
+        row["ts_ns"] = str((100 - n) * 1_000_000_000)  # newest first
+    ops = FakeOps(rows)
+
+    found = search.frames(ops, "", limit=100)
+
+    assert found["total"] == 6, "every page, not just the newest"
+    assert ops.pages > 1

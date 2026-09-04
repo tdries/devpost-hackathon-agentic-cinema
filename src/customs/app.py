@@ -2012,7 +2012,7 @@ def library(request: Request):
 @app.get("/search")
 def search_frames(request: Request, q: str = "", dimension: str = "",
                   market: str = "", flagged: str = "", days: int = 30,
-                  limit: int = 400, format: str = "", mode: str = "semantic"):
+                  limit: int = 4000, format: str = "", mode: str = "semantic"):
     """Find frames by what the analyst said about them, across every run.
 
     "Show me the frames with a rabbit in them" is not a screen anybody
@@ -2033,7 +2033,7 @@ def search_frames(request: Request, q: str = "", dimension: str = "",
         with GrafanaOps(settings) as ops:
             result = search.frames(ops, q, dimension=dimension, market=market,
                                    flagged=flagged, days=max(1, min(days, 90)),
-                                   limit=max(1, min(limit, 2000)),
+                                   limit=max(1, min(limit, 12000)),
                                    mode="literal" if mode == "literal" else "semantic")
     except search.SearchError as exc:
         if format == "json":

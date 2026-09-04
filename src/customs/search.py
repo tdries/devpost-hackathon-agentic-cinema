@@ -183,6 +183,35 @@ def semantic_hits(question: str, captions: list[str], model: str = "") -> dict[i
             for i in unique[caption]}
 
 
+# Loki answers one query_range with at most a page of lines, newest first.
+# A search that reads only the newest page is a search that answers "no
+# rabbits" because the rabbits are three weeks old, which is the most
+# confident wrong answer this thing can give. So it pages until the stream
+# is exhausted or the ceiling is reached, and only then decides.
+_PAGE = 1000
+_MAX_PAGES = 12
+
+
+def _all_lines(ops, query: str, days: int, cap: int) -> list[dict]:
+    """Every line the selector matches, oldest page included."""
+    rows: list[dict] = []
+    end = None
+    for _ in range(_MAX_PAGES):
+        page = ops.loki_lines(query, days=days, limit=min(_PAGE, cap - len(rows)),
+                              end=end)
+        if not page:
+            break
+        rows.extend(page)
+        if len(rows) >= cap:
+            break
+        stamps = [int(r["ts_ns"]) for r in page if str(r.get("ts_ns") or "").isdigit()]
+        if len(page) < _PAGE or not stamps:
+            break
+        # walk backwards from the oldest line this page returned
+        end = (min(stamps) - 1) / 1e9
+    return rows
+
+
 def _body(row: dict) -> dict:
     """The parsed line, whatever the reader called it.
 
@@ -226,7 +255,7 @@ def frames(ops, text: str = "", dimension: str = "", market: str = "",
     # Semantics has no keyword to give Loki, so the stream selector does
     # the narrowing and the model reads what comes back.
     query = logql(text if literal else "", dimension, flagged)
-    rows = ops.loki_lines(query, days=days, limit=limit)
+    rows = _all_lines(ops, query, days, limit)
 
     hits = []
     seen = set()
@@ -292,6 +321,8 @@ def frames(ops, text: str = "", dimension: str = "", market: str = "",
         # Loki gave us exactly as many lines as we asked for, so there are
         # probably more. Saying so beats a count that quietly means "400".
         "capped": len(rows) >= limit,
+        "distinct_captions": len({h["statement"] for h in hits}) if not wanted
+                             else None,
         "films": len({h["asset"] for h in hits}),
         "by_asset": dict(Counter(h["asset"] for h in hits).most_common()),
         "by_dimension": dict(Counter(h["dimension"] for h in hits).most_common()),
