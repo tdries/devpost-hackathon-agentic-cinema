@@ -9,7 +9,7 @@
 <img src="docs/media/powered-by-grafana.png" alt="Powered by Grafana" width="150">
 
 [![Live instance](https://img.shields.io/badge/live-customs--app.run.app-4285F4?style=flat-square)](https://customs-app-akap4ao72a-ew.a.run.app)
-[![Tests](https://img.shields.io/badge/tests-557_passing-34A853?style=flat-square)](#tests)
+[![Tests](https://img.shields.io/badge/tests-561_passing-34A853?style=flat-square)](#tests)
 [![Jurisdictions](https://img.shields.io/badge/jurisdictions-98-FBBC05?style=flat-square)](#the-jurisdiction-ladder)
 [![Rules](https://img.shields.io/badge/rules-128_with_citations-EA4335?style=flat-square)](#the-jurisdiction-ladder)
 [![Grafana](https://img.shields.io/badge/Grafana-MCP_at_runtime-F46800?style=flat-square)](#grafana-is-a-participant-not-a-picture)
@@ -388,7 +388,7 @@ Every rule, filed under the observation that can trigger it.
 
 ### <img src="docs/media/icons/i-analyst.svg" width="22"> Frame search
 
-Every caption the analyst ever wrote is a Loki line, so "which frames have a rabbit in them" is a line filter rather than a feature somebody anticipated, and what comes back is the frames themselves across every run. `text` is a regex over the caption alone, anchored at a word boundary so `hare` does not find *share* and `bunn` still finds *bunnies*; the rule ids and market codes in the same log line cannot inflate the count. The agent has it as `search_frames`, which returns the counts first, so **how many frames show a short skirt** is answered with a number and the pictures beside it.
+Every caption the analyst ever wrote is a Loki line, so "which frames have a rabbit in them" is a question rather than a feature somebody anticipated, and what comes back is the frames themselves across every run. **The match is semantic**: the question and the candidate captions go to Gemini together, so *bunnies* finds *"an animated rabbit character"* without anybody guessing which word a vision model chose months ago, and each card says in the model's own words why it is there. A carrot is not a rabbit. `mode=literal` switches to a regex over the caption alone for when you mean the characters, a rule id or a brand. The agent has it as `search_frames`, which returns the counts first, so **how many frames show a short skirt** is answered with a number and the pictures beside it.
 
 ### <img src="docs/media/icons/i-publisher.svg" width="22"> Grafana resources
 
@@ -553,10 +553,10 @@ Needs `ffmpeg` on PATH, a Google Cloud project with Vertex AI enabled, and a Gra
 
 ```bash
 .venv/bin/python -m pytest -q
-# 557 passed, 8 deselected
+# 561 passed, 8 deselected
 ```
 
-**557 offline tests across 24 files**, no network, no API keys, no Grafana. The eight deselected ones are live-API probes you opt into explicitly.
+**561 offline tests across 24 files**, no network, no API keys, no Grafana. The eight deselected ones are live-API probes you opt into explicitly.
 
 The suite exists because most of this system's failure modes are silent: a guard that stops refusing, a citation that stops resolving, a craft gate that accepts a master that lost its soundtrack, a green can appearing in a modesty fix because a default leaked across dimensions. Every one of those has a test, and several of them have a test *because it happened*.
 

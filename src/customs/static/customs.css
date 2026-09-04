@@ -2572,6 +2572,9 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
   font-size: 11px; color: var(--ink-3); }
 .sstatement { font-size: 13px; line-height: 1.5; color: var(--ink); }
 .smeta { display: block; overflow-wrap: anywhere; }
+/* why the model kept this frame: its own words, in the colour the
+   console uses for a machine's reasoning rather than a fact. */
+.swhy { color: var(--g-blue); }
 
 /* ---------- the Grafana resources page ----------
    An inventory reads as tables, so it is built from the console's own

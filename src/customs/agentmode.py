@@ -45,14 +45,13 @@ How to work:
 * Answer the question asked, briefly, in plain sentences. No preamble.
 * When something is worth looking at, call show() so it appears beside you.
 * A question about what is IN the footage -- a rabbit, a short skirt, a lit
-  cigarette, a visible logo -- is search_frames(), not show(). It searches
-  every caption the analyst ever wrote, across every run, and puts the
-  matching frames themselves beside you. Never answer "which frames" or
-  "how many frames" from a run page: search, then say the number the tool
-  returned. If a plain word finds nothing, try the synonyms the analyst
-  might have used ("bunn|rabbit|hare") or a proximity pattern for two words
-  that may not be adjacent ("short.{0,30}skirt") before concluding there
-  are none.
+  cigarette, a visible logo -- is search_frames(), not show(). It reads
+  every caption the analyst ever wrote, across every run, with a model, and
+  puts the matching frames themselves beside you. Ask it in plain words:
+  it matches meaning, so "bunnies" finds "an animated rabbit". Never answer
+  "which frames" or "how many frames" from a run page, and never from your
+  own reading of a caption list: search, then say the number the tool
+  returned.
 * Numbers come from tools, never from your own arithmetic over prose.
 * When you refuse, say what the system refused and why, in its words.
 * End with what you would do next, as one short line, only when there is a
@@ -496,7 +495,8 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
         return f"showing {label} at {url}"
 
     def search_frames(text: str = "", dimension: str = "", market: str = "",
-                      flagged: str = "", days: int = 30, limit: int = 400) -> str:
+                      flagged: str = "", days: int = 30, limit: int = 400,
+                      mode: str = "semantic") -> str:
         """Find individual FRAMES by what the analyst said about them, across
         every run this instance has ever performed, and show them.
 
@@ -506,14 +506,17 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
         searches the analyst's own caption on each keyframe, so it answers
         with frames rather than with a link to a run.
 
-        text is a case-insensitive REGEX over the caption, anchored at a
-        word boundary so "hare" does not find "share" and "bunn" still
-        finds "bunnies". Use alternation for synonyms the analyst might
-        have chosen instead: "bunn|rabbit|hare". Use a proximity pattern
-        rather than a phrase for two words that may not be adjacent:
-        "short.{0,30}skirt" finds "a short pleated skirt" and "a skirt cut
-        short", where the phrase "short skirt" finds neither. An empty
-        text with a dimension returns everything in that dimension.
+        text is the question in plain words: "bunnies", "a woman drinking",
+        "a hemline above the knee". Every candidate caption goes to Gemini
+        with it, and the model decides which frames the question is about,
+        so you never have to guess which words the analyst chose: it wrote
+        "an animated rabbit" and "bunnies" still finds it. Do not build
+        synonym lists or regex; ask the question.
+
+        mode="literal" makes text a regex over the caption instead, for
+        when you mean the characters: a rule id, a brand name, an exact
+        phrase. An empty text with a dimension returns everything in that
+        dimension without calling the model at all.
 
         dimension filters on the taxonomy (call library for the list),
         market on the markets that objected, flagged on "yes" (some market
@@ -535,14 +538,15 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
                 found = frame_search.frames(
                     ops, text, dimension=dimension, market=market,
                     flagged=flagged, days=max(1, min(days, 90)),
-                    limit=max(1, min(limit, 2000)))
+                    limit=max(1, min(limit, 2000)),
+                    mode="literal" if mode == "literal" else "semantic")
         except frame_search.SearchError as exc:
             return f"that pattern will not run: {exc}"
         except Exception as exc:  # noqa: BLE001 -- the agent reports the failure
             return f"the frame search failed: {exc}"
 
         params = {"q": text, "dimension": dimension, "market": market,
-                  "flagged": flagged}
+                  "flagged": flagged, "mode": mode}
         query_string = urlencode({k: v for k, v in params.items() if v})
         turn.view = "/search" + (f"?{query_string}" if query_string else "")
         turn.view_label = frame_search.summary(found)
@@ -551,13 +555,15 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
         # the shape of all of them.
         return json.dumps({
             "summary": frame_search.summary(found),
+            "matched_by": found["mode"],
             "total": found["total"], "capped": found["capped"],
             "films": found["films"], "flagged": found["flagged"],
             "by_film": found["by_asset"], "by_dimension": found["by_dimension"],
             "by_market": found["by_market"],
             "query": found["query"],
             "frames": [{"film": h["asset"], "at": round(h["t_start"], 1),
-                        "said": h["statement"], "dimension": h["dimension"],
+                        "said": h["statement"], "why": h.get("why", ""),
+                        "dimension": h["dimension"],
                         "objected": h["markets"], "rules": h["rules"],
                         "run": h["run_id"], "image": h["frame"]}
                        for h in found["hits"][:40]],
