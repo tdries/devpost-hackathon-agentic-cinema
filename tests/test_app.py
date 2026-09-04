@@ -2004,9 +2004,11 @@ def test_the_front_door_says_what_this_is_before_what_it_does(console):
     assert "Observe once, judge many" in body
     assert "Grafana is a participant" in body
 
-    # counted, not asserted -- a stale number here is a lie to a judge
-    assert f">{len(packs.load())}<" in body, "jurisdiction count is live"
-    assert f">{len(packs.taxonomy())}<" in body, "dimension count is live"
+    # counted, not asserted -- a stale number here is a lie to a judge.
+    # They live in the sentences now rather than in a band of four big
+    # numerals under the doors, but they are still counted from the packs.
+    assert f"{len(packs.load())} jurisdictions" in body, "jurisdiction count is live"
+    assert f"{len(packs.taxonomy())} dimensions" in body, "dimension count is live"
 
     # the console tabs belong behind the door, not on it
     assert "New clearance run</a>" not in body

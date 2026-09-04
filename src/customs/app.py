@@ -1397,12 +1397,14 @@ def landing(request: Request):
     they used to meet was an upload form asking for a master they do not
     have. So the form moved to /new and this says what the thing IS.
     """
+    # packs_total and dims_total only: the band of four numbers that used
+    # to sit under the doors is gone, and with it the run count -- which
+    # was a read of every run in the store on every hit of the page most
+    # likely to be hit.
     return _page(request, "landing.html", screen="landing",
                  roles=ROLES,
                  packs_total=len(market_packs()),
-                 rules_total=sum(len(p.own_rules) for p in market_packs().values()),
-                 dims_total=len(packs.taxonomy()),
-                 runs_total=len(store().recent_runs(500)))
+                 dims_total=len(packs.taxonomy()))
 
 
 # A visitor's own ceiling, separate from the instance's. The generation
