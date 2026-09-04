@@ -30,6 +30,7 @@ from __future__ import annotations
 import json
 import logging
 import re
+import time
 from collections import Counter
 
 from pathlib import Path
@@ -490,7 +491,12 @@ def indexed(store, question: str, dimension: str = "", market: str = "",
     """
     from customs import vectors
 
+    # Where the time actually goes. Guessing cost an afternoon once.
+    clock = {}
+    t0 = time.time()
     near = vectors.nearest(store, question, k=k, model=model or vectors.MODEL)
+    clock["retrieve_ms"] = int((time.time() - t0) * 1000)
+    t0 = time.time()
     keep = {}
     for row in near:
         keep.setdefault(row["run_id"], {})[row["observation_id"]] = row["score"]
@@ -533,8 +539,10 @@ def indexed(store, question: str, dimension: str = "", market: str = "",
                           if obs.evidence_frame else ""),
             })
 
+    clock["detail_ms"] = int((time.time() - t0) * 1000)
     hits.sort(key=lambda h: -h["score"])
     mode = "indexed"
+    t0 = time.time()
     if rerank and hits:
         try:
             reason = semantic_hits(question, [h["statement"] for h in hits], model)
@@ -544,9 +552,11 @@ def indexed(store, question: str, dimension: str = "", market: str = "",
         else:
             hits = [dict(h, why=reason.get(i, "")) for i, h in enumerate(hits)
                     if i in reason]
+    clock["read_ms"] = int((time.time() - t0) * 1000)
     hits.sort(key=lambda h: (h["asset"], h["t_start"]))
 
     return {
+        "took": clock,
         "query": f"nearest {k} captions to {question!r}, then read",
         "mode": mode,
         "routed": [],
