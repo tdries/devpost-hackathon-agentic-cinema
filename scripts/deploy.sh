@@ -301,7 +301,13 @@ gcloud run deploy "$SERVICE" \
     --allow-unauthenticated \
     --max-instances 1 --min-instances 1 \
     --concurrency 20 \
-    --memory 2Gi --cpu 2 \
+    # 4Gi, not 2: a prop_swap composite (720p master, a Gemini-edited PNG
+    # looped as a second input, blend + overlay) took the container over
+    # 2Gi and Cloud Run SIGKILLed it -- ffmpeg exited -9, the finding went
+    # back to open, and the restart aborted an unrelated clearance running
+    # beside it. Memory is billed per GiB-second while a request is in
+    # flight, so idle costs nothing extra.
+    --memory 4Gi --cpu 2 \
     --timeout 900 \
     ${deploy_args[@]+"${deploy_args[@]}"} \
     --quiet
