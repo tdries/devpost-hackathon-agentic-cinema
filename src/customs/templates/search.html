@@ -17,7 +17,7 @@
   <h1 class="pagetitle"><svg class="ic"><use href="#i-analyst"/></svg>What was seen, and where</h1>
   <form class="sform" method="get" action="/search">
     <input class="urlin" type="search" name="q" value="{{ q }}" autofocus
-           placeholder="a rabbit, a lit cigarette, bunn|rabbit|hare">
+           placeholder="bunnies, a woman drinking, a hemline above the knee">
     <select class="urlin sdim" name="dimension">
       <option value="">every dimension</option>
       {% for dim in dimensions %}
@@ -28,6 +28,10 @@
       <option value="">objected to or not</option>
       <option value="yes"{{ ' selected' if flagged == 'yes' }}>a market objected</option>
       <option value="no"{{ ' selected' if flagged == 'no' }}>nobody minded</option>
+    </select>
+    <select class="urlin sdim" name="mode">
+      <option value="semantic"{{ ' selected' if mode != 'literal' }}>read the captions</option>
+      <option value="literal"{{ ' selected' if mode == 'literal' }}>match the words</option>
     </select>
     <button class="btn go" type="submit">Search</button>
   </form>
@@ -42,7 +46,10 @@
     {% endfor %}
   </p>
   {% endif %}
-  <p class="gsmall mono" style="margin-top:8px;color:var(--ink-3);overflow-wrap:anywhere">{{ result.query }}</p>
+  <p class="gsmall mono" style="margin-top:8px;color:var(--ink-3);overflow-wrap:anywhere">
+    {{ result.query }}
+    {% if result.mode.startswith('semantic') %}&nbsp;&rarr;&nbsp;read by {{ model }}{% endif %}
+    {% if 'failed' in result.mode %}&nbsp;&middot;&nbsp;{{ result.mode }}{% endif %}</p>
 </section>
 
 {% if result.hits %}
@@ -66,6 +73,7 @@
           {% endif %}
         </span>
         <span class="sstatement">{{ hit.statement }}</span>
+        {% if hit.why %}<span class="swhy label">matched: {{ hit.why }}</span>{% endif %}
         <span class="smeta label">
           <a class="cite" href="/runs/{{ hit.run_id }}">{{ hit.asset }}</a>
           {% if hit.rules %}&middot; {{ hit.rules | join(', ') }}{% endif %}
