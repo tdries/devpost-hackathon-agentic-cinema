@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Grafana resources{% endblock %}
 {% block nav %}{% include "_topnav.html" %}{% endblock %}
+{# The three products' own marks, from Grafana Labs' own asset URLs. Used
+   where the name is a label rather than a word in a sentence: a logo in
+   the middle of prose is a speed bump, not a signal. #}
+{% macro mark(which) %}<img class="blogo" src="/static/logo-{{ which }}.svg?v={{ static_v }}" alt="">{% endmacro %}
 {% block main %}
 
 {# The whole Grafana surface on one page.
@@ -36,7 +40,7 @@
     <colgroup><col style="width:15%"><col style="width:22%"><col></colgroup>
     <tr><th>What</th><th>Where</th><th>Holds</th></tr>
     <tr>
-      <td class="tight"><b>Grafana Cloud</b></td>
+      <td class="tight">{{ mark('grafana') }}<b>Grafana Cloud</b></td>
       <td class="tight mono">{{ stack.url }}</td>
       <td>Folder <span class="chip on">{{ stack.folder_title }}</span>
         <span class="mono">uid {{ stack.folder_uid }}</span>, which every
@@ -44,7 +48,7 @@
     </tr>
     {% for store in datastores %}
     <tr>
-      <td class="tight"><b>{{ store.name }}</b></td>
+      <td class="tight">{{ mark(store.logo) }}<b>{{ store.name }}</b></td>
       <td class="tight mono">{{ store.uid }}</td>
       <td>{{ store.holds }} <div class="gsmall" style="margin-top:4px">via {{ store.written_with }}</div></td>
     </tr>
@@ -100,7 +104,9 @@
         <tr>
           <td class="tight">{{ panel.title }}</td>
           <td class="tight"><span class="chip">{{ panel.kind }}</span></td>
-          <td class="tight"><span class="label">{{ panel.store }}</span></td>
+          <td class="tight"><span class="label">
+            {%- if panel.store in ('Mimir', 'Loki') %}{{ mark(panel.store | lower) }}{% endif -%}
+            {{ panel.store }}</span></td>
           {# a text panel has no query, and an empty cell says that better
              than a placeholder glyph does #}
           <td>{% if panel.query %}<code class="gq">{{ panel.query }}</code>{% endif %}</td>
@@ -119,7 +125,7 @@
 </section>
 
 <section>
-  <div class="rule-row"><span class="label">Metric series, in Mimir</span>
+  <div class="rule-row"><span class="label">{{ mark('mimir') }}Metric series, in Mimir</span>
     <span class="right label">pushed over OTLP on two different clocks</span></div>
   <p class="subline" style="max-width:96ch">A commercial is a time series and the
     timecode is the x axis, so one of these is written on the film's own clock:
@@ -144,7 +150,7 @@
 </section>
 
 <section>
-  <div class="rule-row"><span class="label">Log streams, in Loki</span>
+  <div class="rule-row"><span class="label">{{ mark('loki') }}Log streams, in Loki</span>
     <span class="right label">all three on the film's own clock</span></div>
   <table class="grid gtable">
     <colgroup><col style="width:14%"><col style="width:24%"><col></colgroup>
