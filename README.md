@@ -1,12 +1,6 @@
+<img src="docs/media/hero.png" alt="The Media Customs: one asset, every market, before it ships" width="100%">
+
 <div align="center">
-
-<img src="docs/logo.png" alt="The Media Customs" width="420">
-
-### One asset, every market, before it ships.
-
-**An AI crew watches your commercial once, judges it against 98 jurisdictions in parallel, builds its own Grafana instrument panel, and re-renders the shots that fail.**
-
-<img src="docs/media/powered-by-grafana.png" alt="Powered by Grafana" width="150">
 
 [![Live instance](https://img.shields.io/badge/live-customs--app.run.app-4285F4?style=flat-square)](https://customs-app-akap4ao72a-ew.a.run.app)
 [![Tests](https://img.shields.io/badge/tests-561_passing-34A853?style=flat-square)](#tests)
@@ -328,6 +322,26 @@ The crew still writes to Grafana Cloud over MCP. The viewer is a second pair of 
 </details>
 
 ---
+
+
+### What is actually in Loki and Mimir
+
+Not a claim, four renders. Every panel below is windowed to the run's own mapped clock, because that is where this system's telemetry lives: wall second `t0+n` **is** video second `n`. Point the stock dashboards at `now-6h` and they say *No data*, which is the first thing anyone gets wrong here.
+
+**Loki, `kind="observation"` — one line per keyframe.** Labels carry `app`, `asset`, `dimension`, `flagged` and `kind`; the body carries the analyst's own sentence, its confidence, the shot and the window, and which markets objected.
+
+<img src="docs/media/store-loki-observations.png" alt="Loki observation lines with their labels and bodies" width="100%">
+
+**Loki, `kind="finding"` — the join, with the statute in it.** `market` and `rule_id` are labels, so a market's findings are a selector rather than a scan. The body holds the class, the severity, the rationale, and the grounded `citation_url` that was resolved at adjudication time.
+
+<img src="docs/media/store-loki-findings.png" alt="Loki finding lines carrying statute and citation" width="100%">
+
+| Loki, by label | Mimir, on the film's clock |
+|---|---|
+| <img src="docs/media/store-loki-by-dimension.png" alt="Observation lines per dimension" width="100%"> | <img src="docs/media/store-mimir-risk.png" alt="customs_risk per market across the timecode" width="100%"> |
+| Counted from the stream labels alone, no body parsing. | `customs_risk`, one sample per video second, which is what makes the timecode an x axis. |
+
+The full inventory of what this system keeps in Grafana — 8 dashboards, 23 panels, 4 metric series, 3 log streams, 2 alert rules, and which of the 8 write operations goes over MCP versus the provisioning API — is a screen in the console itself: **[/grafana](https://customs-app-akap4ao72a-ew.a.run.app/grafana)**.
 
 ## The console
 

@@ -55,9 +55,14 @@ def fetch(base: str, path: str, cookie: str) -> str:
 
 
 def stage(html: str, base: str, *, open_details=False, detail_view=False,
-          open_scenes=False, hide=()) -> str:
+          open_scenes=False, eager=False, hide=()) -> str:
     """Make one still show what a click would have shown."""
     html = html.replace("<head>", f'<head><base href="{base.rstrip("/")}/">', 1)
+    if eager:
+        # A lazy iframe below the fold never loads in a headless capture,
+        # which is how the Grafana panel came out blank in the one GIF that
+        # is about the Grafana panel.
+        html = html.replace(' loading="lazy"', "")
     if open_details:
         html = re.sub(r"<details(?![^>]*\bopen\b)", "<details open", html)
     if open_scenes:
@@ -69,12 +74,16 @@ def stage(html: str, base: str, *, open_details=False, detail_view=False,
     return html
 
 
-def shot(html: str, dest: Path, tmp: Path, height: int = HEIGHT) -> Path:
+def shot(html: str, dest: Path, tmp: Path, height: int = HEIGHT,
+         budget: int = 6000) -> Path:
+    """Render one page. `budget` is virtual milliseconds: a page that only
+    has to lay itself out needs a couple of seconds, and one that boots a
+    Grafana in an iframe needs twenty."""
     page = tmp / (dest.stem + ".html")
     page.write_text(html)
     subprocess.run([chrome(), "--headless", "--disable-gpu", "--hide-scrollbars",
                     f"--window-size={WIDTH},{height}",
-                    "--virtual-time-budget=6000",
+                    f"--virtual-time-budget={budget}",
                     f"--screenshot={dest}", f"file://{page}"],
                    check=True, capture_output=True)
     return dest
@@ -175,14 +184,15 @@ def main() -> int:
     def page(path, **kw):
         return stage(fetch(base, path, cookie), base, **kw)
 
-    def frame(name, html, text, scroll=0, point=None):
+    def frame(name, html, text, scroll=0, point=None, budget=6000):
         """One captioned still, optionally scrolled down the page.
 
         The page is rendered tall enough to contain the scroll, then a
         window of the standard height is cut out of it, so every frame of
         a GIF is the same size whatever part of the page it shows.
         """
-        raw = shot(html, tmp / f"{name}_raw.png", tmp, HEIGHT + scroll + 40)
+        raw = shot(html, tmp / f"{name}_raw.png", tmp, HEIGHT + scroll + 40,
+                   budget=budget)
         if scroll:
             raw = window(raw, scroll, tmp / f"{name}_win.png")
         if point:
@@ -227,12 +237,15 @@ def main() -> int:
               "3 · The localized master, beside the original", scroll=300),
     ]
 
+    # eager + a long budget: this GIF is about the live Grafana panel, and
+    # a lazy iframe that never loads is the one thing it cannot show.
     gifs["tut-4-grafana"] = lambda: [
-        frame("t4a", page(f"/runs/{run}/timeline"),
-              "1 · The grid: every category across the film's own clock", scroll=430),
-        frame("t4b", page(f"/runs/{run}/timeline"),
+        frame("t4a", page(f"/runs/{run}/timeline", eager=True),
+              "1 · The grid: every category across the film's own clock",
+              scroll=430, budget=25000),
+        frame("t4b", page(f"/runs/{run}/timeline", eager=True),
               "2 · Click a square in Grafana's own panel", scroll=430,
-              point=(430, 420)),
+              point=(430, 420), budget=25000),
         frame("t4c", page(f"/runs/{run}/markets/{args.market}",
                           detail_view=True, open_scenes=True),
               "3 · ...and a priced generative fix starts on that scene", scroll=560),
