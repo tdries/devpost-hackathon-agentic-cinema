@@ -325,12 +325,21 @@ SERVICE_URL="$(gcloud run services describe "$SERVICE" \
 
 if [ "$FAST" != "1" ]; then
 echo "-- wiring the Grafana contact point to ${SERVICE_URL}/webhook/alert --"
+WEBHOOK_TOKEN="$(grep -E '^WEBHOOK_TOKEN=' "$ENV_FILE" | cut -d= -f2- | tr -d '"')" \
 PYTHONPATH="$ROOT/src" "$PY" - "$SERVICE_URL" <<'PYEOF'
 import sys
 from customs.config import Settings
 from customs.grafana_ops import GrafanaOps
 
+import os
+
 url = sys.argv[1].rstrip("/") + "/webhook/alert"
+# The shared secret the route checks. Without it a stranger with the
+# service URL can forge an alert naming a real open finding and start a
+# paid generative fix (verified live, 2026-09-05).
+token = os.environ.get("WEBHOOK_TOKEN", "")
+if token:
+    url += "?key=" + token
 settings = Settings.load()
 with GrafanaOps(settings, mcp_tools=set()) as ops:
     uid = ops.ensure_contact_point(url)

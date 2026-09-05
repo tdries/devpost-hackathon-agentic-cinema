@@ -42,6 +42,10 @@ from customs.config import settings
 # for free: "bunn|rabbit|hare" is a legitimate and useful thing to ask,
 # which is the whole point of not making this a menu.
 _MAX_PATTERN = 200
+# (x+)+  (x*)*  (x+)*  (x{2,}){3}  and friends: a repeat applied to a group
+# that already repeats. Crude on purpose -- it refuses a few harmless
+# patterns and nothing hostile gets past it.
+_NESTED_QUANTIFIER = re.compile(r"\([^)]*[+*}][^)]*\)\s*[+*{]")
 _log = logging.getLogger(__name__)
 
 
@@ -56,6 +60,15 @@ def _compile(text: str) -> re.Pattern | None:
     if len(pattern) > _MAX_PATTERN:
         raise SearchError(f"that pattern is {len(pattern)} characters; "
                           f"the limit is {_MAX_PATTERN}")
+    # Nested quantifiers are the shape of catastrophic backtracking, and
+    # this pattern is run in Python against every caption: "(a+)+$" took
+    # 3.5 seconds on 26 characters and doubles with each one after that,
+    # on an unauthenticated GET, against an instance there is only one of.
+    # Loki's own filter is RE2 and immune; this stage is not.
+    if _NESTED_QUANTIFIER.search(pattern):
+        raise SearchError(
+            "that pattern nests one repeat inside another, which can take "
+            "hours to match. Write it without the inner repeat.")
     # A leading word boundary, because "hare" found SHARE and "bunn" has to
     # keep finding bunnies: anchoring the start and not the end is what
     # makes a prefix search work and a substring accident stop. A pattern
@@ -71,12 +84,20 @@ def _compile(text: str) -> re.Pattern | None:
 def logql(text: str, dimension: str = "", flagged: str = "") -> str:
     """The stream selector plus the line filter, as Loki will see it."""
     selector = ['app="customs"', 'kind="observation"']
-    if isinstance(dimension, (list, tuple, set)):
-        names = sorted(d for d in dimension if d)
-        if names:
-            selector.append('dimension=~"' + "|".join(names) + '"')
-    elif dimension:
-        selector.append(f'dimension="{dimension}"')
+    # Whitelisted against the taxonomy, never interpolated raw: a
+    # dimension of 'x" } |~ "' rewrote the stream selector and read
+    # whatever else the tenant holds. There are eighteen legal values and
+    # anything else is not a typo worth honouring.
+    from customs import packs
+
+    known = set(packs.taxonomy())
+    names = ([d for d in dimension if d in known]
+             if isinstance(dimension, (list, tuple, set))
+             else ([dimension] if dimension in known else []))
+    if len(names) == 1:
+        selector.append(f'dimension="{names[0]}"')
+    elif names:
+        selector.append('dimension=~"' + "|".join(sorted(names)) + '"')
     if flagged in ("yes", "no"):
         selector.append(f'flagged="{flagged}"')
     query = "{" + ", ".join(selector) + "}"

@@ -18,6 +18,15 @@ import pytest
 def _no_optional_integrations(monkeypatch):
     from customs import app as app_module
 
+    # The webhook's shared token goes with them. A developer's .env has a
+    # real one, and with it every offline webhook test posts without a key
+    # and gets the 404 a stranger gets. The test that is ABOUT the token
+    # sets its own.
+    changed = {}
     if getattr(app_module.settings, "grafana_viewer_url", ""):
+        changed["grafana_viewer_url"] = ""
+    if getattr(app_module.settings, "webhook_token", ""):
+        changed["webhook_token"] = ""
+    if changed:
         monkeypatch.setattr(app_module, "settings", dataclasses.replace(
-            app_module.settings, grafana_viewer_url=""))
+            app_module.settings, **changed))
