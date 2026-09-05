@@ -2579,6 +2579,7 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
   margin: 0 0 14px; }
 .bw-pair { display: flex; align-items: center; gap: 18px; }
 .bw-item { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.bw-item img[src*="logo-adk"] { width: 42px; height: 42px; }
 .bw-item:hover { opacity: .82; }
 .bw-name { font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.15; }
 .bw-name em { display: block; font-style: normal; font-size: 11px; font-weight: 500;
@@ -2785,13 +2786,13 @@ video.runthumb { object-fit: cover; background: var(--well); }
 .brand-with, .hero-with, .ah-with { display: inline-flex; align-items: center; gap: 10px; }
 .brand-with { margin-left: 14px; align-self: center; }
 .brand-bar { display: block; width: 1px; height: 18px; background: var(--line-2); }
-.brand-adk { display: block; height: 22px; width: 22px; }
+.brand-adk { display: block; height: 28px; width: 28px; }
 .brand-grafana { display: block; height: 22px; width: auto; opacity: 0.9; }
 .brand-with:hover .brand-grafana { opacity: 1; }
 .hero-with { margin: 0 0 14px; }
 /* Scoped, because .runhero-mark sizes its own img for the big logo and
    would otherwise blow the robot up to the same size. */
-.runhero-mark .hero-adk, .hero-adk { display: block; height: 26px !important; width: 26px !important; }
+.runhero-mark .hero-adk, .hero-adk { display: block; height: 32px !important; width: 32px !important; }
 .hero-grafana { display: block; height: 26px; width: auto; opacity: 0.92; }
 .hero-with .brand-bar { height: 22px; }
 @media (max-width: 900px) { .brand-with { display: none; } }
@@ -2816,7 +2817,7 @@ video.runthumb { object-fit: cover; background: var(--well); }
 .agenthero-stats { display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
   margin-bottom: 0; }
 .ah-with { margin-left: auto; }
-.ah-adk { display: block; height: 20px; width: 20px; }
+.ah-adk { display: block; height: 25px; width: 25px; }
 .ah-grafana { display: block; height: 20px; width: auto; opacity: 0.85; }
 .ah-with .brand-bar { height: 16px; }
 .ah-stat { font-size: 12.5px; color: var(--ink-2); }
