@@ -89,12 +89,12 @@ The output is two things: **a decision** (can this air here, and on what evidenc
 
 | | |
 |---|---|
-| **98 jurisdictions** | 21 market packs resolving to a global baseline, the EU, 16 countries and 80 broadcasters, 757 market-rule pairings once inheritance resolves |
-| **128 rules** | every one naming a real statute, broadcaster code or cultural norm, with a live citation |
-| **18 dimensions** | one fixed taxonomy the analyst emits and every rule is written against |
-| **6 repair methods** | from a €0.04 single-frame patch to a €3.68 Veo-generated bridge, priced in euro before you press |
-| **5 agents** | an ADK `SequentialAgent` named `customs_crew`, with the adjudicators fanned out in parallel |
-| **1 refusal** | when a rule targets a protected characteristic, a rule-layer Guard refuses to auto-edit and hands it to a human |
+| **Jurisdictions** | 21 market packs resolving to a global baseline, the EU, 16 countries and 80 broadcasters, 757 market-rule pairings once inheritance resolves |
+| **Rules** | every one naming a real statute, broadcaster code or cultural norm, with a live citation |
+| **Dimensions** | one fixed taxonomy the analyst emits and every rule is written against |
+| **Repair methods** | from a €0.04 single-frame patch to a €3.68 Veo-generated bridge, priced in euro before you press |
+| **Agents** | a Google Cloud Agent Builder (ADK) `SequentialAgent` named `customs_crew`, with the adjudicators fanned out in parallel |
+| **The refusal** | when a rule targets a protected characteristic, a rule-layer Guard refuses to auto-edit and hands it to a human |
 
 ---
 
@@ -625,7 +625,7 @@ grafana-viewer/   stock grafana-oss that is allowed to be framed
 tests/            22 files, 524 tests
 ```
 
-**Built with:** Python · FastAPI · Google ADK · Gemini (vision, text, TTS, image) · Veo 3.1 · Gemini Omni · Grafana Cloud (Mimir, Loki, MCP) · ffmpeg · SQLite · Cloud Run
+**Built with:** Python · FastAPI · Google Cloud Agent Builder (ADK) · Gemini (vision, text, TTS, image) · Veo 3.1 · Gemini Omni · Grafana Cloud (Mimir, Loki, MCP) · ffmpeg · SQLite · Cloud Run
 
 ---
 

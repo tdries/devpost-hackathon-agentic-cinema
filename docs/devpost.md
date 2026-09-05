@@ -18,7 +18,7 @@ You upload a commercial (or paste a YouTube link) and a market list, and you wat
 
 ### How we built it
 
-The core decision is observe once, judge per market. A Gemini multimodal Analyst watches each shot one time and emits neutral, timecoded observations under a fixed 18-dimension taxonomy, with no verdicts allowed. One Adjudicator agent per selected jurisdiction (Google ADK, run in parallel) joins that single fact set to its resolved YAML market pack (128 rules across the ladder, every one naming a real statute or code) and grounds every citation with Google Search. A finding is always a join: observation x market rule x citation. The Publisher pushes metrics to Grafana Cloud Mimir over OTLP, finding detail to Loki, and creates dashboards, annotations and alert rules through the official Grafana MCP server. Alerts webhook back into the Cloud Run service and wake the Remediator, which edits with Gemini image editing, TTS and Veo 3.1, then ffmpeg recomposites the master and a craft gate refuses any deliverable that lost frames, resolution or soundtrack. The console is FastAPI with server-sent events and no build step. The test commercial itself was generated with Veo, deliberately loaded with seven documented landmines plus a clean control shot, so Google's own tools made the ad and then failed it.
+The core decision is observe once, judge per market. A Gemini multimodal Analyst watches each shot one time and emits neutral, timecoded observations under a fixed 18-dimension taxonomy, with no verdicts allowed. One Adjudicator agent per selected jurisdiction (Google Cloud Agent Builder / ADK, run in parallel) joins that single fact set to its resolved YAML market pack (128 rules across the ladder, every one naming a real statute or code) and grounds every citation with Google Search. A finding is always a join: observation x market rule x citation. The Publisher pushes metrics to Grafana Cloud Mimir over OTLP, finding detail to Loki, and creates dashboards, annotations and alert rules through the official Grafana MCP server. Alerts webhook back into the Cloud Run service and wake the Remediator, which edits with Gemini image editing, TTS and Veo 3.1, then ffmpeg recomposites the master and a craft gate refuses any deliverable that lost frames, resolution or soundtrack. The console is FastAPI with server-sent events and no build step. The test commercial itself was generated with Veo, deliberately loaded with seven documented landmines plus a clean control shot, so Google's own tools made the ad and then failed it.
 
 ### Challenges we ran into
 
@@ -38,7 +38,7 @@ More markets: a market is a YAML file, not code, and the pack format is the exte
 
 ## Built with
 
-python, google-gemini, google-adk, grafana, grafana-cloud, mcp, veo, google-cloud-run, ffmpeg, fastapi, sqlite
+python, google-gemini, google-adk, agent-builder, vertex-ai, grafana, grafana-cloud, mcp, veo, google-cloud-run, ffmpeg, fastapi, sqlite
 
 ## Links
 
