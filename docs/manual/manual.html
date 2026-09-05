@@ -194,7 +194,7 @@ Grafana alert ──> webhook ──> REMEDIATOR ──> VERIFIER ──> metric
   </table>
   <p>The Verifier closing back onto the Analyst is what makes this a crew rather than a pipeline: remediation is not trusted until the same instrument that found the problem agrees it is gone. Unsourced citations cap a finding at severity 40 and never trigger remediation or block a market.</p>
   <h2>Vendor rule, enforced</h2>
-  <p>No Anthropic, OpenAI, AWS or Microsoft model, agent framework or AI API appears at runtime or in the dependency tree; the contest rule is enforced by <code>tests/test_no_forbidden_vendors.py</code>. Models are Gemini 3.x (vision, text, grounding), Gemini image editing, Gemini TTS and Veo, all via Vertex AI. Agents are coded agents on Google ADK.</p>
+  <p>No Anthropic, OpenAI, AWS or Microsoft model, agent framework or AI API appears at runtime or in the dependency tree; the contest rule is enforced by <code>tests/test_no_forbidden_vendors.py</code>. Models are Gemini 3.x (vision, text, grounding), Gemini image editing, Gemini TTS and Veo, all via Vertex AI. Agents are coded agents on Google Cloud Agent Builder (the Agent Development Kit), containerised on Cloud Run, which is the deployment target ADK's own documentation lists beside Agent Runtime.</p>
   <div class="footer"><span>THE MEDIA CUSTOMS OPERATOR MANUAL</span><span>05</span></div>
 </div>
 
