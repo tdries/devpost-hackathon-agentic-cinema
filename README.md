@@ -56,7 +56,7 @@ Every frame below is the running console, shot from the deployed instance rather
 
 | | |
 |---|---|
-| ![Upload and processing](docs/media/tut-1-upload.gif) | **Hand it a master.** Pick from 98 jurisdictions, and the crew narrates itself stage by stage while it works: shots, transcript, observations, then one adjudicator per market in parallel. |
+| ![Upload and processing](docs/media/tut-1-upload.gif) | **Hand it a master.** Pick your markets, and the crew narrates itself stage by stage while it works: shots, transcript, observations, then one adjudicator per market in parallel. |
 | ![Frames and findings](docs/media/tut-2-frames.gif) | **Every frame, as the analyst saw it.** One neutral timecoded sentence each, verdicts forbidden. A finding is that observation joined to one market's rule and a live citation. |
 | ![The fix picker](docs/media/tut-3-fix.gif) | **Five ways to fix it, priced in euro before you press.** What should change, and how much of the footage to disturb. The localized master lands beside the original in the cutting room. |
 | ![A click in Grafana](docs/media/tut-4-grafana.gif) | **A click on a Grafana panel starts a generative fix.** The grid is the crew's own dashboard; clicking a square resolves the scene under it and starts a priced edit on that span. |
@@ -353,7 +353,7 @@ Hand it a file or a YouTube link, pick the markets, and watch it clear customs l
 
 <img src="docs/media/01-landing.png" alt="The front door" width="100%">
 
-### <img src="docs/media/icons/n-board.svg" width="22"> Archive
+### <img src="docs/media/icons/n-runs.svg" width="22"> Archive
 
 Every clearance this instance has performed. Hover a card and the whole film plays as a five-second timelapse; the squares beneath it are live Grafana.
 

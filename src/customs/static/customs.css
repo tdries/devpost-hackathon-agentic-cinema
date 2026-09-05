@@ -2564,6 +2564,22 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
    the expensive one further down the page in its own words. */
 .already-do { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
 
+.loadmore { display: flex; justify-content: center; margin: 18px 0 4px; }
+.loadmore .btn .mono { color: var(--ink-3); margin-left: 6px; font-size: 11.5px; }
+
+/* The two platforms, as marks. One baseline, one divider, and a label
+   that does not shout: the logos carry it. */
+.builtwith { display: flex; align-items: center; flex-wrap: wrap; gap: 16px;
+  margin: 0 0 14px; }
+.bw-pair { display: flex; align-items: center; gap: 18px; }
+.bw-item { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.bw-item:hover { opacity: .82; }
+.bw-name { font-size: 13.5px; font-weight: 600; color: var(--ink); line-height: 1.15; }
+.bw-name em { display: block; font-style: normal; font-size: 11px; font-weight: 500;
+  color: var(--ink-3); letter-spacing: .03em; }
+.bw-bar { width: 1px; height: 30px; background: var(--line-2); }
+.bw-graf { display: block; }
+
 /* ---------- the agent, working ----------
    A bar that says the machine is busy, and a list that says what it is
    busy WITH. The bar is the four brand colours run through a spectrum and

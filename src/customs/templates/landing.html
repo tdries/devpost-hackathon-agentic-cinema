@@ -194,9 +194,26 @@
 </section>
 
 <section class="landfoot">
+  {# The two platforms this is built on, as their own marks rather than as
+     two words in a sentence: the ADK robot and the Grafana lockup, on one
+     baseline with a divider between them. #}
+  <div class="builtwith">
+    <span class="label">Built with</span>
+    <span class="bw-pair">
+      <a class="bw-item" href="https://google.github.io/adk-docs/" target="_blank" rel="noreferrer">
+        <img src="/static/logo-adk.png?v={{ static_v }}" alt="" width="34" height="34">
+        <span class="bw-name">Agent Builder<em>Agent Development Kit</em></span>
+      </a>
+      <span class="bw-bar" aria-hidden="true"></span>
+      <a class="bw-item" href="https://grafana.com/" target="_blank" rel="noreferrer">
+        <img class="bw-graf" src="/static/powered-by-grafana.png?v={{ static_v }}"
+             alt="Powered by Grafana" width="150">
+      </a>
+    </span>
+  </div>
   <p class="subline">Built for the <a class="cite" href="https://agentic-cinema.devpost.com" target="_blank" rel="noreferrer">Agentic Cinema</a>
-    hackathon, Grafana Labs track. Google ADK, Gemini 3.7, Veo 3.1, Grafana Cloud.
-    <a class="cite" href="https://github.com/tdries/td-devpost-agentic-cinema" target="_blank" rel="noreferrer">Source on GitHub</a>.</p>
+    hackathon, Grafana Labs track. Gemini 3.7 and Veo 3.1 on Vertex AI, Grafana Cloud.
+    <a class="cite" href="https://github.com/tdries/devpost-hackathon-agentic-cinema" target="_blank" rel="noreferrer">Source on GitHub</a>.</p>
 </section>
 
 {% endblock %}
