@@ -2015,7 +2015,7 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 .landhero {
   position: relative; overflow: hidden; border-radius: 16px;
   border: 1px solid var(--line); background: var(--ground-2);
-  padding: 60px 48px 54px; margin: 8px 0 0; isolation: isolate;
+  padding: 40px 48px 36px; margin: 8px 0 0; isolation: isolate;
   display: flex; align-items: center; gap: 48px;
 }
 .landhero .swarm {
@@ -2029,7 +2029,7 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
     linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
   -webkit-mask-composite: source-in; mask-composite: intersect;
 }
-.landhero-front { position: relative; z-index: 1; flex: 1 1 auto; max-width: 70ch; }
+.landhero-front { position: relative; z-index: 1; flex: 1 1 auto; max-width: 76ch; }
 .landhero-mark { position: relative; z-index: 1; flex: 0 0 auto; order: 2; }
 .landhero-mark img {
   width: 200px; height: auto; display: block;
@@ -2045,10 +2045,16 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   display: block; margin: 18px 0 6px; font-size: 11px;
   letter-spacing: .3em; text-transform: uppercase; color: var(--ink-3);
 }
+/* One line, not three. Three stacked lines at 62px made the hero most of
+   the first screen; the sentence is short enough to sit on one line at a
+   size that still reads as the headline, and the box shrinks with it. */
 .landhero-title {
-  margin: 0 0 16px; font-size: clamp(34px, 5.2vw, 62px); line-height: 1.02;
-  letter-spacing: -0.025em; font-weight: 700; color: var(--ink);
+  margin: 0 0 14px; font-size: clamp(22px, 2.35vw, 34px); line-height: 1.1;
+  letter-spacing: -0.02em; font-weight: 700; color: var(--ink);
 }
+/* Wide enough for the whole sentence: it stays on one line and the column
+   widens to hold it rather than the sentence breaking to fit the column. */
+@media (min-width: 900px) { .landhero-title { white-space: nowrap; } }
 .landhero-lede {
   margin: 0; max-width: 58ch; font-size: 16.5px; line-height: 1.62;
   color: var(--ink-2);
