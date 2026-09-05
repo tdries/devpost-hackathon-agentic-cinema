@@ -2180,6 +2180,28 @@ def test_a_lane_is_never_shorter_than_the_glyph_that_labels_it():
     assert height >= ys[-1] + 38
 
 
+def test_an_empty_search_is_a_page_not_a_query(console, monkeypatch):
+    """Opening the Frame search tab from the nav paged the whole Loki
+    corpus and rendered every caption as a card: seven seconds, two
+    megabytes, 2,334 images, for a screen whose job at that moment is to
+    show a text box. No query, no Loki, no model."""
+    from customs import app as app_mod
+
+    client, _store, _launched, _jobs = console
+
+    def explode(*a, **k):
+        raise AssertionError("an empty search reached Grafana")
+
+    monkeypatch.setattr(app_mod, "GrafanaOps", explode, raising=False)
+    import customs.grafana_ops as g
+    monkeypatch.setattr(g, "GrafanaOps", explode)
+
+    page = client.get("/search")
+    assert page.status_code == 200
+    assert 'name="q"' in page.text and "class=\"scard\"" not in page.text
+    assert client.get("/search?format=json").json()["total"] == 0
+
+
 def test_the_grafana_tab_shows_the_whole_surface_at_once(console):
     """The project's claim is that Grafana is upstream of the work, and it
     was told in fragments: a panel here, a chip there, a paragraph in the

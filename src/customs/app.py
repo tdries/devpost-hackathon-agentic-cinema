@@ -2082,6 +2082,24 @@ def search_frames(request: Request, q: str = "", dimension: str = "",
     pane, so what it says and what you see are one query.
     """
     from customs.grafana_ops import GrafanaOps
+    # An empty search is the page, not a query. Without this, opening the
+    # Frame search tab from the nav paged the whole Loki corpus and rendered
+    # every caption as a card: seven seconds and two megabytes, with 2,334
+    # images, for a screen whose job at that moment is to show a text box.
+    if not q.strip() and not dimension and not flagged:
+        empty = {"query": "", "mode": "none", "routed": [], "pattern": "",
+                 "total": 0, "scanned": 0, "capped": False, "films": 0,
+                 "by_asset": {}, "by_dimension": {}, "by_market": {},
+                 "flagged": 0, "hits": []}
+        if format == "json":
+            return JSONResponse(content=empty)
+        return _page(request, "search.html", screen="search", result=empty,
+                     summary="Ask for what is in the footage: a rabbit, somebody "
+                             "smoking, a hemline above the knee. Every caption the "
+                             "analyst ever wrote, across every run, read for meaning.",
+                     q="", dimension="", market="", flagged="", days=days,
+                     mode=mode, model=settings.model_text,
+                     dimensions=sorted(packs.taxonomy()))
     try:
         if q.strip() and mode != "literal":
             # The fast path: the index answers in milliseconds and the

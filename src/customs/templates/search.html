@@ -46,11 +46,13 @@
     {% endfor %}
   </p>
   {% endif %}
+  {% if result.query %}
   <p class="gsmall mono" style="margin-top:8px;color:var(--ink-3);overflow-wrap:anywhere">
     {{ result.query }}
     {% if result.mode.startswith('indexed') %}&nbsp;&rarr;&nbsp;{{ result.indexed }} captions indexed, {{ result.scanned }} nearest read by {{ model }}
     {% elif result.mode.startswith('semantic') %}&nbsp;&rarr;&nbsp;read by {{ model }}{% endif %}
     {% if 'failed' in result.mode %}&nbsp;&middot;&nbsp;{{ result.mode }}{% endif %}</p>
+  {% endif %}
 </section>
 
 {% if result.hits %}

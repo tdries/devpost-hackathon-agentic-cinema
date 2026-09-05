@@ -107,10 +107,16 @@ try {
       <img class="brand-logo" src="/static/logo.png?v={{ static_v }}" alt="" aria-hidden="true">
       <span class="brand-name">THE MEDIA CUSTOMS</span>
       <span class="brand-sub">LAUNCH CONTROL</span>
-      {# Grafana is upstream of the work, so it is credited beside the mark
-         rather than in a footer nobody reaches. #}
-      <img class="brand-grafana" src="/static/powered-by-grafana.png?v={{ static_v }}"
-           alt="Powered by Grafana" width="95" height="22">
+      {# Both platforms this runs on, credited beside the mark rather than
+         in a footer nobody reaches: the Agent Builder robot for the crew,
+         the Grafana lockup for the instrument panel. #}
+      <span class="brand-with" aria-label="Built with Google Cloud Agent Builder and Grafana">
+        <img class="brand-adk" src="/static/logo-adk.png?v={{ static_v }}"
+             alt="Google Cloud Agent Builder" width="22" height="22">
+        <i class="brand-bar" aria-hidden="true"></i>
+        <img class="brand-grafana" src="/static/powered-by-grafana.png?v={{ static_v }}"
+             alt="Powered by Grafana" width="95" height="22">
+      </span>
     </a>
     <div class="topbar-right">
       {# The activity beacon: wherever you are, whatever is running shows
@@ -126,8 +132,8 @@ try {
       </span>
       {% block topbar_right %}{% endblock %}
       <span class="theme-switch" role="group" aria-label="Style mode">
-        <button type="button" class="tbtn" data-set-theme="" title="Mission: the dark launch-control room">Mission</button>
-        <button type="button" class="tbtn" data-set-theme="studio" title="Studio: light, for daylight and print">Studio</button>
+        <button type="button" class="tbtn" data-set-theme="" title="Dark: the launch-control room">Dark</button>
+        <button type="button" class="tbtn" data-set-theme="studio" title="Light: for daylight and print">Light</button>
       </span>
     </div>
   </div>

@@ -28,8 +28,12 @@
         <summary class="label">its {{ tools | length }} tools</summary>
         <span class="ah-toolrow">{% for t in tools %}<code class="ah-tool">{{ t }}</code>{% endfor %}</span>
       </details>
-      <img class="ah-grafana" src="/static/powered-by-grafana.png?v={{ static_v }}"
-           alt="Powered by Grafana" width="95" height="22">
+      <span class="ah-with">
+        <img class="ah-adk" src="/static/logo-adk.png?v={{ static_v }}" alt="" width="20" height="20">
+        <i class="brand-bar" aria-hidden="true"></i>
+        <img class="ah-grafana" src="/static/powered-by-grafana.png?v={{ static_v }}"
+             alt="Powered by Grafana" width="95" height="22">
+      </span>
     </div>
   </div>
 </section>

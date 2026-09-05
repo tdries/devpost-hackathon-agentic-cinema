@@ -1,5 +1,10 @@
 {% set run_state = {"done": "cleared", "error": "blocked", "running": "pending", "created": "pending"}.get(run.status, "pending") %}
 {% set lc = run_lifecycle(run) %}
+{# The console's own tabs first, on every run screen: the way to the
+   library or the frame search used to be All runs and then the tab, two
+   hops from a page where a question about a rule is most likely to come
+   up. Recent runs stays lit, because a run is inside it. #}
+{% include "_topnav.html" %}
 <nav class="runnav">
   {# The way up. Inside a run the only exits used to be the brand (which
      lands on the marketing page) and a mode switch named Studio -- neither
