@@ -4,7 +4,7 @@ Paste-ready. Track: Grafana Labs.
 
 ## Tagline (under 200 chars)
 
-An AI crew that clears your commercial for 98 jurisdictions in parallel: the statute behind every finding, a Grafana instrument panel it builds itself, and failing shots re-rendered with Veo.
+An AI crew that clears your commercial for every market you ship to, in parallel: the statute behind every finding, a Grafana instrument panel it builds itself, and failing shots re-rendered with Veo.
 
 ## Project story
 

@@ -2902,6 +2902,31 @@ def test_the_archive_is_one_card_per_film_not_per_run(console):
     assert "4 runs" in page and "2 films" in page
 
 
+def test_the_archive_pays_for_nine_cards_and_asks_before_the_rest(console):
+    """Every card carries a poster, a lane chart and, for the first few, a
+    live Grafana frame. Thirty of those on one paint is a page that takes
+    seconds to settle, so nine come with the page and the rest arrive when
+    somebody asks for them."""
+    client, store, _launched, _jobs = console
+    for n in range(12):
+        _judged_run(store, asset=f"runs/uploads/{n}/film_{n}.mp4")
+
+    page = client.get("/runs").text
+
+    assert page.count('class="runrow') == 9, "nine films, not twelve"
+    assert 'id="loadmore"' in page and 'data-total="12"' in page
+    assert "(3 more films)" in page
+
+    # the fragment is the cards alone, in the same markup
+    more = client.get("/runs?fragment=1&offset=9")
+    assert more.status_code == 200
+    assert more.text.count('class="runrow') == 3
+    assert "<html" not in more.text.lower(), "cards only, no page around them"
+
+    # ...and there is a way through without any of this
+    assert client.get("/runs?all=1").text.count('class="runrow') == 12
+
+
 def test_the_archive_caps_how_many_grafanas_it_boots(console, monkeypatch):
     """loading="lazy" was supposed to make one live panel per card
     survivable. Measured against the real page it was not: thirty-nine

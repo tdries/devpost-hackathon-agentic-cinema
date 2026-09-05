@@ -2147,13 +2147,60 @@ def grafana_resources(request: Request):
                  reads=grafana_map.READS)
 
 
-@app.get("/runs", response_class=HTMLResponse)
-def all_runs(request: Request):
-    """The archive: every run this store holds, newest first.
+PAGE_SIZE = 9
 
-    Home shows the last 12; this is the whole book. The 500 cap is a page
-    weight guard, not pagination -- at demo scale the store never gets there,
-    and when it someday does, this is the seam where real paging goes.
+
+def _by_film(runs) -> dict[str, list]:
+    """Every run grouped by the film it cleared, newest first in each."""
+    grouped: dict[str, list] = {}
+    for run in runs:  # recent_runs is newest first, so [0] is the newest
+        grouped.setdefault(asset_key(run), []).append(run)
+    return grouped
+
+
+def _run_rows(runs, by_asset: dict[str, list], offset: int = 0) -> list[dict]:
+    """One row per film, ready for the card template.
+
+    `offset` is the card's position in the WHOLE archive, not in this page:
+    the live-panel cap has to stay global, or every page of a load-more
+    would boot another six Grafanas.
+    """
+    return [{"run": run, "older": by_asset.get(asset_key(run), [run])[1:],
+             "states": (st := market_states(run)),
+             "groups": pill_groups(run, st),
+             "busy": run.status in ("created", "running")
+                     or any(v["working"] for v in st.values()),
+             # The card's lanes, live from the viewer -- but only for the
+             # first few. loading="lazy" was supposed to make one per card
+             # survivable; measured, it was not. Thirty-nine frames and
+             # thirty-nine videos kept a real browser from reaching
+             # domcontentloaded in thirty seconds, because a lazy iframe
+             # still loads the moment it is anywhere near the viewport and
+             # every one of them boots a Grafana. The cards a visitor
+             # actually looks at get the live panel; the rest keep the SVG,
+             # which is what every card had before and is indistinguishable
+             # at that size.
+             "live_lanes": ((embeds(run).get("viewer") or {}).get("squares", "")
+                            if i < LIVE_LANE_CARDS else ""),
+             # The row labels Grafana cannot draw. Same set and same order
+             # the panel resolves from Loki -- both come from this run's
+             # observations -- so the icons line up with the squares.
+             "dims": sorted({o.dimension for o in store().observations(run.id)
+                             if o.dimension and o.dimension != "none"}),
+             "gauge": clearance_gauge(st)}
+            for i, run in enumerate(runs, start=offset)]
+
+
+@app.get("/runs", response_class=HTMLResponse)
+def all_runs(request: Request, all: int = 0, offset: int = 0,
+             fragment: int = 0):
+    """The archive: every film this store holds, newest first, nine at a time.
+
+    Each card carries a poster, a lane chart and, for the first few, a live
+    Grafana frame. Thirty of those on one paint is a page that takes seconds
+    to settle, so the first nine come with the page and the rest arrive when
+    somebody asks. `all=1` is the no-JavaScript way to the whole book, and
+    `fragment=1` renders the cards alone for the load-more fetch.
     """
     # No lane charts built here. Doing it inline meant one Loki round trip
     # per run, server-side, before a single byte of the page went out --
@@ -2182,34 +2229,9 @@ def all_runs(request: Request):
     # identical filenames and three sets of lanes, and the newest one was
     # the only one anybody wanted. The newest is the card; the others are
     # dated links under it, so nothing is hidden and nothing is repeated.
-    by_asset: dict[str, list] = {}
-    for run in runs:  # recent_runs is newest first, so [0] is the newest
-        by_asset.setdefault(asset_key(run), []).append(run)
+    by_asset = _by_film(runs)
     newest = [older[0] for older in by_asset.values()]
-    rows = [{"run": run, "older": by_asset[asset_key(run)][1:],
-             "states": (st := market_states(run)),
-             "groups": pill_groups(run, st),
-             "busy": run.status in ("created", "running")
-                     or any(v["working"] for v in st.values()),
-             # The card's lanes, live from the viewer -- but only for the
-             # first few. loading="lazy" was supposed to make one per card
-             # survivable; measured, it was not. Thirty-nine frames and
-             # thirty-nine videos kept a real browser from reaching
-             # domcontentloaded in thirty seconds, because a lazy iframe
-             # still loads the moment it is anywhere near the viewport and
-             # every one of them boots a Grafana. The cards a visitor
-             # actually looks at get the live panel; the rest keep the SVG,
-             # which is what every card had before and is indistinguishable
-             # at that size.
-             "live_lanes": ((embeds(run).get("viewer") or {}).get("squares", "")
-                            if i < LIVE_LANE_CARDS else ""),
-             # The row labels Grafana cannot draw. Same set and same order
-             # the panel resolves from Loki -- both come from this run's
-             # observations -- so the icons line up with the squares.
-             "dims": sorted({o.dimension for o in store().observations(run.id)
-                             if o.dimension and o.dimension != "none"}),
-             "gauge": clearance_gauge(st)}
-            for i, run in enumerate(newest)]
+    rows = _run_rows(newest, by_asset)
     # One live panel, not thirty-five. Every card carries its own charts as
     # SVG for a reason -- building them inline once took this page past a two
     # minute timeout -- and an iframe per card would be thirty-five Grafana
@@ -2219,7 +2241,17 @@ def all_runs(request: Request):
     if settings.grafana_viewer_url and not scoped:
         live_history = (f"{settings.grafana_viewer_url}/d-solo/customs-history/"
                         f"customs?panelId=1&kiosk&theme=light&from=now-7d&to=now")
-    return _page(request, "runs.html", rows=rows, screen="runs", scoped=scoped,
+    films = len(rows)
+    if fragment:
+        # the cards alone, in the same markup the first page used
+        page = rows[offset:offset + PAGE_SIZE]
+        return _page(request, "_runcards.html",
+                     rows=_run_rows([r["run"] for r in page], by_asset,
+                                    offset=offset),
+                     showcase=_showcase(store()))
+    shown = films if all else min(PAGE_SIZE, films)
+    return _page(request, "runs.html", rows=rows[:shown], screen="runs",
+                 scoped=scoped, shown=shown, films=films, more=shown < films,
                  runs_total=len(runs),
                  showcase=_showcase(store()), live_history=live_history,
                  packs_total=len(market_packs()), dims_total=len(packs.taxonomy()))

@@ -229,6 +229,57 @@
   })();
 
 
+  /* ---------- 1a3c. the archive's load-more ----------
+     Nine films with the page, the rest on request. The server renders the
+     same partial the first nine came from, so a second page cannot drift
+     from the first. With scripting off the button is not there and the
+     noscript link goes to ?all=1. */
+
+  (function () {
+    var button = document.getElementById("loadmore");
+    var list = document.getElementById("runlist");
+    if (!button || !list) { return; }
+    var busy = false;
+
+    button.addEventListener("click", function () {
+      if (busy) { return; }
+      busy = true;
+      var next = parseInt(button.getAttribute("data-next"), 10) || 0;
+      var total = parseInt(button.getAttribute("data-total"), 10) || 0;
+      button.disabled = true;
+      var was = button.innerHTML;
+      button.textContent = "Loading...";
+      fetch("/runs?fragment=1&offset=" + next)
+        .then(function (r) { return r.text(); })
+        .then(function (html) {
+          var slot = document.createElement("div");
+          slot.innerHTML = html;
+          var added = 0;
+          while (slot.firstChild) {
+            var node = slot.firstChild;
+            slot.removeChild(node);
+            if (node.nodeType === 1 && node.classList.contains("runcard")) { added++; }
+            list.appendChild(node);
+          }
+          next += added;
+          button.setAttribute("data-next", next);
+          if (added === 0 || next >= total) {
+            button.parentNode.removeChild(button);
+          } else {
+            button.disabled = false;
+            button.innerHTML = was.replace(/\(\d+ more/, "(" + (total - next) + " more");
+          }
+          busy = false;
+        })
+        .catch(function () {
+          button.disabled = false;
+          button.innerHTML = was;
+          busy = false;
+        });
+    });
+  })();
+
+
   /* ---------- 1a4. the activity beacon ----------
      Wherever you are in the console, whatever is running shows in the
      topbar: runs mid-analysis, fixes in the making. Fed by /ops/busy,
