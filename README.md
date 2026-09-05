@@ -328,11 +328,11 @@ The crew still writes to Grafana Cloud over MCP. The viewer is a second pair of 
 
 Not a claim, four renders. Every panel below is windowed to the run's own mapped clock, because that is where this system's telemetry lives: wall second `t0+n` **is** video second `n`. Point the stock dashboards at `now-6h` and they say *No data*, which is the first thing anyone gets wrong here.
 
-**Loki, `kind="observation"` — one line per keyframe.** Labels carry `app`, `asset`, `dimension`, `flagged` and `kind`; the body carries the analyst's own sentence, its confidence, the shot and the window, and which markets objected.
+**Loki, `kind="observation"`: one line per keyframe.** Labels carry `app`, `asset`, `dimension`, `flagged` and `kind`; the body carries the analyst's own sentence, its confidence, the shot and the window, and which markets objected.
 
 <img src="docs/media/store-loki-observations.png" alt="Loki observation lines with their labels and bodies" width="100%">
 
-**Loki, `kind="finding"` — the join, with the statute in it.** `market` and `rule_id` are labels, so a market's findings are a selector rather than a scan. The body holds the class, the severity, the rationale, and the grounded `citation_url` that was resolved at adjudication time.
+**Loki, `kind="finding"`: the join, with the statute in it.** `market` and `rule_id` are labels, so a market's findings are a selector rather than a scan. The body holds the class, the severity, the rationale, and the grounded `citation_url` that was resolved at adjudication time.
 
 <img src="docs/media/store-loki-findings.png" alt="Loki finding lines carrying statute and citation" width="100%">
 
@@ -341,7 +341,7 @@ Not a claim, four renders. Every panel below is windowed to the run's own mapped
 | <img src="docs/media/store-loki-by-dimension.png" alt="Observation lines per dimension" width="100%"> | <img src="docs/media/store-mimir-risk.png" alt="customs_risk per market across the timecode" width="100%"> |
 | Counted from the stream labels alone, no body parsing. | `customs_risk`, one sample per video second, which is what makes the timecode an x axis. |
 
-The full inventory of what this system keeps in Grafana — 8 dashboards, 23 panels, 4 metric series, 3 log streams, 2 alert rules, and which of the 8 write operations goes over MCP versus the provisioning API — is a screen in the console itself: **[/grafana](https://customs-app-akap4ao72a-ew.a.run.app/grafana)**.
+The full inventory of what this system keeps in Grafana (8 dashboards, 23 panels, 4 metric series, 3 log streams, 2 alert rules, and which of the 8 write operations goes over MCP versus the provisioning API) is a screen in the console itself: **[/grafana](https://customs-app-akap4ao72a-ew.a.run.app/grafana)**.
 
 ## The console
 
