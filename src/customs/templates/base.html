@@ -10,7 +10,15 @@
 <meta property="og:title" content="The Media Customs">
 <meta property="og:description" content="Agentic ad clearance: an AI crew watches your commercial once, judges it against 98 jurisdictions in parallel, builds its own Grafana instrument panel, and re-renders the shots that fail.">
 <meta property="og:type" content="website">
-<meta property="og:image" content="https://customs-app-akap4ao72a-ew.a.run.app/static/og.png">
+{# ?v=mtime, like every other static asset here. Without it the URL never
+   changes, so LinkedIn, Slack and iMessage keep serving whatever they
+   scraped the first time -- which is how a card from August survived the
+   console going from dark to light. #}
+<meta property="og:image" content="https://customs-app-akap4ao72a-ew.a.run.app/static/og.png?v={{ static_v }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Media Customs launch board: cleared for launch in 2 of 6 markets">
+<meta name="twitter:image" content="https://customs-app-akap4ao72a-ew.a.run.app/static/og.png?v={{ static_v }}">
 <meta name="twitter:card" content="summary_large_image">
 <script>/* Apply the style mode before first paint so it never flashes.
    Studio -- the light one -- is the default everywhere now: the console is
