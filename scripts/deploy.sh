@@ -137,6 +137,7 @@ gcloud services enable \
     IFS= read -r DEPLOY_VEO_MODEL
     IFS= read -r DEPLOY_TTS_MODEL
     IFS= read -r DEPLOY_GRAFANA_VIEWER_URL
+    IFS= read -r DEPLOY_WEBHOOK_TOKEN
 } < <(PYTHONPATH="$ROOT/src" "$PY" - "$ENV_FILE" <<'PYEOF'
 import sys
 from customs.config import Settings
@@ -145,7 +146,7 @@ s = Settings.load(sys.argv[1])
 for value in (s.grafana_url, s.grafana_stack_id, s.grafana_sa_token,
               s.grafana_cloud_token, s.otlp_url, s.loki_push_url, s.loki_user,
               s.model_vision, s.model_text, s.model_image, s.model_video,
-              s.model_tts, s.grafana_viewer_url):
+              s.model_tts, s.grafana_viewer_url, s.webhook_token):
     print(value)
 PYEOF
 )
@@ -153,7 +154,8 @@ PYEOF
 for pair in "GRAFANA_URL:$DEPLOY_GRAFANA_URL" "GRAFANA_STACK_ID:$DEPLOY_GRAFANA_STACK_ID" \
             "GRAFANA_SA_TOKEN:$DEPLOY_GRAFANA_SA_TOKEN" "GRAFANA_CLOUD_TOKEN:$DEPLOY_GRAFANA_CLOUD_TOKEN" \
             "OTLP_URL:$DEPLOY_OTLP_URL" "LOKI_PUSH_URL:$DEPLOY_LOKI_PUSH_URL" \
-            "LOKI_USER:$DEPLOY_LOKI_USER"; do
+            "LOKI_USER:$DEPLOY_LOKI_USER" \
+            "WEBHOOK_TOKEN:$DEPLOY_WEBHOOK_TOKEN"; do
     name="${pair%%:*}"
     val="${pair#*:}"
     if [[ -z "$val" ]]; then
@@ -253,6 +255,12 @@ if [[ -n "$DEPLOY_TTS_MODEL" ]]; then env_pairs+=("TTS_MODEL=${DEPLOY_TTS_MODEL}
 # The embeddable viewer (scripts/deploy_viewer.sh). Unset means the board
 # keeps rendering Grafana's panels as PNGs, which is the old behaviour.
 if [[ -n "$DEPLOY_GRAFANA_VIEWER_URL" ]]; then env_pairs+=("GRAFANA_VIEWER_URL=${DEPLOY_GRAFANA_VIEWER_URL}"); fi
+# Required above, so this is never empty in a deployed service: an empty
+# token means the alert webhook accepts anyone's forged alert, and that
+# route starts paid work. Wiring the contact point with a key while the
+# container had no token to check it against is exactly the failure this
+# pairing prevents.
+env_pairs+=("WEBHOOK_TOKEN=${DEPLOY_WEBHOOK_TOKEN}")
 if [[ ${#YT_COOKIES_ENV[@]} -gt 0 ]]; then env_pairs+=("${YT_COOKIES_ENV[@]}"); fi
 
 joined="$(IFS=';'; echo "${env_pairs[*]}")"
@@ -325,7 +333,7 @@ SERVICE_URL="$(gcloud run services describe "$SERVICE" \
 
 if [ "$FAST" != "1" ]; then
 echo "-- wiring the Grafana contact point to ${SERVICE_URL}/webhook/alert --"
-WEBHOOK_TOKEN="$(grep -E '^WEBHOOK_TOKEN=' "$ENV_FILE" | cut -d= -f2- | tr -d '"')" \
+WEBHOOK_TOKEN="$DEPLOY_WEBHOOK_TOKEN" \
 PYTHONPATH="$ROOT/src" "$PY" - "$SERVICE_URL" <<'PYEOF'
 import sys
 from customs.config import Settings
