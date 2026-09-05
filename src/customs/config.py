@@ -54,6 +54,7 @@ class Settings:
     grafana_public_overview: str
     grafana_public_timeline: str
     grafana_viewer_url: str
+    webhook_token: str
     judge_password: str
     visitor_password: str
 
@@ -103,6 +104,11 @@ class Settings:
             # word per door and it travels in a cookie -- but enough that a
             # link posted somewhere public does not hand a stranger the
             # generation budget.
+            # The webhook's shared secret. Grafana cannot sign a request, so
+            # the contact point carries the token in its URL and the route
+            # refuses anything else. Empty means open, which is what the
+            # offline tests and a laptop run want; deploy.sh always sets it.
+            webhook_token=g("WEBHOOK_TOKEN", ""),
             judge_password=g("JUDGE_PASSWORD", "DEVPOST"),
             visitor_password=g("VISITOR_PASSWORD", "VISITOR"),
         )

@@ -69,6 +69,7 @@ import asyncio
 import json
 import logging
 import re
+import secrets
 import shutil
 import threading
 import time
@@ -97,8 +98,30 @@ from customs.store import Store
 
 log = logging.getLogger("customs.app")
 
+# docs_url/redoc_url/openapi_url off: this URL is public, and Swagger was
+# publishing a try-it-now button for every POST the console has, including
+# delete, remediate and the alert webhook. The routes are unchanged and the
+# schema is still generated in code; it is simply not served.
 app = FastAPI(title="Customs Launch Control",
-              description="Ad clearance crew: console, mission feed, alert webhook")
+              description="Ad clearance crew: console, mission feed, alert webhook",
+              docs_url=None, redoc_url=None, openapi_url=None)
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    """The four headers a public page should not be without.
+
+    No CSP: the console inlines its own SVG sprite and a few style
+    attributes, and a policy written to allow those while claiming to stop
+    anything would be decoration. The three below cost nothing and are
+    true.
+    """
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault(
+        "Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+    return response
 
 _HERE = Path(__file__).resolve().parent
 templates = Jinja2Templates(directory=str(_HERE / "templates"))
@@ -301,7 +324,21 @@ async def alert_webhook(request: Request, background: BackgroundTasks) -> dict:
     logged and dropped: unknown asset, forged rule_id, an already-resolved
     finding and a resolved-status alert all land in that same branch, and
     none of them start any work.
+
+    Authenticated by a shared token in the URL, because this route SPENDS:
+    a forged alert naming a real open finding starts a paid generative fix
+    and rewrites a localized master. Grafana cannot sign a request or send
+    a header from a contact point, so the token rides in the query string
+    that deploy.sh writes into the contact point, and the console's own
+    doors are irrelevant here -- Grafana carries no cookie.
+
+    An unset token means open, which is what the offline tests and a
+    laptop want. Every deploy sets one.
     """
+    want = settings.webhook_token
+    if want and not secrets.compare_digest(request.query_params.get("key", ""), want):
+        log.warning("alert webhook rejected: wrong or missing key")
+        raise HTTPException(status_code=404, detail="no such endpoint")
     try:
         payload = await request.json()
     except Exception:  # noqa: BLE001 -- a malformed body is a dropped alert, not a 500

@@ -405,3 +405,30 @@ def test_an_index_that_cannot_be_built_costs_a_slow_search_not_a_run(
 
     assert vectors.index_run(store, run.id) == 0
     assert vectors.size(store) == 0
+
+
+def test_a_pattern_that_could_run_for_hours_is_refused():
+    """Catastrophic backtracking, on an unauthenticated GET, against an
+    instance there is only one of: "(a+)+$" took 3.5 seconds on 26
+    characters and doubles with every character after that. Loki's own
+    filter is RE2 and immune; this stage is Python and is not."""
+    for evil in ("(a+)+$", "(a*)*b", "(ab+)+c", "(x{2,}){3}"):
+        with pytest.raises(search.SearchError) as caught:
+            search.frames(FakeOps([]), evil, mode="literal")
+        assert "nests one repeat" in str(caught.value), evil
+
+    for fine in ("bunn|rabbit|hare", "short.{0,30}skirt", "a lit cigarette"):
+        assert search._compile(fine) is not None, fine
+
+
+def test_a_dimension_cannot_rewrite_the_stream_selector():
+    """'x" } |~ "' broke out of the selector and asked Loki for whatever
+    else the tenant holds. There are eighteen legal dimensions; anything
+    else is not a typo worth honouring."""
+    hostile = 'a" } |~ "leak'
+
+    query = search.logql("x", dimension=hostile)
+
+    assert query == '{app="customs", kind="observation"} |~ "(?i)x"'
+    assert "leak" not in query
+    assert search.logql("x", dimension="food_and_animals").count("dimension=") == 1

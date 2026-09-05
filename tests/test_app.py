@@ -3111,3 +3111,47 @@ def test_a_phase_is_never_a_stack_trace(console):
         assert said and "{" not in said, tool
     assert agentmode.phrase({"tool": "invented"}) == "invented"
     assert agentmode.phrase({}) == "working"
+
+
+def test_the_alert_webhook_refuses_an_alert_that_carries_no_key(client, monkeypatch):
+    """This route SPENDS. A forged alert naming a real open finding starts a
+    paid generative fix and rewrites a localized master, and it was open to
+    anyone who had the service URL -- verified against production, which
+    answered {"accepted": 1}.
+
+    Grafana cannot sign a request or send a header from a contact point, so
+    the secret rides in the URL deploy.sh writes into it. Wrong key and no
+    key both get the same 404 a stranger would get from a route that does
+    not exist.
+    """
+    import dataclasses
+
+    from customs import app as app_mod
+
+    test_client, _store, run, jobs = client
+    monkeypatch.setattr(app_mod, "settings", dataclasses.replace(
+        app_mod.settings, webhook_token="s3cret"))
+
+    assert test_client.post("/webhook/alert", json=_alert()).status_code == 404
+    assert test_client.post("/webhook/alert?key=wrong",
+                            json=_alert()).status_code == 404
+    assert jobs == [], "and neither one enqueued a fix"
+
+    right = test_client.post("/webhook/alert?key=s3cret", json=_alert())
+    assert right.status_code == 200 and right.json()["accepted"] == 1
+    assert jobs == [(run.id, "fnd_FR_FR-ALC-01_obs_shot_0_000", "FR")]
+
+
+def test_the_public_url_serves_no_api_console_and_says_nosniff(console):
+    """Swagger published a try-it-now button for every POST this console
+    has, delete and the alert webhook included, on a URL meant to be shared
+    with strangers."""
+    client, _store, _launched, _jobs = console
+
+    for path in ("/docs", "/redoc", "/openapi.json"):
+        assert client.get(path).status_code == 404, path
+
+    headers = client.get("/").headers
+    assert headers["X-Content-Type-Options"] == "nosniff"
+    assert headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
+    assert "max-age=" in headers["Strict-Transport-Security"]
