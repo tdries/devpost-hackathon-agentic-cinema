@@ -15,8 +15,12 @@
   <div class="runhero-mark" aria-hidden="true">
     <img src="/static/logo.png?v={{ static_v }}" alt="">
     <span class="runhero-word">THE MEDIA<br>CUSTOMS</span>
-    <img class="hero-grafana" src="/static/powered-by-grafana.png?v={{ static_v }}"
-         alt="Powered by Grafana" width="114" height="26">
+    <span class="hero-with">
+      <img class="hero-adk" src="/static/logo-adk.png?v={{ static_v }}" alt="" width="26" height="26">
+      <i class="brand-bar" aria-hidden="true"></i>
+      <img class="hero-grafana" src="/static/powered-by-grafana.png?v={{ static_v }}"
+           alt="Powered by Grafana" width="114" height="26">
+    </span>
   </div>
   <div class="runhero-front">
     <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
@@ -25,7 +29,7 @@
       its board, its timeline and its cutting room.{% else %}Every clearance this instance has
       performed. Open one for its board, its timeline and its cutting room.{% endif %}</p>
     <span class="runhero-stats mono">{{ runs_total }} run{{ '' if runs_total == 1 else 's' }}
-      {% if runs_total != rows | length %}of {{ rows | length }} film{{ '' if rows | length == 1 else 's' }}{% endif %}
+      {% if runs_total != films %}of {{ films }} film{{ '' if films == 1 else 's' }}{% endif %}
       &middot; {{ packs_total }} market packs &middot; {{ dims_total }} things watched for</span>
   </div>
 </section>

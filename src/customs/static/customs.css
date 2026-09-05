@@ -2774,12 +2774,21 @@ video.runthumb { object-fit: cover; background: var(--well); }
    crew writes to Grafana over MCP before anything reaches the console, and
    an alert in Grafana is what starts a render. The badge is the official
    lockup with our own "POWERED BY" set beside it. */
-.brand-grafana { display: block; height: 22px; width: auto; margin-left: 14px;
-  align-self: center; opacity: 0.9; }
-.brand-grafana:hover { opacity: 1; }
-.hero-grafana { display: block; height: 26px; width: auto; margin: 0 0 14px;
-  opacity: 0.92; }
-@media (max-width: 900px) { .brand-grafana { display: none; } }
+/* The two platform marks, wherever the console credits them: one row, a
+   hairline between, shared baseline. Three sizes for three places. */
+.brand-with, .hero-with, .ah-with { display: inline-flex; align-items: center; gap: 10px; }
+.brand-with { margin-left: 14px; align-self: center; }
+.brand-bar { display: block; width: 1px; height: 18px; background: var(--line-2); }
+.brand-adk { display: block; height: 22px; width: 22px; }
+.brand-grafana { display: block; height: 22px; width: auto; opacity: 0.9; }
+.brand-with:hover .brand-grafana { opacity: 1; }
+.hero-with { margin: 0 0 14px; }
+/* Scoped, because .runhero-mark sizes its own img for the big logo and
+   would otherwise blow the robot up to the same size. */
+.runhero-mark .hero-adk, .hero-adk { display: block; height: 26px !important; width: 26px !important; }
+.hero-grafana { display: block; height: 26px; width: auto; opacity: 0.92; }
+.hero-with .brand-bar { height: 22px; }
+@media (max-width: 900px) { .brand-with { display: none; } }
 
 /* ---------- agent mode: a hero, and pointers ----------
    It used to open onto two grey panes and a blinking cursor, which tells a
@@ -2800,7 +2809,10 @@ video.runthumb { object-fit: cover; background: var(--well); }
   line-height: 1.55; margin: 0 0 12px; }
 .agenthero-stats { display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
   margin-bottom: 0; }
-.ah-grafana { height: 20px; width: auto; opacity: 0.85; margin-left: auto; }
+.ah-with { margin-left: auto; }
+.ah-adk { display: block; height: 20px; width: 20px; }
+.ah-grafana { display: block; height: 20px; width: auto; opacity: 0.85; }
+.ah-with .brand-bar { height: 16px; }
 .ah-stat { font-size: 12.5px; color: var(--ink-2); }
 .ah-stat b { font-family: var(--mono); font-size: 14px; color: var(--ink);
   margin-right: 4px; }
