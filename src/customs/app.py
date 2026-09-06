@@ -306,7 +306,14 @@ def _remediate_and_verify(run_id: str, finding_id: str, market: str,
                 spend=_charge if chosen in ("bridge", "per_frame", "omni") else None,
                 on_event=lambda agent, message: db.emit(run_id, agent, message),
                 landing=landing)
-            return verify.confirm(run, market, [change], db, workdir)
+            ok = verify.confirm(run, market, [change], db, workdir)
+            if ok:
+                # One asset, every market: the seconds this market just paid
+                # to fix are the same seconds the other markets objected to,
+                # so carry the confirmed picture into their cuts and let
+                # their own packs rule on it. Costs no generation.
+                verify.spread(run, market, [change], db, workdir)
+            return ok
     except Exception as exc:  # noqa: BLE001 -- a background task has nobody to raise to
         log.exception("remediation of %s failed", finding_id)
         db.emit(run_id, "remediator", f"stage_error: remediate: {finding_id}: {exc!r}")
@@ -1218,13 +1225,48 @@ templates.env.filters["stamp"] = _stamp
 _LEVEL_ROWS = ("global", "continental", "national", "subnational", "channel")
 
 
+def film_runs(run) -> list:
+    """Every clearance of the same uploaded file, newest first.
+
+    Two runs of ad.mp4 -- one judged against France, one against the Gulf --
+    are two passes over one film, and the film is what the operator has. See
+    asset_key for what "the same file" means here and what it costs.
+    """
+    key = asset_key(run)
+    return [r for r in store().recent_runs(500) if asset_key(r) == key]
+
+
+def other_pass_markets(run) -> dict:
+    """Markets this film was judged against in ANOTHER pass, code -> run.
+
+    A market appears once, from the newest run that judged it, and never
+    from this one. recent_runs is newest first, so the first sighting wins.
+    """
+    mine = set(run.markets or [])
+    found: dict[str, object] = {}
+    for other in film_runs(run):
+        if other.id == run.id:
+            continue
+        for code in other.markets or []:
+            if code not in mine and code not in found:
+                found[code] = other
+    return found
+
+
 def market_rows(run) -> list[dict]:
-    """This run's markets, grouped into one row per jurisdiction level.
+    """This film's markets, grouped into one row per jurisdiction level.
 
     A run can cover a global baseline, a continent, a dozen countries and
     twenty broadcasters at once, and a single strip of tabs makes that look
     like one flat list of codes. One row per level, labelled, says what you
     are actually looking at.
+
+    The film's, not the run's. Upload ad.mp4 for France on Monday and for
+    the Gulf on Thursday and you have two runs of one commercial, each
+    knowing nothing about the other -- so the Gulf verdicts were invisible
+    from the French run and there was no screen anywhere that answered "is
+    this film cleared". The other pass's markets ride in the same strip,
+    marked, each linking into the run that actually judged it.
     """
     all_packs = market_packs()
     # The tabs carry the verdict as a coloured underline. Without it the
@@ -1232,14 +1274,30 @@ def market_rows(run) -> list[dict]:
     # tiles, which is the wrong way round: the tab strip is what you steer
     # by, and it was the one part of the board saying nothing.
     states = market_states(run)
+    elsewhere = other_pass_markets(run)
+    states_of: dict[str, dict] = {}
+    for code, other in elsewhere.items():
+        states_of.setdefault(other.id, market_states(other))
+
+    def _level(code: str) -> str:
+        return all_packs[code].level if code in all_packs else "national"
+
     rows = []
     for level in _LEVEL_ROWS:
-        codes = [m for m in run.markets
-                 if (all_packs[m].level if m in all_packs else "national") == level]
-        if codes:
-            rows.append({"level": level, "markets": [
-                {"code": c, "state": tile_state(states[c]) if c in states else "pending"}
-                for c in sorted(codes)]})
+        here = [{"code": c, "run": run.id, "elsewhere": None,
+                 "state": tile_state(states[c]) if c in states else "pending"}
+                for c in run.markets if _level(c) == level]
+        there = []
+        for code, other in elsewhere.items():
+            if _level(code) != level:
+                continue
+            st = states_of.get(other.id) or {}
+            there.append({"code": code, "run": other.id, "elsewhere": other.id,
+                          "state": tile_state(st[code]) if code in st else "pending"})
+        if here or there:
+            rows.append({"level": level,
+                         "markets": sorted(here, key=lambda m: m["code"])
+                                    + sorted(there, key=lambda m: m["code"])})
     return rows
 
 
@@ -1936,6 +1994,7 @@ def launch_board(request: Request, run_id: str):
             more.append(dict(group, families=families,
                              count=sum(len(f["packs"]) for f in families)))
     return _page(request, "launch_board.html", run=run, tiles=tiles,
+                 other_passes=other_pass_markets(run),
                  more=more, has_poster=poster_available(run),
                  stills=board_stills(run, asset_duration(run)),
                  can_add=bool(store().observations(run.id)),

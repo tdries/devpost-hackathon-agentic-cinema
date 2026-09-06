@@ -23,6 +23,18 @@
       Every market cleared. The findings, the citations and the edits are all one click down.
     {% endif %}
   </p>
+  {# The same file, judged again for other markets. Without this the two
+     passes never mention each other and no screen answers "is this film
+     cleared" -- only "is this run". #}
+  {% if other_passes %}
+  <p class="otherpass">
+    <svg class="ic"><use href="#n-runs"/></svg>
+    <span>The same file was also judged against
+      {% for code, other in other_passes.items() %}<a href="/runs/{{ other.id }}/markets/{{ code }}">{{ code }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
+      in {{ (other_passes.values() | map(attribute='id') | unique | list | length) }}
+      other clearance{{ '' if (other_passes.values() | map(attribute='id') | unique | list | length) == 1 else 's' }} of this commercial.</span>
+  </p>
+  {% endif %}
   {% if overall.state == 'pending' %}
   <div class="progress" id="progress">
     <div class="progress-head">

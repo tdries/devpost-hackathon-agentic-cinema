@@ -2975,3 +2975,26 @@ tbody.mkscene[hidden] { display: none; }
 .enter-form .label { width: 100%; }
 .enter-form .urlin { flex: 1; min-width: 220px; }
 .fb > .sc[hidden] { display: none; }
+
+
+/* ---------- a market judged in another pass of the same file ----------
+   Two uploads of ad.mp4, one for France and one for the Gulf, are two runs
+   of one commercial. The strip carries both now, and this is the tab that
+   leaves this run: dashed underneath, so it reads as the same film seen
+   somewhere else rather than as a tab that is merely inactive. */
+.runnav .markets-row .tab.mk-elsewhere {
+  border-bottom-style: dashed;
+  opacity: 0.72;
+}
+.runnav .markets-row .tab.mk-elsewhere:hover { opacity: 1; }
+.runnav .markets-row .tab.mk-elsewhere::after {
+  content: "\2197"; margin-left: 4px; font-size: 10px; opacity: 0.8;
+}
+
+/* the film's other clearances, named on the board that opens a run */
+.otherpass {
+  display: flex; align-items: baseline; gap: 8px; margin: 12px 0 0;
+  max-width: 92ch; font-size: 13px; color: var(--ink-2); line-height: 1.5;
+}
+.otherpass .ic { width: 15px; height: 15px; flex: none; align-self: center; }
+.otherpass a { color: var(--g-blue); }

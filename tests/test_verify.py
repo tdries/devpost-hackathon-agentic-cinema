@@ -381,3 +381,68 @@ def test_confirm_releases_a_remediating_sibling_instead_of_stranding_it(
     verify.confirm(run, "FR", [change], store, tmp_path / "work")
     by_id = {f.id: f for f in store.findings(run.id, "FR")}
     assert by_id[sibling.id].status == "resolved"
+
+
+def test_a_confirmed_fix_is_carried_into_every_market_that_objected(
+        remediated, monkeypatch, no_telemetry, tmp_path):
+    """One asset, every market. The edit is pixels, and the pixels do not
+    belong to the market that paid for them: when FR's on-screen text is
+    relettered, the SA finding about the same text in the same second is
+    about footage that no longer exists.
+
+    It stayed open anyway -- confirm() only rules on the market it was
+    called for, and every market carries its own cut -- so SA stayed
+    blocked by a violation nobody could see any more. spread() splices the
+    confirmed seconds into SA's cut and lets SA's own pack rule on them.
+    Nothing is generated."""
+    store, run, _origin, change, master = remediated
+
+    # SA objects to the same shot, for its own reason
+    run = replace(run, markets=["FR", "SA"])
+    peer = _finding(id="fnd_SA_SA-LANG-01", run_id=run.id, market="SA",
+                    rule_id="SA-LANG-01", status="open")
+    store.add_findings([peer])
+
+    # FR's cut is the fixed one; SA has never been edited
+    master.write_bytes(master.read_bytes())
+    sa_cut = remediate.localized_master(run, "SA", store)
+    assert not sa_cut.exists()
+
+    monkeypatch.setattr(pipeline, "observe_shot",
+                        lambda *a, **k: [_observation(statement="A tea glass.")])
+    monkeypatch.setattr(pipeline, "judge", _fake_judge_returning([]))
+
+    carried = verify.spread(run, "FR", [change], store, tmp_path / "work")
+
+    assert carried == ["SA"], "SA objected to the same seconds and got the fix"
+    assert sa_cut.exists(), "SA now has a cut of its own, carrying FR's picture"
+    assert store.findings(run.id, "SA")[0].status == "resolved"
+    # and it is recorded as a change, so the cutting room can show it
+    carried_change = [c for c in store.changes(run.id) if c.id != change.id]
+    assert len(carried_change) == 1
+    assert "carried over from FR" in carried_change[0].method
+
+
+def test_a_market_that_edited_the_span_itself_keeps_its_own_cut(
+        remediated, monkeypatch, no_telemetry, tmp_path):
+    """The refusal that matters. SA's cut is SA's own answer to SA's pack,
+    and splicing FR's picture over it would silently undo a fix somebody
+    already paid for."""
+    store, run, _origin, change, _master = remediated
+    run = replace(run, markets=["FR", "SA"])
+    peer = _finding(id="fnd_SA_SA-LANG-01", run_id=run.id, market="SA",
+                    rule_id="SA-LANG-01", status="open")
+    store.add_findings([peer])
+    # SA has already edited these very seconds for itself
+    store.add_change(ChangeRecord(
+        id="chg_sa", run_id=run.id, finding_id=peer.id, method="prop_swap",
+        description="SA's own edit", before_frame="b.png", after_frame="a.png"))
+    sa_cut = remediate.localized_master(run, "SA", store)
+    sa_cut.write_bytes(b"SA's own cut")
+
+    monkeypatch.setattr(pipeline, "observe_shot", lambda *a, **k: [_observation()])
+    monkeypatch.setattr(pipeline, "judge", _fake_judge_returning([]))
+
+    assert verify.spread(run, "FR", [change], store, tmp_path / "work") == []
+    assert sa_cut.read_bytes() == b"SA's own cut", "untouched"
+    assert store.findings(run.id, "SA")[0].status == "open"

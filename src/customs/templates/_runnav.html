@@ -48,8 +48,12 @@
   <div class="wrap markets-row">
     <span class="lvl-tag label">{{ row.level }}</span>
     {% for m in row.markets %}
-    <a class="tab mk-{{ m.state }} {% if screen == 'market' and market == m.code %}on{% endif %}"
-       href="/runs/{{ run.id }}/markets/{{ m.code }}" title="{{ m.code }}: {{ m.state.replace('_', ' ') }}">
+    {# A market judged in another pass of the same file links into the run
+       that holds it, marked, rather than being absent from this strip --
+       one film, every market it has ever been judged against. #}
+    <a class="tab mk-{{ m.state }}{{ ' mk-elsewhere' if m.elsewhere }} {% if screen == 'market' and market == m.code and not m.elsewhere %}on{% endif %}"
+       href="/runs/{{ m.run }}/markets/{{ m.code }}"
+       title="{{ m.code }}: {{ m.state.replace('_', ' ') }}{{ ' -- judged in another clearance of this same file' if m.elsewhere }}">
       {% if row.level == 'channel' %}<svg class="ic"><use href="#n-cut"/></svg>
       {% elif row.level == 'global' %}<svg class="ic"><use href="#d-national_symbols_politics"/></svg>
       {% elif row.level == 'continental' %}<svg class="ic"><use href="#n-market"/></svg>

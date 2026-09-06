@@ -318,3 +318,131 @@ def _persist_new_findings(store, run, market: str, pack, fresh: list[Finding],
           f"verification surfaced {len(guarded)} new finding(s) in the edited "
           f"shot(s): {', '.join(sorted(f.rule_id for f in guarded))}")
     return guarded
+
+
+def _own_edit_overlaps(store, run, market: str, lo: float, hi: float) -> bool:
+    """Has THIS market already edited these seconds for itself?
+
+    Its cut is its own answer to its own pack, and splicing another
+    market's picture over it would silently undo a fix somebody paid for.
+    """
+    findings = {f.id: f for f in store.findings(run.id, market)}
+    for change in store.changes(run.id):
+        finding = findings.get(change.finding_id)
+        if finding and finding.t_start < hi and finding.t_end > lo:
+            return True
+    return False
+
+
+def spread(run, market: str, changes: list[ChangeRecord], store, workdir) -> list[str]:
+    """Carry a confirmed fix into every other market that objected to the
+    same seconds. Returns the markets whose cut was updated.
+
+    One asset, every market. The edit is pixels, and pixels do not belong to
+    the market that paid for them: when AE's whisky becomes a tea glass, the
+    SA finding about the same glass in the same second is about footage that
+    no longer exists. It stayed open anyway, and kept SA blocked, because
+    confirm() only ever rules on the market it was called for and each
+    market carries its own cut -- localized_{market}.mp4.
+
+    So the confirmed seconds are cut out of the market that has them and
+    spliced into every other objecting market's cut over the same span, and
+    that market's own pack is re-run over the result. Nothing is generated:
+    the picture exists and has already been verified once, so this costs the
+    day's generation budget nothing at all.
+
+    Two refusals, both deliberate. It never touches a span the other market
+    has already edited for itself. And it never resolves a finding on its
+    own say-so -- confirm() re-observes and re-judges with that market's
+    pack, so a rule that still fires stays open and that market stays
+    blocked, which is the same standard the original fix was held to.
+    """
+    from customs import media  # local: verify is imported by lighter callers
+
+    source = remediate.localized_master(run, market, store)
+    if not source.exists():
+        return []
+    others = [m for m in (run.markets or []) if m != market]
+    if not others:
+        return []
+
+    workdir = Path(workdir)
+    # confirm() is handed a workdir that its caller made; spread() runs
+    # after it and cuts a clip of its own, so it cannot assume one exists.
+    workdir.mkdir(parents=True, exist_ok=True)
+    changes_dir = remediate.run_dir(run, store) / "changes"
+    changes_dir.mkdir(parents=True, exist_ok=True)
+    carried: list[str] = []
+
+    for change in changes:
+        origin = next((f for f in store.findings(run.id, market)
+                       if f.id == change.finding_id), None)
+        if origin is None:
+            continue
+        # The span that actually changed is the SHOT's, not the finding's:
+        # every method edits the shot it was pointed at, and a finding's own
+        # window can be a fraction of it.
+        shots = _touched_shots(store, run.id, [origin])
+        if not shots:
+            continue
+        lo = min(s.t_start for s in shots)
+        hi = max(s.t_end for s in shots)
+
+        for other in others:
+            peers = [f for f in store.findings(run.id, other)
+                     if f.status == "open" and f.t_start < hi and f.t_end > lo]
+            if not peers:
+                continue
+            if _own_edit_overlaps(store, run, other, lo, hi):
+                _emit(store, run.id,
+                      f"{other} objects to the same {lo:.2f}-{hi:.2f}s, but has "
+                      f"already edited that span for itself; leaving its cut alone")
+                continue
+
+            dest = remediate.localized_master(run, other, store)
+            base = dest if dest.exists() else Path(run.asset_path)
+            _emit(store, run.id,
+                  f"carrying {change.method} from {market} into {other}: "
+                  f"{len(peers)} finding(s) on the same {lo:.2f}-{hi:.2f}s "
+                  f"({', '.join(p.rule_id for p in peers)}), no generation")
+            for peer in peers:
+                store.update_finding_status(peer.id, "remediating", run_id=run.id)
+
+            carry_id = f"chg_{uuid.uuid4().hex[:12]}"
+            clip = workdir / f"{carry_id}_carry.mp4"
+            staged = dest.with_name(f".{carry_id}_{dest.name}")
+            try:
+                before = remediate._still(base, carry_id, "before", peers[0],
+                                          changes_dir)
+                media.cut_span(source, lo, hi, clip)
+                media.splice_clip(base, clip, lo, hi, staged)
+                craft = media.craft_check(base, staged, span=(lo, hi))
+                if craft["failures"]:
+                    raise RuntimeError("; ".join(craft["failures"]))
+                staged.replace(dest)
+                after = remediate._still(dest, carry_id, "after", peers[0],
+                                         changes_dir)
+            except Exception as exc:  # noqa: BLE001 -- one market failing is not all of them
+                staged.unlink(missing_ok=True)
+                for peer in peers:
+                    store.update_finding_status(peer.id, "open", run_id=run.id)
+                _emit(store, run.id,
+                      f"stage_error: verify: could not carry {change.id} into "
+                      f"{other}: {exc!r}; {dest.name} untouched")
+                continue
+            finally:
+                clip.unlink(missing_ok=True)
+
+            record = ChangeRecord(
+                id=carry_id, run_id=run.id, finding_id=peers[0].id,
+                method=f"carried over from {market}",
+                description=(f"the same seconds {market} fixed, spliced into "
+                             f"{other}'s cut: {change.description}"),
+                before_frame=str(before), after_frame=str(after),
+            )
+            store.add_change(record)
+            carried.append(other)
+            # Same standard as the original: this market's own pack decides.
+            confirm(run, other, [record], store, workdir)
+
+    return carried

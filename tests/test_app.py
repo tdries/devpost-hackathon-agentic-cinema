@@ -3299,3 +3299,42 @@ def test_grafana_panels_wear_the_console_s_theme(console):
     # cookie alone only fixes the NEXT load
     js = (Path(app_module.__file__).parent / "static" / "customs.js").read_text()
     assert "repaint" in js and "theme=" in js
+
+
+def test_two_runs_of_one_file_read_as_one_film(console):
+    """Upload ad.mp4 for France on Monday and for the Gulf on Thursday and
+    you have two clearances of one commercial, each knowing nothing about
+    the other. The Gulf verdicts were invisible from the French run, and no
+    screen anywhere answered "is this film cleared".
+
+    The market strip is the film's now, not the run's: the other pass's
+    markets ride in it, marked, each linking into the run that judged
+    them. Same file means the same uploaded filename, which is the identity
+    the metrics, the alerts and the Grafana panels already use."""
+    client, store, _launched, _jobs = console
+    from customs import app as app_module
+
+    first = _judged_run(store)                       # FR, and the fixture's own
+    asset = first.asset_path
+    # the Gulf pass: a market this run never judged
+    second = store.create_run(asset_path=asset, markets=["AE"])
+    store.set_run_status(second.id, "done")
+
+    rows = app_module.market_rows(store.get_run(first.id))
+    seen = {m["code"]: m for row in rows for m in row["markets"]}
+    assert "AE" in seen, "the other pass's market is in this run's strip"
+    assert seen["AE"]["elsewhere"] == second.id, "and it names where it lives"
+    assert seen["AE"]["run"] == second.id
+    assert seen["FR"]["elsewhere"] is None, "this run's own markets are its own"
+
+    # the strip links out to the run that actually holds it
+    page = client.get(f"/runs/{first.id}").text
+    assert f'/runs/{second.id}/markets/AE' in page
+    assert "mk-elsewhere" in page
+
+    # and a run of a DIFFERENT file does not join the film
+    store.create_run(asset_path="/tmp/somethingelse.mp4", markets=["TH"])
+    rows = app_module.market_rows(store.get_run(first.id))
+    codes = {m["code"] for row in rows for m in row["markets"]}
+    assert "TH" not in codes, "a different commercial is a different film"
+
