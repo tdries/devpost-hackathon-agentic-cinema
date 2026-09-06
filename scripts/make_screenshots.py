@@ -48,7 +48,7 @@ def main() -> int:
     ap.add_argument("--base", default="https://customs-app-akap4ao72a-ew.a.run.app")
     ap.add_argument("--run", default="run_804f7b687c72")
     ap.add_argument("--cookie", default="customs-role=judge")
-    ap.add_argument("--only", help="og, mission, board, landing")
+    ap.add_argument("--only", help="og, mission, board, landing, insight")
     args = ap.parse_args()
 
     tmp = ROOT / "scripts" / ".shotcache"
@@ -58,6 +58,7 @@ def main() -> int:
     def page(path, **kw):
         return stage(fetch(base, path, args.cookie), base, **kw)
 
+    # path, dest, final size, render height, virtual-time budget, stage kwargs
     jobs = {
         # the card a pasted link shows: the verdict, at Open Graph's shape.
         # 1280x672 is Open Graph's own 1.905 aspect at the render width, so
@@ -65,18 +66,29 @@ def main() -> int:
         # 700 tall and resizing to 630 compressed every line of type by a
         # tenth, which is visible in the headline.
         "og": (f"/runs/{run}", STATIC / "og.png", (OG_W, OG_H),
-               round(OG_H * WIDTH / OG_W)),
+               round(OG_H * WIDTH / OG_W), 6000, {}),
         "mission": (f"/runs/{run}/mission", OUT / "05-mission-feed.png",
-                    (SHOT_W, SHOT_H), 950),
+                    (SHOT_W, SHOT_H), 950, 6000, {}),
         "board": (f"/runs/{run}", OUT / "03-launch-board.png",
-                  (SHOT_W, 880), 930),
-        "landing": ("/", OUT / "01-landing.png", (SHOT_W, 950), 1000),
+                  (SHOT_W, 880), 930, 6000, {}),
+        "landing": ("/", OUT / "01-landing.png", (SHOT_W, 950), 1000, 6000, {}),
+        # The intelligence board is the one page a staged copy cannot show
+        # (its panels are iframes the viewer refuses to a file:// origin)
+        # and the one that needs real time: booting a Grafana and answering
+        # a 30-day query takes far longer than the six seconds that suit a
+        # page which only has to lay itself out. Both defaults gave an
+        # empty hero, which is the panel the README points at.
+        "insight": ("/insight", OUT / "09-intelligence.png", (SHOT_W, 900),
+                    950, 120000, {"live": True}),
     }
 
-    for name, (path, dest, size, height) in jobs.items():
+    for name, (path, dest, size, height, budget, kw) in jobs.items():
         if args.only and args.only != name:
             continue
-        raw = shot(page(path), tmp / f"{name}.png", tmp, height)
+        live = kw.pop("live", False)
+        raw = shot("" if live else page(path, **kw), tmp / f"{name}.png",
+                   tmp, height, budget,
+                   url=base.rstrip("/") + path if live else "")
         resize(raw, size, dest)
         print(f"{name}: {dest.relative_to(ROOT)} {size[0]}x{size[1]} "
               f"({dest.stat().st_size / 1024:.0f} KB)", flush=True)

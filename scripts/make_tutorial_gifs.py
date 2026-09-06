@@ -89,16 +89,23 @@ def stage(html: str, base: str, *, open_details=False, detail_view=False,
 
 
 def shot(html: str, dest: Path, tmp: Path, height: int = HEIGHT,
-         budget: int = 6000) -> Path:
+         budget: int = 6000, url: str = "") -> Path:
     """Render one page. `budget` is virtual milliseconds: a page that only
     has to lay itself out needs a couple of seconds, and one that boots a
-    Grafana in an iframe needs twenty."""
-    page = tmp / (dest.stem + ".html")
-    page.write_text(html)
+    Grafana in an iframe needs twenty.
+
+    `url` shoots the live page instead of a staged copy, for the pages a
+    copy cannot show: the Grafana viewer's CSP names the app as its only
+    allowed frame-ancestor, so every panel on a file:// copy is refused.
+    """
+    if not url:
+        page = tmp / (dest.stem + ".html")
+        page.write_text(html)
+        url = f"file://{page}"
     subprocess.run([chrome(), "--headless", "--disable-gpu", "--hide-scrollbars",
                     f"--window-size={WIDTH},{height}",
                     f"--virtual-time-budget={budget}",
-                    f"--screenshot={dest}", f"file://{page}"],
+                    f"--screenshot={dest}", url],
                    check=True, capture_output=True)
     return dest
 

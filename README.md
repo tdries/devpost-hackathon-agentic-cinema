@@ -280,7 +280,7 @@ This is the [Grafana Labs track](https://agentic-cinema.devpost.com/details/graf
 
 ### 1 · The crew writes into Grafana
 
-The Publisher agent calls MCP tools to build its own instrument panel: **8 dashboards / 23 panels**, an annotation per finding, and the alert rules that will later wake the Remediator. Seven distinct `mcp-grafana` tools are called at runtime: `create_folder`, `update_dashboard`, `alerting_manage_rules`, `get_panel_image`, `query_loki_logs`, `search_dashboards`, `get_dashboard_by_uid`.
+The Publisher agent calls MCP tools to build its own instrument panel: **9 dashboards / 40 panels**, an annotation per finding, and the alert rules that will later wake the Remediator. Seven distinct `mcp-grafana` tools are called at runtime: `create_folder`, `update_dashboard`, `alerting_manage_rules`, `get_panel_image`, `query_loki_logs`, `search_dashboards`, `get_dashboard_by_uid`.
 
 What lands in the stack:
 
@@ -341,7 +341,7 @@ Not a claim, four renders. Every panel below is windowed to the run's own mapped
 | <img src="docs/media/store-loki-by-dimension.png" alt="Observation lines per dimension" width="100%"> | <img src="docs/media/store-mimir-risk.png" alt="customs_risk per market across the timecode" width="100%"> |
 | Counted from the stream labels alone, no body parsing. | `customs_risk`, one sample per video second, which is what makes the timecode an x axis. |
 
-The full inventory of what this system keeps in Grafana (8 dashboards, 23 panels, 4 metric series, 3 log streams, 2 alert rules, and which of the 8 write operations goes over MCP versus the provisioning API) is a screen in the console itself: **[/grafana](https://customs-app-akap4ao72a-ew.a.run.app/grafana)**.
+The full inventory of what this system keeps in Grafana (9 dashboards, 40 panels, 4 metric series, 3 log streams, 2 alert rules, and which of the 8 write operations goes over MCP versus the provisioning API) is a screen in the console itself: **[/grafana](https://customs-app-akap4ao72a-ew.a.run.app/grafana)**.
 
 ## The console
 
@@ -417,9 +417,17 @@ Every rule, filed under the observation that can trigger it.
 
 Every caption the analyst ever wrote is a Loki line, so "which frames have a rabbit in them" is a question rather than a feature somebody anticipated, and what comes back is the frames themselves across every run. **The match is semantic**: the question and the candidate captions go to Gemini together, so *bunnies* finds *"an animated rabbit character"* without anybody guessing which word a vision model chose months ago, and each card says in the model's own words why it is there. A carrot is not a rabbit. `mode=literal` switches to a regex over the caption alone for when you mean the characters, a rule id or a brand. The agent has it as `search_frames`, which returns the counts first, so **how many frames show a short skirt** is answered with a number and the pictures beside it.
 
+### <img src="docs/media/icons/i-analyst.svg" width="22"> Intelligence
+
+Every other screen answers a question about one commercial. This one reads across all of them, out of the same two stores the crew wrote during those runs: **17 panels and 8 kinds of chart** over every clearance this instance has performed. Which subject your creative keeps tripping over, which jurisdictions are actually hard, the dimension-against-market matrix, the severity distribution, worst severity per market against the line where a finding starts to block, market status over time out of Mimir, and the raw finding stream underneath it all.
+
+The division of labour is the design. **Grafana charts the data because it holds it; the console draws the axis because Grafana has never heard of an eighteen-part taxonomy or a broadcaster channel's mark.** The hero is one LCD block per commercial, lit to the highest severity any market ever recorded against it, with that film's own first frame directly underneath it in the same order: green cleared, blue noted, red past the 70 where a finding begins to block. Both halves sort by value and then by name, because the store promises neither: `sort_desc` says nothing about how a tie is broken, seven of these films sit at 95, and five executions of that one query came back in five different arrangements of them. The panel does it in a Grafana transformation, the console does it in Python, and the sixteen posters line up with the sixteen blocks position for position.
+
+<img src="docs/media/09-intelligence.png" width="100%">
+
 ### <img src="docs/media/icons/i-publisher.svg" width="22"> Grafana resources
 
-The whole Grafana surface on one page: 8 dashboards and every panel on them, the 4 metric series and 3 log streams the crew writes and which clock each sits on, the annotations, both alert rules with the expression that fires them, and every write operation with the MCP tool it uses or the REST call it falls back to when `mcp-grafana` 1.1.0 has no tool for it. Read from the definitions the Publisher provisions from, so it cannot drift into describing a stack nobody has.
+The whole Grafana surface on one page: 9 dashboards and every panel on them, the 4 metric series and 3 log streams the crew writes and which clock each sits on, the annotations, both alert rules with the expression that fires them, and every write operation with the MCP tool it uses or the REST call it falls back to when `mcp-grafana` 1.1.0 has no tool for it. Read from the definitions the Publisher provisions from, so it cannot drift into describing a stack nobody has.
 
 Everything that is *working* wears one mark: a rotating ring of the four brand colours. An uploading master, a run mid-analysis, a market tile whose fix is landing, the exact frame being repaired, the stage narrating it, and a beacon in the topbar that says what is running wherever you are.
 
@@ -618,11 +626,11 @@ src/customs/
   grafana_ops.py  MCP first, REST where mcp-grafana 1.1.0 has no write tool
   telemetry.py    Mimir over OTLP on the film's own clock, Loki lines, annotations
   costs.py        what each method costs before you press
-  app.py          FastAPI console: SSE, 11 templates, no build step
+  app.py          FastAPI console: SSE, 21 templates, no build step
 markets/          21 packs → 98 jurisdictions → 128 rules
-grafana/dashboards/  8 dashboards, provisioned as JSON
+grafana/dashboards/  9 dashboards, provisioned as JSON
 grafana-viewer/   stock grafana-oss that is allowed to be framed
-tests/            22 files, 524 tests
+tests/            24 files, 589 tests
 ```
 
 **Built with:** Python · FastAPI · Google Cloud Agent Builder (ADK) · Gemini (vision, text, TTS, image) · Veo 3.1 · Gemini Omni · Grafana Cloud (Mimir, Loki, MCP) · ffmpeg · SQLite · Cloud Run
