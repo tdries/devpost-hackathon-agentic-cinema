@@ -8,6 +8,14 @@
    what to type. It gets the same hero every other screen has, the agent's
    real tool list (from agentmode.TOOL_NAMES, so it cannot drift), and three
    pointers that say what happens when you type. #}
+{# One screen, exactly. .agent used to be height:calc(100vh - 132px),
+   a number written when the panes were the only thing on this page --
+   then a hero and three pointers were added above them and nobody
+   changed it, so the console stood ~200px taller than the window and
+   the suggestions and the ask box, the two things you need, sat below
+   the fold. The screen is a flex column now: the hero takes what it
+   takes, the panes take the rest, and nothing scrolls the page. #}
+<div class="agentscreen">
 <section class="agenthero">
   <div class="swarm" aria-hidden="true">
     <span class="swarm-row"><svg class="ic"><use href="#i-analyst"/></svg><svg class="ic"><use href="#n-board"/></svg><svg class="ic"><use href="#i-adjudicator"/></svg><svg class="ic"><use href="#n-timeline"/></svg><svg class="ic"><use href="#i-publisher"/></svg><svg class="ic"><use href="#n-market"/></svg><svg class="ic"><use href="#i-remediator"/></svg><svg class="ic"><use href="#n-library"/></svg><svg class="ic"><use href="#i-verifier"/></svg><svg class="ic"><use href="#n-feed"/></svg><svg class="ic"><use href="#i-guard"/></svg><svg class="ic"><use href="#i-frame"/></svg></span>
@@ -29,10 +37,11 @@
         <span class="ah-toolrow">{% for t in tools %}<code class="ah-tool">{{ t }}</code>{% endfor %}</span>
       </details>
       <span class="ah-with">
-        <img class="ah-adk" src="/static/logo-adk.png?v={{ static_v }}" alt="" width="25" height="25">
+        <img class="ah-adk" src="/static/logo-adk.png?v={{ static_v }}"
+             alt="Google Cloud Agent Builder" width="50" height="50">
         <i class="brand-bar" aria-hidden="true"></i>
         <img class="ah-grafana" src="/static/powered-by-grafana.png?v={{ static_v }}"
-             alt="Powered by Grafana" width="95" height="22">
+             alt="Powered by Grafana" width="190" height="44">
       </span>
     </div>
   </div>
@@ -79,15 +88,33 @@
       </div>
     </div>
 
-    <div class="agent-suggest" id="agent-suggest">
-      <span class="sugg-label label">Try one, or type your own</span>
-      <button type="button" class="sugg" data-say="What is the status of this run?"><svg class="ic"><use href="#i-pending"/></svg>Where are we</button>
-      <button type="button" class="sugg" data-say="What is blocked right now, and where?"><svg class="ic"><use href="#i-blocked"/></svg>What is blocked</button>
-      <button type="button" class="sugg" data-say="Clear this asset for more markets too."><svg class="ic"><use href="#n-market"/></svg>Add markets</button>
-      <button type="button" class="sugg" data-say="Show me the frame board for this run."><svg class="ic"><use href="#i-frame"/></svg>Show the frames</button>
-      <button type="button" class="sugg" data-say="Which findings need a human decision, and why?"><svg class="ic"><use href="#i-human"/></svg>Needs a human</button>
-      <button type="button" class="sugg" data-say="Build a Grafana dashboard of the findings by dimension."><svg class="ic"><use href="#i-publisher"/></svg>Build a dashboard</button>
-      <button type="button" class="sugg" data-say="What would you fix first, and what would it cost?"><svg class="ic"><use href="#i-remediator"/></svg>What to fix first</button>
+    {# The opening rail, in the order the work happens: find out where you
+       stand, look at the evidence, then act. Seven chips in one flat row
+       read as a word cloud -- nothing said which to press first, and the
+       one that spends money sat beside the one that just reads a status.
+       customs.js replaces this whole block after the first turn with what
+       to ask next, derived from what the turn actually did. #}
+    <div class="agent-suggest guided" id="agent-suggest">
+      <span class="sugg-label label">Start here, or type your own</span>
+      <div class="sugg-lane">
+        <span class="sugg-step mono">1</span>
+        <span class="sugg-lead label">Where do I stand</span>
+        <button type="button" class="sugg" data-say="What is blocked right now, and where?"><svg class="ic"><use href="#i-blocked"/></svg>What is blocked</button>
+        <button type="button" class="sugg" data-say="What is the status of this run?"><svg class="ic"><use href="#i-pending"/></svg>Where are we</button>
+      </div>
+      <div class="sugg-lane">
+        <span class="sugg-step mono">2</span>
+        <span class="sugg-lead label">Show me why</span>
+        <button type="button" class="sugg" data-say="Show me the frame board for this run."><svg class="ic"><use href="#i-frame"/></svg>Show the frames</button>
+        <button type="button" class="sugg" data-say="Which findings need a human decision, and why?"><svg class="ic"><use href="#i-human"/></svg>Needs a human</button>
+        <button type="button" class="sugg" data-say="Build a Grafana dashboard of the findings by dimension."><svg class="ic"><use href="#i-publisher"/></svg>Build a dashboard</button>
+      </div>
+      <div class="sugg-lane">
+        <span class="sugg-step mono">3</span>
+        <span class="sugg-lead label">Do something about it</span>
+        <button type="button" class="sugg" data-say="What would you fix first, and what would it cost?"><svg class="ic"><use href="#i-remediator"/></svg>What to fix first</button>
+        <button type="button" class="sugg" data-say="Clear this asset for more markets too."><svg class="ic"><use href="#n-market"/></svg>Add markets</button>
+      </div>
     </div>
 
     {# Upload where the conversation is. The point of agent mode is not
@@ -134,6 +161,7 @@
       </div>
     </div>
   </div>
+</div>
 </div>
 
 {% endblock %}

@@ -43,3 +43,32 @@ def test_charts_fill_the_space_and_wear_the_app_colours():
     assert hues == [state.SIGNAL, state.BLOCKED, state.AT_RISK, state.CLEARED]
     assert all(p["fieldConfig"]["defaults"]["color"]["mode"] == "shades"
                for p in four["panels"]), "shades gives each series a tint of the hue"
+
+
+def test_every_turn_ends_with_somewhere_to_go():
+    """Agent mode opened with seven suggestions and then never changed
+    them: from the second message on the operator faced a blank box and
+    had to invent the next question, and an invented question is usually
+    one the console cannot answer.
+
+    Every turn now carries a rail of next moves, derived from the tools
+    the turn actually called, so it is about what is on screen. Never
+    empty -- a greeting gets the default rail -- and every entry is a
+    sentence this agent can act on."""
+    from customs.agentmode import Turn, follow_ups
+
+    plain = follow_ups(Turn(reply="Hello."))
+    assert plain, "even a greeting ends with somewhere to go"
+    assert all(m["say"] and m["label"] and m["icon"] for m in plain)
+
+    # what it just did leads, and the default rail fills the rest
+    room = follow_ups(Turn(reply="x", calls=[
+        {"tool": "list_runs"}, {"tool": "show", "args": {"view": "market"}}]))
+    assert room[0]["say"].startswith("What is the statute"), \
+        "the market room it just opened is what the operator is looking at"
+    assert len({m["say"] for m in room}) == len(room), "no repeats"
+    assert len(room) <= 4
+
+    # a failed turn offers the two questions that get it unstuck
+    broken = follow_ups(Turn(error="no such run"))
+    assert broken[0]["label"] == "List the runs"

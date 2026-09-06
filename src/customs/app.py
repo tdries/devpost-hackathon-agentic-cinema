@@ -2089,6 +2089,11 @@ async def agent_ask(request: Request, message: str = Form(...),
         "view": turn.view, "view_label": turn.view_label,
         "view_external": turn.view_external,
         "calls": turn.calls, "error": turn.error,
+        # Where to go from here, from what this turn actually did. A chat
+        # that answers and then shows an empty box makes the operator
+        # invent the next question, and the invented one is usually the one
+        # the console cannot do.
+        "follow_ups": agentmode.follow_ups(turn),
     }
 
 

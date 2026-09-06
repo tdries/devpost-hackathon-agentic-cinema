@@ -1097,6 +1097,7 @@
             last.appendChild(calls);
           }
           open(data.view, data.view_label, data.view_external);
+          nextMoves(data.follow_ups);
           log.scrollTop = log.scrollHeight;
         })
         .catch(function () {
@@ -1179,11 +1180,43 @@
       });
     }
 
+    /* The rail under the conversation, rewritten after every turn.
+
+       It opened with seven suggestions and then never changed again: from
+       the second message on, the operator faced a blank box and had to
+       invent the next question, and the invented one is usually the one
+       the console cannot do. The server sends what to ask next, derived
+       from the tools the turn actually called, so the rail is always about
+       what is on screen now -- and never empty. */
+    var suggest = document.getElementById("agent-suggest");
+
+    var nextMoves = function (moves) {
+      if (!suggest || !moves || !moves.length) { return; }
+      suggest.innerHTML = "";
+      var label = document.createElement("span");
+      label.className = "sugg-label label";
+      label.textContent = "What next";
+      suggest.appendChild(label);
+      moves.forEach(function (m) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "sugg";
+        b.setAttribute("data-say", m.say);
+        b.title = m.say;
+        b.innerHTML = '<svg class="ic"><use href="#' + m.icon + '"></use></svg>';
+        b.appendChild(document.createTextNode(m.label));
+        suggest.appendChild(b);
+      });
+    };
+
     form.addEventListener("submit", function (event) {
       event.preventDefault();
       ask(input.value);
     });
-    Array.prototype.forEach.call(document.querySelectorAll(".sugg"), function (b) {
-      b.addEventListener("click", function () { ask(b.getAttribute("data-say")); });
+    /* Delegated, because the rail is replaced after every turn and a
+       listener bound to the opening buttons would die with them. */
+    document.addEventListener("click", function (event) {
+      var b = event.target.closest && event.target.closest(".sugg");
+      if (b && b.getAttribute("data-say")) { ask(b.getAttribute("data-say")); }
     });
   })();

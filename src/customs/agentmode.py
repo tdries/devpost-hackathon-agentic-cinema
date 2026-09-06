@@ -838,3 +838,143 @@ async def ask(store: Store, message: str, session_id: str,
 TOOL_NAMES = ("chart", "list_runs", "markets", "findings", "fix_options",
               "library", "show", "search_frames", "data_schema", "query",
               "build_dashboard")
+
+
+# --- what to ask next ----------------------------------------------------
+
+# One rail of next moves per thing the agent just did. A chat that answers
+# and then shows a blank box makes every turn start from nothing: the
+# operator has to invent the follow-up, and the one they invent is usually
+# the one the console cannot do. These are all things it CAN do, phrased as
+# the sentence that triggers them, so the conversation always has a next
+# step and the next step always works.
+#
+# Keyed by tool, because a tool call is what the turn actually did rather
+# than what it was asked. `show` is keyed by the view it opened.
+_NEXT_BY_TOOL = {
+    "findings": [
+        ("What would you fix first, and what would it cost?", "What to fix first", "i-remediator"),
+        ("Which of these need a human decision, and why?", "Needs a human", "i-human"),
+        ("Show me the frames these findings came from.", "See the frames", "i-frame"),
+    ],
+    "fix_options": [
+        ("Explain the difference between those methods for this shot.", "Why that method", "i-adjudicator"),
+        ("What else is open on this run at that price?", "Other fixes", "i-blocked"),
+        ("Show me the frame this would change.", "See the frame", "i-frame"),
+    ],
+    "markets": [
+        ("Which market is holding the campaign, and on what statute?", "Who is blocking", "i-legal"),
+        ("Clear this asset for more markets too.", "Add markets", "n-market"),
+        ("Show me the launch board.", "Open the board", "n-board"),
+    ],
+    "list_runs": [
+        ("Open the newest run's launch board.", "Open the newest", "n-board"),
+        ("Which runs are still blocked anywhere?", "Still blocked", "i-blocked"),
+        ("What has been fixed and verified across every run?", "What got fixed", "i-cleared"),
+    ],
+    "library": [
+        ("Which of those rules has this run actually tripped?", "Tripped here", "i-at-risk"),
+        ("Show me a finding that cites one of them.", "See it cited", "i-sourced"),
+    ],
+    "search_frames": [
+        ("Which markets objected to those frames?", "Who objected", "n-market"),
+        ("Show those frames on the frame board.", "On the board", "i-frame"),
+        ("What would it cost to fix them?", "Price a fix", "i-remediator"),
+    ],
+    "build_dashboard": [
+        ("Add a panel for findings by market.", "Add a panel", "i-publisher"),
+        ("What does that dashboard say is worst?", "Read it back", "i-analyst"),
+    ],
+    "chart": [
+        ("Group that by market instead.", "By market", "n-market"),
+        ("Build a dashboard from it in Grafana.", "Make it a dashboard", "i-publisher"),
+    ],
+    "query": [
+        ("Chart that.", "Chart it", "i-publisher"),
+        ("What does that mean for the launch?", "So what", "i-adjudicator"),
+    ],
+    "data_schema": [
+        ("Query the findings stream for the last day.", "Query it", "i-pipeline"),
+        ("Chart what is in Mimir for this run.", "Chart Mimir", "i-publisher"),
+    ],
+}
+
+_NEXT_BY_VIEW = {
+    "board": [
+        ("Which market is blocking, and why?", "Who is blocking", "i-blocked"),
+        ("What would you fix first, and what would it cost?", "What to fix first", "i-remediator"),
+        ("Show me the frames behind those findings.", "See the frames", "i-frame"),
+    ],
+    "frames": [
+        ("Which of those frames did a market object to?", "Which objected", "n-market"),
+        ("Price a fix for the worst one.", "Price a fix", "i-remediator"),
+    ],
+    "timeline": [
+        ("Which second is the worst, and for whom?", "Worst second", "i-at-risk"),
+        ("Open the market room for the market that objects most.", "Open that market", "n-market"),
+    ],
+    "market": [
+        ("What is the statute behind each of these findings?", "The statute", "i-legal"),
+        ("Price a fix for the worst finding here.", "Price a fix", "i-remediator"),
+        ("What clears if I fix them all?", "What clears", "i-cleared"),
+    ],
+    "mission": [
+        ("Summarise what the crew did on this run.", "Summarise the run", "i-pipeline"),
+        ("Where did it spend money?", "What it cost", "i-remediator"),
+    ],
+    "cutting": [
+        ("Did the verifier sign that off?", "Was it verified", "i-verifier"),
+        ("What is still open after that fix?", "Still open", "i-blocked"),
+    ],
+    "library": [
+        ("Which of those rules has this run tripped?", "Tripped here", "i-at-risk"),
+    ],
+    "runs": [
+        ("Open the newest run's launch board.", "Open the newest", "n-board"),
+        ("Which runs are still blocked?", "Still blocked", "i-blocked"),
+    ],
+}
+
+# When the turn did nothing a rail is keyed to -- a greeting, a question it
+# answered from what it already knew, an error. Never an empty rail: the
+# whole point is that every turn ends with somewhere to go.
+_NEXT_DEFAULT = [
+    ("What is blocked right now, and where?", "What is blocked", "i-blocked"),
+    ("Show me the launch board for the newest run.", "Open a run", "n-board"),
+    ("What would you fix first, and what would it cost?", "What to fix first", "i-remediator"),
+]
+
+_NEXT_ON_ERROR = [
+    ("What runs can you read?", "List the runs", "n-runs"),
+    ("What can you actually do?", "What you can do", "i-adjudicator"),
+]
+
+
+def follow_ups(turn: "Turn", limit: int = 4) -> list[dict]:
+    """Two to four things worth asking next, given what this turn did.
+
+    Ordered by how recent the thing they follow is: the last tool the agent
+    called is the one the operator is still looking at, so its rail leads.
+    Deduplicated by the sentence, capped, and never empty.
+    """
+    rails: list[tuple[str, str, str]] = []
+    if turn.error:
+        rails.extend(_NEXT_ON_ERROR)
+    for call in reversed(turn.calls or []):
+        tool = call.get("tool") or ""
+        if tool == "show":
+            view = str((call.get("args") or {}).get("view") or "")
+            rails.extend(_NEXT_BY_VIEW.get(view, ()))
+        rails.extend(_NEXT_BY_TOOL.get(tool, ()))
+    rails.extend(_NEXT_DEFAULT)
+
+    seen: set[str] = set()
+    out: list[dict] = []
+    for say, label, icon in rails:
+        if say in seen:
+            continue
+        seen.add(say)
+        out.append({"say": say, "label": label, "icon": icon})
+        if len(out) >= limit:
+            break
+    return out

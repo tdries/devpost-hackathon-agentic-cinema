@@ -1377,9 +1377,18 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
    The operator types on the left; whatever the agent opens fills the right.
    Two panes, one screen height, nothing scrolls the page itself. */
 
+/* The screen is one viewport: topbar and console nav are fixed chrome
+   (122px together), everything else -- hero, pointers, panes -- divides
+   what is left. The panes were on a hardcoded calc(100vh - 132px) written
+   when they were the only thing on this page, so once a hero and three
+   pointers appeared above them the ask box fell below the fold. */
+.agentscreen {
+  display: flex; flex-direction: column; gap: 0;
+  height: calc(100vh - 122px); min-height: 540px;
+}
 .agent {
-  display: grid; grid-template-columns: minmax(360px, 460px) 1fr;
-  gap: 14px; height: calc(100vh - 132px); margin: 18px 0 22px;
+  display: grid; grid-template-columns: minmax(340px, 420px) 1fr;
+  gap: 14px; flex: 1; min-height: 0; margin: 12px 0 14px;
 }
 .agent-side, .agent-view {
   display: flex; flex-direction: column; min-height: 0;
@@ -2877,8 +2886,8 @@ video.runthumb { object-fit: cover; background: var(--well); }
    It used to open onto two grey panes and a blinking cursor, which tells a
    first-time visitor nothing. Same hero device as the landing and archive,
    then three numbered pointers, then the two panes. */
-.agenthero { position: relative; overflow: hidden; padding: 18px 0 14px;
-  border-bottom: 1px solid var(--line); }
+.agenthero { position: relative; overflow: hidden; padding: 12px 0 10px;
+  border-bottom: 1px solid var(--line); flex: none; }
 .agenthero .swarm { position: absolute; inset: 0; display: grid; gap: 26px;
   align-content: center; opacity: 0.05; pointer-events: none;
   mask-image: radial-gradient(120% 100% at 100% 50%, #000 30%, transparent 72%);
@@ -2889,13 +2898,14 @@ video.runthumb { object-fit: cover; background: var(--well); }
 .agenthero-title { font-size: clamp(26px, 3.6vw, 40px); line-height: 1.12;
   margin: 6px 0 12px; letter-spacing: -0.015em; }
 .agenthero-lede { max-width: 74ch; font-size: 13px; color: var(--ink-2);
-  line-height: 1.55; margin: 0 0 12px; }
+  line-height: 1.5; margin: 0 0 8px; }
 .agenthero-stats { display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
   margin-bottom: 0; }
 .ah-with { margin-left: auto; }
-.ah-adk { display: block; height: 25px; width: 25px; }
-.ah-grafana { display: block; height: 20px; width: auto; opacity: 0.85; }
-.ah-with .brand-bar { height: 16px; }
+.ah-adk { display: block; height: 50px; width: 50px; }
+.ah-grafana { display: block; height: 40px; width: auto; opacity: 0.9; }
+.ah-with { display: inline-flex; align-items: center; gap: 12px; }
+.ah-with .brand-bar { height: 30px; }
 .ah-stat { font-size: 12.5px; color: var(--ink-2); }
 .ah-stat b { font-family: var(--mono); font-size: 14px; color: var(--ink);
   margin-right: 4px; }
@@ -2905,13 +2915,13 @@ video.runthumb { object-fit: cover; background: var(--well); }
   background: var(--panel); }
 
 .agentsteps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 14px; padding: 14px 0 2px; }
+  gap: 14px; padding: 10px 0 2px; flex: none; }
 .ast { display: flex; gap: 12px; align-items: flex-start; }
 .ast-n { flex: none; width: 24px; height: 24px; border-radius: 50%;
   display: grid; place-items: center; font-size: 12px;
   background: var(--well); border: 1px solid var(--line-2); color: var(--ink-2); }
 .ast b { font-size: 13.5px; display: block; margin-bottom: 3px; }
-.ast p { font-size: 12.5px; color: var(--ink-3); line-height: 1.55; margin: 0; }
+.ast p { font-size: 12px; color: var(--ink-3); line-height: 1.45; margin: 0; }
 
 .sugg-label { display: block; width: 100%; margin-bottom: 2px; }
 .ih-point { margin-top: 14px; font-size: 11px; color: var(--ink-3);
@@ -2998,3 +3008,23 @@ tbody.mkscene[hidden] { display: none; }
 }
 .otherpass .ic { width: 15px; height: 15px; flex: none; align-self: center; }
 .otherpass a { color: var(--g-blue); }
+
+
+/* ---------- the agent's rail: guided, then reactive ----------
+   Opening, it is three lanes in the order the work happens -- find out
+   where you stand, look at the evidence, act -- because seven chips in one
+   flat row read as a word cloud and nothing said which to press first.
+   After the first turn customs.js replaces it with what to ask next, and
+   that rail is flat on purpose: by then the conversation is the order. */
+.agent-suggest.guided { display: grid; gap: 7px; }
+.sugg-lane {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 5px;
+  padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--well);
+}
+.sugg-step {
+  flex: none; width: 15px; height: 15px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 9px; letter-spacing: 0;
+  background: var(--g-blue); color: #fff;
+}
+.sugg-lead { flex: none; margin-right: 2px; font-size: 9.5px; }

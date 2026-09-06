@@ -3338,3 +3338,28 @@ def test_two_runs_of_one_file_read_as_one_film(console):
     codes = {m["code"] for row in rows for m in row["markets"]}
     assert "TH" not in codes, "a different commercial is a different film"
 
+
+
+def test_agent_mode_opens_guided_and_fits_one_screen(console):
+    """Two things a first-time visitor met: seven suggestion chips in one
+    flat row, nothing saying which to press first, and a console taller
+    than the window -- .agent was on a hardcoded calc(100vh - 132px)
+    written when the panes were the only thing on the page, so once a hero
+    and three pointers went above them the ask box fell below the fold.
+
+    The rail opens in the order the work happens, and the screen is a flex
+    column that divides one viewport between the hero and the panes."""
+    client, _store, _launched, _jobs = console
+    page = client.get("/agent").text
+
+    assert page.count('class="sugg-lane"') == 3, "where I stand, why, what to do"
+    assert "Start here" in page
+
+    css = (Path(app_module.__file__).parent / "static" / "customs.css").read_text()
+    assert ".agentscreen" in css and "calc(100vh - 122px)" in css
+    assert "height: calc(100vh - 132px)" not in css,         "the number written for a page that no longer exists"
+
+    # the two marks, at twice the size they were
+    assert 'width="50" height="50"' in page, "the Agent Builder mark"
+    assert 'width="190" height="44"' in page, "the Grafana mark"
+
