@@ -3379,7 +3379,7 @@ def test_the_intelligence_board_labels_grafana_with_the_console_s_own_icons(
     from customs import app as app_module
     client, _store, _launched, _jobs = console
 
-    monkeypatch.setattr(app_module, "_ranked", lambda query, label: (
+    monkeypatch.setattr(app_module, "_ranked", lambda query, label, **kw: (
         [{"key": "alcohol_tobacco_drugs", "n": 270},
          {"key": "modesty_dress_body", "n": 61}] if label == "dimension" else
         [{"key": "EU", "n": 120}, {"key": "FR", "n": 44},
@@ -3441,9 +3441,10 @@ def test_the_filmstrip_pairs_grafana_s_blocks_with_the_console_s_footage(
     run = _judged_run(store)
     asset = Path(run.asset_path).stem
 
-    monkeypatch.setattr(app_module, "_ranked", lambda query, label: (
-        [{"key": asset, "n": 95}, {"key": "quiet_ad", "n": 12},
-         {"key": "gone_ad", "n": 55}] if label == "asset" else []))
+    monkeypatch.setattr(app_module, "_ranked", lambda query, label, **kw: (
+        [{"key": asset, "n": 95}, {"key": "gone_ad", "n": 55},
+         {"key": "quiet_ad", "n": 12},
+         ] if label == "asset" else []))
 
     page = client.get("/insight").text
     # 'fs-shot ' with the space: 'fs-shots' is the container around them
@@ -3455,5 +3456,5 @@ def test_the_filmstrip_pairs_grafana_s_blocks_with_the_console_s_footage(
     # one whose run has been deleted keeps its block and loses its still,
     # rather than borrowing somebody else's
     assert "no run" in page
-    assert page.index(asset.replace("_", " ")) < page.index("gone ad"), \
-        "ranked worst first, so the strip reads in the panel's own order"
+    assert page.index("gone ad") < page.index("quiet ad"), \
+        "the strip keeps the order the store returned, not one of its own"

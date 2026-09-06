@@ -2245,8 +2245,17 @@ _INSIGHT_TTL = 120.0
 _insight_cache: dict[str, tuple[float, list]] = {}
 
 
-def _ranked(query: str, label: str) -> list[dict]:
+def _ranked(query: str, label: str, *, as_returned: bool = False) -> list[dict]:
     """[{key, n}] for a `sum by (label)` LogQL query, biggest first.
+
+    `as_returned` keeps Loki's own order instead of re-sorting. It matters
+    wherever the console draws an axis for a panel: a query wrapped in
+    sort_desc comes back sorted by the store, and ties inside it are broken
+    by Loki however Loki breaks them. Sorting again here by (-n, key) gave
+    the same NUMBERS in a different order -- seven commercials at severity
+    95, and the poster under each block belonged to a different film. The
+    values agreed and the identities did not, which is the one way an axis
+    is worse than no axis.
 
     A dead Grafana returns an empty list rather than raising: the page's
     panels are iframes that will show their own error, and the icon axis
@@ -2263,10 +2272,10 @@ def _ranked(query: str, label: str) -> list[dict]:
     except Exception as exc:  # noqa: BLE001 -- the panels still render
         log.warning("insight ranking failed for %s: %s", label, exc)
         return []
-    ranked = sorted(
-        ({"key": r["labels"].get(label, ""), "n": int(r["value"])}
-         for r in rows if r["labels"].get(label)),
-        key=lambda r: (-r["n"], r["key"]))
+    ranked = [{"key": r["labels"].get(label, ""), "n": int(r["value"])}
+              for r in rows if r["labels"].get(label)]
+    if not as_returned:
+        ranked.sort(key=lambda r: (-r["n"], r["key"]))
     _insight_cache[query] = (time.time(), ranked)
     return ranked
 
@@ -2288,10 +2297,12 @@ def insight(request: Request):
     this product's icons and this product cannot draw Grafana's data, so
     each does the half it is good at.
     """
-    dims = _ranked('sum by (dimension) (count_over_time({app="customs", '
-                   'kind="finding"}[30d]))', "dimension")
-    markets = _ranked('sum by (market) (count_over_time({app="customs", '
-                      'kind="finding"}[30d]))', "market")
+    # Each of these is the panel's own expression, sort_desc included, so
+    # the axis is not merely sorted the same way -- it is the same answer.
+    dims = _ranked('sort_desc(sum by (dimension) (count_over_time({app="customs", '
+                   'kind="finding"}[30d])))', "dimension", as_returned=True)
+    markets = _ranked('sort_desc(sum by (market) (count_over_time({app="customs", '
+                      'kind="finding"}[30d])))', "market", as_returned=True)
     # Which mark a market wears is a question about its level, not its
     # code: the sprite holds sixteen countries, and EU, GLOBAL and every
     # broadcaster channel are not among them. Same rule the run nav uses,
@@ -2310,8 +2321,9 @@ def insight(request: Request):
     # A film in the stores whose run has since been deleted keeps its block
     # and loses its poster: the block is what the store says, and inventing
     # a still for it would be worse than an empty frame.
-    films = _ranked('max by (asset) (max_over_time({app="customs", '
-                    'kind="finding"} | json | unwrap severity [30d]))', "asset")
+    films = _ranked('sort_desc(max by (asset) (max_over_time({app="customs", '
+                    'kind="finding"} | json | unwrap severity [30d])))',
+                    "asset", as_returned=True)
     newest: dict[str, str] = {}
     for r in store().recent_runs(500):
         newest.setdefault(asset_key(r), r.id)
