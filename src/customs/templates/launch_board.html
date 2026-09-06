@@ -98,7 +98,7 @@
   <p class="label" style="margin-top:8px">live grafana &middot; hover a segment
     for its values, click one to remediate the scene it sits on</p>
   {% else %}
-  <img class="boardlanes" src="/runs/{{ run.id }}/lanes.png" alt="Problem lanes"
+  <img class="boardlanes" src="/runs/{{ run.id }}/lanes.png?theme={{ gtheme }}" alt="Problem lanes"
        loading="lazy">
   {% endif %}
 </section>

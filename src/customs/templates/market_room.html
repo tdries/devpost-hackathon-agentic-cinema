@@ -144,7 +144,7 @@
         </span>
       </td></tr>
       {% for finding in sc.findings %}
-      <tr{{ ' class="sparkle"' | safe if finding.status == 'remediating' }}>
+      <tr class="frow{{ ' sparkle' if finding.status == 'remediating' }}">
         {# Rule and citation are two columns, not one stacked cell. Stacked,
            the rationale and a statute title shared a 200px column and ran
            twelve lines deep while Class, Severity and Window sat empty
@@ -186,45 +186,10 @@
         <td class="tight"><span class="pill s-{{ fst }}"><svg class="ic"><use href="#i-{{ fst }}"/></svg>{{ finding.status }}</span></td>
         <td class="tight">
           {% if finding.status == 'open' and finding.remediable and finding.id in fixes %}
-          {% set fix = fixes[finding.id] %}
+          {# Just the toggle here. The panel it opens is the next row: see
+             the block under </tr>, and .fixrow in the stylesheet. #}
           <details class="fixer">
             <summary class="btn">Remediate now</summary>
-            <form method="post" action="/runs/{{ run.id }}/findings/{{ finding.id }}/remediate">
-              {% if fix.verdict %}<div class="fix-verdict">{{ fix.verdict }}</div>{% endif %}
-              <div class="fix-h label">What should change</div>
-              {% for s in fix.suggestions %}
-              <label class="fix-opt">
-                <input type="radio" name="intent" value="{{ s.key }}" {{ 'checked' if loop.first }}>
-                <span>{{ s.label }}</span>
-              </label>
-              {% endfor %}
-              <div class="fix-h label">How to do it</div>
-              {% for o in fix.options %}
-              <label class="fix-opt{{ ' off' if not o.available }}" title="{{ o.why_not or o.caveat or o.best_for }}">
-                <input type="radio" name="method" value="{{ o.key }}" {{ 'checked' if o.key == 'overlay' }} {{ 'disabled' if not o.available }}>
-                <svg class="ic ic-m" aria-hidden="true"><use href="#m-{{ o.key }}"/></svg>
-                <span class="fix-m">
-                  <b>{{ o.name }}</b>
-                  <span class="fix-why">{{ o.why_not or o.best_for }}</span>
-                  {% if o.caveat and o.available %}<span class="fix-why caveat">Poor fit here: {{ o.caveat }}</span>{% endif %}
-                </span>
-                <span class="fix-cost mono">
-                  <b>{{ '%.2f'|format(o.eur) }} EUR</b>
-                  <span>{{ o.length }} &middot; {{ o.complexity }}</span>
-                </span>
-              </label>
-              {% endfor %}
-              {# Filled by customs.js when a disabled method row is clicked.
-                 A disabled radio silently ignores the click and the form
-                 submits whatever was already checked -- which is how three
-                 explicit Veo picks once became two centre crops. The click
-                 now explains itself instead. #}
-              <p class="fix-why fix-refused" role="alert" hidden></p>
-              <div class="fix-foot">
-                <span class="label">Generation budget {{ '%.2f'|format(budget_left) }} of {{ '%.2f'|format(budget_total) }} EUR left today</span>
-                <button class="btn go" type="submit">Run the fix</button>
-              </div>
-            </form>
           </details>
           {% elif finding.status == 'remediating' %}
           <button class="btn" disabled data-busy><span class="spin"></span>Working</button>
@@ -235,6 +200,83 @@
           {% endif %}
         </td>
       </tr>
+      {% if finding.status == 'open' and finding.remediable and finding.id in fixes %}
+      {% set fix = fixes[finding.id] %}
+      {# The panel is its own full-width row, not a dropdown inside the last
+         cell. That cell is 12% of the table, sized for the word "open", and
+         a five-method price list rendered into it came out clipped at the
+         table's edge with the prices -- the one number the decision turns
+         on -- outside the panel entirely. A row spans all eight columns, so
+         what should change and how to do it sit side by side and the whole
+         thing is read at once. The <details> in the cell above is still the
+         only state: .fixrow is revealed by :has(), so this works with
+         JavaScript off exactly as a disclosure should. #}
+      <tr class="fixrow"><td colspan="8">
+        <form class="fixpanel" method="post" action="/runs/{{ run.id }}/findings/{{ finding.id }}/remediate">
+          <div class="fp-head">
+            <span class="fp-title">Remediate <b>{{ finding.rule_id }}</b></span>
+            {% if fix.verdict %}<p class="fix-verdict">{{ fix.verdict }}</p>{% endif %}
+          </div>
+          <div class="fp-cols">
+            <div class="fp-col">
+              <div class="fix-h label"><span class="fp-n mono">1</span>What should change</div>
+              {% for s in fix.suggestions %}
+              <label class="fix-opt">
+                <input type="radio" name="intent" value="{{ s.key }}" {{ 'checked' if loop.first }}>
+                <span>{{ s.label }}</span>
+              </label>
+              {% endfor %}
+            </div>
+            <div class="fp-col">
+              <div class="fix-h label"><span class="fp-n mono">2</span>How to do it</div>
+              {# The scope caveat is one sentence about the FINDING, and the
+                 method loop repeated it verbatim on every method it ruled
+                 out -- four amber paragraphs saying the same thing, which is
+                 how the panel became a wall. Said once here, tagged per row
+                 below. #}
+              {% set caveats = fix.options | selectattr('available') | selectattr('caveat')
+                                           | map(attribute='caveat') | unique | list %}
+              {% for c in caveats %}
+              <p class="fp-caveat"><svg class="ic"><use href="#i-at-risk"/></svg>{{ c }}</p>
+              {% endfor %}
+              {# The cheap patch is the default wherever it fits, which is most
+                 findings. Where it does not -- a concept-scope violation, say --
+                 it was still the pre-checked option, so the panel argued for
+                 regeneration in three places and then selected the one method
+                 it had just tagged a poor fit. Fall through to whatever does
+                 fit instead. #}
+              {% set fitting = fix.options | selectattr('available') | rejectattr('caveat')
+                                           | map(attribute='key') | list %}
+              {% set picked = 'overlay' if ('overlay' in fitting or not fitting) else fitting[0] %}
+              {% for o in fix.options %}
+              <label class="fix-opt{{ ' off' if not o.available }}" title="{{ o.why_not or o.caveat or o.best_for }}">
+                <input type="radio" name="method" value="{{ o.key }}" {{ 'checked' if o.key == picked }} {{ 'disabled' if not o.available }}>
+                <svg class="ic ic-m" aria-hidden="true"><use href="#m-{{ o.key }}"/></svg>
+                <span class="fix-m">
+                  <b>{{ o.name }}{% if o.caveat and o.available %}<span class="fp-tag">poor fit here</span>{% endif %}</b>
+                  <span class="fix-why">{{ o.why_not or o.best_for }}</span>
+                </span>
+                <span class="fix-cost mono">
+                  <b>{{ '%.2f'|format(o.eur) }} EUR</b>
+                  <span>{{ o.length }} &middot; {{ o.complexity }}</span>
+                </span>
+              </label>
+              {% endfor %}
+            </div>
+          </div>
+          {# Filled by customs.js when a disabled method row is clicked.
+             A disabled radio silently ignores the click and the form
+             submits whatever was already checked -- which is how three
+             explicit Veo picks once became two centre crops. The click
+             now explains itself instead. #}
+          <p class="fix-why fix-refused" role="alert" hidden></p>
+          <div class="fix-foot">
+            <span class="label">Generation budget {{ '%.2f'|format(budget_left) }} of {{ '%.2f'|format(budget_total) }} EUR left today</span>
+            <button class="btn go" type="submit">Run the fix</button>
+          </div>
+        </form>
+      </td></tr>
+      {% endif %}
       {% endfor %}
       </tbody>
       {% endfor %}

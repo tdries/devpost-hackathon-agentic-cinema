@@ -902,7 +902,24 @@ def asset_duration(run) -> float:
         mtime = 0.0
     return _duration_of(str(run.asset_path), mtime)
 
-def embeds(run) -> dict[str, str]:
+def gtheme(request: Request | None) -> str:
+    """Which Grafana theme this viewer's console is wearing.
+
+    The console's own theme lives in localStorage, which the server cannot
+    read, so the inline script in base.html mirrors it into a cookie for
+    exactly this: a Grafana panel embedded in the light console has to come
+    back light, and the same panel in Mission has to come back dark. Read
+    server-side, the first paint is already right -- no reload, no second
+    fetch, and no pair of near-identical images to keep in step.
+
+    Absent or unreadable, the answer is light, which is the console's own
+    default for the same reason.
+    """
+    cookie = request.cookies.get("customs-theme") if request else None
+    return "dark" if cookie == "mission" else "light"
+
+
+def embeds(run, theme: str = "light") -> dict[str, str]:
     """The two Grafana pages the board links out to, windowed for this run.
 
     Pure string building, no network call and no GrafanaOps: see
@@ -934,7 +951,7 @@ def embeds(run) -> dict[str, str]:
     if settings.grafana_viewer_url:
         base = settings.grafana_viewer_url
         asset_v = quote(Path(run.asset_path).stem or run.asset_path)
-        common = f"var-asset={asset_v}&var-run={quote(run.id)}&kiosk&theme=light"
+        common = f"var-asset={asset_v}&var-run={quote(run.id)}&kiosk&theme={theme}"
         if run.t0 is not None:
             span = asset_duration(run)
             # No padding either side: the console draws the axes for this
@@ -1087,7 +1104,7 @@ def generated_clip(run_id: str, change_id: str):
 
 
 @app.get("/grafana/{uid}.png")
-def grafana_png(uid: str, run: str = ""):
+def grafana_png(request: Request, uid: str, run: str = "", theme: str = ""):
     """A whole Grafana dashboard, rendered server-side as an image.
 
     Grafana Cloud answers every page with `x-frame-options: deny + frame-ancestors 'none'`, so a
@@ -1120,11 +1137,13 @@ def grafana_png(uid: str, run: str = ""):
                                  now_ms)
             except Exception:  # noqa: BLE001 -- no readable window, default holds
                 pass
-            # Light, and wide. The pane this lands in is the right half of
-            # a desktop window, so the render is sized to fill it rather
-            # than sit as a small dark card in a light console.
+            # Wide: the pane this lands in is the right half of a desktop
+            # window, so the render fills it rather than sitting as a small
+            # card in the middle. The theme follows the console's, because a
+            # light render on Mission's ground is a torch in a dark room.
             png = ops.render_png(uid, None, None, None, width=1600, height=900,
-                                 theme="light", window_ms=window_ms)
+                                 theme=theme or gtheme(request),
+                                 window_ms=window_ms)
     except Exception as exc:  # noqa: BLE001 -- a dead renderer is not a 500 here
         log.warning("dashboard render failed for %s: %s", uid, exc)
         raise HTTPException(status_code=502,
@@ -1276,6 +1295,10 @@ def pill_groups(run, states: dict) -> list[dict]:
 
 
 def _page(request: Request, name: str, **context):
+    # Every template can ask which Grafana theme this viewer is on, because
+    # any of them may embed a panel. Set explicitly by a caller if it has a
+    # reason to; otherwise read from the cookie base.html mirrors.
+    context.setdefault("gtheme", gtheme(request))
     return templates.TemplateResponse(request, name, context)
 
 
@@ -1917,7 +1940,7 @@ def launch_board(request: Request, run_id: str):
                  stills=board_stills(run, asset_duration(run)),
                  can_add=bool(store().observations(run.id)),
                  overall=overall(states), progress=run_progress(run, states),
-                 embeds=embeds(run),
+                 embeds=embeds(run, gtheme(request)),
                  duration=asset_duration(run), published=published(run),
                  changes=len(store().changes(run.id)), screen="board")
 
@@ -2179,7 +2202,8 @@ def _by_film(runs) -> dict[str, list]:
     return grouped
 
 
-def _run_rows(runs, by_asset: dict[str, list], offset: int = 0) -> list[dict]:
+def _run_rows(runs, by_asset: dict[str, list], offset: int = 0,
+              theme: str = "light") -> list[dict]:
     """One row per film, ready for the card template.
 
     `offset` is the card's position in the WHOLE archive, not in this page:
@@ -2201,7 +2225,7 @@ def _run_rows(runs, by_asset: dict[str, list], offset: int = 0) -> list[dict]:
              # actually looks at get the live panel; the rest keep the SVG,
              # which is what every card had before and is indistinguishable
              # at that size.
-             "live_lanes": ((embeds(run).get("viewer") or {}).get("squares", "")
+             "live_lanes": ((embeds(run, theme).get("viewer") or {}).get("squares", "")
                             if i < LIVE_LANE_CARDS else ""),
              # The row labels Grafana cannot draw. Same set and same order
              # the panel resolves from Loki -- both come from this run's
@@ -2252,7 +2276,7 @@ def all_runs(request: Request, all: int = 0, offset: int = 0,
     # dated links under it, so nothing is hidden and nothing is repeated.
     by_asset = _by_film(runs)
     newest = [older[0] for older in by_asset.values()]
-    rows = _run_rows(newest, by_asset)
+    rows = _run_rows(newest, by_asset, theme=gtheme(request))
     # One live panel, not thirty-five. Every card carries its own charts as
     # SVG for a reason -- building them inline once took this page past a two
     # minute timeout -- and an iframe per card would be thirty-five Grafana
@@ -2261,14 +2285,15 @@ def all_runs(request: Request, all: int = 0, offset: int = 0,
     live_history = ""
     if settings.grafana_viewer_url and not scoped:
         live_history = (f"{settings.grafana_viewer_url}/d-solo/customs-history/"
-                        f"customs?panelId=1&kiosk&theme=light&from=now-7d&to=now")
+                        f"customs?panelId=1&kiosk&theme={gtheme(request)}"
+                        f"&from=now-7d&to=now")
     films = len(rows)
     if fragment:
         # the cards alone, in the same markup the first page used
         page = rows[offset:offset + PAGE_SIZE]
         return _page(request, "_runcards.html",
                      rows=_run_rows([r["run"] for r in page], by_asset,
-                                    offset=offset),
+                                    offset=offset, theme=gtheme(request)),
                      showcase=_showcase(store()))
     shown = films if all else min(PAGE_SIZE, films)
     return _page(request, "runs.html", rows=rows[:shown], screen="runs",
@@ -2486,7 +2511,7 @@ def timeline(request: Request, run_id: str):
         matrix.append({"dimension": dim, "cells": row})
 
     return _page(request, "timeline.html", run=run, lanes=lanes, ticks=ticks,
-                 scenes=scenes, matrix=matrix, embeds=embeds(run),
+                 scenes=scenes, matrix=matrix, embeds=embeds(run, gtheme(request)),
                  duration=duration, screen="timeline")
 
 @app.get("/runs/{run_id}/frames", response_class=HTMLResponse)
@@ -3235,7 +3260,7 @@ def run_lanes(run_id: str, full: int = 0):
                     headers={"Cache-Control": "public, max-age=600"})
 
 @app.get("/runs/{run_id}/lanes.png")
-def run_lanes_grafana(run_id: str):
+def run_lanes_grafana(request: Request, run_id: str, theme: str = ""):
     """The same lanes, drawn by Grafana itself rather than by us.
 
     This is the real `customs-lanes` state timeline: one lane per dimension
@@ -3253,7 +3278,10 @@ def run_lanes_grafana(run_id: str):
     Grafana outage costs the chart its provenance, not its existence.
     """
     run = _run_or_404(run_id)
-    cached = run_dir(run) / "lanes.png"
+    # Cached per theme: the two renders are different pictures, and one
+    # overwriting the other is how a light panel ends up on Mission.
+    want = theme if theme in ("light", "dark") else gtheme(request)
+    cached = run_dir(run) / ("lanes.png" if want == "light" else "lanes-dark.png")
     fresh = cached.is_file() and (time.time() - cached.stat().st_mtime) < 600
     if not fresh:
         try:
@@ -3262,7 +3290,7 @@ def run_lanes_grafana(run_id: str):
             duration = asset_duration(run) or MAX_DURATION_S
             with GrafanaOps(settings) as ops:
                 png = ops.render_png("customs-lanes", 1, run, duration,
-                                     width=1200, height=420, theme="light",
+                                     width=1200, height=420, theme=want,
                                      variables={"asset": asset, "run": run.id})
         except Exception as exc:  # noqa: BLE001 -- the SVG has the same facts
             log.warning("grafana lanes render failed for %s: %s", run.id, exc)

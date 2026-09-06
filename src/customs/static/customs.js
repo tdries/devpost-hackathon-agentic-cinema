@@ -802,6 +802,25 @@
       });
     };
 
+    /* Every Grafana panel on the page carries the theme in its URL, and
+       the URL was built by the server from the cookie below. On a toggle
+       the cookie is right for the NEXT page load and the panels on this
+       one are still the old colour, so re-source them in place: one query
+       parameter, same panel, same window. An iframe reload is cheap and
+       the alternative is a white chart on a black page.
+
+       Grafana's own theme param is light|dark; the console's is
+       studio|mission. They are the same two states under two names. */
+    var repaint = function (mode) {
+      var want = mode === "mission" ? "dark" : "light";
+      document.querySelectorAll("iframe[src], img[src]").forEach(function (el) {
+        var src = el.getAttribute("src") || "";
+        if (src.indexOf("theme=") === -1) { return; }
+        var next = src.replace(/([?&])theme=(light|dark)/, "$1theme=" + want);
+        if (next !== src) { el.setAttribute("src", next); }
+      });
+    };
+
     buttons.forEach(function (b) {
       b.addEventListener("click", function () {
         var mode = b.getAttribute("data-set-theme");
@@ -813,6 +832,11 @@
              here would throw the choice away on the next page load. */
           localStorage.setItem(KEY, mode || "mission");
         } catch (e) { /* private mode: the choice just does not persist */ }
+        try {
+          document.cookie = "customs-theme=" + (mode || "mission") +
+                            ";path=/;max-age=31536000;samesite=Lax";
+        } catch (e) { /* the server falls back to light, which is the default */ }
+        repaint(mode || "mission");
         mark();
       });
     });

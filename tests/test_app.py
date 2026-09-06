@@ -6,6 +6,7 @@ into work, and which are dropped. TestClient runs a BackgroundTask after the
 response has been returned, so a recorded call proves the task was really
 enqueued rather than just planned.
 """
+import inspect
 import sqlite3
 
 import pytest
@@ -3224,3 +3225,77 @@ def test_the_public_url_serves_no_api_console_and_says_nosniff(console):
     assert headers["X-Content-Type-Options"] == "nosniff"
     assert headers["Referrer-Policy"] == "strict-origin-when-cross-origin"
     assert "max-age=" in headers["Strict-Transport-Security"]
+
+
+def test_the_fix_picker_is_its_own_row(console, monkeypatch):
+    """The panel used to open inside the findings table's last cell, which
+    is 12% of the table and sized for the word "open". It came out clipped
+    at the table's edge with the price column -- the number the decision
+    turns on -- outside the panel entirely, and the same scope caveat was
+    repeated verbatim under every method it ruled out.
+
+    It is a row spanning all eight columns now, the caveat is said once,
+    and the pre-checked method is one the panel has not just called a poor
+    fit."""
+    from customs import scope as scope_mod
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    page = client.get(f"/runs/{run.id}/markets/FR").text
+    assert '<tr class="fixrow">' in page, "the panel spans the whole table"
+    toggle = page.split('<details class="fixer">')[1].split("</details>")[0]
+    assert "fix-opt" not in toggle and "<form" not in toggle, (
+        "the panel must not render inside the narrow last cell")
+
+    # concept scope is the case that produced the wall: every method but
+    # regeneration carries one and the same sentence
+    monkeypatch.setattr(scope_mod, "classify", lambda *a, **k: "concept")
+    page = client.get(f"/runs/{run.id}/markets/FR").text
+    panels = [p.split("</tr>")[0] for p in page.split('<tr class="fixrow">')[1:]]
+    assert panels, "an open remediable finding still offers a panel"
+    for panel in panels:
+        assert panel.count('class="fp-caveat"') == 1, (
+            "one caveat for the finding, not one paragraph per method")
+        assert panel.count("fp-tag") >= 2, "the poor fits stay marked"
+        options = [o.split("</label>")[0]
+                   for o in panel.split('<label class="fix-opt')[1:]]
+        methods = [o for o in options if 'name="method"' in o]
+        picked = [o for o in methods if " checked" in o]
+        assert len(picked) == 1, "exactly one method is pre-selected"
+        assert "fp-tag" not in picked[0], (
+            "the default is a method that fits, not one just called a poor fit")
+
+
+def test_grafana_panels_wear_the_console_s_theme(console):
+    """A Grafana panel embedded in the console is a picture Grafana draws,
+    and it draws light or dark on request. Pinned to light, every panel on
+    Mission was a torch in a dark room.
+
+    The console's theme lives in localStorage, which the server cannot
+    read, so base.html mirrors it into a cookie and every embed URL is
+    built from that. A toggle re-sources the panels in place, which is what
+    the repaint in customs.js is for -- the cookie alone would only fix the
+    next page load."""
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    light = client.get(f"/runs/{run.id}").text
+    assert "theme=dark" not in light, "light console, light panels"
+
+    client.cookies.set("customs-theme", "mission")
+    dark = client.get(f"/runs/{run.id}").text
+    assert "theme=light" not in dark, "Mission asks Grafana for dark panels"
+
+    # the archive's one instance-wide panel follows too
+    assert "theme=light" not in client.get("/runs").text
+
+    # the renders the server makes itself are cached per theme: one file
+    # overwriting the other is how a light panel lands on Mission
+    from customs import app as app_module
+    src = inspect.getsource(app_module.run_lanes_grafana)
+    assert "lanes-dark.png" in src and "lanes.png" in src
+
+    # and a toggle re-sources what is already on the page, because the
+    # cookie alone only fixes the NEXT load
+    js = (Path(app_module.__file__).parent / "static" / "customs.js").read_text()
+    assert "repaint" in js and "theme=" in js

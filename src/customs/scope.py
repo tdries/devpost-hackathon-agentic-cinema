@@ -105,18 +105,29 @@ def classify(finding, findings, duration: float) -> str:
 
 # Which methods can reach which scope. A patch cannot fix a shot, and
 # nothing here fixes an idea.
+# omni and per_frame were added to costs.METHODS and never added here, so
+# every scope ruled them out and the picker tagged them a poor fit on every
+# finding it has ever shown -- five rows carrying a warning that was really
+# just a gap in this table. Both edit the footage in place over a span, so
+# both reach anything a patch reaches and a scene besides.
 _METHODS_BY_SCOPE = {
-    "frame": ("overlay", "track", "bridge"),
-    "segment": ("overlay", "track", "bridge"),
-    "scene": ("bridge",),
+    "frame": ("overlay", "track", "bridge", "omni", "per_frame"),
+    "segment": ("overlay", "track", "bridge", "omni", "per_frame"),
+    "scene": ("bridge", "omni", "per_frame"),
     "concept": (),
 }
 
+# Every pair this table does not cover falls through to a sentence that
+# says nothing ("Not applicable at this scope."), and the picker shows the
+# caveat as a banner, so a missing entry reads as a warning with no
+# content. Cover the pairs that can actually occur.
 _WHY_NOT = {
     ("scene", "overlay"): "The whole shot is the violation; a patch over one frame cannot reach it.",
     ("scene", "track"): "The whole shot is the violation; there is no clean part of it to propagate.",
     ("concept", "overlay"): "The premise of the commercial is the violation. No edit reaches it.",
     ("concept", "track"): "The premise of the commercial is the violation. No edit reaches it.",
+    ("concept", "omni"): "The premise of the commercial is the violation. Rewriting the footage would rewrite the same idea.",
+    ("concept", "per_frame"): "The premise of the commercial is the violation. Repainting every frame leaves the premise untouched.",
     ("concept", "bridge"): "The premise of the commercial is the violation. Regenerating the shot would regenerate the problem.",
 }
 

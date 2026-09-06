@@ -1125,38 +1125,75 @@ html[data-theme="studio"] .grp > summary:hover { background: rgba(23, 34, 44, 0.
    Remediation is two decisions an operator owns: what should change, and
    how much you are willing to spend changing it. Both are on the button. */
 
-.fixer { display: inline-block; position: relative; }
+.fixer { display: block; position: relative; }
 .fixer > summary { list-style: none; cursor: pointer; }
 .fixer > summary::-webkit-details-marker { display: none; }
 .fixer[open] > summary { border-color: var(--g-blue); color: var(--ink); }
-/* A dropdown, not a popover. Floating over the table it covered the rows
-   underneath, closed itself on an outside click, and had to guess which
-   side of the viewport it was on. In flow it just pushes the table down,
-   which is what a person expects a disclosure to do. */
-.fixer { display: block; }
-.fixer form {
-  margin: 8px 0 4px; padding: 14px;
-  border: 1px solid var(--line-2); border-radius: var(--radius);
-  background: var(--well); text-align: left;
-}
-/* The panel lives in the findings table's last cell, which is sized for
-   the word "open". Five priced methods with a sentence each rendered as
-   five ribbons one word wide. Opening it widens the column instead: a
-   table shares column widths, so the cell grows, the prose gets a line,
-   and the rest of the row gives up the space it was not using. Only one
-   fixer is ever open. */
-.fixer[open] > form { min-width: min(460px, 46vw); }
 .fixer > summary { display: inline-flex; align-items: center; gap: 6px; }
 .fixer > summary::after { content: "\203A"; font-size: 17px; line-height: 1;
   transition: transform .15s ease; }
 .fixer[open] > summary::after { transform: rotate(90deg); }
-.fix-h { display: block; margin: 4px 0 8px; }
+
+/* ---------- the panel, one row wide ----------
+   It used to open inside the findings table's last cell, which is 12% of
+   the table and sized for the word "open". Five priced methods with a
+   sentence each could not fit: the panel was clipped at the table's right
+   edge, the price column -- the one number the decision turns on -- fell
+   off it entirely, and the rule cell opposite was squeezed until
+   "AE-ALC-01" broke across three lines.
+
+   So the panel is its own row spanning all eight columns, revealed by the
+   <details> still sitting in that cell. :has() means no JavaScript is
+   involved: with scripting off the disclosure works exactly as before. */
+tr.fixrow > td { display: none; }
+tr.frow:has(.fixer[open]) + tr.fixrow > td {
+  display: table-cell; padding: 0 12px 16px;
+}
+.fixpanel {
+  padding: 16px 18px 14px; text-align: left;
+  border: 1px solid var(--g-blue); border-radius: var(--radius);
+  background: var(--well);
+  box-shadow: 0 10px 30px rgba(23, 34, 44, 0.08);
+}
+.fp-head { margin-bottom: 14px; }
+.fp-title { font-size: 14px; color: var(--ink-2); }
+.fp-title b { color: var(--ink); font-family: var(--mono); font-weight: 600; }
+/* what and how, side by side: the pairing IS the decision. The intents
+   are short labels and the methods carry prices, hence the 2:3 split. */
+.fp-cols { display: grid; grid-template-columns: minmax(220px, 2fr) 3fr; gap: 12px 26px; }
+.fp-col { min-width: 0; }
+.fp-n {
+  display: inline-grid; place-items: center; width: 17px; height: 17px;
+  margin-right: 7px; border-radius: 50%; background: var(--g-blue);
+  color: #fff; font-size: 10px; letter-spacing: 0;
+}
+/* The scope caveat, said once above the methods it applies to, instead of
+   repeated verbatim under every one of them. */
+.fp-caveat {
+  display: flex; gap: 8px; margin: 0 0 8px; padding: 8px 10px;
+  border: 1px solid rgba(251, 188, 5, 0.5); border-radius: var(--radius);
+  background: rgba(251, 188, 5, 0.09);
+  font-size: 12.5px; line-height: 1.45; color: var(--ink-2);
+}
+/* amber on the dark ground by default, darkened for the light one --
+   #8a6d00 on the dark theme's panel is unreadable, which is the mistake
+   the .fix-why.caveat rule above already had to correct for */
+.fp-caveat .ic { flex: none; width: 15px; height: 15px; margin-top: 1px; color: #FBBC05; }
+.fp-tag {
+  margin-left: 8px; padding: 1px 6px; border-radius: 3px;
+  background: rgba(251, 188, 5, 0.18); color: #FBBC05;
+  font-family: var(--mono); font-size: 9.5px; font-weight: 500;
+  letter-spacing: 0.06em; text-transform: uppercase; vertical-align: 1px;
+}
+html[data-theme="studio"] .fp-caveat .ic { color: #B07D00; }
+html[data-theme="studio"] .fp-tag { color: #8a6d00; }
+.fix-h { display: flex; align-items: center; margin: 0 0 8px; }
 .fix-h + .fix-opt { margin-top: 0; }
 .fix-opt {
   display: flex; align-items: center; gap: 10px; max-width: 100%;
-  padding: 8px 10px; margin-bottom: 5px;
+  padding: 9px 11px; margin-bottom: 6px;
   border: 1px solid var(--line); border-radius: var(--radius);
-  background: var(--well); cursor: pointer; font-size: 13px;
+  background: var(--panel); cursor: pointer; font-size: 13.5px;
 }
 .fix-opt:hover { border-color: var(--line-2); }
 .fix-opt input { accent-color: var(--g-blue); }
@@ -1170,19 +1207,20 @@ html[data-theme="studio"] .grp > summary:hover { background: rgba(23, 34, 44, 0.
    straight out of the panel. */
 .fix-m { display: grid; gap: 2px; min-width: 0; }
 .fix-m b { font-weight: 600; }
-.fix-why { font-size: 11.5px; color: var(--ink-3); line-height: 1.35; overflow-wrap: anywhere; }
+.fix-why { font-size: 12.5px; color: var(--ink-2); line-height: 1.4; }
 /* Scope says this method is a poor fit. It is advice, not a refusal: the
    option stays selectable and the sentence says what to expect. */
 .fix-why.caveat { color: #FBBC05; display: block; margin-top: 3px; }
 /* the "that option cannot run" line under the picker, written on click */
 .fix-refused { color: var(--blocked); font-size: 12px; margin: 10px 0 0; }
 .fix-cost { margin-left: auto; text-align: right; display: grid; gap: 2px; white-space: nowrap; }
-.fix-cost b { font-size: 12.5px; color: var(--ink); }
-.fix-cost span { font-size: 10.5px; color: var(--ink-3); }
-.fix-foot { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.fix-cost b { font-size: 13.5px; color: var(--ink); }
+.fix-cost span { font-size: 11px; color: var(--ink-3); }
+.fix-foot { display: flex; align-items: center; gap: 12px; margin-top: 14px;
+  padding-top: 12px; border-top: 1px solid var(--line); }
 .fix-foot .btn { margin-left: auto; }
-.fix-h.label { margin-top: 12px; }
-html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44, 0.22); }
+
+
 
 /* nav on two rows: the screens, then the markets */
 .runnav .wrap.screens { min-height: 44px; border-bottom: 1px solid var(--line); }
@@ -1194,7 +1232,10 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 .chip.sc-segment { color: var(--g-blue); border-color: rgba(66, 133, 244, 0.4); }
 .chip.sc-scene   { color: var(--g-yellow); border-color: rgba(251, 188, 5, 0.4); }
 .chip.sc-concept { color: var(--g-red); border-color: rgba(234, 67, 53, 0.45); background: rgba(234, 67, 53, 0.08); }
-.fix-verdict { font-size: 12.5px; color: var(--ink-2); line-height: 1.4; padding: 4px 2px 8px; overflow-wrap: anywhere; }
+/* the analyst's reading of this finding, at the top of the panel: full
+   width now, so it is a paragraph rather than a clipped column */
+.fix-verdict { margin: 6px 0 0; max-width: 104ch;
+  font-size: 13px; color: var(--ink-2); line-height: 1.5; }
 
 /* a row with work in flight */
 .spin {
@@ -1440,10 +1481,11 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   .as-list .evidence { width: 100%; margin: 8px 0 0; }
   .as-list .rationale, .as-list td > div[style*="margin-top:8px"] { display: block; }
 
-  /* the fix picker is a sheet, not a dropdown */
-  .fixer { position: static; }
-  .fixer form { position: static; width: 100%; max-width: none; max-height: none;
-                margin-top: 10px; box-shadow: none; }
+  /* the fix picker: one column, and the panel row is a block like every
+     other cell in the stacked table */
+  .fixpanel { padding: 12px 12px 10px; box-shadow: none; }
+  .fp-cols { grid-template-columns: 1fr; gap: 4px; }
+  tr.frow:has(.fixer[open]) + tr.fixrow > td { display: block; padding: 4px 12px 12px; }
   .fix-opt { align-items: flex-start; }
   .fix-cost { margin-left: 0; text-align: left; }
   .btn, .sugg, .market-pick { min-height: 44px; }
@@ -1593,7 +1635,7 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
   border: 1px solid var(--line-2); background: var(--well); flex: none;
 }
 .runlist.as-rows .runrow { align-items: center; gap: 12px; }
-.runlist:not(.as-rows) .runthumb { width: 100%; height: 184px; margin-bottom: 10px; }
+.runlist:not(.as-rows) .runthumb { width: 100%; margin-bottom: 10px; }
 
 /* The line under the progress bar: what an agent said most recently. It
    fades in on change so a new message is noticed without the eye having to
@@ -2003,8 +2045,15 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 /* More of the frame, less of the letterbox. At 92px a 16:9 still was
    cropped to a band you could not read a scene from, and the card had
    the room -- it is the one part of a run card that says what the
-   commercial actually IS. */
-.runlist:not(.as-rows) .runthumb { height: 124px; }
+   commercial actually IS.
+
+   Twice that height again now, and by ratio rather than by number: the
+   card is 361px of frame wide at three columns, so 3:2 is 241px -- double
+   the 124 it was -- and it stays double at two columns and at one. A
+   fixed pixel height cannot: it crops a different amount of the still at
+   every window width. The 3:2 costs about a tenth of the frame's width
+   against 16:9, which is the trade for the height. */
+.runlist:not(.as-rows) .runthumb { height: auto; aspect-ratio: 3 / 2; }
 
 /* ---------- the front door ---------- */
 /*
@@ -2185,9 +2234,17 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
    to its label by default, so at 12% of a narrow table it simply drew
    past the panel edge and got clipped. */
 .market-room table.grid td.tight:last-child { white-space: normal; }
-.market-room table.grid td:last-child .btn,
-.market-room table.grid td:last-child .fixer > summary {
+.market-room table.grid tr.frow > td:last-child .btn,
+.market-room table.grid tr.frow > td:last-child .fixer > summary {
   width: 100%; box-sizing: border-box; text-align: center;
+}
+/* ...but not inside the panel row, whose only cell is also a last child:
+   "Run the fix" came out a metre wide across the bottom of the panel. */
+.market-room table.grid tr.fixrow .btn { width: auto; }
+/* and the toggle itself reads on one line rather than breaking after
+   "Remediate", now that the panel no longer needs the column to grow */
+.market-room table.grid tr.frow > td:last-child .fixer > summary {
+  white-space: nowrap; justify-content: center;
 }
 /* and a backstop, so a narrow window scrolls the table instead of
    spilling it over the page */
