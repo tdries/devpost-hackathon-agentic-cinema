@@ -55,9 +55,23 @@ def fetch(base: str, path: str, cookie: str) -> str:
 
 
 def stage(html: str, base: str, *, open_details=False, detail_view=False,
-          open_scenes=False, eager=False, hide=()) -> str:
+          open_scenes=False, eager=False, panel_png_for="", hide=()) -> str:
     """Make one still show what a click would have shown."""
     html = html.replace("<head>", f'<head><base href="{base.rstrip("/")}/">', 1)
+    if panel_png_for:
+        # The grid is a live iframe into the Grafana viewer, and the viewer
+        # renders it empty for a headless capture: the panel's own query
+        # window is the run's four seconds on the mapped clock and it comes
+        # back white. The console has a second path for exactly this case,
+        # the server-side render at /runs/{id}/lanes.png, which is the same
+        # Loki state timeline drawn by Grafana's renderer. That is what the
+        # GIF shows: still Grafana's panel, arriving as an image.
+        html = re.sub(
+            r'<iframe class="mg-live"[^>]*></iframe>',
+            f'<img class="mg-live" src="/runs/{panel_png_for}/lanes.png" '
+            f'alt="Occurrences per scene, rendered by Grafana" '
+            f'style="height:auto;width:100%;display:block">',
+            html)
     if eager:
         # A lazy iframe below the fold never loads in a headless capture,
         # which is how the Grafana panel came out blank in the one GIF that
@@ -240,12 +254,12 @@ def main() -> int:
     # eager + a long budget: this GIF is about the live Grafana panel, and
     # a lazy iframe that never loads is the one thing it cannot show.
     gifs["tut-4-grafana"] = lambda: [
-        frame("t4a", page(f"/runs/{run}/timeline", eager=True),
+        frame("t4a", page(f"/runs/{run}/timeline", panel_png_for=run),
               "1 · The grid: every category across the film's own clock",
-              scroll=430, budget=25000),
-        frame("t4b", page(f"/runs/{run}/timeline", eager=True),
+              scroll=430, budget=12000),
+        frame("t4b", page(f"/runs/{run}/timeline", panel_png_for=run),
               "2 · Click a square in Grafana's own panel", scroll=430,
-              point=(430, 420), budget=25000),
+              point=(1000, 470), budget=12000),
         frame("t4c", page(f"/runs/{run}/markets/{args.market}",
                           detail_view=True, open_scenes=True),
               "3 · ...and a priced generative fix starts on that scene", scroll=560),
