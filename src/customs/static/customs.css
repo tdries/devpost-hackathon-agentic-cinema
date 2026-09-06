@@ -2752,8 +2752,16 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
 /* Loki, Mimir and Grafana wear their own marks where their name is a
    label. Height only: the three lockups have different aspect ratios and
    a fixed width would squash two of them. */
-.blogo { height: 15px; width: auto; vertical-align: -3px; margin-right: 6px; }
-.label .blogo { height: 13px; vertical-align: -2px; margin-right: 4px; }
+/* Three times the size they were. At 15px these read as bullets rather
+   than as marks, and which store a panel reads is the whole claim this
+   page makes -- Mimir and Loki are the reason any of it is upstream of
+   the work. Middle-aligned, because at 45px a baseline offset drags the
+   row's text off centre. */
+.blogo { height: 45px; width: auto; vertical-align: middle; margin-right: 10px; }
+.label .blogo { height: 39px; vertical-align: middle; margin-right: 8px; }
+/* the rows they sit in have to make room rather than clip */
+.gtable td.tight { line-height: 1.4; }
+.rule-row .label:has(.blogo) { display: inline-flex; align-items: center; }
 
 .gcount { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 16px 0 0;
   font-size: 12px; color: var(--ink-3); }

@@ -767,7 +767,17 @@ def _kinds_found(findings) -> list[str]:
 # ponytail: hardcoded id, becomes a computed best-run when the archive churns
 # How many archive cards frame a live Grafana panel. Beyond this they use
 # the app's own SVG: see the note in the archive route.
-LIVE_LANE_CARDS = 6
+#
+# Two, not six. Six cards plus the instance-wide history panel meant seven
+# Grafana applications booting in one browser on the one page most people
+# open first, each firing its own panel queries at the same Grafana Cloud
+# tenant in the same second. Since the trial ended that tenant is on the
+# free plan's read limits, and a panel that trips one renders Grafana's own
+# error text inside its iframe -- which the page cannot catch or style,
+# because the iframe is cross-origin. Two still shows a visitor that these
+# are live panels rather than pictures; the rest keep the SVG, which the
+# archive route's own note says is indistinguishable at card size.
+LIVE_LANE_CARDS = 2
 
 SHOWCASE_RUN = "run_c61fa291681f"
 
