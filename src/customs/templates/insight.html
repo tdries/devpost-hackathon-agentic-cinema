@@ -37,7 +37,51 @@
     and labelled by this console.</p>
 </section>
 
-{# ---- the showpiece: this app's axis, Grafana's bars ---- #}
+{# ---- the hero: one block per film, the footage as the axis ----
+   Every other panel on this page aggregates. This one enumerates: one bar
+   per commercial this instance has ever judged, lit to its worst recorded
+   severity, in the console's own three states. The posters underneath are
+   the axis, and they are the furthest this idea goes -- Grafana holds the
+   numbers and has never seen the footage; the console holds the footage
+   and cannot chart anything live. #}
+{% if films %}
+<section>
+  <div class="rule-row"><span class="label">Every commercial, at its worst moment</span>
+    <span class="right label">green cleared &middot; blue noted &middot; red blocking</span></div>
+  <p class="subline" style="max-width:96ch">One block per film, lit to the
+    highest severity any market ever recorded against it. Seventy is the line
+    where a finding starts to block a market, so a red block is a commercial
+    that has actually been held out of somewhere. The strip under the blocks
+    is each film's own first frame, in the same order.</p>
+
+  <div class="filmstrip" style="--films:{{ films | length }}">
+    {% if solo %}
+    <iframe class="fs-panel" src="{{ solo }}60"
+            title="Every commercial at its worst severity, live from Grafana"
+            loading="lazy"></iframe>
+    {% else %}{{ noviewer() }}{% endif %}
+    <div class="fs-shots">
+      {% for f in films %}
+      {# the block's own colour repeated on the still, so the pairing is
+         readable without counting across from the bar above it #}
+      <a class="fs-shot s-{{ f.state }}"
+         href="{{ ('/runs/' ~ f.run) if f.run else '/runs' }}"
+         title="{{ f.key.replace('_', ' ') }} &middot; worst severity {{ f.n }} &middot; {{ f.state }}">
+        {% if f.run %}
+        <img src="/runs/{{ f.run }}/poster.jpg" alt="" loading="lazy"
+             onerror="this.style.visibility='hidden'">
+        {% else %}
+        <span class="fs-gone label">no run</span>
+        {% endif %}
+        <span class="fs-n mono">{{ f.n }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# ---- this app's axis, Grafana's bars ---- #}
 <section>
   <div class="rule-row"><span class="label">What gets objected to</span>
     <span class="right label">the console's taxonomy, Grafana's counts</span></div>

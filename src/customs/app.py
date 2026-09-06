@@ -2302,6 +2302,23 @@ def insight(request: Request):
     for row in markets:
         pack = packs_by_code.get(row["key"])
         row["level"] = pack.level if pack else "national"
+
+    # The hero's axis is the footage itself: one poster per film, under the
+    # block that carries its worst severity. Grafana has never seen the
+    # footage and this app cannot chart live, so each draws its half.
+    #
+    # A film in the stores whose run has since been deleted keeps its block
+    # and loses its poster: the block is what the store says, and inventing
+    # a still for it would be worse than an empty frame.
+    films = _ranked('max by (asset) (max_over_time({app="customs", '
+                    'kind="finding"} | json | unwrap severity [30d]))', "asset")
+    newest: dict[str, str] = {}
+    for r in store().recent_runs(500):
+        newest.setdefault(asset_key(r), r.id)
+    for row in films:
+        row["run"] = newest.get(row["key"], "")
+        row["state"] = ("blocked" if row["n"] >= 70
+                        else "noted" if row["n"] >= 40 else "cleared")
     base = settings.grafana_viewer_url
     theme = gtheme(request)
     board = solo = ""
@@ -2311,7 +2328,8 @@ def insight(request: Request):
         solo = f"{base}/d-solo/customs-insight/customs?{common}&panelId="
     return _page(request, "insight.html", screen="insight",
                  showcase=_showcase(store()),
-                 dims=dims, markets=markets, board=board, solo=solo,
+                 dims=dims, markets=markets, films=films,
+                 board=board, solo=solo,
                  packs_total=len(market_packs()),
                  dims_total=len(packs.taxonomy()))
 

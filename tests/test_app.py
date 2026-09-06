@@ -3423,3 +3423,37 @@ def test_the_intelligence_board_survives_a_dead_grafana(console, monkeypatch):
     page = client.get("/insight")
     assert page.status_code == 200
     assert "What every clearance adds up to" in page.text
+
+
+def test_the_filmstrip_pairs_grafana_s_blocks_with_the_console_s_footage(
+        console, monkeypatch):
+    """The hero of the intelligence board is one bar per commercial, lit to
+    its worst recorded severity, with that film's own first frame directly
+    underneath it. It is the icon-and-live-Grafana idea taken as far as it
+    goes: Grafana holds the numbers and has never seen the footage, the
+    console holds the footage and cannot chart anything live.
+
+    Which means the two halves have to agree about order and about state,
+    and the state has to be the console's own three -- green cleared, blue
+    noted, red past the 70 where a finding starts to block a market."""
+    from customs import app as app_module
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    asset = Path(run.asset_path).stem
+
+    monkeypatch.setattr(app_module, "_ranked", lambda query, label: (
+        [{"key": asset, "n": 95}, {"key": "quiet_ad", "n": 12},
+         {"key": "gone_ad", "n": 55}] if label == "asset" else []))
+
+    page = client.get("/insight").text
+    # 'fs-shot ' with the space: 'fs-shots' is the container around them
+    assert page.count('class="fs-shot s-') == 3, "one still per film"
+    # the console's three states, at its own thresholds
+    assert "s-blocked" in page and "s-cleared" in page and "s-noted" in page
+    # a film whose run is still here shows its poster and links to it
+    assert f"/runs/{run.id}/poster.jpg" in page
+    # one whose run has been deleted keeps its block and loses its still,
+    # rather than borrowing somebody else's
+    assert "no run" in page
+    assert page.index(asset.replace("_", " ")) < page.index("gone ad"), \
+        "ranked worst first, so the strip reads in the panel's own order"

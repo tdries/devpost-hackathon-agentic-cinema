@@ -3094,3 +3094,43 @@ tbody.mkscene[hidden] { display: none; }
 }
 .xnone p { margin: 0; max-width: 60ch; font-size: 12.5px; color: var(--ink-3);
   line-height: 1.5; }
+
+/* ---------- the filmstrip: Grafana's blocks over the console's footage ----
+   One bar per commercial in the frame above, one poster per commercial in
+   the strip below, the same order and the same column widths. The panel
+   cannot draw a still and the strip cannot draw a live query, so they are
+   laid out to be read as one instrument. */
+.filmstrip { --films: 1; --strip-h: 210px; margin: 10px 0 6px; }
+.fs-panel {
+  width: 100%; height: var(--strip-h); border: 1px solid var(--line);
+  border-bottom: none; border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--panel); display: block;
+}
+.fs-shots {
+  display: grid; grid-template-columns: repeat(var(--films), 1fr); gap: 2px;
+  border: 1px solid var(--line); border-radius: 0 0 var(--radius) var(--radius);
+  border-top: none; padding: 6px; background: var(--well);
+}
+.fs-shot {
+  position: relative; display: block; aspect-ratio: 16 / 10; min-width: 0;
+  overflow: hidden; border-radius: 2px; background: var(--ground-2);
+  /* the block's own state, carried onto the still: a 3px foot rather than a
+     tint, because tinting a frame misrepresents the footage */
+  border-bottom: 3px solid var(--line-2);
+}
+.fs-shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fs-shot.s-cleared { border-bottom-color: var(--g-green); }
+.fs-shot.s-noted   { border-bottom-color: var(--g-blue); }
+.fs-shot.s-blocked { border-bottom-color: var(--g-red); }
+.fs-shot:hover { outline: 2px solid var(--g-blue); outline-offset: -2px; }
+.fs-n {
+  position: absolute; right: 2px; bottom: 5px; padding: 0 3px;
+  font-size: 9px; color: #fff; background: rgba(0, 0, 0, 0.55);
+  border-radius: 2px;
+}
+.fs-gone { display: grid; place-items: center; height: 100%; font-size: 8px;
+  color: var(--ink-3); }
+@media (max-width: 900px) {
+  .fs-shots { display: none; }
+  .fs-panel { border-bottom: 1px solid var(--line); border-radius: var(--radius); }
+}

@@ -30,3 +30,15 @@ def _no_optional_integrations(monkeypatch):
     if changed:
         monkeypatch.setattr(app_module, "settings", dataclasses.replace(
             app_module.settings, **changed))
+
+
+@pytest.fixture(autouse=True)
+def _no_telemetry_pacing(monkeypatch):
+    """Telemetry paces and backs off its writes, because Grafana Cloud's
+    free plan throttles a share of them whatever the rate. Waiting is the
+    behaviour, so a suite that exercised it would wait too: five backoffs
+    is seventy-seven seconds, and a run with fifty findings paces fifty
+    writes. The one test that is ABOUT the retry replaces this itself."""
+    from customs import telemetry
+
+    monkeypatch.setattr(telemetry, "_SLEEP", lambda seconds: None)

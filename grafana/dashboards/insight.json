@@ -15,6 +15,104 @@
   },
   "panels": [
     {
+      "id": 60,
+      "type": "bargauge",
+      "title": "Every commercial, at its worst moment",
+      "description": "One block per film, lit to the highest severity any market ever recorded against it. Green cleared, blue noted, red past 70 -- the line where a finding starts to block a market. The posters under the blocks are the console's.",
+      "datasource": {
+        "type": "loki",
+        "uid": "grafanacloud-logs"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          },
+          "expr": "max by (asset) (max_over_time({app=\"customs\", kind=\"finding\"} | json | unwrap severity [$__range]))",
+          "editorMode": "code",
+          "queryType": "instant",
+          "legendFormat": "{{asset}}"
+        }
+      ],
+      "options": {
+        "displayMode": "lcd",
+        "orientation": "vertical",
+        "valueMode": "color",
+        "showUnfilled": true,
+        "minVizWidth": 8,
+        "minVizHeight": 16,
+        "maxVizHeight": 300,
+        "namePlacement": "auto",
+        "sizing": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "min": 0,
+          "max": 100,
+          "decimals": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#34A853",
+                "value": null
+              },
+              {
+                "color": "#4285F4",
+                "value": 40
+              },
+              {
+                "color": "#EA4335",
+                "value": 70
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "transformations": [
+        {
+          "id": "reduce",
+          "options": {
+            "reducers": [
+              "lastNotNull"
+            ]
+          }
+        },
+        {
+          "id": "sortBy",
+          "options": {
+            "fields": {},
+            "sort": [
+              {
+                "field": "Last *",
+                "desc": true
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
       "id": 1,
       "type": "stat",
       "title": "Findings",
@@ -25,7 +123,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 0,
+        "y": 8,
         "w": 4,
         "h": 4
       },
@@ -80,7 +178,7 @@
       },
       "gridPos": {
         "x": 4,
-        "y": 0,
+        "y": 8,
         "w": 4,
         "h": 4
       },
@@ -135,7 +233,7 @@
       },
       "gridPos": {
         "x": 8,
-        "y": 0,
+        "y": 8,
         "w": 4,
         "h": 4
       },
@@ -190,7 +288,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 0,
+        "y": 8,
         "w": 4,
         "h": 4
       },
@@ -245,7 +343,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 0,
+        "y": 8,
         "w": 4,
         "h": 4
       },
@@ -300,7 +398,7 @@
       },
       "gridPos": {
         "x": 20,
-        "y": 0,
+        "y": 8,
         "w": 4,
         "h": 4
       },
@@ -355,7 +453,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 4,
+        "y": 12,
         "w": 12,
         "h": 10
       },
@@ -443,7 +541,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 4,
+        "y": 12,
         "w": 12,
         "h": 10
       },
@@ -529,7 +627,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 14,
+        "y": 22,
         "w": 24,
         "h": 12
       },
@@ -629,7 +727,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 26,
+        "y": 34,
         "w": 9,
         "h": 9
       },
@@ -682,7 +780,7 @@
       },
       "gridPos": {
         "x": 9,
-        "y": 26,
+        "y": 34,
         "w": 9,
         "h": 9
       },
@@ -758,7 +856,7 @@
       },
       "gridPos": {
         "x": 18,
-        "y": 26,
+        "y": 34,
         "w": 6,
         "h": 9
       },
@@ -850,7 +948,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 35,
+        "y": 43,
         "w": 16,
         "h": 9
       },
@@ -961,7 +1059,7 @@
       },
       "gridPos": {
         "x": 16,
-        "y": 35,
+        "y": 43,
         "w": 8,
         "h": 9
       },
@@ -1065,7 +1163,7 @@
       },
       "gridPos": {
         "x": 0,
-        "y": 44,
+        "y": 52,
         "w": 12,
         "h": 11
       },
@@ -1143,7 +1241,7 @@
       },
       "gridPos": {
         "x": 12,
-        "y": 44,
+        "y": 52,
         "w": 12,
         "h": 11
       },

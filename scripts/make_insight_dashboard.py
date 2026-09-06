@@ -92,7 +92,46 @@ def stat(pid, title, expr, x, unit=""):
         defaults={"unit": unit, "decimals": 0})
 
 
+# --- the hero: one block per commercial, the LCD read as a shelf --------
+# Every other panel here aggregates. This one enumerates: one bar per film
+# this instance has ever judged, lit to its worst recorded severity, in the
+# console's own three states -- green cleared, blue noted, red blocking.
+# The console draws each film's own poster underneath as the axis, which is
+# the whole icon-and-live-Grafana idea taken as far as it goes: Grafana has
+# the numbers and has never seen the footage; the console has the footage
+# and cannot chart anything live.
+#
+# Vertical bars arranged left to right, which is what Grafana calls
+# orientation "vertical" and what a person calls a row of blocks.
+_HERO = panel(
+    60, "bargauge", "Every commercial, at its worst moment",
+    'max by (asset) (max_over_time({app="customs", kind="finding"} '
+    '| json | unwrap severity [$__range]))',
+    0, 0, 24, 8, instant=True,
+    description="One block per film, lit to the highest severity any market "
+                "ever recorded against it. Green cleared, blue noted, red "
+                "past 70 -- the line where a finding starts to block a "
+                "market. The posters under the blocks are the console's.",
+    legend="{{asset}}",
+    options={"displayMode": "lcd", "orientation": "vertical",
+             "valueMode": "color", "showUnfilled": True,
+             "minVizWidth": 8, "minVizHeight": 16, "maxVizHeight": 300,
+             "namePlacement": "auto", "sizing": "auto",
+             "reduceOptions": {"calcs": ["lastNotNull"], "fields": "",
+                               "values": False}},
+    defaults={"min": 0, "max": 100, "decimals": 0,
+              "color": {"mode": "thresholds"},
+              "thresholds": {"mode": "absolute", "steps": [
+                  {"color": GREEN, "value": None},
+                  {"color": BLUE, "value": 40},
+                  {"color": RED, "value": 70}]}},
+    transformations=[{"id": "reduce", "options": {"reducers": ["lastNotNull"]}},
+                     {"id": "sortBy", "options": {
+                         "fields": {}, "sort": [{"field": "Last *",
+                                                 "desc": True}]}}])
+
 PANELS = [
+    _HERO,
     stat(1, "Findings", 'sum(count_over_time({app="customs", kind="finding"}[$__range]))', 0),
     stat(2, "Commercials judged",
          'count(sum by (asset) (count_over_time({app="customs", kind="observation"}[$__range])))', 4),
@@ -341,6 +380,11 @@ DASHBOARD = {
 
 
 def main() -> int:
+    # The hero owns the top eight rows; every other panel was laid out
+    # before it existed, so shift them rather than re-typing every gridPos.
+    for p in PANELS:
+        if p["id"] != 60:
+            p["gridPos"]["y"] += 8
     OUT.write_text(json.dumps(DASHBOARD, indent=2) + "\n")
     kinds = sorted({p["type"] for p in PANELS})
     print(f"{OUT.relative_to(ROOT)}: {len(PANELS)} panels, "

@@ -171,7 +171,31 @@ def _check(resp) -> None:
 # perfectly. Mimir held nothing at all for this instance by the time it was
 # noticed. Loki is on a separate limiter and was never affected, which is
 # why the logs looked healthy throughout.
-_RETRY_AFTER = (1.0, 4.0, 12.0)
+_RETRY_AFTER = (1.0, 3.0, 8.0, 20.0, 45.0)
+
+# The smallest gap between two writes to the metric store. Retrying alone
+# was not enough: a publisher stage sends thirty-odd requests in a few
+# seconds -- the timeline, a status per market, a line per finding -- and
+# on this tenant enough of them came back 429 that four attempts in a row
+# could all fail. Whatever the limiter is counting, it is not the 75 per
+# second in its own message, so the writes are spaced as well as retried.
+# A publish takes a few seconds longer and lands, which is the trade.
+_MIN_GAP = 0.35
+_last_write = 0.0
+
+# The one seam the suite replaces. Waiting is the whole behaviour here, so
+# a test that exercises it would otherwise have to wait too: five backoffs
+# is seventy-seven seconds, and a run with fifty findings paces fifty
+# writes. tests/conftest.py no-ops this for every test.
+_SLEEP = time.sleep
+
+
+def _pace() -> None:
+    global _last_write
+    gap = _MIN_GAP - (time.time() - _last_write)
+    if gap > 0:
+        _SLEEP(gap)
+    _last_write = time.time()
 
 
 def _post_retrying(url: str, *, json_body: dict, headers: dict,
@@ -183,11 +207,13 @@ def _post_retrying(url: str, *, json_body: dict, headers: dict,
     returned either way, so _check still raises on a write that never got
     through and the caller still logs it.
     """
+    _pace()
     resp = _post(url, json_body=json_body, headers=headers, auth=auth)
     for wait in _RETRY_AFTER:
         if resp.status_code != 429 and resp.status_code < 500:
             return resp
-        time.sleep(wait)
+        _SLEEP(wait)
+        _pace()
         resp = _post(url, json_body=json_body, headers=headers, auth=auth)
     return resp
 

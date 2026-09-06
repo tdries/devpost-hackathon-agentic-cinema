@@ -638,7 +638,7 @@ def test_a_throttled_write_is_sent_again(monkeypatch):
         return _Resp(codes[len(sent) - 1] if len(sent) <= len(codes) else 200)
 
     monkeypatch.setattr(telemetry, "_post", fake_post)
-    monkeypatch.setattr(telemetry.time, "sleep", lambda s: None)
+    monkeypatch.setattr(telemetry, "_SLEEP", lambda seconds: None)
 
     resp = telemetry._post_retrying("http://x/v1/metrics", json_body={},
                                     headers={}, auth=("1", "t"))
@@ -654,7 +654,7 @@ def test_a_throttled_write_is_sent_again(monkeypatch):
 
     # and a tenant throttling every attempt still raises, so the caller logs
     sent.clear()
-    codes[:] = [429, 429, 429, 429]
+    codes[:] = [429] * (len(telemetry._RETRY_AFTER) + 1)
     resp = telemetry._post_retrying("http://x/v1/metrics", json_body={},
                                     headers={}, auth=("1", "t"))
     assert resp.status_code == 429
