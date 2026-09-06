@@ -23,7 +23,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 
-from make_tutorial_gifs import OUT, fetch, shot, stage  # noqa: E402
+from make_tutorial_gifs import OUT, WIDTH, fetch, shot, stage  # noqa: E402
 
 STATIC = ROOT / "src" / "customs" / "static"
 # What the README uses everywhere else, so a new one drops in beside them.
@@ -59,8 +59,13 @@ def main() -> int:
         return stage(fetch(base, path, args.cookie), base, **kw)
 
     jobs = {
-        # the card a pasted link shows: the verdict, at Open Graph's shape
-        "og": (f"/runs/{run}", STATIC / "og.png", (OG_W, OG_H), 700),
+        # the card a pasted link shows: the verdict, at Open Graph's shape.
+        # 1280x672 is Open Graph's own 1.905 aspect at the render width, so
+        # the resize down to 1200x630 is a scale and not a squash -- shooting
+        # 700 tall and resizing to 630 compressed every line of type by a
+        # tenth, which is visible in the headline.
+        "og": (f"/runs/{run}", STATIC / "og.png", (OG_W, OG_H),
+               round(OG_H * WIDTH / OG_W)),
         "mission": (f"/runs/{run}/mission", OUT / "05-mission-feed.png",
                     (SHOT_W, SHOT_H), 950),
         "board": (f"/runs/{run}", OUT / "03-launch-board.png",
