@@ -105,8 +105,8 @@ def stat(pid, title, expr, x, unit=""):
 # orientation "vertical" and what a person calls a row of blocks.
 _HERO = panel(
     60, "bargauge", "Every commercial, at its worst moment",
-    'max by (asset) (max_over_time({app="customs", kind="finding"} '
-    '| json | unwrap severity [$__range]))',
+    'sort_desc(max by (asset) (max_over_time({app="customs", kind="finding"} '
+    '| json | unwrap severity [$__range])))',
     0, 0, 24, 8, instant=True,
     description="One block per film, lit to the highest severity any market "
                 "ever recorded against it. Green cleared, blue noted, red "
@@ -117,18 +117,14 @@ _HERO = panel(
              "valueMode": "color", "showUnfilled": True,
              "minVizWidth": 8, "minVizHeight": 16, "maxVizHeight": 300,
              "namePlacement": "auto", "sizing": "auto",
-             "reduceOptions": {"calcs": ["lastNotNull"], "fields": "",
-                               "values": False}},
+             "reduceOptions": {"calcs": [], "fields": "", "values": True}},
     defaults={"min": 0, "max": 100, "decimals": 0,
               "color": {"mode": "thresholds"},
               "thresholds": {"mode": "absolute", "steps": [
                   {"color": GREEN, "value": None},
                   {"color": BLUE, "value": 40},
                   {"color": RED, "value": 70}]}},
-    transformations=[{"id": "reduce", "options": {"reducers": ["lastNotNull"]}},
-                     {"id": "sortBy", "options": {
-                         "fields": {}, "sort": [{"field": "Last *",
-                                                 "desc": True}]}}])
+    )
 
 PANELS = [
     _HERO,
@@ -148,7 +144,8 @@ PANELS = [
     # Sorted horizontal bars: the ranking is the whole point, and reading
     # eighteen taxonomy names is easier down the side than along the bottom.
     panel(10, "barchart", "What gets objected to, every run",
-          'sum by (dimension) (count_over_time({app="customs", kind="finding"}[$__range]))',
+          'sort_desc(sum by (dimension) (count_over_time({app="customs", '
+          'kind="finding"}[$__range])))',
           0, 4, 12, 10, instant=True,
           description="Findings by dimension of the taxonomy, across every "
                       "run. Sorted by count: the ranking is the finding.",
@@ -161,14 +158,11 @@ PANELS = [
                    "tooltip": {"mode": "single", "sort": "none"}},
           defaults={"custom": {"lineWidth": 0, "fillOpacity": 85,
                                "axisBorderShow": False, "gradientMode": "none",
-                               "axisLabel": "", "axisPlacement": "auto"}},
-          transformations=[{"id": "reduce", "options": {"reducers": ["lastNotNull"]}},
-                           {"id": "sortBy", "options": {
-                               "fields": {}, "sort": [{"field": "Last *",
-                                                       "desc": True}]}}]),
+                               "axisLabel": "", "axisPlacement": "auto"}},),
 
     panel(11, "barchart", "Which markets object most",
-          'sum by (market) (count_over_time({app="customs", kind="finding"}[$__range]))',
+          'sort_desc(sum by (market) (count_over_time({app="customs", '
+          'kind="finding"}[$__range])))',
           12, 4, 12, 10, instant=True,
           description="Findings by market. A tall bar is a hard jurisdiction, "
                       "not a bad commercial.",
@@ -181,11 +175,7 @@ PANELS = [
                    "tooltip": {"mode": "single", "sort": "none"}},
           defaults={"color": {"mode": "fixed", "fixedColor": RED},
                     "custom": {"lineWidth": 0, "fillOpacity": 85,
-                               "axisBorderShow": False, "gradientMode": "none"}},
-          transformations=[{"id": "reduce", "options": {"reducers": ["lastNotNull"]}},
-                           {"id": "sortBy", "options": {
-                               "fields": {}, "sort": [{"field": "Last *",
-                                                       "desc": True}]}}]),
+                               "axisBorderShow": False, "gradientMode": "none"}},),
 
     # --- the matrix ----------------------------------------------------
     # A table lens: dimension down, market across, cell coloured by count.
@@ -236,8 +226,8 @@ PANELS = [
     # 70 is where a finding starts blocking a market (see state.py), so the
     # bar is read against that line rather than against the other bars.
     panel(31, "bargauge", "Worst severity per market, against the blocking line",
-          'max by (market) (max_over_time({app="customs", kind="finding"} '
-          '| json | unwrap severity [$__range]))',
+          'sort_desc(max by (market) (max_over_time({app="customs", '
+          'kind="finding"} | json | unwrap severity [$__range])))',
           9, 26, 9, 9, instant=True,
           description="70 is where a finding begins to block a market. A bar "
                       "past the marker is a market this instance has actually "
@@ -247,8 +237,7 @@ PANELS = [
                    "valueMode": "color", "showUnfilled": True,
                    "minVizWidth": 8, "minVizHeight": 10, "maxVizHeight": 300,
                    "namePlacement": "auto", "sizing": "auto",
-                   "reduceOptions": {"calcs": ["lastNotNull"], "fields": "",
-                                     "values": False}},
+                   "reduceOptions": {"calcs": [], "fields": "", "values": True}},
           defaults={"min": 0, "max": 100, "decimals": 0,
                     "color": {"mode": "thresholds"},
                     "thresholds": {"mode": "absolute", "steps": [
@@ -283,7 +272,8 @@ PANELS = [
           ]),
 
     panel(41, "barchart", "Adjudications: triggered against cleared",
-          'sum by (verdict) (count_over_time({app="customs", kind="verdict"}[$__range]))',
+          'sort_desc(sum by (verdict) (count_over_time({app="customs", '
+          'kind="verdict"}[$__range])))',
           16, 35, 8, 9, instant=True,
           description="Every rule the adjudicators considered, not only the "
                       "ones that fired. A desk that only records its hits "
@@ -303,7 +293,7 @@ PANELS = [
               {"matcher": {"id": "byName", "options": "cleared"},
                "properties": [{"id": "color", "value": {"mode": "fixed", "fixedColor": GREEN}}]},
           ],
-          transformations=[{"id": "reduce", "options": {"reducers": ["lastNotNull"]}}]),
+          ),
 
     # --- the specifics -------------------------------------------------
     panel(50, "table", "The rules that fire everywhere",

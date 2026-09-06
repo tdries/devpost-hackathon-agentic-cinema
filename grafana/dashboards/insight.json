@@ -36,7 +36,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "max by (asset) (max_over_time({app=\"customs\", kind=\"finding\"} | json | unwrap severity [$__range]))",
+          "expr": "sort_desc(max by (asset) (max_over_time({app=\"customs\", kind=\"finding\"} | json | unwrap severity [$__range])))",
           "editorMode": "code",
           "queryType": "instant",
           "legendFormat": "{{asset}}"
@@ -53,11 +53,9 @@
         "namePlacement": "auto",
         "sizing": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": [],
           "fields": "",
-          "values": false
+          "values": true
         }
       },
       "fieldConfig": {
@@ -88,29 +86,7 @@
           }
         },
         "overrides": []
-      },
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "reducers": [
-              "lastNotNull"
-            ]
-          }
-        },
-        {
-          "id": "sortBy",
-          "options": {
-            "fields": {},
-            "sort": [
-              {
-                "field": "Last *",
-                "desc": true
-              }
-            ]
-          }
-        }
-      ]
+      }
     },
     {
       "id": 1,
@@ -464,7 +440,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "sum by (dimension) (count_over_time({app=\"customs\", kind=\"finding\"}[$__range]))",
+          "expr": "sort_desc(sum by (dimension) (count_over_time({app=\"customs\", kind=\"finding\"}[$__range])))",
           "editorMode": "code",
           "queryType": "instant",
           "legendFormat": "{{dimension}}"
@@ -506,29 +482,7 @@
           }
         },
         "overrides": []
-      },
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "reducers": [
-              "lastNotNull"
-            ]
-          }
-        },
-        {
-          "id": "sortBy",
-          "options": {
-            "fields": {},
-            "sort": [
-              {
-                "field": "Last *",
-                "desc": true
-              }
-            ]
-          }
-        }
-      ]
+      }
     },
     {
       "id": 11,
@@ -552,7 +506,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "sum by (market) (count_over_time({app=\"customs\", kind=\"finding\"}[$__range]))",
+          "expr": "sort_desc(sum by (market) (count_over_time({app=\"customs\", kind=\"finding\"}[$__range])))",
           "editorMode": "code",
           "queryType": "instant",
           "legendFormat": "{{market}}"
@@ -592,29 +546,7 @@
           }
         },
         "overrides": []
-      },
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "reducers": [
-              "lastNotNull"
-            ]
-          }
-        },
-        {
-          "id": "sortBy",
-          "options": {
-            "fields": {},
-            "sort": [
-              {
-                "field": "Last *",
-                "desc": true
-              }
-            ]
-          }
-        }
-      ]
+      }
     },
     {
       "id": 20,
@@ -791,7 +723,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "max by (market) (max_over_time({app=\"customs\", kind=\"finding\"} | json | unwrap severity [$__range]))",
+          "expr": "sort_desc(max by (market) (max_over_time({app=\"customs\", kind=\"finding\"} | json | unwrap severity [$__range])))",
           "editorMode": "code",
           "queryType": "instant",
           "legendFormat": "{{market}}"
@@ -808,11 +740,9 @@
         "namePlacement": "auto",
         "sizing": "auto",
         "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
+          "calcs": [],
           "fields": "",
-          "values": false
+          "values": true
         }
       },
       "fieldConfig": {
@@ -1070,7 +1000,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "sum by (verdict) (count_over_time({app=\"customs\", kind=\"verdict\"}[$__range]))",
+          "expr": "sort_desc(sum by (verdict) (count_over_time({app=\"customs\", kind=\"verdict\"}[$__range])))",
           "editorMode": "code",
           "queryType": "instant",
           "legendFormat": "{{verdict}}"
@@ -1140,17 +1070,7 @@
             ]
           }
         ]
-      },
-      "transformations": [
-        {
-          "id": "reduce",
-          "options": {
-            "reducers": [
-              "lastNotNull"
-            ]
-          }
-        }
-      ]
+      }
     },
     {
       "id": 50,
