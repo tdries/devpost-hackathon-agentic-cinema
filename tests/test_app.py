@@ -3457,4 +3457,38 @@ def test_the_filmstrip_pairs_grafana_s_blocks_with_the_console_s_footage(
     # rather than borrowing somebody else's
     assert "no run" in page
     assert page.index("gone ad") < page.index("quiet ad"), \
-        "the strip keeps the order the store returned, not one of its own"
+        "worst first, which is the order the blocks above are in"
+
+
+def test_the_axis_breaks_a_tie_the_way_the_panel_beside_it_does(monkeypatch):
+    """Grafana sorts these panels by value descending and ties by name.
+    The console has to reach the same order from its own execution of the
+    same query, or the poster under a block belongs to another film.
+
+    Loki is the reason this cannot be left alone: sort_desc says nothing
+    about ties, and five executions of the hero's expression came back in
+    five different arrangements of the seven films sitting at 95. So the
+    rows arrive here shuffled on purpose.
+    """
+    from customs import app as app_module
+
+    rows = [{"labels": {"asset": "solstice"}, "value": 95.0},
+            {"labels": {"asset": "boro_Comet"}, "value": 95.0},
+            {"labels": {"asset": "BOND_JAMES"}, "value": 95.0},
+            {"labels": {"asset": "quiet_ad"}, "value": 12.0}]
+
+    class FakeOps:
+        def __init__(self, *a, **k): pass
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+        def loki_instant(self, query): return rows
+
+    monkeypatch.setattr("customs.grafana_ops.GrafanaOps", FakeOps)
+    app_module._insight_cache.clear()
+
+    order = [r["key"] for r in app_module._ranked("whatever", "asset")]
+    # biggest first, and inside the tie the name -- case-insensitively,
+    # because Grafana's sortBy is: a codepoint sort would read
+    # BOND_JAMES, boro_Comet as BOND_JAMES, then anything capitalised.
+    assert order == ["BOND_JAMES", "boro_Comet", "solstice", "quiet_ad"]
+    app_module._insight_cache.clear()

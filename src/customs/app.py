@@ -2245,17 +2245,25 @@ _INSIGHT_TTL = 120.0
 _insight_cache: dict[str, tuple[float, list]] = {}
 
 
-def _ranked(query: str, label: str, *, as_returned: bool = False) -> list[dict]:
+def _ranked(query: str, label: str) -> list[dict]:
     """[{key, n}] for a `sum by (label)` LogQL query, biggest first.
 
-    `as_returned` keeps Loki's own order instead of re-sorting. It matters
-    wherever the console draws an axis for a panel: a query wrapped in
-    sort_desc comes back sorted by the store, and ties inside it are broken
-    by Loki however Loki breaks them. Sorting again here by (-n, key) gave
-    the same NUMBERS in a different order -- seven commercials at severity
-    95, and the poster under each block belonged to a different film. The
-    values agreed and the identities did not, which is the one way an axis
-    is worse than no axis.
+    Biggest first, and ties by name, because that is the order the panels
+    this axis labels are sorted into. Trusting the store's order was the
+    bug: sort_desc gets the values right and says nothing about how a tie
+    is broken, five executions of the hero's expression came back in five
+    different arrangements of the seven films at severity 95, and the
+    console runs its own execution to lay the axis out. The values agreed
+    and the identities did not, which is the one way an axis is worse than
+    no axis. The panels now sort themselves the same two ways (see
+    `ordered()` in scripts/make_insight_dashboard.py), so both halves land
+    on an order neither store promises.
+
+    The name key is lowercased because Grafana's is: its sortBy compares
+    strings case-insensitively, which puts BOND_JAMES before boro_Comet
+    where a codepoint sort puts Cigars between them.
+    # ponytail: two names that differ only in punctuation could still
+    # disagree with Grafana's collation; a proper ICU key is the upgrade.
 
     A dead Grafana returns an empty list rather than raising: the page's
     panels are iframes that will show their own error, and the icon axis
@@ -2272,10 +2280,10 @@ def _ranked(query: str, label: str, *, as_returned: bool = False) -> list[dict]:
     except Exception as exc:  # noqa: BLE001 -- the panels still render
         log.warning("insight ranking failed for %s: %s", label, exc)
         return []
-    ranked = [{"key": r["labels"].get(label, ""), "n": int(r["value"])}
-              for r in rows if r["labels"].get(label)]
-    if not as_returned:
-        ranked.sort(key=lambda r: (-r["n"], r["key"]))
+    ranked = sorted(
+        ({"key": r["labels"].get(label, ""), "n": int(r["value"])}
+         for r in rows if r["labels"].get(label)),
+        key=lambda r: (-r["n"], r["key"].lower()))
     _insight_cache[query] = (time.time(), ranked)
     return ranked
 
@@ -2297,12 +2305,13 @@ def insight(request: Request):
     this product's icons and this product cannot draw Grafana's data, so
     each does the half it is good at.
     """
-    # Each of these is the panel's own expression, sort_desc included, so
-    # the axis is not merely sorted the same way -- it is the same answer.
+    # Each of these is the panel's own expression, sort_desc included, and
+    # each panel carries the same two sorts this function applies, so the
+    # axis is not merely sorted the same way: it is the same answer.
     dims = _ranked('sort_desc(sum by (dimension) (count_over_time({app="customs", '
-                   'kind="finding"}[30d])))', "dimension", as_returned=True)
+                   'kind="finding"}[30d])))', "dimension")
     markets = _ranked('sort_desc(sum by (market) (count_over_time({app="customs", '
-                      'kind="finding"}[30d])))', "market", as_returned=True)
+                      'kind="finding"}[30d])))', "market")
     # Which mark a market wears is a question about its level, not its
     # code: the sprite holds sixteen countries, and EU, GLOBAL and every
     # broadcaster channel are not among them. Same rule the run nav uses,
@@ -2323,7 +2332,7 @@ def insight(request: Request):
     # a still for it would be worse than an empty frame.
     films = _ranked('sort_desc(max by (asset) (max_over_time({app="customs", '
                     'kind="finding"} | json | unwrap severity [30d])))',
-                    "asset", as_returned=True)
+                    "asset")
     newest: dict[str, str] = {}
     for r in store().recent_runs(500):
         newest.setdefault(asset_key(r), r.id)

@@ -92,6 +92,28 @@ def stat(pid, title, expr, x, unit=""):
         defaults={"unit": unit, "decimals": 0})
 
 
+def ordered(label: str) -> list[dict]:
+    """Sort a panel by value descending, ties by name, inside Grafana.
+
+    Every panel the console draws its own axis beside has the same
+    exposure: LogQL's sort_desc gets the values right and says nothing
+    about how a tie is broken, and the console runs its own execution of
+    the query to lay that axis out. Five runs of the hero's expression
+    came back in five different arrangements of the seven films sitting at
+    severity 95, so the poster under a block was a coin toss with seven
+    sides.
+
+    Sorting here is the fix, because here it is defined. A Loki instant
+    query arrives as one table -- a label column and `Value #A` -- so the
+    two sorts chain on it directly, and sortBy is stable, which is what
+    lets the name order survive inside each tie. The console applies the
+    same two keys and both halves land on an order neither store promises.
+    """
+    return [{"id": "sortBy", "options": {"sort": [{"field": label}]}},
+            {"id": "sortBy", "options": {"sort": [{"field": "Value #A",
+                                                   "desc": True}]}}]
+
+
 # --- the hero: one block per commercial, the LCD read as a shelf --------
 # Every other panel here aggregates. This one enumerates: one bar per film
 # this instance has ever judged, lit to its worst recorded severity, in the
@@ -124,6 +146,17 @@ _HERO = panel(
                   {"color": GREEN, "value": None},
                   {"color": BLUE, "value": 40},
                   {"color": RED, "value": 70}]}},
+    # sort_desc gets the values right and the order only mostly: LogQL
+    # says nothing about how a tie is broken, and five executions of this
+    # exact query came back in five different arrangements of the seven
+    # films sitting at 95. The console runs its own execution to lay the
+    # posters out, so "the poster under the block" was a coin toss with
+    # seven sides. Sorting happens here instead, where it is defined:
+    # reduce the series to rows, order them by name, then by value
+    # descending -- a stable sort, so the name order survives inside each
+    # tie. The console applies the same two keys and both halves land on
+    # an order neither store promises.
+    transformations=ordered("asset"),
     )
 
 PANELS = [
@@ -158,7 +191,8 @@ PANELS = [
                    "tooltip": {"mode": "single", "sort": "none"}},
           defaults={"custom": {"lineWidth": 0, "fillOpacity": 85,
                                "axisBorderShow": False, "gradientMode": "none",
-                               "axisLabel": "", "axisPlacement": "auto"}},),
+                               "axisLabel": "", "axisPlacement": "auto"}},
+          transformations=ordered("dimension"),),
 
     panel(11, "barchart", "Which markets object most",
           'sort_desc(sum by (market) (count_over_time({app="customs", '
@@ -175,7 +209,8 @@ PANELS = [
                    "tooltip": {"mode": "single", "sort": "none"}},
           defaults={"color": {"mode": "fixed", "fixedColor": RED},
                     "custom": {"lineWidth": 0, "fillOpacity": 85,
-                               "axisBorderShow": False, "gradientMode": "none"}},),
+                               "axisBorderShow": False, "gradientMode": "none"}},
+          transformations=ordered("market"),),
 
     # --- the matrix ----------------------------------------------------
     # A table lens: dimension down, market across, cell coloured by count.
