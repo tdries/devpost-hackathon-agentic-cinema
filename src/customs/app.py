@@ -2236,6 +2236,86 @@ def search_frames(request: Request, q: str = "", dimension: str = "",
                  dimensions=sorted(packs.taxonomy()))
 
 
+# The cross-run board's own numbers, read once and held briefly. Every
+# panel on /insight is a live Grafana panel, but the icon axis beside two
+# of them is drawn by this app, and an axis that does not agree with the
+# bars it labels is worse than no axis at all -- so the order comes from
+# the same store the panel reads, not from a guess.
+_INSIGHT_TTL = 120.0
+_insight_cache: dict[str, tuple[float, list]] = {}
+
+
+def _ranked(query: str, label: str) -> list[dict]:
+    """[{key, n}] for a `sum by (label)` LogQL query, biggest first.
+
+    A dead Grafana returns an empty list rather than raising: the page's
+    panels are iframes that will show their own error, and the icon axis
+    simply has nothing to label. One failure mode, on the panel that owns
+    it, instead of a 502 on a page of fourteen other working panels.
+    """
+    hit = _insight_cache.get(query)
+    if hit and time.time() - hit[0] < _INSIGHT_TTL:
+        return hit[1]
+    try:
+        from customs.grafana_ops import GrafanaOps
+        with GrafanaOps(settings) as ops:
+            rows = ops.loki_instant(query)
+    except Exception as exc:  # noqa: BLE001 -- the panels still render
+        log.warning("insight ranking failed for %s: %s", label, exc)
+        return []
+    ranked = sorted(
+        ({"key": r["labels"].get(label, ""), "n": int(r["value"])}
+         for r in rows if r["labels"].get(label)),
+        key=lambda r: (-r["n"], r["key"]))
+    _insight_cache[query] = (time.time(), ranked)
+    return ranked
+
+
+@app.get("/insight", response_class=HTMLResponse)
+def insight(request: Request):
+    """Every clearance this instance has performed, read across runs.
+
+    The rest of the console answers questions about ONE commercial. This
+    page answers the ones a clearance desk actually has -- which subject
+    costs us the most, which market is hardest, which rule fires on
+    everything, whether the citations hold up -- and it answers them out of
+    the same two stores the crew wrote during those runs.
+
+    The panels are live Grafana, embedded from customs-insight. What this
+    app adds is the axis: the taxonomy icons and the market marks are the
+    console's own, drawn down the side of a Grafana bar chart whose own
+    labels are hidden, ordered by the counts read here. Grafana cannot draw
+    this product's icons and this product cannot draw Grafana's data, so
+    each does the half it is good at.
+    """
+    dims = _ranked('sum by (dimension) (count_over_time({app="customs", '
+                   'kind="finding"}[30d]))', "dimension")
+    markets = _ranked('sum by (market) (count_over_time({app="customs", '
+                      'kind="finding"}[30d]))', "market")
+    # Which mark a market wears is a question about its level, not its
+    # code: the sprite holds sixteen countries, and EU, GLOBAL and every
+    # broadcaster channel are not among them. Same rule the run nav uses,
+    # so the same market wears the same icon on both screens. A market with
+    # no pack at all -- one whose pack was renamed since the run -- reads
+    # as national and falls back to the generic mark in the template.
+    packs_by_code = market_packs()
+    for row in markets:
+        pack = packs_by_code.get(row["key"])
+        row["level"] = pack.level if pack else "national"
+    base = settings.grafana_viewer_url
+    theme = gtheme(request)
+    board = solo = ""
+    if base:
+        common = f"kiosk&theme={theme}&from=now-30d&to=now"
+        board = f"{base}/d/customs-insight/customs?{common}"
+        solo = f"{base}/d-solo/customs-insight/customs?{common}&panelId="
+    return _page(request, "insight.html", screen="insight",
+                 showcase=_showcase(store()),
+                 dims=dims, markets=markets, board=board, solo=solo,
+                 packs_total=len(market_packs()),
+                 dims_total=len(packs.taxonomy()))
+
+
 @app.get("/grafana", response_class=HTMLResponse)
 def grafana_resources(request: Request):
     """The whole Grafana surface, on one page.

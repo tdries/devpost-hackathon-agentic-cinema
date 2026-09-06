@@ -1952,7 +1952,7 @@ def test_every_dashboard_is_painted_from_the_one_palette():
         assert not stray, f"{path.name} paints with {sorted(stray)}, not the palette"
         seen[path.name] = found
 
-    assert len(seen) == 8, f"expected 8 dashboards, found {sorted(seen)}"
+    assert len(seen) == 9, f"expected 9 dashboards, found {sorted(seen)}"
     # and the palette is actually used, rather than trivially satisfied by
     # dashboards that carry no colour literal at all
     assert set().union(*seen.values()) >= {state.BLOCKED.upper(),
@@ -3363,3 +3363,63 @@ def test_agent_mode_opens_guided_and_fits_one_screen(console):
     assert 'width="50" height="50"' in page, "the Agent Builder mark"
     assert 'width="190" height="44"' in page, "the Grafana mark"
 
+
+
+def test_the_intelligence_board_labels_grafana_with_the_console_s_own_icons(
+        console, monkeypatch):
+    """Every other screen answers a question about one commercial. This one
+    reads across every run, out of the same two stores the crew wrote.
+
+    The division of labour is the whole design: Grafana charts the data
+    because it holds it, and this console draws the axis because Grafana
+    has never heard of an eighteen-part taxonomy or a broadcaster channel's
+    mark. They agree because the icon order comes from the same query the
+    panel beside it runs -- an axis that disagrees with its bars is worse
+    than no axis."""
+    from customs import app as app_module
+    client, _store, _launched, _jobs = console
+
+    monkeypatch.setattr(app_module, "_ranked", lambda query, label: (
+        [{"key": "alcohol_tobacco_drugs", "n": 270},
+         {"key": "modesty_dress_body", "n": 61}] if label == "dimension" else
+        [{"key": "EU", "n": 120}, {"key": "FR", "n": 44},
+         {"key": "BE-PLAY", "n": 3}, {"key": "GLOBAL", "n": 1}]))
+
+    page = client.get("/insight").text
+    assert page.count('class="xkey"') == 6, "one key per row, both axes"
+    # ranked, biggest first, so the axis reads in the panel's own order
+    assert page.index("alcohol_tobacco_drugs") < page.index("modesty_dress_body")
+
+    # every market wears the mark its level earns, exactly as the run nav
+    # does -- the country sprite has no EU, no GLOBAL and no channels
+    assert "#n-market" in page, "a continent is not a country"
+    assert "#d-national_symbols_politics" in page, "nor is the global baseline"
+    assert "#n-cut" in page, "nor is a broadcaster channel"
+    assert "#c-FR" in page, "a country is"
+    assert "#c-EU" not in page and "#c-GLOBAL" not in page
+
+    # and the board is provisioned, so the page frames something real
+    from customs import grafana_map
+    uids = {d.uid for d in grafana_map.dashboards()}
+    assert "customs-insight" in uids
+
+
+def test_the_intelligence_board_survives_a_dead_grafana(console, monkeypatch):
+    """The panels are iframes that show their own errors. The axis beside
+    them is this app's, and if the query behind it fails there is simply
+    nothing to label -- one failure mode, on the thing that owns it,
+    instead of a 502 on a page of fourteen working panels."""
+    from customs import app as app_module
+
+    client, _store, _launched, _jobs = console
+    app_module._insight_cache.clear()
+
+    def explode(*a, **k):
+        raise RuntimeError("grafana is down")
+
+    monkeypatch.setattr(app_module, "GrafanaOps", explode, raising=False)
+    monkeypatch.setattr("customs.grafana_ops.GrafanaOps", explode)
+
+    page = client.get("/insight")
+    assert page.status_code == 200
+    assert "What every clearance adds up to" in page.text

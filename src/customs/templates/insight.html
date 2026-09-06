@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% block title %}Intelligence{% endblock %}
+{% block nav %}{% include "_topnav.html" %}{% endblock %}
+{% block main %}
+
+{% macro noviewer() %}
+<div class="xnone">
+  <span class="label">No embeddable viewer</span>
+  <p>The panel that belongs here is live Grafana. Set <code>GRAFANA_VIEWER_URL</code>
+    and it appears; the board itself is provisioned either way, as
+    <code>customs-insight</code>.</p>
+</div>
+{% endmacro %}
+
+{# The cross-run board.
+
+   Every other screen in this console answers a question about one
+   commercial. This one answers the questions a clearance desk has across
+   all of them, and it answers them out of the same two stores the crew
+   wrote during those runs rather than out of the run database.
+
+   The division of labour is the point. Grafana draws the data: it is the
+   thing that holds it and the thing that can chart it live. This app draws
+   the axis: eighteen taxonomy marks and forty market marks that Grafana
+   has never heard of, ordered by counts read from the same query the panel
+   beside them runs. Neither half can do the other's job. #}
+
+<section class="hero" style="padding-bottom:16px">
+  <div class="rule-row"><span class="label">Intelligence</span>
+    <span class="right label">every run, both stores, live</span></div>
+  <h1 class="pagetitle"><svg class="ic"><use href="#i-analyst"/></svg>What every clearance adds up to</h1>
+  <p class="subline" style="max-width:96ch">One run tells you whether one
+    commercial ships. Thirty tell you what your creative keeps doing wrong,
+    which jurisdictions are actually hard, and which rule your next shoot
+    should design around. Every panel below is a live query against the
+    Loki stream and the Mimir series this crew wrote, charted by Grafana
+    and labelled by this console.</p>
+</section>
+
+{# ---- the showpiece: this app's axis, Grafana's bars ---- #}
+<section>
+  <div class="rule-row"><span class="label">What gets objected to</span>
+    <span class="right label">the console's taxonomy, Grafana's counts</span></div>
+  <p class="subline" style="max-width:92ch">The marks down the left are this
+    product's own, one per dimension of the taxonomy every market pack is
+    written against. The bars are a live Loki query. They are in the same
+    order because they come from the same query.</p>
+
+  {% if dims %}
+  <div class="xgrid" style="--rows:{{ dims | length }}">
+    <div class="xkeys">
+      {% for d in dims %}
+      <span class="xkey" title="{{ d.key.replace('_', ' ') }}: {{ d.n }} findings">
+        <svg class="ic"><use href="#d-{{ d.key }}"/></svg>
+        <span class="xname label">{{ d.key.replace('_', ' ') }}</span>
+        {% if not solo %}<span class="xn mono">{{ d.n }}</span>{% endif %}
+      </span>
+      {% endfor %}
+    </div>
+    {% if solo %}
+    <iframe class="xpanel" src="{{ solo }}10"
+            title="Findings by dimension, live from Grafana" loading="lazy"></iframe>
+    {% else %}{{ noviewer() }}{% endif %}
+  </div>
+  {% else %}
+  <div class="empty"><span class="big">Nothing judged yet</span>
+    <p>Clear one commercial and this axis fills itself from the taxonomy it trips.</p></div>
+  {% endif %}
+</section>
+
+{# ---- the same trick, for jurisdictions ---- #}
+<section>
+  <div class="rule-row"><span class="label">Which markets object most</span>
+    <span class="right label">a tall bar is a hard jurisdiction, not a bad ad</span></div>
+  {% if markets %}
+  <div class="xgrid" style="--rows:{{ markets | length }}">
+    <div class="xkeys">
+      {% for m in markets %}
+      {# Same icon rules as the run nav: the sprite holds countries, and a
+         continent, a global baseline and a broadcaster channel each have
+         their own mark instead. #}
+      <span class="xkey" title="{{ m.key }}: {{ m.n }} findings">
+        {% if m.level == 'channel' %}<svg class="ic"><use href="#n-cut"/></svg>
+        {% elif m.level == 'global' %}<svg class="ic"><use href="#d-national_symbols_politics"/></svg>
+        {% elif m.level == 'continental' %}<svg class="ic"><use href="#n-market"/></svg>
+        {% else %}<svg class="ic country"><use href="#c-{{ m.key }}"/></svg>{% endif %}
+        <span class="xname label">{{ m.key }}</span>
+        {% if not solo %}<span class="xn mono">{{ m.n }}</span>{% endif %}
+      </span>
+      {% endfor %}
+    </div>
+    {% if solo %}
+    <iframe class="xpanel" src="{{ solo }}11"
+            title="Findings by market, live from Grafana" loading="lazy"></iframe>
+    {% else %}{{ noviewer() }}{% endif %}
+  </div>
+  {% endif %}
+</section>
+
+{# ---- and the whole board, in one frame ---- #}
+<section>
+  <div class="rule-row"><span class="label">The whole board</span>
+    <span class="right label">16 panels &middot; 8 kinds of chart</span></div>
+  <p class="subline" style="max-width:96ch">Sixteen panels in one frame rather
+    than sixteen frames: an embedded panel boots a Grafana of its own, and a
+    page of them boots a page of them. Summary counts, the dimension and
+    market rankings again at full width, the dimension-against-market matrix,
+    the severity distribution, worst severity per market against the line
+    where a finding starts to block, market status over time out of Mimir,
+    objections per day by class, triggered against cleared, the rules that
+    fire everywhere, and the raw finding stream underneath it all.</p>
+  {% if board %}
+  <iframe class="xboard" src="{{ board }}"
+          title="Customs: Intelligence, live from Grafana" loading="lazy"></iframe>
+  {% else %}{{ noviewer() }}{% endif %}
+  <p class="subline gsmall" style="color:var(--ink-3)">
+    Nothing here is a fixture or a screenshot. Every number is
+    <code>count_over_time</code> or <code>unwrap severity</code> over the
+    lines the adjudicators wrote, and the status timeline is the
+    <code>customs_market_status</code> gauge the publisher pushed.</p>
+</section>
+
+{% set next_text = "This is what the archive adds up to. A single clearance is where it comes from." %}
+{% set next_href = "/runs/" ~ showcase if showcase else "/runs" %}
+{% set next_label = "Open a clearance" if showcase else "Open the archive" %}
+{% include "_nextstep.html" %}
+
+{% endblock %}

@@ -75,6 +75,9 @@ _SHOWN_IN = {
                       "Grafana itself",
     "customs-remediation": "Not embedded: what was changed and what it closed, "
                            "with the annotations on it",
+    "customs-insight": "Intelligence tab: the whole board in one frame, plus "
+                       "its dimension and market rankings as solo panels with "
+                       "the console's own icon axis down the side",
 }
 
 _PUBLIC = {

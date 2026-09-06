@@ -25,6 +25,7 @@ from customs.schema import RunRecord
 DASHBOARD_DIR = pathlib.Path(grafana_ops.__file__).resolve().parents[2] / "grafana" / "dashboards"
 
 EXPECTED_DASHBOARDS = {
+    "customs-insight",
     "customs-overview",
     "customs-timeline",
     "customs-findings",

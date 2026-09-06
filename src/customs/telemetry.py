@@ -156,6 +156,41 @@ def _check(resp) -> None:
     if resp.status_code >= 400:
         raise RuntimeError(f"telemetry push failed: HTTP {resp.status_code}: {resp.text[:500]}")
 
+
+# How many times a throttled write is re-sent, and how long it waits first.
+# Grafana Cloud's free plan answers a share of writes with 429 and
+# err-mimir-tenant-max-request-rate regardless of the rate actually sent --
+# measured on this tenant at roughly one request in four, from a probe
+# sending one request every eight seconds against a stated limit of 75 per
+# second. The number in the message is not the number being enforced.
+#
+# One 429 used to cost a whole run's metrics: push_timeline batches an
+# entire run's customs_risk into ONE request on purpose, so a single
+# rejection dropped every sample of it, the caller logged and carried on,
+# and the timeline panel read "No data" for a run that had completed
+# perfectly. Mimir held nothing at all for this instance by the time it was
+# noticed. Loki is on a separate limiter and was never affected, which is
+# why the logs looked healthy throughout.
+_RETRY_AFTER = (1.0, 4.0, 12.0)
+
+
+def _post_retrying(url: str, *, json_body: dict, headers: dict,
+                   auth: tuple[str, str] | None = None):
+    """A write, re-sent while the tenant is throttling it.
+
+    Only 429 and 5xx are retried: a 400 is a payload this code got wrong
+    and sending it again would only be wrong again. The last response is
+    returned either way, so _check still raises on a write that never got
+    through and the caller still logs it.
+    """
+    resp = _post(url, json_body=json_body, headers=headers, auth=auth)
+    for wait in _RETRY_AFTER:
+        if resp.status_code != 429 and resp.status_code < 500:
+            return resp
+        time.sleep(wait)
+        resp = _post(url, json_body=json_body, headers=headers, auth=auth)
+    return resp
+
 def _data_point(value: float, unix_seconds: float, attributes: dict[str, str]) -> dict:
     """One OTLP gauge dataPoint, exactly the shape verified working on
     2026-08-23: asDouble, timeUnixNano (string -- protobuf JSON's canonical
@@ -190,7 +225,7 @@ def _otlp_push(metrics: dict[str, list[dict]]) -> None:
             }],
         }],
     }
-    resp = _post(
+    resp = _post_retrying(
         url,
         json_body=payload,
         headers={"Content-Type": "application/json"},
@@ -199,7 +234,7 @@ def _otlp_push(metrics: dict[str, list[dict]]) -> None:
     _check(resp)
 
 def _loki_push(streams: list[dict]) -> None:
-    resp = _post(
+    resp = _post_retrying(
         settings.loki_push_url,
         json_body={"streams": streams},
         headers={"Content-Type": "application/json"},

@@ -3036,3 +3036,61 @@ tbody.mkscene[hidden] { display: none; }
   background: var(--g-blue); color: #fff;
 }
 .sugg-lead { flex: none; margin-right: 2px; font-size: 9.5px; }
+
+/* ---------- the cross-run board: this app's axis, Grafana's bars ----------
+   Grafana cannot draw this product's taxonomy marks and this product cannot
+   chart Grafana's data live, so each draws the half it is good at: an icon
+   column here, a bar chart in an iframe beside it, the panel's own y-axis
+   labels hidden and the rows lined up by giving both the same row count.
+
+   Same mechanism as the archive card's .cardgrid, at reading size: the key
+   column's rows are the panel's height divided by the number of categories,
+   which is the closest a document can get to laying out inside a frame it
+   does not own. */
+.xgrid {
+  --panel-h: 340px;
+  display: grid; grid-template-columns: 190px 1fr; gap: 10px;
+  align-items: stretch; margin: 10px 0 6px;
+}
+.xkeys {
+  display: grid; grid-auto-rows: calc(var(--panel-h) / var(--rows));
+  align-items: center;
+  /* the plot keeps a small inset of its own; this matches it from outside */
+  padding: 6px 0;
+}
+.xkey { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.xkey .ic {
+  flex: none; opacity: 0.9;
+  width: min(17px, calc(var(--panel-h) / var(--rows) - 3px));
+  height: min(17px, calc(var(--panel-h) / var(--rows) - 3px));
+}
+.xkey .ic.country { stroke: var(--g-blue); stroke-width: 2.4; fill: none; }
+.xname {
+  font-size: 9.5px; color: var(--ink-2); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
+}
+.xpanel {
+  width: 100%; height: var(--panel-h); border: 1px solid var(--line);
+  border-radius: var(--radius); background: var(--panel); display: block;
+}
+/* the whole dashboard, one frame. Tall on purpose: sixteen panels that
+   scroll inside their own iframe is two scrollbars arguing. */
+.xboard {
+  width: 100%; height: 1850px; border: 1px solid var(--line);
+  border-radius: var(--radius); background: var(--panel);
+  display: block; margin: 10px 0 8px;
+}
+@media (max-width: 900px) {
+  .xgrid { grid-template-columns: 1fr; }
+  .xkeys { display: none; }
+  .xboard { height: 1400px; }
+}
+/* the axis carries its own numbers when there are no bars to label */
+.xn { margin-left: auto; font-size: 11px; color: var(--ink); font-weight: 600; }
+.xnone {
+  display: grid; align-content: center; gap: 6px; padding: 18px;
+  height: var(--panel-h); border: 1px dashed var(--line-2);
+  border-radius: var(--radius); background: var(--well);
+}
+.xnone p { margin: 0; max-width: 60ch; font-size: 12.5px; color: var(--ink-3);
+  line-height: 1.5; }

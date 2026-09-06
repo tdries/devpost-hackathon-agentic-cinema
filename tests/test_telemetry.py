@@ -610,3 +610,53 @@ def test_the_observation_label_set_cannot_explode():
     labels = src.split('"stream": {')[1].split("}")[0]
     for forbidden in ("statement", "observation_id", "shot_id", "confidence", "run_id"):
         assert f'"{forbidden}"' not in labels, f"{forbidden} must stay in the body"
+
+
+def test_a_throttled_write_is_sent_again(monkeypatch):
+    """Grafana Cloud's free plan answers a share of writes with 429 and
+    err-mimir-tenant-max-request-rate regardless of the rate actually sent
+    -- measured on this tenant at roughly one request in four, from a probe
+    sending one request every eight seconds against a stated limit of 75
+    per second.
+
+    One of those used to cost a whole run's metrics: push_timeline batches
+    an entire run's customs_risk into ONE request on purpose, so a single
+    rejection dropped every sample of it, the caller logged and carried on,
+    and the panel read No data for a run that had completed perfectly.
+    Mimir held nothing at all for this instance by the time it was noticed.
+    """
+    sent = []
+
+    class _Resp:
+        def __init__(self, code):
+            self.status_code, self.text = code, "err-mimir-tenant-max-request-rate"
+
+    codes = [429, 429, 200]
+
+    def fake_post(url, *, json_body, headers, auth=None):
+        sent.append(url)
+        return _Resp(codes[len(sent) - 1] if len(sent) <= len(codes) else 200)
+
+    monkeypatch.setattr(telemetry, "_post", fake_post)
+    monkeypatch.setattr(telemetry.time, "sleep", lambda s: None)
+
+    resp = telemetry._post_retrying("http://x/v1/metrics", json_body={},
+                                    headers={}, auth=("1", "t"))
+    assert resp.status_code == 200
+    assert len(sent) == 3, "sent again until it landed"
+
+    # a payload this code got wrong is not worth sending twice
+    sent.clear()
+    codes[:] = [400, 200, 200]
+    resp = telemetry._post_retrying("http://x/v1/metrics", json_body={},
+                                    headers={}, auth=("1", "t"))
+    assert resp.status_code == 400 and len(sent) == 1
+
+    # and a tenant throttling every attempt still raises, so the caller logs
+    sent.clear()
+    codes[:] = [429, 429, 429, 429]
+    resp = telemetry._post_retrying("http://x/v1/metrics", json_body={},
+                                    headers={}, auth=("1", "t"))
+    assert resp.status_code == 429
+    with pytest.raises(RuntimeError, match="429"):
+        telemetry._check(resp)
