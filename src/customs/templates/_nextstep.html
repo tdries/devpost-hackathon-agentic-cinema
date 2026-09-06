@@ -1,0 +1,10 @@
+{# One obvious next step, in the same words as the run lifecycle's own
+   CTA (_runnav.html's .lc-cta): a sentence saying why, a chip saying what
+   to click. Reference screens -- the library, the Grafana inventory, an
+   empty search -- used to end cold with a table and nothing after it.
+   Call with next_text / next_href / next_label. #}
+<div class="nextstep">
+  <span class="ns-label label">What's next</span>
+  <span class="ns-why">{{ next_text }}</span>
+  <a class="chip on" href="{{ next_href }}">{{ next_label }} &rarr;</a>
+</div>

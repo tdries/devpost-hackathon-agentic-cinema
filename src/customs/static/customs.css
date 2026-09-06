@@ -1862,6 +1862,10 @@ html[data-theme="studio"] .fixer form { box-shadow: 0 18px 44px rgba(23, 34, 44,
 
 .runhero-front { position: relative; z-index: 1; max-width: 62ch; }
 .runhero-front .headline { margin: 14px 0 10px; }
+/* "All runs, newest first." wrapped at the clamp's larger sizes, because
+   the hero's own column is capped at 62ch -- narrower than the sentence
+   needs once the font is past ~40px. One line, like the front page's. */
+@media (min-width: 640px) { .runhero-front .headline { white-space: nowrap; } }
 .runhero-front .subline { margin: 0; }
 .runhero .bars { display: flex; gap: 7px; }
 .runhero .bars i { width: 46px; height: 6px; border-radius: 3px; display: block; }
@@ -2636,6 +2640,21 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
   .ag-bar i, .ag-bar::after, .ag-steps li.on::before { animation: none; }
   .ag-bar::after { display: none; }
 }
+
+/* ---------- the next-step nudge ----------
+   A reference screen -- the library, the Grafana inventory, an empty
+   search -- answers a question and then has nowhere to send you. One
+   footer, everywhere the same: what to do because of what you just read,
+   in the run lifecycle's own words (.lc-cta) rather than a new device. */
+.nextstep {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin: 28px 0 4px; padding: 16px 18px;
+  border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel);
+}
+.ns-why { font-size: 13px; color: var(--ink-2); flex: 1 1 320px; min-width: 0; }
+.nextstep .chip.on { margin-left: auto; }
+@media (max-width: 640px) { .nextstep .chip.on { margin-left: 0; } }
 
 /* ---------- frame search ----------
    A result is a picture with a sentence under it, so the grid is sized by

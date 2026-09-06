@@ -53,6 +53,14 @@
     {% elif result.mode.startswith('semantic') %}&nbsp;&rarr;&nbsp;read by {{ model }}{% endif %}
     {% if 'failed' in result.mode %}&nbsp;&middot;&nbsp;{{ result.mode }}{% endif %}</p>
   {% endif %}
+  {% if not result.total %}
+  {% set next_text = "Not sure what to ask? Every clearance already has captions "
+                     "indexed -- open one and see what the analyst wrote, frame "
+                     "by frame." %}
+  {% set next_href = "/runs/" ~ showcase if showcase else "/runs" %}
+  {% set next_label = "Browse a run's frames" if showcase else "Open the archive" %}
+  {% include "_nextstep.html" %}
+  {% endif %}
 </section>
 
 {% if result.hits %}

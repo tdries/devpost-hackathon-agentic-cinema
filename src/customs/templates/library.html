@@ -48,4 +48,12 @@
   </div>
 </section>
 
+<section style="border-top:none;padding-top:0">
+  {% set next_text = "This is what gets checked. Clear a real commercial against "
+                     "it, or open a finding that already cites one of these rules." %}
+  {% set next_href = "/runs/" ~ showcase if showcase else "/new" %}
+  {% set next_label = "See a rule fire on a real run" if showcase else "Start a clearance" %}
+  {% include "_nextstep.html" %}
+</section>
+
 {% endblock %}

@@ -2202,6 +2202,28 @@ def test_an_empty_search_is_a_page_not_a_query(console, monkeypatch):
     assert client.get("/search?format=json").json()["total"] == 0
 
 
+def test_reference_screens_end_with_one_obvious_next_step(console):
+    """The library, the Grafana inventory and an empty search answer a
+    question and then, before this, had nowhere to send you. Every one
+    ends on the same device the run lifecycle already proved: a sentence
+    saying why, a chip saying what to click. Pointed at the showcase run
+    when this instance has one, at the plain next screen when it does
+    not -- never at a run that is not there."""
+    client, store, _launched, _jobs = console
+
+    for path in ("/library", "/grafana", "/search"):
+        page = client.get(path).text
+        assert 'class="nextstep"' in page, path
+        assert "WHAT'S NEXT" in page.upper()
+        assert 'href="/new"' in page or 'href="/runs"' in page, path
+
+    # a search that actually found something has its own action per card;
+    # the footer nudge would be a second, competing "what next"
+    hit = client.get("/search?q=wine&mode=literal").text
+    if 'class="scard"' in hit:
+        assert 'class="nextstep"' not in hit
+
+
 def test_the_grafana_tab_shows_the_whole_surface_at_once(console):
     """The project's claim is that Grafana is upstream of the work, and it
     was told in fragments: a panel here, a chip there, a paragraph in the

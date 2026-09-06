@@ -71,7 +71,7 @@
 <section>
   <form class="panel launcher" method="post" action="/runs" enctype="multipart/form-data">
     <div>
-      <div class="rule-row"><span class="label">The master</span></div>
+      <div class="rule-row"><span class="ast-n mono" style="margin-right:8px">1</span><span class="label">The master</span></div>
       <label class="drop" id="drop">
         <input type="file" name="asset" id="asset" accept="video/mp4,video/quicktime,video/*">
         <span class="pick">Choose a file</span>
@@ -88,7 +88,7 @@
       <p class="subline" style="font-size:13.5px">A run takes about four minutes for a 30-second spot, and longer films take proportionally longer, because the analyst reads every shot: shot detection, a transcription and an observation pass per shot, then every market judged in parallel with a grounded citation for each finding.</p>
     </div>
     <div>
-      <div class="rule-row"><span class="label">Markets</span></div>
+      <div class="rule-row"><span class="ast-n mono" style="margin-right:8px">2</span><span class="label">Markets</span></div>
       <div class="levels">
         {% for group in groups %}
         {# global and continental open with GLOBAL + EU pre-ticked: the
@@ -141,6 +141,7 @@
       <div style="margin-top:22px">
         <p class="limits" id="launchwarn" role="alert" hidden></p>
         <button class="btn go" type="submit">Begin clearance</button>
+        <p class="subline" style="font-size:12px;margin-top:10px">Next: the mission feed narrates every stage as the crew works, live.</p>
       </div>
     </div>
   </form>

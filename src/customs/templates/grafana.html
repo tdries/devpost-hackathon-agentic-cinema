@@ -245,4 +245,13 @@
   </table>
 </section>
 
+<section style="border-top:none;padding-top:0">
+  {% set next_text = "Every row above is written by a real run, not a fixture. "
+                     "Open one and watch its dashboards, its alert and its "
+                     "fix land in this same Grafana stack." %}
+  {% set next_href = "/runs/" ~ showcase if showcase else "/runs" %}
+  {% set next_label = "See it live on a run" if showcase else "Open the archive" %}
+  {% include "_nextstep.html" %}
+</section>
+
 {% endblock %}

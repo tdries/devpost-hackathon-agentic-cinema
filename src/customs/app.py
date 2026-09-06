@@ -2059,7 +2059,7 @@ def library(request: Request):
     cards.sort(key=lambda c: -c["count"])
     total = sum(c["count"] for c in cards)
     return _page(request, "library.html", cards=cards, total=total, screen="library",
-                 packs_total=len(all_packs))
+                 packs_total=len(all_packs), showcase=_showcase(store()))
 
 
 @app.get("/search")
@@ -2099,7 +2099,8 @@ def search_frames(request: Request, q: str = "", dimension: str = "",
                              "analyst ever wrote, across every run, read for meaning.",
                      q="", dimension="", market="", flagged="", days=days,
                      mode=mode, model=settings.model_text,
-                     dimensions=sorted(packs.taxonomy()))
+                     dimensions=sorted(packs.taxonomy()),
+                     showcase=_showcase(store()))
     try:
         if q.strip() and mode != "literal":
             # The fast path: the index answers in milliseconds and the
@@ -2133,6 +2134,7 @@ def search_frames(request: Request, q: str = "", dimension: str = "",
     return _page(request, "search.html", screen="search", result=result,
                  summary=search.summary(result), q=q, dimension=dimension,
                  market=market, flagged=flagged, days=days, mode=mode,
+                 showcase=_showcase(store()),
                  model=settings.model_text,
                  dimensions=sorted(packs.taxonomy()))
 
@@ -2153,6 +2155,7 @@ def grafana_resources(request: Request):
     job is to be legible the slowest in the console.
     """
     return _page(request, "grafana.html", screen="grafana",
+                 showcase=_showcase(store()),
                  totals=grafana_map.totals(),
                  stack=grafana_map.stack(),
                  datastores=grafana_map.DATASTORES,
