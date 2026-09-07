@@ -1,6 +1,14 @@
 from dataclasses import asdict, dataclass, field
 
-FINDING_STATUSES = {"open", "remediating", "resolved"}
+# open        nothing has happened to it yet, and it holds the market
+# remediating a fix is running (see the boot sweep in app.lifespan: a
+#             status cannot outlive the process that owns it)
+# resolved    a fix landed and the verifier confirmed the rule stopped
+#             firing
+# waived      a person accepted the risk for this market, with a reason.
+#             It stops holding the market, because that is what accepting
+#             the risk means, and clearance() only counts what is open.
+FINDING_STATUSES = {"open", "remediating", "resolved", "waived"}
 
 class _JsonMixin:
     def to_json(self) -> dict:

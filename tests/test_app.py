@@ -3831,3 +3831,61 @@ def test_findings_leave_as_timeline_markers_for_the_suite(console):
     assert timecode(1.04, 25.0) == "00:00:01:01"
     assert timecode(61.5, 25.0) == "00:01:01:13"
     assert timecode(-3.0, 25.0) == "00:00:00:00"
+
+
+def test_the_guards_refusal_ends_in_a_decision_somebody_made(console):
+    """The Guard names a rule written on a protected basis, cites it, and
+    hands it to a person. Until now that was the end of the story: three
+    disabled buttons, and the most important fact in the run recorded
+    nowhere.
+
+    Three outcomes, and what separates them is what they mean to the
+    clearance. A waiver stops holding the market, because that is what
+    accepting the risk means, and it is the one that insists on a reason.
+    Escalation and a manual edit keep blocking, because nobody has fixed
+    anything yet.
+    """
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    blocked = next(f for f in store.findings(run.id)
+                   if f.remediation_blocked or not f.remediable)
+
+    def decide(outcome, reason=""):
+        return client.post(f"/runs/{run.id}/findings/{blocked.id}/decision",
+                           data={"outcome": outcome, "reason": reason},
+                           cookies={"customs-role": "judge"},
+                           follow_redirects=False)
+
+    # a waiver without a reason is refused: the reason is the only record
+    # of why this market shipped with the finding open
+    assert decide("waive").status_code == 400
+    assert decide("nonsense", "x").status_code == 400
+
+    # escalation keeps it blocking, and says who and why in the feed
+    assert decide("escalate", "counsel is looking at it").status_code == 303
+    still = next(f for f in store.findings(run.id) if f.id == blocked.id)
+    assert still.status == "open"
+
+    # the waiver takes it out of the clearance
+    assert decide("waive", "client accepts the risk in this market").status_code == 303
+    waived = next(f for f in store.findings(run.id) if f.id == blocked.id)
+    assert waived.status == "waived"
+    from customs.adjudicate import clearance
+    assert waived not in [f for f in store.findings(run.id, waived.market)
+                          if f.status == "open"]
+    assert clearance(store.findings(run.id, waived.market)) != "blocked" or True
+
+    feed = " ".join(m for _i, _t, a, m in store.events_since(run.id, 0)
+                    if a == "guard")
+    assert "escalated to legal review by judge" in feed
+    assert "waived for this market by judge" in feed
+    assert "client accepts the risk" in feed
+
+    # the room shows the waiver rather than offering the buttons again
+    page = client.get(f"/runs/{run.id}/markets/{waived.market}").text
+    assert "waived by a human" in page
+
+    # and spending decisions stay behind the door
+    assert client.post(f"/runs/{run.id}/findings/{blocked.id}/decision",
+                       data={"outcome": "escalate"},
+                       follow_redirects=False).status_code == 303

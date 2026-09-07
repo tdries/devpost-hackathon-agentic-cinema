@@ -823,6 +823,31 @@ def annotate(run: RunRecord, finding: Finding, existing: set[tuple] | None = Non
     existing.add(key)
     return True
 
+def annotate_decision(run: RunRecord, finding: Finding, outcome: str,
+                      reason: str, who: str) -> None:
+    """A human's decision about a finding, on the run's own timeline.
+
+    The Guard refuses to auto-edit a rule written on a protected basis and
+    hands it to a person. What that person decided is the most important
+    fact in the whole run, and until now it existed nowhere: the buttons
+    were disabled and the refusal was the end of the story. Written as an
+    annotation beside the finding's own marker and tagged the same way, so
+    a reader pairs them, plus "decision" and the outcome.
+    """
+    tags = ["customs", _asset_label(run), finding.market, finding.rule_id,
+            finding.id, "decision", outcome]
+    text = (f"{outcome.replace('_', ' ')} by {who}: {finding.rule_id} "
+            f"({finding.market})")
+    if reason:
+        text += f" -- {reason}"
+    _annotation_post({
+        "time": int(_mapped_unix_seconds(run, finding.t_start) * 1000),
+        "timeEnd": int(_mapped_unix_seconds(run, finding.t_end) * 1000),
+        "tags": tags,
+        "text": text,
+    })
+
+
 def annotate_resolution(run: RunRecord, change: ChangeRecord, store: Store | None = None) -> None:
     """Create the resolving Grafana annotation for `change`, tagged the same
     as annotate()'s original finding annotation (finding.id included) plus

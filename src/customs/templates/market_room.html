@@ -75,11 +75,32 @@
         <div class="decision">
           {% if finding.citation_url %}<a class="cite" href="{{ finding.citation_url }}" target="_blank" rel="noreferrer">{{ finding.citation_ref or 'citation' }}</a>{% elif finding.citation_ref %}<span class="mono" style="font-size:12.5px;color:var(--ink-3)">{{ finding.citation_ref }}</span>{% endif %}
         </div>
+        {# Three buttons that used to be disabled. The guard's refusal was
+           the end of the story: it named the problem, cited the statute,
+           handed it to a person, and then offered them nothing to do. The
+           decision is the most important fact in the run. #}
+        {% if finding.status == 'waived' %}
         <div class="decision">
-          <button class="btn" disabled title="The guard blocked auto-remediation for this finding">Remediate</button>
-          <button class="btn" disabled title="Wire this to your review queue">Send to legal review</button>
-          <button class="btn" disabled title="Wire this to your review queue">Accept the risk</button>
+          <span class="chip on"><svg class="ic"><use href="#i-human"/></svg>waived by a human</span>
+          <span class="fix-why">This market ships with the finding open. The
+            reason is in the mission feed, on the certificate, and on the
+            run's Grafana timeline.</span>
         </div>
+        {% else %}
+        <form class="decision guard-decide" method="post"
+              action="/runs/{{ run.id }}/findings/{{ finding.id }}/decision">
+          <input class="urlin" type="text" name="reason" maxlength="400"
+                 placeholder="Why (required to waive, recorded either way)">
+          <span class="decision">
+            <button class="btn" type="submit" name="outcome" value="manual"
+                    title="The fix happens in the edit suite; the markers export is beside the certificate">Approve a manual edit</button>
+            <button class="btn" type="submit" name="outcome" value="escalate"
+                    title="Keeps blocking: nobody has decided anything yet">Send to legal review</button>
+            <button class="btn" type="submit" name="outcome" value="waive"
+                    title="Stops holding the market, on your say-so and with your reason">Accept the risk</button>
+          </span>
+        </form>
+        {% endif %}
       </div>
     </div>
     {% endfor %}

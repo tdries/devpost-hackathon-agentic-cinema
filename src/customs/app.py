@@ -3121,6 +3121,81 @@ async def mission_stream(request: Request, run_id: str):
 
 # -- one market --
 
+# What a person is allowed to decide about a finding the Guard refused,
+# and what each decision means to the clearance.
+#
+#   waive     a human accepts the risk for this market. It stops holding
+#             clearance, because that is what accepting the risk MEANS, and
+#             the reason is recorded everywhere the finding is.
+#   escalate  it goes to legal review and keeps blocking, because nobody
+#             has decided anything yet.
+#   manual    the fix will happen in an editing suite rather than here. It
+#             keeps blocking until the verifier sees it gone; the markers
+#             export beside this button is how it gets to the editor.
+_DECISIONS = {
+    "waive": ("waived", "waived for this market"),
+    "escalate": ("open", "escalated to legal review"),
+    "manual": ("open", "approved for a manual edit"),
+}
+
+
+@app.post("/runs/{run_id}/findings/{finding_id}/decision")
+def finding_decision(request: Request, run_id: str, finding_id: str,
+                     outcome: str = Form(""), reason: str = Form("")):
+    """Record what a human decided about a finding this system will not edit.
+
+    The Guard's refusal used to be the end of the story: it named the
+    problem, cited the statute, handed it to a person, and offered them
+    three disabled buttons. The decision is the most important fact in the
+    run and it existed nowhere.
+
+    Gated, like everything that changes an outcome. Written to the
+    finding's status, to the run's feed, and to Grafana as an annotation on
+    the finding's own marker, so the timeline carries who decided what and
+    when.
+    """
+    door = _needs_word(request, f"/runs/{run_id}")
+    if door is not None:
+        return door
+    run = _run_or_404(run_id)
+    choice = (outcome or "").strip()
+    if choice not in _DECISIONS:
+        raise HTTPException(status_code=400,
+                            detail=f"unknown outcome: {choice or '(none)'}")
+    db = store()
+    finding = next((f for f in db.findings(run.id) if f.id == finding_id), None)
+    if finding is None:
+        raise HTTPException(status_code=404, detail="no finding with that id")
+    if finding.status == "resolved":
+        raise HTTPException(status_code=409,
+                            detail="this finding is already fixed and verified")
+    status, phrase = _DECISIONS[choice]
+    note = (reason or "").strip()[:400]
+    if choice == "waive" and not note:
+        raise HTTPException(
+            status_code=400,
+            detail="a waiver needs a reason: it is the only record of why "
+                   "this market shipped with the finding open")
+    who = _role(request) or "visitor"
+    db.update_finding_status(finding.id, status, run_id=run.id)
+    db.emit(run.id, "guard",
+            f"{phrase} by {who}: {finding.rule_id} ({finding.market})"
+            + (f" -- {note}" if note else ""))
+    try:
+        telemetry.annotate_decision(run, finding, choice, note, who)
+        # And the market's status again, because a waiver changes it: the
+        # finding stops being open, customs_blocking stops carrying its
+        # sample, and Grafana resolves its own alert -- the same mechanism
+        # a verified fix uses, for a decision a person made instead.
+        after = db.findings(run.id, finding.market)
+        telemetry.push_status(run, finding.market,
+                              adjudicate.clearance(after), after)
+    except Exception as exc:  # noqa: BLE001 -- the decision stands regardless
+        log.warning("decision telemetry failed for %s: %s", finding.id, exc)
+    return RedirectResponse(f"/runs/{run.id}/markets/{finding.market}",
+                            status_code=303)
+
+
 @app.get("/runs/{run_id}/markets/{market}/certificate.pdf")
 def market_certificate(run_id: str, market: str):
     """This market's decision as a document, with every finding in it.
