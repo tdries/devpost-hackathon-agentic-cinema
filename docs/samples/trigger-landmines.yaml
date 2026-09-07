@@ -32,8 +32,16 @@
 # nothing should fire, and a finding there is a false positive worth
 # investigating.
 
+# WHAT ACTUALLY FIRED, cleared on the live instance 2026-09-07:
+#   reel a  run_edd9356048af  8 markets, 24 findings, 4 of 8 cleared
+#   reel b  run_6d490151b6be  8 markets, 19 findings, 4 of 8 cleared
+# Corpus-wide the taxonomy went from 8 of 18 categories triggering a real
+# rule to 15 of 18. `fired` on each shot below is the measured outcome,
+# not the hope.
+
 reel_a:
   file: trigger_reel_a.mp4
+  run: run_edd9356048af
   duration_s: 16.7
   shots:
     - shot: 1
@@ -44,6 +52,7 @@ reel_a:
         COLLECT ALL SIX in a crayon font across the bottom of frame.
       expects: [GL-CHILD-01, UK-CHILD-01, BE-VRT-KIDS-01]
       markets: [GLOBAL, UK, BE-VRT]
+      fired: borderline
       note: >-
         No minor is depicted and none is needed: GL-CHILD-01 is about
         exploiting the credulity of children, which a mascot and a
@@ -55,6 +64,7 @@ reel_a:
       inject: A white plate of sliced cured ham and bacon on the desk.
       expects: [AE-FOOD-01, SA-FOOD-01]
       markets: [AE, SA]
+      fired: [AE-FOOD-01, SA-FOOD-01]
 
     - shot: 3
       t_approx: 10
@@ -64,6 +74,7 @@ reel_a:
         the bottle shattering. Nobody present, nobody hurt.
       expects: [US-VIOL-01, DE-WR-01, UK-VIOL-01, FR-VIOL-01]
       markets: [US, DE, UK, FR]
+      fired: [US-VIOL-01, DE-WR-01, UK-VIOL-01, FR-VIOL-01]
       note: >-
         The second attempt. The first put a revolver on a bar counter in a
         shot of a runner, and Omni returned the footage essentially
@@ -77,6 +88,7 @@ reel_a:
         On-screen copy reading FOR THE MAN WHO EARNED IT. ASK HER TO POUR.
       expects: [BE-GENDER-01, FR-GEND-01, US-GEND-01]
       markets: [BE-VRT, FR, US]
+      fired: [BE-GENDER-01, FR-GEND-01, US-GEND-01, DE-DISC-01, SA-GEND-01]
       note: >-
         Also the second attempt, and the interesting refusal of the whole
         exercise. Asking Omni to pose a photorealistic woman as decorative
@@ -95,6 +107,7 @@ reel_a:
 
 reel_b:
   file: trigger_reel_b.mp4
+  run: run_6d490151b6be
   duration_s: 16.1
   shots:
     - shot: 1
@@ -105,6 +118,7 @@ reel_b:
         betting odds, and a DOUBLE YOUR MONEY button.
       expects: [AE-GAM-01, SA-GAM-01, CN-GAM-01, DE-GAM-01, UK-GAM-01]
       markets: [AE, SA, CN, DE, UK]
+      fired: [AE-GAM-01, SA-GAM-01, CN-GAM-01, DE-GAM-01, UK-GAM-01, US-GAM-01, FR-GAM-01]
       note: >-
         The one dimension nothing in the corpus had ever even been observed
         in. Also the injection that taught the reel where people can and
@@ -119,6 +133,7 @@ reel_b:
         product's backdrop.
       expects: [CN-NAT-01]
       markets: [CN]
+      fired: [CN-NAT-01]
       note: >-
         Second attempt, and the trigger-text lesson twice over: the first
         pass asked for "a national flag", got the Stars and Stripes, and
@@ -134,6 +149,7 @@ reel_b:
         decorative sales tag.
       expects: [AE-REL-01, SA-REL-01]
       markets: [AE, SA]
+      fired: [AE-REL-01, SA-REL-01]
 
     - shot: 4
       t_approx: 14
@@ -143,12 +159,27 @@ reel_b:
       markets: []
       note: Control. Unedited source footage; nothing should fire here.
 
-# The three dimensions NOT in these reels, and why they need no footage:
+# The three dimensions still cold, and the assumption that was wrong.
 #
-#   humour_irony_satire        observed twice already, only US has a rule
-#   language_profanity_idiom   observed eight times already, only US
-#   superstition_number_colour observed twice already, only CN and JP
+# The plan was that these needed no footage, because their rules live in
+# markets the showcase run had never selected. So the showcase run was
+# re-judged against US, CN and JP for the price of a Gemini call, and all
+# three stayed cold. Measured afterwards:
 #
-# All three are reachable by selecting US and CN on a clearance of the
-# existing reel. That is the cheapest coverage in the whole taxonomy: a
-# re-judge spends no generation budget at all.
+#   humour_irony_satire        observed only in test.mp4 and a phone clip,
+#                              never in test_ad or these reels: this run has
+#                              no observation for anyone to judge
+#   language_profanity_idiom   observed in test_ad and reel a, judged
+#                              against US, and no rule fired: an idiom that
+#                              translates cleanly is not profanity
+#   superstition_number_colour observed in test_ad and reel b, judged
+#                              against CN and JP, and no rule fired: the
+#                              rules want the number four or a funeral
+#                              colour in a market that reads it that way
+#
+# Which is the same lesson as the knife and the wrong flag, a third time: a
+# market with the rule and an observation in the dimension are both
+# necessary and neither is sufficient. Finishing these three needs footage
+# that plainly meets the trigger -- an actual expletive on screen, a joke at
+# a group's expense, the number four in a Chinese context -- which is three
+# more Omni spans at EUR 0.40 each.
