@@ -1,4 +1,5 @@
 import json, os, re
+import threading as _threading
 import time as _time_mod
 from google import genai
 from google.genai import types
@@ -30,25 +31,46 @@ def operation(name: str) -> None:
     _operation = name or "generate"
 
 
+# Usage reporting is off until something turns it on, and the deployed app
+# is what turns it on (see app.lifespan). Off by default because this
+# fires on EVERY model call: a test suite with a mocked Gemini would
+# otherwise post a metric per mocked call to the real Grafana Cloud
+# tenant, which is both slow and a lie in somebody's dashboard.
+_report = False
+
+
+def report_usage(on: bool = True) -> None:
+    """Turn per-call token and latency reporting on for this process."""
+    global _report
+    _report = bool(on)
+
+
 def _report_usage(model: str, response, seconds: float) -> None:
     """Tokens and latency for one call, onto the same OTLP path as the rest.
 
     Every Gemini response carries usage_metadata, so the numbers are
-    already in hand: reporting them costs one push and no SDK. Never
-    fatal, and never noisy -- a metrics endpoint that is down must not
-    fail a clearance that worked.
+    already in hand: reporting them costs no SDK. In a thread, because a
+    clearance run makes dozens of model calls and none of them should wait
+    on a metrics endpoint -- one 429 with a retry used to be four seconds
+    of a stage that had already finished. Never fatal, either way.
     """
-    try:
-        from customs import telemetry
+    if not _report:
+        return
 
-        usage = getattr(response, "usage_metadata", None)
-        telemetry.push_model_usage(
-            model, _operation,
-            input_tokens=int(getattr(usage, "prompt_token_count", 0) or 0),
-            output_tokens=int(getattr(usage, "candidates_token_count", 0) or 0),
-            seconds=seconds)
-    except Exception:  # noqa: BLE001 -- telemetry never breaks the work
-        pass
+    def send() -> None:
+        try:
+            from customs import telemetry
+
+            usage = getattr(response, "usage_metadata", None)
+            telemetry.push_model_usage(
+                model, _operation,
+                input_tokens=int(getattr(usage, "prompt_token_count", 0) or 0),
+                output_tokens=int(getattr(usage, "candidates_token_count", 0) or 0),
+                seconds=seconds)
+        except Exception:  # noqa: BLE001 -- telemetry never breaks the work
+            pass
+
+    _threading.Thread(target=send, name="usage-report", daemon=True).start()
 
 
 def _generate(model, contents, config):

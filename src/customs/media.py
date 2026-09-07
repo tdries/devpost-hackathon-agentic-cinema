@@ -125,6 +125,53 @@ def _parse_yavg(text: str) -> list[tuple[float, float]]:
             t = None
     return samples
 
+# How much a span moves, and where the line is.
+#
+# Measured on this project's own test ad, per frame, as ffmpeg's scene
+# score (the normalised difference between a frame and the one before it):
+# a shot of two people talking at a table sits at 0.002, a busy bar
+# interior with camera movement at 0.06. The threshold is between them and
+# nearer the quiet end, because the cost of being wrong differs: a patch
+# method on a moving shot produces an edit that visibly fails and gets
+# reopened by the verifier, while Omni on a shot that barely moves simply
+# costs more than it needed to.
+#
+# The MEDIAN, not the mean or the max. A span that contains a cut carries
+# one frame scoring 1.0, which drags a mean up and pins a max at the
+# ceiling; the median describes the shot rather than its boundary.
+MOTION_THRESHOLD = 0.01
+
+_SCENE_SCORE_RE = re.compile(r"lavfi\.scene_score=([0-9]+(?:\.[0-9]+)?)")
+
+
+def motion_score(path, t_start: float, t_end: float) -> float:
+    """Median per-frame difference across one span, 0..1.
+
+    Zero when the span cannot be measured at all, which reads as "not
+    moving" and therefore as "a patch is allowed to try" -- the same answer
+    this system gave before it could measure anything.
+    """
+    span = max(0.0, float(t_end) - float(t_start))
+    if span <= 0:
+        return 0.0
+    try:
+        proc = _run([
+            "ffmpeg", "-v", "error", "-ss", f"{max(0.0, float(t_start)):.3f}",
+            "-t", f"{span:.3f}", "-i", str(path),
+            "-vf", "select='gt(scene,0)',metadata=print:file=-",
+            "-f", "null", "-",
+        ], timeout=_TIMEOUT)
+    except Exception:  # noqa: BLE001 -- an unmeasurable span is not an error
+        return 0.0
+    scores = sorted(float(m.group(1))
+                    for m in _SCENE_SCORE_RE.finditer(proc.stdout))
+    if not scores:
+        return 0.0
+    middle = len(scores) // 2
+    return (scores[middle] if len(scores) % 2
+            else (scores[middle - 1] + scores[middle]) / 2)
+
+
 def detect_flashes(path) -> list[FlashWindow]:
     """Measure sustained full-frame luminance flashing, deterministically.
 

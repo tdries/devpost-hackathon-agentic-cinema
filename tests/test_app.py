@@ -234,7 +234,10 @@ def test_two_alerts_for_one_market_serialize_end_to_end(tmp_path, monkeypatch):
         return True
 
     monkeypatch.setattr(app_module.remediate, "apply", slow_apply)
-    monkeypatch.setattr(app_module.remediate, "plan", lambda finding, observation=None: "prop_swap")
+    # **_ because plan() now also takes the evidence the caller measured
+    # (scope's reach, the span's motion, whether Omni could run at all)
+    monkeypatch.setattr(app_module.remediate, "plan",
+                        lambda finding, observation=None, **_: "prop_swap")
     monkeypatch.setattr(app_module.verify, "confirm", slow_verify)
 
     threads = [
@@ -2445,7 +2448,7 @@ def test_the_pickers_word_is_law(console, monkeypatch, tmp_path):
     got = []
 
     monkeypatch.setattr(app_module.remediate, "plan",
-                        lambda finding, observation=None: "prop_swap")
+                        lambda finding, observation=None, **_: "prop_swap")
     monkeypatch.setattr(app_module.remediate, "apply",
                         lambda run_arg, finding, chosen, workdir, db, **kw:
                         got.append((chosen, kw.get("landing"))) or object())

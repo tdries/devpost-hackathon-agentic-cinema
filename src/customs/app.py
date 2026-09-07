@@ -124,6 +124,20 @@ async def lifespan(_app: FastAPI):
 
     threading.Thread(target=ask, name="omni-preflight", daemon=True).start()
 
+    # Per-call token and latency reporting, on for the deployed process and
+    # off everywhere else: it fires on every model call, and a test suite
+    # with a mocked Gemini would otherwise write a metric per mocked call
+    # into the real tenant -- which is both a lie in somebody's dashboard
+    # and, measured, a minute and a half of retry sleeps in the suite.
+    #
+    # Gated on the state dir, which is the same tell _sweep_orphaned_work
+    # uses to answer "am I the deployed instance": a TestClient boots this
+    # lifespan too, and a process-global switch flipped by one fixture
+    # stays flipped for every test after it.
+    if persist.state_dir() is not None:
+        from customs.genai_client import report_usage
+        report_usage(True)
+
     # No sweep of stale "remediating" findings here: _sweep_orphaned_work
     # above already does it at import, and gates itself on the state dir so
     # a test run cannot mutate a developer's local store. One mechanism.
@@ -302,7 +316,38 @@ def _remediate_and_verify(run_id: str, finding_id: str, market: str,
             # see it was expected. See customs/scope.py.
             shape = scope_mod.classify(finding, db.findings(run_id),
                                        asset_duration(run) or 120.0)
-            technique = remediate.plan(finding, observation)
+            # Evidence for the planner, and ONLY when nobody named a
+            # method: the picker's word is law, and an operator who picks
+            # overlay is entitled to see what a freeze does to the shot.
+            # For "auto" the question is whether a patch is even the right
+            # shape of answer -- does scope think it can reach this, does
+            # the span move, and would Omni be allowed to run at all.
+            # Three prop_swap fixes on the test ad passed the craft gate
+            # and were reopened by the verifier ("FR-ALC-01 still fires")
+            # because a wine bar is not a shot with a bottle in it.
+            evidence: dict[str, object] = {}
+            if method == "auto":
+                span_s = max(0.0, finding.t_end - finding.t_start)
+                reaches, _why = scope_mod.allows(shape, "overlay",
+                                                 finding.substitutable)
+                motion = 0.0
+                try:
+                    # This market's own master when one exists (an earlier
+                    # fix may already have moved the span), else the source.
+                    master = remediate.localized_master(run, market, db)
+                    source = master if master.is_file() else Path(run.asset_path)
+                    if source.is_file():
+                        motion = media.motion_score(source, finding.t_start,
+                                                    finding.t_end)
+                except Exception as exc:  # noqa: BLE001 -- unmeasured is still
+                    log.debug("motion score failed for %s: %s", finding.id, exc)
+                evidence = {
+                    "patch_reaches": reaches, "motion": motion,
+                    "span": span_s,
+                    "omni_ok": costs.available("omni", span_s,
+                                               db.spent_today())[0],
+                }
+            technique = remediate.plan(finding, observation, **evidence)
             chosen, landing = {
                 "bridge": ("bridge", None),
                 "omni": ("omni", None),

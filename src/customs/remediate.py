@@ -337,20 +337,49 @@ def _dimension_of(finding: Finding, observation: Observation | None) -> str:
     rule = _rule_for(finding)
     return rule.dimension if rule else ""
 
-def plan(finding: Finding, observation: Observation | None = None) -> str:
+# The patch methods: one frame edited and held, or edited and propagated by
+# relighting. Both assume the thing being changed stays put and stays the
+# only instance of itself in the shot.
+_PATCH_TECHNIQUES = ("prop_swap", "relettering")
+
+
+def plan(finding: Finding, observation: Observation | None = None, *,
+         patch_reaches: bool = True, motion: float = 0.0,
+         span: float = 0.0, omni_ok: bool = False) -> str:
     """Choose the remediation method for one finding. See METHOD_BY_DIMENSION.
 
     Pure: no model call, no I/O beyond the (cached) market pack read. Passing
     the finding's own Observation is what lets a claims finding made in
     on-screen text be re-lettered instead of re-voiced; without it the
     dimension's default applies.
+
+    The keyword evidence is measured by the caller, which is the only place
+    that has the master on disk and the day's budget in hand, and it decides
+    one thing: whether a patch is even the right shape of answer.
+
+    `patch_reaches` is scope's own verdict (scope.allows for a patch): false
+    when the element runs through the scene rather than sitting in a frame
+    of it. `motion` is media.motion_score for the span. Either one says a
+    still edit will not hold, and if Omni can take the span at all, Omni
+    takes it instead.
+
+    Measured, not assumed: three prop_swap fixes on this project's own test
+    ad passed the craft gate and were then reopened by the verifier with
+    "FR-ALC-01 still fires", because a wine bar is not a shot with a bottle
+    in it -- the element IS the scene. Motion turned out not to be the
+    discriminator there (the medians were 0.0014 to 0.0063, all quiet), so
+    both signals are read and either is enough.
     """
     dimension = _dimension_of(finding, observation)
     method = METHOD_BY_DIMENSION.get(dimension, DEFAULT_METHOD)
     if method == "revoice" and dimension in _CLAIM_DIMENSIONS and observation is not None:
         statement = observation.statement.lower()
         if any(marker in statement for marker in _ON_SCREEN_MARKERS):
-            return "relettering"
+            method = "relettering"
+    if (method in _PATCH_TECHNIQUES and omni_ok
+            and 0 < span <= costs.OMNI_MAX_SPAN_S
+            and (not patch_reaches or motion > media.MOTION_THRESHOLD)):
+        return "omni"
     return method
 
 # --- one writer per localized master ---
