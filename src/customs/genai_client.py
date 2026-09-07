@@ -229,6 +229,19 @@ class OmniRefusedInput(RuntimeError):
     """
 
 
+class OmniRefusedOutput(RuntimeError):
+    """Omni made something and then refused to hand it over.
+
+    Distinct from OmniRefusedInput, and the distinction is the whole
+    value: seen live 2026-09-07, "the output contains reputational harms
+    to photorealistic individuals" on a request to put an online casino
+    beside real-looking people in our own footage. The footage is fine and
+    the same span accepts other instructions -- it is the COMBINATION that
+    was refused, so the thing to change is what you asked for, not what
+    you sent. Nothing is charged either way.
+    """
+
+
 class OmniQuota(RuntimeError):
     """Omni's quota on this project refused the request before any work.
 
@@ -345,6 +358,15 @@ def generate_omni_edit(instruction: str, clip_path, out_path,
                       f"run. Set OMNI_MODEL to a current one and restart.")
             costs.set_omni_unavailable(reason)
             raise RuntimeError(reason) from exc
+        if ("reputational harm" in message or "Responsible AI" in message
+                or "Unable to show the generated video" in message):
+            import re as _re
+            said = _re.search(r"'message':\s*[\"']([^\"']+)", message)
+            raise OmniRefusedOutput(
+                "Omni produced an edit and then refused to return it: the "
+                "footage was accepted, so what to change is the "
+                "instruction rather than the clip. Nothing was charged. "
+                "Omni said: " + (said.group(1) if said else message[:200])) from exc
         if "prohibited_content" in message or "third-party content" in message:
             # Omni checks its INPUT -- a famous cartoon reel and the Chanel
             # spot were both refused over "interests of third-party content
