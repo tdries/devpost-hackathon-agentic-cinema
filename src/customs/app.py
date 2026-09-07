@@ -791,19 +791,6 @@ def _kinds_found(findings) -> list[str]:
     return [d for d, _ in sorted(worst.items(), key=lambda kv: -kv[1])]
 
 
-# The one run a stranger should see first: a commercial with findings
-# across three dimensions, seven markets judged, four cleared, and eight
-# fixes that landed and were verified. Both doors point at it -- the
-# judge's archive pins it, the visitor's empty state and the launcher link
-# it -- because the run that proves the product was otherwise sitting
-# unmarked at position six of thirty-five.
-#
-# It used to be a Chanel spot with a famous actor in it, which is a strange
-# thing for a rights-clearance tool to lead with. This one is the ad this
-# project generated with Veo and loaded with its own documented landmines
-# (docs/samples/landmines.yaml), so Google's tools made the film and then
-# failed it.
-# ponytail: hardcoded id, becomes a computed best-run when the archive churns
 # How many archive cards frame a live Grafana panel. Beyond this they use
 # the app's own SVG: see the note in the archive route.
 #
@@ -818,7 +805,23 @@ def _kinds_found(findings) -> list[str]:
 # archive route's own note says is indistinguishable at card size.
 LIVE_LANE_CARDS = 2
 
-SHOWCASE_RUN = "run_3ea5230a429f"
+# The one run a stranger should see first, and it has to carry the whole
+# argument: 77 findings across seven dimensions and eight jurisdictions at
+# all four rungs of the ladder, nine fixes that landed and were verified
+# without anyone clicking (the alert fired, the Remediator woke, the
+# Verifier re-observed), two findings the Guard refused to touch because
+# the rule targets a protected characteristic, and one market that lost its
+# judging pass to a 429 and wears an error tile rather than a green one it
+# did not earn. Both doors point at it: the judge's archive pins it, the
+# visitor's empty state and the launcher link it.
+#
+# It used to be a Chanel spot with a famous actor in it, which is a strange
+# thing for a rights-clearance tool to lead with. This is the ad this
+# project generated with Veo and loaded with its own documented landmines
+# (docs/samples/landmines.yaml), so Google's tools made the film and then
+# failed it.
+# ponytail: hardcoded id, becomes a computed best-run when the archive churns
+SHOWCASE_RUN = "run_5299053b6a62"
 
 
 def _showcase(db) -> str:
