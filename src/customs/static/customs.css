@@ -2232,14 +2232,20 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
    pixels meant the declared total outran the table on a narrower panel
    and the last column -- the one carrying the button -- was pushed
    outside it. */
-.market-room table.grid th:nth-child(1) { width: 24%; }  /* rule + rationale */
+.market-room table.grid th:nth-child(1) { width: 21%; }  /* rule + rationale */
 .market-room table.grid th:nth-child(2) { width: 16%; }  /* citation */
 .market-room table.grid th:nth-child(3) { width: 13%; }  /* evidence */
 .market-room table.grid th:nth-child(4) { width: 8%; }   /* class */
 .market-room table.grid th:nth-child(5) { width: 8%; }   /* severity */
 .market-room table.grid th:nth-child(6) { width: 11%; }  /* window */
-.market-room table.grid th:nth-child(7) { width: 8%; }   /* status */
+/* Status was 8%, which is 88px on a laptop, and "remediating" set nowrap
+   in a fixed-layout table does not shrink -- it overflows, and the next
+   column's button (width:100% of its own cell) then painted straight over
+   it. Wider, and the cell clips rather than bleeding into its neighbour
+   whatever word ends up in it. */
+.market-room table.grid th:nth-child(7) { width: 11%; }  /* status */
 .market-room table.grid th:nth-child(8) { width: 12%; }  /* the fix */
+.market-room table.grid tr.frow > td:nth-child(7) { overflow: hidden; }
 .market-room table.grid td { vertical-align: top; }
 .market-room table.grid td.tight { white-space: nowrap; }
 /* ...except the button, which would rather wrap than leave the panel.

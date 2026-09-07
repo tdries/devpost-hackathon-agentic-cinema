@@ -214,8 +214,12 @@
         </td>
         <td class="tight">{{ severity(finding.severity) }}</td>
         <td class="tight">{{ window(finding) }}</td>
-        {% set fst = {'open': 'blocked', 'remediating': 'pending', 'resolved': 'cleared'}[finding.status] %}
-        <td class="tight"><span class="pill s-{{ fst }}"><svg class="ic"><use href="#i-{{ fst }}"/></svg>{{ finding.status }}</span></td>
+        {% set fst = {'open': 'blocked', 'remediating': 'pending', 'resolved': 'cleared', 'waived': 'cleared'}[finding.status] %}
+        {# "fixing", not "remediating": the column beside this one already
+           says Working, and the longer word is what overflowed a narrow
+           status cell and painted under that button. #}
+        {% set fword = {'open': 'open', 'remediating': 'fixing', 'resolved': 'resolved', 'waived': 'waived'}[finding.status] %}
+        <td class="tight"><span class="pill s-{{ fst }}"><svg class="ic"><use href="#i-{{ fst }}"/></svg>{{ fword }}</span></td>
         <td class="tight">
           {% if finding.status == 'open' and finding.remediable and finding.id in fixes %}
           {# Just the toggle here. The panel it opens is the next row: see
