@@ -368,36 +368,6 @@ class Store:
         return [Finding.from_json(json.loads(r[0])) for r in rows]
 
     @_locked
-    def release_orphaned_remediations(self) -> list[tuple[str, str]]:
-        """Findings left "remediating" by a process that is gone, reopened.
-
-        One instance is the deployment and remediation runs in a thread of
-        it, so a finding still marked "remediating" when this process boots
-        is a finding whose thread died with the previous container -- a
-        deploy landing mid-fix, or a crash. Nothing is coming back for it,
-        and the board drew eight of them "Working" for an hour after two
-        deploys had killed the work.
-
-        Returns [(run_id, finding_id)] so the caller can say so in each
-        run's own feed rather than only in a log line.
-        """
-        rows = self._conn.execute(
-            "SELECT run_id, id, data FROM findings ORDER BY rowid").fetchall()
-        released = []
-        for run_id, finding_id, raw in rows:
-            data = json.loads(raw)
-            if data.get("status") != "remediating":
-                continue
-            data["status"] = "open"
-            self._conn.execute(
-                "UPDATE findings SET data = ? WHERE id = ? AND run_id = ?",
-                (json.dumps(data), finding_id, run_id))
-            released.append((run_id, finding_id))
-        if released:
-            self._conn.commit()
-        return released
-
-    @_locked
     def update_finding_status(self, finding_id: str, status: str,
                               run_id: str | None = None) -> None:
         """Set one finding's status.
