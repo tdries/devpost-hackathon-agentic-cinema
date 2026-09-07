@@ -1,4 +1,5 @@
 import json, os, re
+import queue as _queue_mod
 import threading as _threading
 import time as _time_mod
 from google import genai
@@ -45,32 +46,66 @@ def report_usage(on: bool = True) -> None:
     _report = bool(on)
 
 
+# One reporter, not one per call.
+#
+# The first version started a thread per model call so nothing waited on a
+# metrics endpoint. A clearance makes north of a hundred model calls -- one
+# vision call per shot, one judging call per market, one grounded citation
+# per finding -- and a hundred threads each holding an open HTTPS
+# connection inside a 4 GiB container is how this service came to be
+# terminated on SIGBUS twice in twenty minutes, losing two clearance runs
+# that were mid-flight.
+#
+# So: a bounded queue and a single daemon draining it. A full queue drops
+# the measurement rather than growing, because a metric is worth less than
+# the run it is measuring.
+# ponytail: one thread, drop on overflow. A real exporter is the upgrade if
+# anyone ever needs these to be exact.
+_QUEUE: "_queue_mod.Queue[tuple]" = _queue_mod.Queue(maxsize=256)
+_pump_started = False
+_pump_guard = _threading.Lock()
+
+
+def _pump() -> None:
+    from customs import telemetry
+
+    while True:
+        model, operation, tokens_in, tokens_out, seconds = _QUEUE.get()
+        try:
+            telemetry.push_model_usage(model, operation,
+                                       input_tokens=tokens_in,
+                                       output_tokens=tokens_out,
+                                       seconds=seconds)
+        except Exception:  # noqa: BLE001 -- telemetry never breaks the work
+            pass
+        finally:
+            _QUEUE.task_done()
+
+
 def _report_usage(model: str, response, seconds: float) -> None:
-    """Tokens and latency for one call, onto the same OTLP path as the rest.
+    """Tokens and latency for one call, queued for the reporter.
 
     Every Gemini response carries usage_metadata, so the numbers are
-    already in hand: reporting them costs no SDK. In a thread, because a
-    clearance run makes dozens of model calls and none of them should wait
-    on a metrics endpoint -- one 429 with a retry used to be four seconds
-    of a stage that had already finished. Never fatal, either way.
+    already in hand and reporting them costs no SDK. Never blocking and
+    never fatal: a full queue is a dropped measurement.
     """
     if not _report:
         return
-
-    def send() -> None:
-        try:
-            from customs import telemetry
-
-            usage = getattr(response, "usage_metadata", None)
-            telemetry.push_model_usage(
-                model, _operation,
-                input_tokens=int(getattr(usage, "prompt_token_count", 0) or 0),
-                output_tokens=int(getattr(usage, "candidates_token_count", 0) or 0),
-                seconds=seconds)
-        except Exception:  # noqa: BLE001 -- telemetry never breaks the work
-            pass
-
-    _threading.Thread(target=send, name="usage-report", daemon=True).start()
+    global _pump_started
+    try:
+        usage = getattr(response, "usage_metadata", None)
+        item = (model, _operation,
+                int(getattr(usage, "prompt_token_count", 0) or 0),
+                int(getattr(usage, "candidates_token_count", 0) or 0),
+                float(seconds))
+        with _pump_guard:
+            if not _pump_started:
+                _threading.Thread(target=_pump, name="usage-report",
+                                  daemon=True).start()
+                _pump_started = True
+        _QUEUE.put_nowait(item)
+    except Exception:  # noqa: BLE001 -- including queue.Full, deliberately
+        pass
 
 
 def _generate(model, contents, config):

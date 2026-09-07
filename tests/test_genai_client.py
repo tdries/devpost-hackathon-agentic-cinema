@@ -116,3 +116,41 @@ def test_a_stale_interactions_token_gets_one_fresh_client(monkeypatch, tmp_path)
     out = genai_client.generate_omni_edit("edit it", clip, tmp_path / "out.mp4")
     assert out.read_bytes() == b"edited"
     assert clients == [], "the stale client was replaced exactly once"
+
+
+def test_usage_reporting_is_one_thread_and_drops_rather_than_grows(monkeypatch):
+    """The first version of this started a thread per model call so that
+    nothing waited on a metrics endpoint. A clearance makes north of a
+    hundred model calls, and a hundred threads each holding an open HTTPS
+    connection inside a 4 GiB container is how the service came to be
+    terminated on SIGBUS twice in twenty minutes, taking two mid-flight
+    clearance runs with it.
+
+    One reporter, a bounded queue, and a dropped measurement when it is
+    full: a metric is worth less than the run it is measuring.
+    """
+    import threading
+
+    from customs import genai_client, telemetry
+
+    delivered = []
+    monkeypatch.setattr(telemetry, "push_model_usage",
+                        lambda *a, **k: delivered.append(k))
+    monkeypatch.setattr(genai_client, "_report", True)
+
+    class Response:
+        class usage_metadata:
+            prompt_token_count, candidates_token_count = 11, 3
+
+    before = threading.active_count()
+    for _ in range(400):
+        genai_client._report_usage("m", Response(), 0.5)
+
+    # one reporter regardless of how many calls went through it
+    assert sum(1 for t in threading.enumerate() if t.name == "usage-report") == 1
+    assert threading.active_count() <= before + 1
+
+    # and it is off by default, because it fires on every model call and a
+    # mocked Gemini would otherwise write to the real tenant
+    monkeypatch.setattr(genai_client, "_report", False)
+    genai_client._report_usage("m", Response(), 0.5)
