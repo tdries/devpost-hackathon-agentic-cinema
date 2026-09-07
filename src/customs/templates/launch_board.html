@@ -14,7 +14,7 @@
  <div class="board-hero-text">
   <div class="rule-row">
     <span class="label">Launch verdict</span>
-    <span class="pill s-{{ flag_state }}" id="flag"><span class="dot"></span>{{ flag }}</span>
+    <span class="pill s-{{ flag_state }}" id="flag" data-tour="verdict"><span class="dot"></span>{{ flag }}</span>
   </div>
   <h1 class="headline{% if overall.state == 'go' %} go{% endif %}" id="headline">CLEARED FOR LAUNCH IN {{ overall.cleared }} OF {{ overall.total }} MARKETS</h1>
   <p class="subline" id="subline">

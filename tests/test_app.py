@@ -4073,3 +4073,57 @@ def test_a_running_run_rings_its_thumbnail_not_the_whole_card(console):
     # and the card itself no longer wears it
     assert 'class="runrow sparkle"' not in page
     assert idle.id in page and busy.id in page
+
+
+def test_the_tour_is_thirteen_slides_and_a_walk_of_the_real_thing(console):
+    """A first-time visitor met two doors and a paragraph: either they
+    already knew what ad clearance was, or the product was a mystery with
+    a colour scheme.
+
+    Two halves. The deck is server-rendered, so a browser with no
+    JavaScript still reads the tour top to bottom and the script only adds
+    the carousel. The walk is the same story spotlit on the live console,
+    which is the half that cannot be faked.
+    """
+    client, store, _launched, _jobs = console
+    _judged_run(store)
+
+    page = client.get("/tour")
+    assert page.status_code == 200
+    body = page.text
+
+    # every slide is in the document, not fetched by a script
+    slides = re.findall(r'<section class="ts ts-(\w+)" data-slide="([\w-]+)"', body)
+    assert len(slides) >= 10, slides
+    kinds = {kind for kind, _id in slides}
+    assert {"splash", "value", "walkthrough", "proof", "cta"} <= kinds, kinds
+    # only the first is visible without JavaScript running
+    tags = re.findall(r'<section class="ts [^>]*>', body)
+    assert len(tags) == len(slides)
+    assert sum(1 for tag in tags if "hidden" not in tag) == 1, tags[:2]
+
+    # and every number on a slide is this instance's own
+    from customs import costs, grafana_map
+    from customs.packs import taxonomy
+    assert f"{len(app_module.market_packs())} jurisdictions" in body
+    assert f"{len(taxonomy())} things watched for" in body
+    assert f"{grafana_map.totals()['dashboards']} dashboards" in body
+    assert f"{costs.DAILY_BUDGET_EUR:.0f} EUR a day" in body
+
+    # the walk's stops name real pages and real hooks on them
+    stops = client.get("/tour/walk.json").json()["stops"]
+    assert len(stops) >= 8
+    for stop in stops:
+        assert stop["path"].startswith("/"), stop
+        assert stop["at"] and stop["title"] and stop["body"], stop
+        landed = client.get(stop["path"])
+        assert landed.status_code == 200, stop["path"]
+        # `at` is a fallback chain: the best hook this page has, and at
+        # least one of them has to be on it or the stop spotlights nothing
+        assert any(f'data-tour="{hook}"' in landed.text
+                   for hook in stop["at"].split("|")), stop
+
+    # the invitation is on the front door, as a third way in
+    front = client.get("/").text
+    assert 'class="door door-tour sparkle" href="/tour"' in front
+    assert "Show me around" in front

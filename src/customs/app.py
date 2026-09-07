@@ -89,10 +89,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from customs import (adjudicate, agentmode, analyst, certificate, costs,
-                     grafana_map, markers, media,
+                     grafana_map, grafana_ops, markers, media,
                      narrate, packs, replyfmt, persist, pipeline, remediate,
                      scope as scope_mod, search, spark, state as state_mod,
-                     telemetry, verify)
+                     telemetry, tour, verify)
 from customs.fetch import FetchError, fetch_youtube
 from customs.config import is_withheld, settings, withheld_matcher
 from customs.media import MediaError, probe_duration
@@ -1802,6 +1802,85 @@ VISITOR_DAILY_EUR = 1.0
 
 def _visitor_spent(request: Request) -> float:
     return store().spent_today_on(_mine(request))
+
+
+def _tour_context() -> dict:
+    """The tour's slides and stops, with this instance's own numbers.
+
+    Nothing here is typed into a slide by hand. A tour that claims 98
+    jurisdictions while the packs say otherwise is a brochure, and the
+    whole argument of this project is that the screens are not brochures.
+    """
+    db = store()
+    packs_by_code = market_packs()
+    inventory = grafana_map.totals()
+    runs = db.recent_runs(500)
+    findings = sum(len(db.findings(run.id)) for run in runs[:40])
+    # The walk needs a finished, interesting clearance. That is what the
+    # showcase run is; if this store does not hold it, the newest run with
+    # findings will do, and if there is none the walk skips the run stops
+    # rather than pointing at a 404.
+    run_id = _showcase(db)
+    if not run_id:
+        run_id = next((r.id for r in runs if db.findings(r.id)), "")
+    # And a market room with something in it. The walk used to name SA,
+    # which is only the right answer on the instance that happened to run
+    # it; what the stops actually need is a room holding a guard refusal
+    # (the stop about what this system will not do) AND a finding the guard
+    # left alone (the stop about what a finding is), so that is what is
+    # preferred, then a room with a refusal, then the busiest room.
+    rooms: dict[str, list] = {}
+    for f in db.findings(run_id) if run_id else []:
+        rooms.setdefault(f.market, []).append(f)
+
+    def _room_rank(code: str) -> tuple:
+        held = rooms[code]
+        refused = any(f.remediation_blocked for f in held)
+        plain = any(not f.remediation_blocked for f in held)
+        return (refused and plain, refused, len(held), code)
+
+    market = max(rooms, key=_room_rank, default="")
+    stops = [dict(stop, path=stop["path"].replace("{run}", run_id)
+                                         .replace("{market}", market))
+             for stop in tour.WALK
+             if (run_id or "{run}" not in stop["path"])
+             and (market or "{market}" not in stop["path"])]
+    slides = tour.slides(
+        packs=len(packs_by_code),
+        dimensions=len(packs.taxonomy()),
+        rules=len({r.id for p in packs_by_code.values() for r in p.own_rules}),
+        pairings=sum(len(p.rules) for p in packs_by_code.values()),
+        dashboards=inventory["dashboards"], panels=inventory["panels"],
+        series=inventory["series"], alert_rules=len(grafana_ops.ALERT_RULES),
+        runs=len(runs), findings=findings, budget=costs.DAILY_BUDGET_EUR,
+        stops=len(stops))
+    return {"slides": slides, "stops": stops, "run_id": run_id}
+
+
+@app.get("/tour", response_class=HTMLResponse)
+def tour_deck(request: Request):
+    """The onboarding tour: a carousel, and then a walk through the app.
+
+    Open, like every other read here. The deck is server-rendered so the
+    slides are in the page and a browser with no JavaScript still reads
+    them top to bottom; the carousel, the autoplay and the walk are what
+    the script adds.
+    """
+    context = _tour_context()
+    return _page(request, "tour.html", screen="tour",
+                 slides=context["slides"], stops=context["stops"],
+                 run_id=context["run_id"],
+                 dims_all=sorted(packs.taxonomy()))
+
+
+@app.get("/tour/walk.json")
+def tour_walk():
+    """The walk's stops, for the script that drives it across screens.
+
+    Fetched once and kept for the session: each stop names a page, a
+    data-tour hook on it and one sentence, and the script does the rest.
+    """
+    return {"stops": _tour_context()["stops"]}
 
 
 @app.get("/enter/{role}", response_class=HTMLResponse)

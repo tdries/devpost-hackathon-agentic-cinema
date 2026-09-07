@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Show me around{% endblock %}
+{# No console tabs: the tour is its own place, and the only ways out of it
+   are the two it offers. #}
+{% block main %}
+
+{# THE DECK.
+   Thirteen slides, server-rendered so they are all in the page: a browser
+   with no JavaScript reads the tour top to bottom, and the script is what
+   turns it into a carousel with autoplay, arrows, dots and swipe.
+
+   The rainbow is the product's own: the same four Google hues the console
+   uses for its four states, rotating, on the rail and on the buttons that
+   move you forward. It is loud on purpose here and nowhere else. #}
+<div class="tour" id="tour" data-slides="{{ slides | length }}">
+
+  <div class="tour-rail" aria-hidden="true">
+    {% for slide in slides %}<span class="tr-seg"></span>{% endfor %}
+    <span class="tr-fill" id="tr-fill"></span>
+  </div>
+
+  <header class="tour-top">
+    <span class="tour-count mono"><b id="tour-n">1</b> / {{ slides | length }}</span>
+    <span class="tour-tools">
+      <button type="button" class="tbtn" id="tour-auto" aria-pressed="true"
+              title="Advance on its own">auto</button>
+      <a class="tbtn" href="/">skip the tour</a>
+    </span>
+  </header>
+
+  <div class="tour-stage" id="tour-stage">
+  {% for slide in slides %}
+  <section class="ts ts-{{ slide.kind }}" data-slide="{{ slide.id }}"
+           {% if not loop.first %}hidden{% endif %}>
+    <div class="ts-words">
+      {% if slide.eyebrow %}<span class="ts-eyebrow label">{{ slide.eyebrow }}</span>{% endif %}
+      <h1 class="ts-title">{{ slide.title }}</h1>
+      {% if slide.lede %}<p class="ts-lede">{{ slide.lede }}</p>{% endif %}
+      <p class="ts-body">{{ slide.body }}</p>
+      {% if slide.stat %}<span class="ts-stat mono">{{ slide.stat }}</span>{% endif %}
+
+      {% if slide.kind == 'splash' %}
+      <div class="ts-cta">
+        <button type="button" class="gobtn" data-tour-next>
+          <span class="gobtn-ring" aria-hidden="true"></span>
+          <span class="gobtn-face">Take the tour<svg class="ic"><use href="#n-board"/></svg></span>
+        </button>
+        <a class="tbtn" href="/runs">just show me the runs</a>
+      </div>
+      {% elif slide.kind == 'cta' %}
+      <div class="ts-cta">
+        <button type="button" class="gobtn" id="tour-walk" data-run="{{ run_id }}">
+          <span class="gobtn-ring" aria-hidden="true"></span>
+          <span class="gobtn-face">Walk the live console<svg class="ic"><use href="#i-frame"/></svg></span>
+        </button>
+        <a class="tbtn" href="/enter/visitor">clear my own commercial</a>
+        <a class="tbtn" href="/runs">browse on my own</a>
+      </div>
+      {% endif %}
+    </div>
+
+    {# The art. Every panel below is drawn out of the console's own parts --
+       its icons, its pills, its real fix clips -- rather than a picture of
+       them, so the tour cannot show a version of the product that does
+       not exist. #}
+    <div class="ts-art ts-art-{{ slide.art }}">
+      {% if slide.art == 'logo' %}
+      <div class="ta-logo">
+        <span class="ta-bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <img src="/static/logo.png?v={{ static_v }}" alt="" width="150">
+        <span class="ta-word mono">THE MEDIA<br>CUSTOMS</span>
+        <span class="ta-with">
+          <img src="/static/logo-adk.png?v={{ static_v }}" alt="Google Cloud Agent Builder" width="30" height="30">
+          <img src="/static/powered-by-grafana.png?v={{ static_v }}" alt="Powered by Grafana" width="130">
+        </span>
+      </div>
+
+      {% elif slide.art == 'world' %}
+      <div class="ta-grid ta-world">
+        {% for code in ('EU', 'FR', 'DE', 'UK', 'US', 'BE', 'AE', 'SA', 'CN', 'JP', 'IN', 'BR', 'TR', 'TH', 'ID', 'NG') %}
+        <span class="ta-cell"><svg class="ic lvl country"><use href="#c-{{ code }}"/></svg><b class="mono">{{ code }}</b></span>
+        {% endfor %}
+      </div>
+
+      {% elif slide.art == 'observe' %}
+      <div class="ta-grid ta-dims">
+        {% for dim in dims_all %}
+        <span class="ta-cell" title="{{ dim.replace('_', ' ') }}">
+          <svg class="ic"><use href="#d-{{ dim }}"/></svg></span>
+        {% endfor %}
+      </div>
+
+      {% elif slide.art == 'ladder' %}
+      <div class="ta-ladder">
+        <span class="ta-rung"><svg class="ic"><use href="#d-national_symbols_politics"/></svg><b>GLOBAL</b><i>the baseline everyone inherits</i></span>
+        <span class="ta-rung"><svg class="ic"><use href="#n-market"/></svg><b>EU</b><i>what a continent adds</i></span>
+        <span class="ta-rung"><svg class="ic lvl country"><use href="#c-BE"/></svg><b>BE</b><i>one country's law</i></span>
+        <span class="ta-rung ta-rung-last"><svg class="ic"><use href="#n-cut"/></svg><b>BE-VRT</b><i>a broadcaster's own acceptance rules</i></span>
+      </div>
+
+      {% elif slide.art == 'join' %}
+      <div class="ta-join">
+        <span class="ta-jchip"><svg class="ic"><use href="#i-analyst"/></svg>a wine bottle on the table, 00:01.0</span>
+        <span class="ta-jop" aria-hidden="true">&times;</span>
+        <span class="ta-jchip"><svg class="ic"><use href="#i-legal"/></svg>FR-ALC-01, Loi Evin</span>
+        <span class="ta-jop" aria-hidden="true">&times;</span>
+        <span class="ta-jchip"><svg class="ic"><use href="#i-sourced"/></svg>legifrance.gouv.fr</span>
+        <span class="ta-jeq" aria-hidden="true">=</span>
+        <span class="ta-jout"><svg class="ic"><use href="#i-blocked"/></svg>one finding, severity 95, France blocked</span>
+      </div>
+
+      {% elif slide.art == 'guard' %}
+      <div class="ta-guard">
+        <span class="label"><svg class="ic"><use href="#i-human"/></svg>Human decision required</span>
+        <b class="mono">AE-LGBT-01</b>
+        <p>rule basis targets a protected characteristic; human decision required</p>
+        <span class="ta-gopts">
+          <i>approve a manual edit</i><i>send to legal review</i><i>accept the risk</i>
+        </span>
+      </div>
+
+      {% elif slide.art == 'clips' %}
+      {# The real marketing clips, and they are the product's own output:
+         each pair is one finding before and after a fix that landed. #}
+      <div class="ta-clips">
+        {% for name, caption in (('wine', 'wine becomes juice'), ('smoke', 'a cigarette becomes an espresso'), ('skirt', 'a hemline becomes knee-length')) %}
+        <span class="ta-clip">
+          <span class="ta-pair">
+            <video src="/static/fix-{{ name }}-before.mp4" muted loop playsinline autoplay preload="none"></video>
+            <video src="/static/fix-{{ name }}-after.mp4" muted loop playsinline autoplay preload="none"></video>
+          </span>
+          <i class="label">{{ caption }}</i>
+        </span>
+        {% endfor %}
+      </div>
+
+      {% elif slide.art == 'verify' %}
+      <div class="ta-verify">
+        <span class="ta-vrow"><b class="mono">asked</b><i>replace each cigarette, cigar, tobacco pack</i></span>
+        <span class="ta-vrow"><b class="mono">got</b><i>a cigar, turned into a cigarette</i></span>
+        <span class="ta-vrow ta-vbad"><svg class="ic"><use href="#i-blocked"/></svg>
+          <i>NOT fixed: EU-TOB-01 still fires after omni; finding back to open</i></span>
+        <span class="ta-vrow ta-vgood"><svg class="ic"><use href="#i-cleared"/></svg>
+          <i>craft gate: 49 dB outside the edit, no frames lost</i></span>
+      </div>
+
+      {% elif slide.art == 'grafana' %}
+      <div class="ta-graf">
+        <img src="/static/logo-grafana.svg" alt="Grafana" height="40">
+        <span class="ta-stores">
+          <img src="/static/logo-loki.svg" alt="Loki" height="30">
+          <img src="/static/logo-mimir.svg" alt="Mimir" height="30">
+        </span>
+        <span class="ta-gnote label">dashboards, annotations and alert rules, written over MCP</span>
+      </div>
+
+      {% elif slide.art == 'loop' %}
+      <div class="ta-loop">
+        <span class="ta-lstep"><svg class="ic"><use href="#i-publisher"/></svg>metric pushed</span>
+        <span class="ta-larrow" aria-hidden="true">&rarr;</span>
+        <span class="ta-lstep"><svg class="ic"><use href="#i-alert"/></svg>Grafana fires</span>
+        <span class="ta-larrow" aria-hidden="true">&rarr;</span>
+        <span class="ta-lstep"><svg class="ic"><use href="#i-remediator"/></svg>Remediator fixes</span>
+        <span class="ta-larrow" aria-hidden="true">&rarr;</span>
+        <span class="ta-lstep"><svg class="ic"><use href="#i-verifier"/></svg>Verifier re-observes</span>
+        <span class="ta-larrow" aria-hidden="true">&rarr;</span>
+        <span class="ta-lstep ta-lend"><svg class="ic"><use href="#i-cleared"/></svg>alert resolves itself</span>
+      </div>
+
+      {% elif slide.art == 'takeaway' %}
+      <div class="ta-take">
+        <span class="ta-tcard"><svg class="ic"><use href="#i-legal"/></svg><b>certificate.pdf</b><i>every finding, its statute and its citation</i></span>
+        <span class="ta-tcard"><svg class="ic"><use href="#n-timeline"/></svg><b>markers.csv</b><i>the same spans, on your timeline</i></span>
+        <span class="ta-tcard"><svg class="ic"><use href="#n-cut"/></svg><b>localized master</b><i>the version that can air</i></span>
+      </div>
+
+      {% elif slide.art == 'intelligence' %}
+      <div class="ta-lcd">
+        {% for n in (95, 95, 95, 85, 85, 82, 80, 65) %}
+        <span class="ta-block s-{{ 'blocked' if n >= 70 else 'noted' }}"><b class="mono">{{ n }}</b></span>
+        {% endfor %}
+      </div>
+
+      {% elif slide.art == 'walk' %}
+      <div class="ta-walkmap">
+        {% for stop in stops %}
+        <span class="ta-stop"><b class="mono">{{ loop.index }}</b>{{ stop.title }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </section>
+  {% endfor %}
+  </div>
+
+  <nav class="tour-nav">
+    <button type="button" class="tnav" id="tour-prev" aria-label="Previous">&larr;</button>
+    <span class="tour-dots" id="tour-dots">
+      {% for slide in slides %}
+      <button type="button" class="tdot{{ ' on' if loop.first }}" data-tour-go="{{ loop.index0 }}"
+              aria-label="{{ slide.title }}"></button>
+      {% endfor %}
+    </span>
+    <button type="button" class="tnav" id="tour-next" aria-label="Next">&rarr;</button>
+  </nav>
+</div>
+
+{% endblock %}

@@ -54,7 +54,7 @@
     that has actually been held out of somewhere. The strip under the blocks
     is each film's own first frame, in the same order.</p>
 
-  <div class="filmstrip" style="--films:{{ films | length }}">
+  <div class="filmstrip" style="--films:{{ films | length }}" data-tour="filmstrip">
     {% if solo %}
     <iframe class="fs-panel" src="{{ solo }}60"
             title="Every commercial at its worst severity, live from Grafana"

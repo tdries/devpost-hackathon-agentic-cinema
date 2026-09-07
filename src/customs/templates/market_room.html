@@ -14,7 +14,7 @@
 {% macro window(finding) %}<span class="mono" style="font-size:12px;color:var(--ink-3)">{{ finding.t_start | timecode }} to {{ finding.t_end | timecode }}</span>{% endmacro %}
 
 <section class="hero" style="padding-bottom:30px">
-  <div class="mkt-head">
+  <div class="mkt-head" data-tour="market">
     <span class="mkt-code">{{ market }}</span>
     <span class="mkt-meta">
       <span class="label">Market room</span>
@@ -30,7 +30,7 @@
         {# The decision as a document. Every other output here is a screen;
            a clearance desk files a piece of paper, and a reviewer who was
            not in the room needs every finding with its statute on it. #}
-        <a class="chip" href="/runs/{{ run.id }}/markets/{{ market }}/certificate.pdf"
+        <a class="chip" data-tour="takeaway" href="/runs/{{ run.id }}/markets/{{ market }}/certificate.pdf"
            target="_blank" rel="noreferrer">
           <svg class="ic"><use href="#i-legal"/></svg>certificate (PDF)</a>
         {# For the findings this console should not fix itself: the same
@@ -51,7 +51,7 @@
 
 {% if blocked %}
 <section style="border-top:none;padding-top:0">
-  <div class="guard">
+  <div class="guard" data-tour="guard">
     <h2><svg class="ic"><use href="#i-human"/></svg> Human decision required <span class="chip offence" style="margin-left:6px">guard</span></h2>
     <p class="why">The guard took auto-remediation off the table for {{ blocked | length }} finding{{ '' if blocked | length == 1 else 's' }} in this market. A rule written on a protected basis, or an offence-class rule, is not something this system edits its way around: it names the problem, cites it, and hands it to a person.</p>
     {% for finding in blocked %}
@@ -176,7 +176,7 @@
         </span>
       </td></tr>
       {% for finding in sc.findings %}
-      <tr class="frow{{ ' sparkle' if finding.status == 'remediating' }}">
+      <tr class="frow{{ ' sparkle' if finding.status == 'remediating' }}"{{ ' data-tour=finding' | safe if loop.first }}>
         {# Rule and citation are two columns, not one stacked cell. Stacked,
            the rationale and a statute title shared a 200px column and ran
            twelve lines deep while Class, Severity and Window sat empty

@@ -51,7 +51,7 @@
 </section>
 {% endif %}
 
-<div class="rule-row" style="margin:22px 0 14px">
+<div class="rule-row" style="margin:22px 0 14px" data-tour="archive">
   <span class="label">Campaign history</span>
   <span class="right view-switch" role="group" aria-label="Runs view">
     <button type="button" class="tbtn" data-set-runs="cards">Cards</button>
@@ -67,7 +67,7 @@
   <a class="door starthere" href="/runs/{{ showcase }}">
     <svg class="ic"><use href="#i-cleared"/></svg>
     <span class="door-text">
-      <span class="door-title">Start here</span>
+      <span class="door-title" data-tour="archive-start">Start here</span>
       <span class="door-sub">The run that shows the whole loop: real findings with their statutes,
         a failing span re-rendered by Veo, and a fix the verifier signed off.
         Its cutting room has the before and after.</span>
@@ -76,7 +76,7 @@
   </a>
   {% endif %}
   {% if rows %}
-  <div class="runlist" id="runlist">
+  <div class="runlist" id="runlist" data-tour="archive-list">
     {% include "_runcards.html" %}
   </div>
   {% if more %}

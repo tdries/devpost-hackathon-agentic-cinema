@@ -1338,3 +1338,224 @@
       if (b && b.getAttribute("data-say")) { ask(b.getAttribute("data-say")); }
     });
   })();
+
+/* ==========================================================================
+   THE TOUR
+   Two engines. The deck is a carousel on /tour: arrows, dots, swipe, keys
+   and an autoplay that advances on its own until you touch something. The
+   walk is the same story spotlit on the live console -- it drives the app,
+   navigating from screen to screen, because a spotlight over a real market
+   room IS the market room and a screenshot of one is not.
+   ========================================================================== */
+
+(function () {
+  var deck = document.getElementById("tour");
+  if (!deck) { return; }
+
+  var slides = Array.prototype.slice.call(deck.querySelectorAll(".ts"));
+  var dots = Array.prototype.slice.call(deck.querySelectorAll(".tdot"));
+  var fill = document.getElementById("tr-fill");
+  var counter = document.getElementById("tour-n");
+  var prev = document.getElementById("tour-prev");
+  var next = document.getElementById("tour-next");
+  var autoBtn = document.getElementById("tour-auto");
+  var at = 0;
+  var auto = true;
+  var timer = null;
+  var DWELL = 11000;
+
+  var show = function (n) {
+    at = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function (slide, i) { slide.hidden = i !== at; });
+    dots.forEach(function (dot, i) { dot.classList.toggle("on", i === at); });
+    if (fill) { fill.style.width = ((at + 1) / slides.length * 100) + "%"; }
+    if (counter) { counter.textContent = String(at + 1); }
+    if (prev) { prev.disabled = at === 0; }
+    if (next) { next.disabled = at === slides.length - 1; }
+    /* An autoplaying deck that keeps going after the last slide would
+       loop somebody back to the splash forever. It stops there instead. */
+    if (at === slides.length - 1) { stop(); }
+    var video = slides[at].querySelector("video");
+    if (video && video.paused) { video.play().catch(function () {}); }
+  };
+
+  var tick = function () {
+    if (!auto) { return; }
+    timer = window.setTimeout(function () {
+      if (at < slides.length - 1) { show(at + 1); tick(); }
+    }, DWELL);
+  };
+  var stop = function () {
+    auto = false;
+    if (timer) { window.clearTimeout(timer); timer = null; }
+    if (autoBtn) { autoBtn.setAttribute("aria-pressed", "false"); }
+  };
+
+  if (prev) { prev.addEventListener("click", function () { stop(); show(at - 1); }); }
+  if (next) { next.addEventListener("click", function () { stop(); show(at + 1); }); }
+  dots.forEach(function (dot) {
+    dot.addEventListener("click", function () {
+      stop(); show(parseInt(dot.dataset.tourGo, 10) || 0);
+    });
+  });
+  deck.querySelectorAll("[data-tour-next]").forEach(function (button) {
+    button.addEventListener("click", function () { stop(); show(at + 1); });
+  });
+  if (autoBtn) {
+    autoBtn.addEventListener("click", function () {
+      if (auto) { stop(); return; }
+      auto = true;
+      autoBtn.setAttribute("aria-pressed", "true");
+      tick();
+    });
+  }
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "ArrowRight" || event.key === " ") { stop(); show(at + 1); }
+    if (event.key === "ArrowLeft") { stop(); show(at - 1); }
+    if (event.key === "Escape") { window.location.href = "/runs"; }
+  });
+  /* swipe, because a carousel that cannot be swiped is a slideshow */
+  var x0 = null;
+  deck.addEventListener("touchstart", function (e) { x0 = e.touches[0].clientX; },
+                        { passive: true });
+  deck.addEventListener("touchend", function (e) {
+    if (x0 === null) { return; }
+    var dx = e.changedTouches[0].clientX - x0;
+    if (Math.abs(dx) > 46) { stop(); show(at + (dx < 0 ? 1 : -1)); }
+    x0 = null;
+  }, { passive: true });
+
+  var walkBtn = document.getElementById("tour-walk");
+  if (walkBtn) {
+    walkBtn.addEventListener("click", function () {
+      stop();
+      fetch("/tour/walk.json").then(function (r) { return r.json(); })
+        .then(function (data) {
+          try {
+            window.sessionStorage.setItem("customs-walk",
+                                          JSON.stringify(data.stops));
+          } catch (e) { /* private window: the walk reloads it per page */ }
+          if (data.stops && data.stops.length) {
+            window.location.href = data.stops[0].path + "?walk=0";
+          }
+        });
+    });
+  }
+
+  show(0);
+  tick();
+})();
+
+/* The walk itself, on every page: ?walk=N says which stop we are at. */
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  if (!params.has("walk")) { return; }
+  var index = parseInt(params.get("walk"), 10) || 0;
+
+  var run = function (stops) {
+    if (!stops || !stops.length) { return; }
+    var stop = stops[Math.max(0, Math.min(stops.length - 1, index))];
+    /* `at` may name several hooks, best first: a stop about the guard's
+       refusals wants the guard block, and settles for the market header on
+       a run where the guard never had to refuse anything. */
+    var target = null;
+    stop.at.split("|").some(function (hook) {
+      target = document.querySelector('[data-tour="' + hook + '"]');
+      return !!target;
+    });
+
+    var veil = document.createElement("div");
+    veil.className = "walk-veil";
+    var hole = document.createElement("div");
+    hole.className = "walk-hole";
+    var bubble = document.createElement("div");
+    bubble.className = "walk-bubble";
+    var rail = stops.map(function (_s, i) {
+      return '<i class="' + (i <= index ? "on" : "") + '"></i>';
+    }).join("");
+    bubble.innerHTML =
+      '<span class="wb-step">stop ' + (index + 1) + " of " + stops.length +
+      "</span><h3>" + escapeHtml(stop.title) + "</h3><p>" +
+      escapeHtml(stop.body) + '</p><div class="wb-rail">' + rail + "</div>" +
+      '<div class="wb-foot"></div>';
+    document.body.appendChild(veil);
+    if (target) { document.body.appendChild(hole); }
+    document.body.appendChild(bubble);
+
+    var foot = bubble.querySelector(".wb-foot");
+    var onwards = document.createElement("button");
+    onwards.type = "button";
+    onwards.className = "gobtn";
+    onwards.innerHTML = '<span class="gobtn-ring"></span>' +
+      '<span class="gobtn-face">' +
+      (index + 1 < stops.length ? "Next" : "Finish") + "</span>";
+    onwards.addEventListener("click", function () {
+      if (index + 1 >= stops.length) {
+        window.location.href = "/new?tour=done";
+        return;
+      }
+      var to = stops[index + 1];
+      window.location.href = to.path + "?walk=" + (index + 1);
+    });
+    var out = document.createElement("a");
+    out.className = "tbtn";
+    out.href = window.location.pathname;
+    out.textContent = "leave the tour";
+    foot.appendChild(onwards);
+    foot.appendChild(out);
+
+    var place = function () {
+      var pad = 8;
+      var box = target ? target.getBoundingClientRect() : null;
+      if (box && target) {
+        hole.style.top = (box.top + window.scrollY - pad) + "px";
+        hole.style.left = (box.left + window.scrollX - pad) + "px";
+        hole.style.width = (box.width + pad * 2) + "px";
+        hole.style.height = (box.height + pad * 2) + "px";
+        veil.style.display = "none";        /* the hole's own shadow is the veil */
+      }
+      var b = bubble.getBoundingClientRect();
+      var top, left;
+      if (box) {
+        var below = box.bottom + window.scrollY + 18;
+        var above = box.top + window.scrollY - b.height - 18;
+        top = (box.bottom + b.height + 40 < window.innerHeight + window.scrollY)
+          ? below : Math.max(window.scrollY + 12, above);
+        left = Math.min(
+          Math.max(12, box.left + window.scrollX),
+          window.scrollX + window.innerWidth - b.width - 12);
+      } else {
+        top = window.scrollY + Math.max(24, (window.innerHeight - b.height) / 2);
+        left = window.scrollX + Math.max(12, (window.innerWidth - b.width) / 2);
+      }
+      bubble.style.top = top + "px";
+      bubble.style.left = left + "px";
+    };
+
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      /* after the smooth scroll settles, and again on anything that moves */
+      window.setTimeout(place, 420);
+    }
+    place();
+    window.addEventListener("resize", place);
+    window.addEventListener("scroll", place, { passive: true });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") { window.location.href = window.location.pathname; }
+      if (event.key === "ArrowRight" || event.key === "Enter") { onwards.click(); }
+    });
+  };
+
+  var cached = null;
+  try { cached = window.sessionStorage.getItem("customs-walk"); } catch (e) { cached = null; }
+  if (cached) {
+    try { run(JSON.parse(cached)); return; } catch (e) { /* refetch below */ }
+  }
+  fetch("/tour/walk.json").then(function (r) { return r.json(); })
+    .then(function (data) {
+      try {
+        window.sessionStorage.setItem("customs-walk", JSON.stringify(data.stops));
+      } catch (e) { /* fine */ }
+      run(data.stops);
+    });
+})();

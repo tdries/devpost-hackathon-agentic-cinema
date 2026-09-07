@@ -65,7 +65,7 @@
      label. One strip in ladder order instead, the marks carrying the
      level, and each country's broadcasters folded behind it: BE-VRT,
      BE-VTM, BE-PLAY and BE-RTBF side by side read as four countries. #}
-  <div class="wrap markets-row ladder">
+  <div class="wrap markets-row ladder" data-tour="ladder">
     <span class="lvl-tag label">markets</span>
     {% for tier in market_ladder(run) %}
     {% if not loop.first %}<span class="lvl-sep" aria-hidden="true"></span>{% endif %}
