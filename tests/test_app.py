@@ -3417,6 +3417,78 @@ def test_the_intelligence_board_labels_grafana_with_the_console_s_own_icons(
     assert "customs-insight" in uids
 
 
+def test_the_budget_alert_stops_the_loop_that_spends(console, monkeypatch):
+    """Two of the three alert rules ask Grafana to wake the Remediator. The
+    third asks it to stop: the loop that fixes a finding by generating
+    video is the one that can empty a day's budget while nobody is
+    watching.
+
+    So a firing customs_budget_low holds the automatic path for the rest of
+    the UTC day. Findings still block and alerts still arrive -- they are
+    recorded and refused, in the feed, in words -- and a person at the
+    console can still spend what is left one fix at a time.
+    """
+    from customs import app as app_module
+
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    finding = next(f for f in store.findings(run.id) if f.status == "open")
+    monkeypatch.setattr(app_module, "_REMEDIATION_PAUSED_DAY", "", raising=False)
+
+    def fire(labels):
+        return client.post("/webhook/alert",
+                           json={"alerts": [{"status": "firing", "labels": labels}]})
+
+    real = {"asset": Path(run.asset_path).stem, "market": finding.market,
+            "rule_id": finding.rule_id}
+
+    # before the budget alert, a blocking finding starts work
+    assert fire(real).json()["accepted"] == 1
+
+    # the budget rule carries no asset at all: it is about the card
+    held = fire({"alertname": "customs_budget_low", "action": "pause_remediation",
+                 "team": "customs"})
+    assert held.json() == {"accepted": 0, "ignored": 1}
+    assert app_module.remediation_paused()
+
+    # and now the same alert is recorded and refused rather than acted on
+    assert fire(real).json()["accepted"] == 0
+    feed = " ".join(m for _i, _t, _a, m in store.events_since(run.id, 0))
+    assert "held" in feed and "paused until midnight UTC" in feed
+
+    # tomorrow is a different day, and the pause does not survive it
+    monkeypatch.setattr(app_module, "_REMEDIATION_PAUSED_DAY", "1999-01-01",
+                        raising=False)
+    assert not app_module.remediation_paused()
+    assert fire(real).json()["accepted"] == 1
+
+
+def test_the_days_ledger_is_a_mimir_series_with_a_rule_on_it(monkeypatch):
+    """A budget that only exists as a number on one page of the console is
+    a budget nobody watches. Two series on the real clock, and the third
+    alert rule is the one that reads them.
+    """
+    from customs import telemetry
+    from customs.costs import DAILY_BUDGET_EUR
+    from customs.grafana_ops import ALERT_RULES, BUDGET_ALERT_EUR
+
+    pushed = {}
+    monkeypatch.setattr(telemetry, "_otlp_push", pushed.update)
+    telemetry.push_spend(12.5, DAILY_BUDGET_EUR)
+
+    assert set(pushed) == {"customs_spend_eur_total", "customs_budget_remaining_eur"}
+    assert pushed["customs_spend_eur_total"][0]["asDouble"] == 12.5
+    assert pushed["customs_budget_remaining_eur"][0]["asDouble"] == \
+        DAILY_BUDGET_EUR - 12.5
+
+    rule = next(r for r in ALERT_RULES if r["uid"] == "customs-budget-low")
+    assert f"<= {BUDGET_ALERT_EUR}" in rule["expr"]
+    assert rule["labels"]["action"] == "pause_remediation"
+    # the floor has to leave room for the most expensive single fix
+    from customs.costs import estimate
+    assert BUDGET_ALERT_EUR > estimate("bridge", 8.0)
+
+
 def test_footage_this_instance_may_not_publish_is_not_shown_anywhere(console):
     """Devpost puts the rights to a submission's content on the entrant,
     and this archive grew out of whatever was to hand: a Chanel spot with a

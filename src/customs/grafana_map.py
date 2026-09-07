@@ -173,6 +173,18 @@ SERIES = (
      "sample": "how many times one stage failed on this asset: a tool that "
                "silently skips a shot is worse than one that admits it",
      "read_by": "Overview, and the stage-error alert"},
+    # The only two series here that are not about a commercial.
+    {"name": "customs_spend_eur_total", "clock": "current",
+     "labels": (),
+     "sample": "what today's generative fixes have cost, in euro, written "
+               "after every charge",
+     "read_by": "the budget alert"},
+    {"name": "customs_budget_remaining_eur", "clock": "current",
+     "labels": (),
+     "sample": "what is left of the day's allowance: a staircase down, and "
+               "the series the third alert rule watches so the loop that "
+               "spends can be told to stop",
+     "read_by": "the budget alert, which pauses automatic remediation"},
 )
 
 STREAMS = (

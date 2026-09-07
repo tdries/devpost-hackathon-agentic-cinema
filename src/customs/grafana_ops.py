@@ -178,6 +178,11 @@ MAPPING: dict[str, Transport] = {
 # metric in PromQL, 70 in the Grafana evaluator) would work too but would put
 # the number the spec pins in a place a reader does not look for it.
 
+# What "nearly out" means for the day's generation budget. A fifth of the
+# allowance, which is more than the most expensive single fix (a Veo bridge
+# at 3.68 EUR) so the pause lands with room to finish what is in flight.
+BUDGET_ALERT_EUR = 9.0
+
 ALERT_RULES = [
     {
         "uid": "customs-blocking-finding",
@@ -214,6 +219,35 @@ ALERT_RULES = [
             "description": (
                 "customs_market_status left the cleared band. Open the market "
                 "detail dashboard for this market to see which rule_id did it."
+            ),
+        },
+    },
+    {
+        # The third rule is not about a commercial at all: it is about the
+        # card. Every other alert here asks Grafana to wake the Remediator;
+        # this one asks it to stop, because the loop that fixes a finding
+        # by generating video is the loop that can empty a day's budget
+        # while nobody is watching. The webhook holds automatic remediation
+        # for the rest of the UTC day when it fires; a human at the console
+        # can still spend what is left, deliberately, one fix at a time.
+        "uid": "customs-budget-low",
+        "title": "customs_budget_low",
+        "expr": f"min(customs_budget_remaining_eur) <= {BUDGET_ALERT_EUR}",
+        "for": "0s",
+        "group_by": [],
+        "labels": {"team": "customs", "severity": "warning",
+                   "action": "pause_remediation"},
+        "annotations": {
+            "summary": (
+                "Generation budget down to {{ $value }} EUR: automatic "
+                "remediation paused for the rest of the day"
+            ),
+            "description": (
+                "customs_budget_remaining_eur crossed the floor. Alerts still "
+                "fire and findings still block, but the webhook will not start "
+                "a paid fix on its own until midnight UTC. An operator can "
+                "still remediate by hand, and the picker still prices every "
+                "method against what is actually left."
             ),
         },
     },

@@ -91,7 +91,7 @@ from fastapi.templating import Jinja2Templates
 from customs import (adjudicate, agentmode, analyst, costs, grafana_map, media,
                      narrate, packs, replyfmt, persist, pipeline, remediate,
                      scope as scope_mod, search, spark, state as state_mod,
-                     verify)
+                     telemetry, verify)
 from customs.fetch import FetchError, fetch_youtube
 from customs.config import is_withheld, settings, withheld_matcher
 from customs.media import MediaError, probe_duration
@@ -322,6 +322,14 @@ def _remediate_and_verify(run_id: str, finding_id: str, market: str,
                                  eur if eur is not None
                                  else costs.estimate(_method, _span),
                                  _run, _fid)
+                # The ledger goes to Mimir too, so the day's budget is a
+                # series with an alert rule on it rather than a number on
+                # one page of the console. Never fatal: a fix that worked
+                # is not undone by a telemetry hiccup.
+                try:
+                    telemetry.push_spend(_db.spent_today(), costs.DAILY_BUDGET_EUR)
+                except Exception as exc:  # noqa: BLE001 -- the fix still stands
+                    log.warning("spend telemetry failed: %s", exc)
 
             change = remediate.apply(
                 run, finding, chosen, workdir, db,
@@ -346,6 +354,34 @@ def _remediate_and_verify(run_id: str, finding_id: str, market: str,
 def _label(labels, key: str) -> str:
     value = labels.get(key)
     return value if isinstance(value, str) else ""
+
+
+# Automatic remediation, held for the rest of a UTC day.
+#
+# Two of this system's three alert rules ask Grafana to wake the Remediator.
+# The third asks it to stop: the loop that fixes a finding by generating
+# video is the loop that can spend a day's budget while nobody is watching,
+# so when customs_budget_remaining_eur crosses the floor the webhook stops
+# starting paid work on its own. Findings still block, alerts still fire,
+# and a person at the console can still spend what is left one fix at a
+# time -- the pause is on the automatic path only, which is the one nobody
+# is watching.
+# ponytail: a module-level date, not a table. One instance is the deployment.
+_REMEDIATION_PAUSED_DAY = ""
+
+
+def _pause_remediation(reason: str) -> str:
+    """Hold the automatic path for the rest of the UTC day."""
+    global _REMEDIATION_PAUSED_DAY
+    _REMEDIATION_PAUSED_DAY = time.strftime("%Y-%m-%d", time.gmtime())
+    log.warning("automatic remediation paused for %s: %s",
+                _REMEDIATION_PAUSED_DAY, reason)
+    return _REMEDIATION_PAUSED_DAY
+
+
+def remediation_paused() -> bool:
+    """Is the automatic path held today?"""
+    return _REMEDIATION_PAUSED_DAY == time.strftime("%Y-%m-%d", time.gmtime())
 
 @app.post("/webhook/alert")
 async def alert_webhook(request: Request, background: BackgroundTasks) -> dict:
@@ -394,6 +430,12 @@ async def alert_webhook(request: Request, background: BackgroundTasks) -> dict:
             continue
         labels = alert.get("labels")
         labels = labels if isinstance(labels, dict) else {}
+        # The budget rule carries no asset: it is about the card, not a
+        # commercial, and what it asks for is a stop rather than a fix.
+        if _label(labels, "action") == "pause_remediation":
+            _pause_remediation(_label(labels, "alertname") or "customs_budget_low")
+            ignored += 1
+            continue
         asset = _label(labels, "asset")
         market = _label(labels, "market")
         rule_id = _label(labels, "rule_id")
@@ -410,6 +452,14 @@ async def alert_webhook(request: Request, background: BackgroundTasks) -> dict:
             continue
 
         run, finding = match
+        if remediation_paused():
+            store().emit(run.id, "remediator",
+                         f"alert received: {rule_id} {market} on {asset}, and "
+                         f"held: the day's generation budget is nearly out, so "
+                         f"automatic fixes are paused until midnight UTC. "
+                         f"Remediate by hand if this one is worth it.")
+            ignored += 1
+            continue
         store().emit(run.id, "remediator",
                      f"alert received: {rule_id} {market} on {asset} -> {finding.id}")
         background.add_task(remediate_and_verify, run.id, finding.id, market)

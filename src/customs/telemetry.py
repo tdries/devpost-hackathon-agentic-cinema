@@ -529,6 +529,29 @@ def push_status(
         metrics["customs_blocking"] = blocking_points
     _otlp_push(metrics)
 
+def push_spend(spent_today: float, budget_total: float) -> None:
+    """The day's generation ledger, as two series on the real clock.
+
+    Everything else this system charts is about a commercial. This is about
+    the card: `customs_spend_eur_total` is what today's fixes have cost and
+    `customs_budget_remaining_eur` is what is left of the day's allowance,
+    both stamped at time.time() because a budget is a fact about now and
+    not about video second n.
+
+    Written after every charge, so the remaining series is a staircase down
+    and the alert rule on it (customs_budget_low) fires while there is
+    still enough left to finish what is running. A gauge, not a counter, in
+    both directions: the day rolls over at midnight UTC and the next
+    sample is simply the new day's total.
+    """
+    now = time.time()
+    _otlp_push({
+        "customs_spend_eur_total": [_data_point(float(spent_today), now, {})],
+        "customs_budget_remaining_eur": [
+            _data_point(max(0.0, float(budget_total) - float(spent_today)), now, {})],
+    })
+
+
 def push_log(run: RunRecord, finding: Finding) -> None:
     """Write one Loki line for `finding`. Labels {app="customs", asset,
     market, klass, rule_id, dimension}; body is the finding's own to_json(), so every

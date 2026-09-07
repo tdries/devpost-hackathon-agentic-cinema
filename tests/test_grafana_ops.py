@@ -353,9 +353,10 @@ def test_ensure_dashboards_creates_the_folder_first(tmp_path, http):
 
 # --- ensure_alert_rules ---
 
-def test_ensure_alert_rules_pins_the_two_rules_and_their_expressions():
+def test_ensure_alert_rules_pins_the_three_rules_and_their_expressions():
     titles = [r["title"] for r in grafana_ops.ALERT_RULES]
-    assert titles == ["customs_blocking_finding", "customs_market_at_risk"]
+    assert titles == ["customs_blocking_finding", "customs_market_at_risk",
+                      "customs_budget_low"]
     by_title = {r["title"]: r for r in grafana_ops.ALERT_RULES}
     blocking = by_title["customs_blocking_finding"]
     assert blocking["expr"] == "max by (asset, market, rule_id) (customs_blocking) >= 70"
@@ -365,6 +366,13 @@ def test_ensure_alert_rules_pins_the_two_rules_and_their_expressions():
     assert at_risk["expr"] == "max by (asset, market) (customs_market_status) >= 1"
     assert at_risk["for"] == "0s"
     assert at_risk["labels"]["team"] == "customs"
+    # The third rule is the one that asks for a stop rather than a fix, and
+    # it is about the card: no asset label, and an action the webhook reads.
+    budget = by_title["customs_budget_low"]
+    assert budget["expr"] == (
+        f"min(customs_budget_remaining_eur) <= {grafana_ops.BUDGET_ALERT_EUR}")
+    assert budget["group_by"] == []
+    assert budget["labels"]["action"] == "pause_remediation"
     for rule in grafana_ops.ALERT_RULES:
         summary = rule["annotations"]["summary"]
         for label in ("asset", "market", "rule_id"):
@@ -379,6 +387,8 @@ def test_ensure_alert_rules_via_http_creates_then_sets_the_group_interval(http):
         _FakeResp(202, {"uid": "customs-blocking-finding"}),  # POST rule 1
         _FakeResp(404, {"message": "not found"}),          # GET rule 2
         _FakeResp(202, {"uid": "customs-market-at-risk"}),   # POST rule 2
+        _FakeResp(404, {"message": "not found"}),          # GET rule 3
+        _FakeResp(202, {"uid": "customs-budget-low"}),       # POST rule 3
         _FakeResp(200, {"title": "customs", "folderUid": "customs",
                         "interval": 60, "rules": [{"a": 1}]}),  # GET group
         _FakeResp(200, {}),                                 # PUT group
@@ -387,7 +397,7 @@ def test_ensure_alert_rules_via_http_creates_then_sets_the_group_interval(http):
     ops.ensure_alert_rules()
 
     posts = [c for c in http if c["method"] == "POST" and c["url"].endswith("/alert-rules")]
-    assert len(posts) == 2
+    assert len(posts) == 3
     assert posts[0]["json"]["title"] == "customs_blocking_finding"
     assert posts[0]["json"]["labels"]["team"] == "customs"
     assert posts[0]["json"]["for"] == "0s"
@@ -409,6 +419,8 @@ def test_ensure_alert_rules_updates_in_place_when_the_rule_already_exists(http):
         _FakeResp(200, {}),                                # PUT rule 1
         _FakeResp(200, {"uid": "customs-market-at-risk"}),
         _FakeResp(200, {}),                                # PUT rule 2
+        _FakeResp(200, {"uid": "customs-budget-low"}),
+        _FakeResp(200, {}),                                # PUT rule 3
         _FakeResp(200, {"title": "customs", "interval": 30, "rules": []}),
         _FakeResp(200, {}),
     ])
@@ -416,7 +428,7 @@ def test_ensure_alert_rules_updates_in_place_when_the_rule_already_exists(http):
     ops.ensure_alert_rules()
     assert not [c for c in http if c["method"] == "POST" and c["url"].endswith("/alert-rules")]
     puts = [c for c in http if c["method"] == "PUT" and "/alert-rules/" in c["url"]]
-    assert len(puts) == 2
+    assert len(puts) == 3
 
 
 def test_ensure_alert_rules_via_mcp_calls_the_alerting_tool(http):
@@ -436,7 +448,7 @@ def test_ensure_alert_rules_via_mcp_calls_the_alerting_tool(http):
     ops.ensure_alert_rules()
 
     creates = [a for name, a in mcp.calls if a.get("operation") == "create"]
-    assert len(creates) == 2
+    assert len(creates) == 3
     assert creates[0]["title"] == "customs_blocking_finding"
     assert creates[0]["rule_group"] == "customs"
     assert creates[0]["for"] == "0s"
