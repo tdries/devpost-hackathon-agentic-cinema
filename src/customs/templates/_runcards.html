@@ -109,20 +109,6 @@
         {% endfor %}
       </span>
     </a>
-    {# The way in. The card is a link end to end and always has been, and
-       nothing on it said so: no verb, no arrow, nothing that reads as
-       "this is the button". Same rotating four colours the console uses
-       for work in progress, on the one control that starts the reading.
-       Outside the anchor, because a link inside a link is not a thing. #}
-    <a class="cardgo" href="/runs/{{ item.run.id }}"
-       aria-label="Open {{ item.run.asset_path.split('/')[-1] }}">
-      <span class="cardgo-ring" aria-hidden="true"></span>
-      <span class="cardgo-face">
-        <span class="cardgo-word">OPEN</span>
-        <svg class="ic" aria-hidden="true"><use href="#n-board"/></svg>
-      </span>
-    </a>
-
     {# Earlier clearances of the same film. Outside the anchor, because a
        link inside a link is not a thing, and as chips rather than a
        disclosure so the dates are readable without opening anything. #}
@@ -139,5 +125,19 @@
       {% endif %}
     </span>
     {% endif %}
+    {# The way in, and the last thing in the card so it cannot sit on top
+       of anything. It was a floating button bottom right for one deploy
+       and it covered the channel pills on one card and the "also cleared"
+       dates on another -- the same overlap the status column had, from the
+       same cause: a control taken out of the flow still needs the room it
+       occupies. #}
+    <a class="cardgo" href="/runs/{{ item.run.id }}"
+       aria-label="Open {{ item.run.asset_path.split('/')[-1] }}">
+      <span class="cardgo-ring" aria-hidden="true"></span>
+      <span class="cardgo-face">
+        <span class="cardgo-word">OPEN</span>
+        <svg class="ic" aria-hidden="true"><use href="#n-board"/></svg>
+      </span>
+    </a>
     </span>
 {% endfor %}
