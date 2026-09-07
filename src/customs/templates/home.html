@@ -110,8 +110,19 @@
             <span class="lv-count mono">{{ group.count }}</span>
           </summary>
           {% for family in group.families %}
-          {% if family.parent and group.level == 'channel' %}
-          <div class="fam label">{{ family.parent_name or family.parent }}</div>
+          {# Eighty broadcasters, folded under the sixteen countries they
+             hang off. Opening "channel" used to deal all eighty onto the
+             page at once, in a list where five rows in a row read "12
+             rules" -- which looks like a bug and is the ladder working:
+             a channel with no pack file of its own IS its country's law,
+             and the three that have one add a handful to it. #}
+          {% if group.level == 'channel' and family.parent %}
+          <details class="famfold">
+            <summary>
+              <svg class="ic lvl country"><use href="#c-{{ family.parent }}"/></svg>
+              <span class="fam-name">{{ family.parent_name or family.parent }}</span>
+              <span class="fam-count mono">{{ family.packs | length }}</span>
+            </summary>
           {% endif %}
           <div class="markets">
             {% for pack in family.packs %}
@@ -132,6 +143,7 @@
             </label>
             {% endfor %}
           </div>
+          {% if group.level == 'channel' and family.parent %}</details>{% endif %}
           {% endfor %}
         </details>
         {% else %}

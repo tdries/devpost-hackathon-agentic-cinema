@@ -89,14 +89,23 @@ def main() -> int:
         "archive": ("/runs", OUT / "02-archive.png", (SHOT_W, 900), 1500,
                     120000, {"live": True, "crop_to": 560}),
         "grid": (f"/runs/{run}/timeline", OUT / "04-timeline-grid.png",
-                 (SHOT_W, 900), 950, 120000, {"live": True}),
+                 (SHOT_W, 900), 1500, 150000, {"live": True, "crop_to": 520}),
+        # The board's Grafana half: the lanes panel, live, below the fold.
+        "board_grafana": (f"/runs/{run}", OUT / "03b-board-grafana.png",
+                          (SHOT_W, 760), 2100, 150000,
+                          {"live": True, "crop_to": 1180}),
         "frames": (f"/runs/{run}/frames", OUT / "06-frame-board.png",
                    (SHOT_W, 950), 1000, 6000, {}),
         "market": (f"/runs/{run}/markets/{market}", OUT / "07-market-room.png",
                    (SHOT_W, 900), 950, 6000, {}),
+        # The same room with the fix picker open, which is the point of the
+        # second shot and sits below the fold: five methods, priced in euro,
+        # before anything is spent. Shot tall and cropped to it, because a
+        # short shot of an opened picker is a shot of the header above it.
         "market_open": (f"/runs/{run}/markets/{market}",
-                        OUT / "07b-market-open.png", (SHOT_W, 900), 950, 6000,
-                        {"open_details": True, "open_scenes": True}),
+                        OUT / "07b-market-open.png", (SHOT_W, 900), 1900, 8000,
+                        {"open_details": True, "open_scenes": True,
+                         "crop_to": 820}),
         "cutting": (f"/runs/{run}/cutting", OUT / "08-cutting-room.png",
                     (SHOT_W, 900), 950, 6000, {}),
         "agent": ("/agent", OUT / "09-agent-mode.png", (SHOT_W, 900), 950,
@@ -110,7 +119,7 @@ def main() -> int:
         # page which only has to lay itself out. Both defaults gave an
         # empty hero, which is the panel the README points at.
         "insight": ("/insight", OUT / "09-intelligence.png", (SHOT_W, 900),
-                    950, 120000, {"live": True}),
+                    950, 200000, {"live": True}),
     }
 
     for name, (path, dest, size, height, budget, kw) in jobs.items():

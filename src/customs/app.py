@@ -549,7 +549,11 @@ _LEVEL_BLURB = {
     "continental": "what a continent adds on top",
     "national": "one country's law and self-regulation",
     "subnational": "a region with its own regime",
-    "channel": "a broadcaster's own acceptance rules, on top of its country's",
+    # Says out loud why five channels of one country read the same count:
+    # a channel node IS its country's law until somebody writes its pack.
+    "channel": ("a broadcaster's own acceptance rules on top of its "
+                "country's, so a channel with no pack of its own carries "
+                "exactly its country's count"),
 }
 
 
@@ -803,7 +807,14 @@ def _kinds_found(findings) -> list[str]:
 # because the iframe is cross-origin. Two still shows a visitor that these
 # are live panels rather than pictures; the rest keep the SVG, which the
 # archive route's own note says is indistinguishable at card size.
-LIVE_LANE_CARDS = 2
+#
+# One, not two. A card's panel is windowed to its run's mapped clock, and
+# the second card is by definition an older run -- old enough, on this
+# instance, that its telemetry was re-pushed out of band and its stored t0
+# no longer points at where its samples are, so the panel answered "No
+# data" on the page most people open first. The newest run is the one whose
+# clock is certainly right.
+LIVE_LANE_CARDS = 1
 
 # The one run a stranger should see first, and it has to carry the whole
 # argument: 77 findings across seven dimensions and eight jurisdictions at

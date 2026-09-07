@@ -2608,6 +2608,20 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
 .mg-working { background: rgba(66, 133, 244, 0.16); border-color: var(--g-blue); }
 /* "nothing observed" has no fill by design, so its legend swatch needs an
    outline to exist at all */
+/* one country's broadcasters, folded */
+.famfold { border-top: 1px solid var(--line); }
+.famfold > summary {
+  display: flex; align-items: center; gap: 9px; cursor: pointer;
+  padding: 7px 4px; font-family: var(--mono); font-size: 12px;
+  letter-spacing: .04em; color: var(--ink-2); list-style: none;
+}
+.famfold > summary::-webkit-details-marker { display: none; }
+.famfold > summary:hover { color: var(--ink); }
+.famfold > summary .ic { width: 18px; height: 18px; }
+.famfold .fam-name { flex: 1 1 auto; }
+.famfold .fam-count { color: var(--ink-3); }
+.famfold[open] > summary { color: var(--ink); }
+
 /* the info toggle that folds a screen's own explanation away */
 .explain-btn {
   appearance: none; border: 1px solid var(--line); background: var(--well);
