@@ -88,7 +88,8 @@ from fastapi.responses import (FileResponse, HTMLResponse, JSONResponse,
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from customs import (adjudicate, agentmode, analyst, costs, grafana_map, media,
+from customs import (adjudicate, agentmode, analyst, certificate, costs,
+                     grafana_map, media,
                      narrate, packs, replyfmt, persist, pipeline, remediate,
                      scope as scope_mod, search, spark, state as state_mod,
                      telemetry, verify)
@@ -3119,6 +3120,51 @@ async def mission_stream(request: Request, run_id: str):
     })
 
 # -- one market --
+
+@app.get("/runs/{run_id}/markets/{market}/certificate.pdf")
+def market_certificate(run_id: str, market: str):
+    """This market's decision as a document, with every finding in it.
+
+    Every other output of this system is a screen. A clearance desk's
+    output is a piece of paper: what was cleared, for where, on what date,
+    against which statutes, and what was changed to get there. The
+    verifier's own sentences are lifted out of the run's event log rather
+    than paraphrased, so the certificate quotes the system.
+
+    Open, like every other read here. It names a market this run actually
+    covers or it 404s, which is what keeps the path safe.
+    """
+    run = _run_or_404(run_id)
+    if market not in run.markets:
+        raise HTTPException(status_code=404,
+                            detail=f"run {run_id} does not cover {market}")
+    pack = market_packs().get(market)
+    if pack is None:
+        raise HTTPException(status_code=404,
+                            detail=f"no market pack for {market}")
+    db = store()
+    findings = db.findings(run.id, market)
+    changes = [c for c in db.changes(run.id)
+               if c.finding_id in {f.id for f in findings}]
+    # The verifier writes one sentence per finding it ruled on ("fixed:
+    # FR-ALC-01 no longer fires at ...; fnd_x resolved"). Last word wins:
+    # a finding can be ruled on more than once across passes.
+    lines: dict[str, str] = {}
+    for _id, _ts, agent, message in db.events_since(run.id, 0):
+        if agent != "verifier":
+            continue
+        for finding in findings:
+            if finding.id in message:
+                lines[finding.id] = message
+    pdf = certificate.render(
+        run, pack, adjudicate.clearance(findings), findings, changes, lines,
+        asset_name=Path(run.asset_path).name,
+        instance="The Media Customs")
+    stamp = time.strftime("%Y%m%d", time.gmtime())
+    name = f"clearance-{market}-{Path(run.asset_path).stem}-{stamp}.pdf"
+    return Response(pdf, media_type="application/pdf", headers={
+        "Content-Disposition": f'inline; filename="{name}"'})
+
 
 @app.get("/runs/{run_id}/markets/{market}", response_class=HTMLResponse)
 def market_room(request: Request, run_id: str, market: str):

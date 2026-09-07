@@ -268,6 +268,7 @@ import json
 import os
 import re
 import threading
+import io
 import time
 from pathlib import Path
 
@@ -3415,6 +3416,49 @@ def test_the_intelligence_board_labels_grafana_with_the_console_s_own_icons(
     from customs import grafana_map
     uids = {d.uid for d in grafana_map.dashboards()}
     assert "customs-insight" in uids
+
+
+def test_a_market_room_hands_over_a_certificate_with_every_finding_on_it(console):
+    """Every other output of this system is a screen. A clearance desk's
+    output is a document: what was cleared, for where, on what date, on
+    which statutes, and what was changed to get there.
+
+    So the PDF is not a summary. Each finding carries its rule id, its
+    class, its severity, its seconds, the statute, the citation the
+    adjudicator retrieved, and -- where there is one -- the verifier's own
+    sentence about the fix. A finding the Guard refused says so in those
+    words, because that refusal is the product working.
+    """
+    from pypdf import PdfReader  # noqa: PLC0415 -- test-only reader
+
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    finding = next(f for f in store.findings(run.id, "FR"))
+    store.emit(run.id, "verifier",
+               f"fixed: {finding.rule_id} no longer fires at 1.00-2.00s "
+               f"after prop_swap; {finding.id} resolved")
+
+    answer = client.get(f"/runs/{run.id}/markets/FR/certificate.pdf")
+    assert answer.status_code == 200
+    assert answer.headers["content-type"] == "application/pdf"
+    assert ".pdf" in answer.headers["content-disposition"]
+    assert answer.content[:4] == b"%PDF"
+
+    text = " ".join(page.extract_text() for page in
+                    PdfReader(io.BytesIO(answer.content)).pages)
+    assert "CLEARANCE CERTIFICATE" in text
+    assert run.id in text and "France" in text
+    assert finding.rule_id in text
+    assert "not legal advice" in text
+    # the verifier is quoted, not paraphrased
+    assert "no longer fires" in text
+
+    # a market this run never covered is a 404, like any other unknown path
+    assert client.get(f"/runs/{run.id}/markets/JP/certificate.pdf").status_code == 404
+
+    # and the room offers it
+    assert f"/runs/{run.id}/markets/FR/certificate.pdf" in \
+        client.get(f"/runs/{run.id}/markets/FR").text
 
 
 def test_the_budget_alert_stops_the_loop_that_spends(console, monkeypatch):

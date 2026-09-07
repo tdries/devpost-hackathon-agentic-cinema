@@ -27,6 +27,12 @@
         {% if pack %}<span class="chip {{ 'on' if pack.pre_clearance == 'mandatory' else '' }}">pre-clearance: {{ pack.pre_clearance }}</span>{% endif %}
         {% if pack and pack.regulators %}<span class="chip">{{ pack.regulators | join(' / ') }}</span>{% endif %}
         {% if localized %}<a class="chip on" href="/runs/{{ run.id }}/cutting">localized master ready</a>{% endif %}
+        {# The decision as a document. Every other output here is a screen;
+           a clearance desk files a piece of paper, and a reviewer who was
+           not in the room needs every finding with its statute on it. #}
+        <a class="chip" href="/runs/{{ run.id }}/markets/{{ market }}/certificate.pdf"
+           target="_blank" rel="noreferrer">
+          <svg class="ic"><use href="#i-legal"/></svg>certificate (PDF)</a>
       </span>
     </span>
   </div>
