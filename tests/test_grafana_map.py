@@ -23,7 +23,10 @@ def test_every_series_telemetry_pushes_is_in_the_inventory():
     reads them straight out of the module. Backticked mentions in the
     docstring are not matched: only a quoted name is a name that gets
     pushed."""
-    pushed = set(re.findall(r'"(customs_[a-z_]+)"', TELEMETRY))
+    # Two prefixes now: this project's own series, and the GenAI ones whose
+    # names are OpenTelemetry's rather than ours. A dotted attribute key
+    # ("gen_ai.system") is not a metric name and does not match.
+    pushed = set(re.findall(r'"((?:customs|gen_ai)_[a-z_]+)"', TELEMETRY))
     named = {series["name"] for series in grafana_map.SERIES}
 
     assert pushed == named, (

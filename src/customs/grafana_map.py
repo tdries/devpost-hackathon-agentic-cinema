@@ -174,6 +174,22 @@ SERIES = (
                "silently skips a shot is worse than one that admits it",
      "read_by": "Overview, and the stage-error alert"},
     # The only two series here that are not about a commercial.
+    # What the models cost in tokens, which is the other half of the bill.
+    {"name": "gen_ai_client_token_usage", "clock": "current",
+     "labels": ("gen_ai.system", "gen_ai.request.model",
+                "gen_ai.operation.name", "gen_ai.token.type"),
+     "sample": "tokens in and out of one Gemini call, labelled by the job "
+               "it was doing: analyst, adjudicator, citation. OpenTelemetry's "
+               "GenAI conventions, written through the same OTLP path as "
+               "everything else here",
+     "read_by": "nothing in these dashboards yet: it is there for Grafana "
+                "Cloud's AI Observability, and for the question 'what did "
+                "this run cost in tokens'"},
+    {"name": "gen_ai_client_operation_duration_seconds", "clock": "current",
+     "labels": ("gen_ai.system", "gen_ai.request.model",
+                "gen_ai.operation.name"),
+     "sample": "how long one model call took, by job",
+     "read_by": "the same"},
     {"name": "customs_spend_eur_total", "clock": "current",
      "labels": (),
      "sample": "what today's generative fixes have cost, in euro, written "

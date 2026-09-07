@@ -529,6 +529,41 @@ def push_status(
         metrics["customs_blocking"] = blocking_points
     _otlp_push(metrics)
 
+# What a model call cost, in tokens and seconds.
+#
+# Names and attribute keys follow OpenTelemetry's GenAI semantic
+# conventions, spelled with underscores because that is what Prometheus
+# does to a dot on the way in: gen_ai_client_token_usage becomes the series
+# and gen_ai.request.model the label. Written as gauges through the same
+# OTLP pusher as everything else rather than through the OTel SDK, which
+# would be three more dependencies to emit numbers this system already has
+# in its hand -- every Gemini response carries usage_metadata.
+#
+# ponytail: gauges, not histograms. Grafana Cloud's AI Observability
+# dashboards want the SDK's histograms; these answer "what did this run
+# cost in tokens, by operation and model" without them, which is the
+# question anybody actually asks first.
+def push_model_usage(model: str, operation: str, *, input_tokens: int,
+                     output_tokens: int, seconds: float,
+                     run_id: str = "") -> None:
+    """One Gemini call's tokens and latency, labelled by what it was for."""
+    now = time.time()
+    labels = {"gen_ai.system": "vertex_ai", "gen_ai.request.model": model,
+              "gen_ai.operation.name": operation}
+    if run_id:
+        labels["run_id"] = run_id
+    points = []
+    for kind, count in (("input", input_tokens), ("output", output_tokens)):
+        if count:
+            points.append(_data_point(float(count), now,
+                                      dict(labels, **{"gen_ai.token.type": kind})))
+    metrics = {"gen_ai_client_operation_duration_seconds":
+               [_data_point(float(seconds), now, labels)]}
+    if points:
+        metrics["gen_ai_client_token_usage"] = points
+    _otlp_push(metrics)
+
+
 def push_spend(spent_today: float, budget_total: float) -> None:
     """The day's generation ledger, as two series on the real clock.
 

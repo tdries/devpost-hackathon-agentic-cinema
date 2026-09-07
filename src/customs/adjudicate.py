@@ -1,6 +1,7 @@
 import json
 
 from customs.config import settings
+from customs import genai_client
 from customs.genai_client import generate_grounded, generate_json
 from customs.packs import MarketPack, MarketRule
 from customs.schema import Finding, Observation, Verdict
@@ -197,6 +198,7 @@ def judge(run_id: str, observations: list[Observation], pack: MarketPack,
         f"Candidates (JSON array, each item one observation-rule pairing to judge):\n{json.dumps(payload)}",
     ]
 
+    genai_client.operation("adjudicator")
     raw = generate_json(settings.model_text, parts, _JUDGE_RESPONSE_SCHEMA)
 
     if not isinstance(raw, list):
@@ -320,6 +322,7 @@ def judge(run_id: str, observations: list[Observation], pack: MarketPack,
             continue
 
         _emit(on_event, f"citation check -> {pack.market} {rule.id} for {obs.id}")
+        genai_client.operation("citation")
         _, chunks = generate_grounded(
             settings.model_text,
             CITATION_PROMPT.format(basis=rule.basis, trigger=rule.trigger, market_name=pack.name),

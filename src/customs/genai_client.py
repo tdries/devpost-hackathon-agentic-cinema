@@ -1,4 +1,5 @@
 import json, os, re
+import time as _time_mod
 from google import genai
 from google.genai import types
 from customs.config import settings
@@ -13,8 +14,49 @@ def client() -> genai.Client:
                                location="global")
     return _client
 
+# What this call was for, so the token series can be grouped by the job
+# rather than by the model. Set around a call by the module that makes it;
+# a plain module-level string because one instance runs one stage at a time
+# and threading a parameter through eight call sites to label a metric is
+# the tail wagging the dog.
+# ponytail: a module global, not a context var. Per-call labelling is the
+# upgrade if two stages ever run Gemini concurrently in one process.
+_operation = "generate"
+
+
+def operation(name: str) -> None:
+    """Label the model calls that follow (analyst, judge, citation, ...)."""
+    global _operation
+    _operation = name or "generate"
+
+
+def _report_usage(model: str, response, seconds: float) -> None:
+    """Tokens and latency for one call, onto the same OTLP path as the rest.
+
+    Every Gemini response carries usage_metadata, so the numbers are
+    already in hand: reporting them costs one push and no SDK. Never
+    fatal, and never noisy -- a metrics endpoint that is down must not
+    fail a clearance that worked.
+    """
+    try:
+        from customs import telemetry
+
+        usage = getattr(response, "usage_metadata", None)
+        telemetry.push_model_usage(
+            model, _operation,
+            input_tokens=int(getattr(usage, "prompt_token_count", 0) or 0),
+            output_tokens=int(getattr(usage, "candidates_token_count", 0) or 0),
+            seconds=seconds)
+    except Exception:  # noqa: BLE001 -- telemetry never breaks the work
+        pass
+
+
 def _generate(model, contents, config):
-    return client().models.generate_content(model=model, contents=contents, config=config)
+    started = _time_mod.monotonic()
+    response = client().models.generate_content(
+        model=model, contents=contents, config=config)
+    _report_usage(model, response, _time_mod.monotonic() - started)
+    return response
 
 def generate_json(model: str, parts: list, schema: dict,
                   thinking_budget: int | None = None) -> dict:

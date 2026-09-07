@@ -341,7 +341,7 @@ Not a claim, four renders. Every panel below is windowed to the run's own mapped
 | <img src="docs/media/store-loki-by-dimension.png" alt="Observation lines per dimension" width="100%"> | <img src="docs/media/store-mimir-risk.png" alt="customs_risk per market across the timecode" width="100%"> |
 | Counted from the stream labels alone, no body parsing. | `customs_risk`, one sample per video second, which is what makes the timecode an x axis. |
 
-The full inventory of what this system keeps in Grafana (9 dashboards, 40 panels, 6 metric series, 3 log streams, 3 alert rules, and which of the 8 write operations goes over MCP versus the provisioning API) is a screen in the console itself: **[/grafana](https://customs-app-akap4ao72a-ew.a.run.app/grafana)**.
+The full inventory of what this system keeps in Grafana (9 dashboards, 40 panels, 8 metric series, 3 log streams, 3 alert rules, and which of the 8 write operations goes over MCP versus the provisioning API) is a screen in the console itself: **[/grafana](https://customs-app-akap4ao72a-ew.a.run.app/grafana)**.
 
 ## The console
 
@@ -431,7 +431,7 @@ Two of the three alert rules ask Grafana to wake the Remediator. The third asks 
 
 ### <img src="docs/media/icons/i-publisher.svg" width="22"> Grafana resources
 
-The whole Grafana surface on one page: 9 dashboards and every panel on them, the 6 metric series and 3 log streams the crew writes and which clock each sits on, the annotations, all three alert rules with the expression that fires them, and every write operation with the MCP tool it uses or the REST call it falls back to when `mcp-grafana` 1.1.0 has no tool for it. Read from the definitions the Publisher provisions from, so it cannot drift into describing a stack nobody has.
+The whole Grafana surface on one page: 9 dashboards and every panel on them, the 8 metric series and 3 log streams the crew writes and which clock each sits on, the annotations, all three alert rules with the expression that fires them, and every write operation with the MCP tool it uses or the REST call it falls back to when `mcp-grafana` 1.1.0 has no tool for it. Read from the definitions the Publisher provisions from, so it cannot drift into describing a stack nobody has.
 
 Everything that is *working* wears one mark: a rotating ring of the four brand colours. An uploading master, a run mid-analysis, a market tile whose fix is landing, the exact frame being repaired, the stage narrating it, and a beacon in the topbar that says what is running wherever you are.
 

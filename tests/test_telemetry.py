@@ -660,3 +660,59 @@ def test_a_throttled_write_is_sent_again(monkeypatch):
     assert resp.status_code == 429
     with pytest.raises(RuntimeError, match="429"):
         telemetry._check(resp)
+
+
+def test_a_model_call_reports_its_tokens_and_latency(monkeypatch):
+    """The euro ledger says what generation cost. This says what thinking
+    cost, which is the other half of the bill and the half nobody sees:
+    every Gemini response carries usage_metadata, so the numbers are
+    already in hand and reporting them costs one push and no SDK.
+
+    Names and attribute keys are OpenTelemetry's GenAI conventions, because
+    the point of using them is that something else already knows how to
+    read them.
+    """
+    from customs import telemetry
+
+    pushed = {}
+    monkeypatch.setattr(telemetry, "_otlp_push", pushed.update)
+    telemetry.push_model_usage("gemini-3-flash", "adjudicator",
+                               input_tokens=1200, output_tokens=340,
+                               seconds=2.5, run_id="run_x")
+
+    tokens = pushed["gen_ai_client_token_usage"]
+    assert [p["asDouble"] for p in tokens] == [1200.0, 340.0]
+    kinds = [a["value"]["stringValue"] for p in tokens for a in p["attributes"]
+             if a["key"] == "gen_ai.token.type"]
+    assert kinds == ["input", "output"]
+    labels = {a["key"]: a["value"]["stringValue"] for a in tokens[0]["attributes"]}
+    assert labels["gen_ai.request.model"] == "gemini-3-flash"
+    assert labels["gen_ai.operation.name"] == "adjudicator"
+    assert labels["gen_ai.system"] == "vertex_ai"
+    assert labels["run_id"] == "run_x"
+
+    duration = pushed["gen_ai_client_operation_duration_seconds"]
+    assert duration[0]["asDouble"] == 2.5
+
+    # a call that reports no tokens still reports its latency, because a
+    # slow call with no usage_metadata is exactly what you want to see
+    pushed.clear()
+    telemetry.push_model_usage("m", "analyst", input_tokens=0,
+                               output_tokens=0, seconds=9.0)
+    assert set(pushed) == {"gen_ai_client_operation_duration_seconds"}
+
+
+def test_the_usage_report_never_breaks_the_call_it_measures(monkeypatch):
+    """A metrics endpoint that is down must not fail a clearance that
+    worked. The whole reporting path is best-effort by construction."""
+    from customs import genai_client
+
+    def explode(*a, **k):
+        raise RuntimeError("otlp is down")
+
+    monkeypatch.setattr("customs.telemetry.push_model_usage", explode)
+
+    class Response:
+        usage_metadata = None
+
+    genai_client._report_usage("m", Response(), 1.0)  # must not raise

@@ -3,6 +3,7 @@ from pathlib import Path
 from google.genai import types
 
 from customs.config import settings
+from customs import genai_client
 from customs.genai_client import generate_json
 from customs.media import Shot, detect_shots, extract_keyframes
 from customs.packs import taxonomy
@@ -197,6 +198,8 @@ def observe_shot(video_path, shot: Shot, workdir, on_event=None, transcripts=Non
     parts.append(f"Transcript span: {transcript_text}")
     parts.append(f"Shot timecodes: t_start={shot.t_start:.3f}s, t_end={shot.t_end:.3f}s")
 
+    # Label the token series with the job, not just the model.
+    genai_client.operation("analyst")
     raw = generate_json(settings.model_vision, parts, _RESPONSE_SCHEMA)
 
     if not isinstance(raw, list):
