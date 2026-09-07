@@ -1,0 +1,1803 @@
+<!doctype html>
+<html lang="en">
+<head><base href="https://customs-app-akap4ao72a-ew.a.run.app/">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Launch board run_959b162a0f25</title>
+
+<meta property="og:title" content="The Media Customs">
+<meta property="og:description" content="Agentic ad clearance: an AI crew watches your commercial once, judges it against every market you ship to, in parallel, builds its own Grafana instrument panel, and re-renders the shots that fail.">
+<meta property="og:type" content="website">
+
+<meta property="og:image" content="https://customs-app-akap4ao72a-ew.a.run.app/static/og.png?v=1788785885">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The Media Customs launch board: cleared for launch in 2 of 6 markets">
+<meta name="twitter:image" content="https://customs-app-akap4ao72a-ew.a.run.app/static/og.png?v=1788785885">
+<meta name="twitter:card" content="summary_large_image">
+<script>/* Apply the style mode before first paint so it never flashes.
+   Studio -- the light one -- is the default everywhere now: the console is
+   read in daylight, printed, screenshotted and put in front of people, and
+   a dark room is the exception rather than the rule. Mission is still one
+   click away in the topbar for anyone who wants it, and an explicit choice
+   always wins over this default. */
+try {
+  var _t = localStorage.getItem("customs-theme");
+  if (_t !== "studio" && _t !== "mission") { if (_t) { localStorage.removeItem("customs-theme"); } _t = null; }
+  if (_t !== "mission") { document.documentElement.setAttribute("data-theme", "studio"); }
+  /* Mirrored into a cookie so the SERVER knows it too. Every Grafana panel
+     on this page is an iframe or a render whose theme is chosen when the
+     URL is built, and the URL is built server-side -- without this the
+     console goes dark and the panels inside it stay white. Written on every
+     load, so a cookie cleared behind our back repairs itself. */
+  document.cookie = "customs-theme=" + (_t === "mission" ? "mission" : "studio") +
+                    ";path=/;max-age=31536000;samesite=Lax";
+} catch (e) { document.documentElement.setAttribute("data-theme", "studio"); }</script>
+<link rel="stylesheet" href="/static/customs.css?v=1788785885">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%230a0d10'/><path d='M4 24 L11 10 L15 18 L20 8 L28 22' fill='none' stroke='%234285F4' stroke-width='3'/><path d='M11 10 L15 18' stroke='%23EA4335' stroke-width='3' fill='none'/><path d='M15 18 L20 8' stroke='%23FBBC05' stroke-width='3' fill='none'/><path d='M20 8 L28 22' stroke='%2334A853' stroke-width='3' fill='none'/></svg>">
+</head>
+<body>
+<svg class="defs" aria-hidden="true"><defs>
+  <symbol id="i-cleared" viewBox="0 0 24 24"><path fill="#34A853" d="M9.5 18.4 2.9 11.8l2.6-2.6 4 4 8.9-8.9 2.6 2.6z"/></symbol>
+  <symbol id="i-at-risk" viewBox="0 0 24 24"><path fill="#FBBC05" fill-rule="evenodd" d="M12 2.4 23.2 21.4H.8zm-1.2 6.8h2.4v6h-2.4zm0 7.4h2.4v2.4h-2.4z"/></symbol>
+  <symbol id="i-blocked" viewBox="0 0 24 24"><path fill="#EA4335" fill-rule="evenodd" d="M12 1.8a10.2 10.2 0 1 0 0 20.4 10.2 10.2 0 0 0 0-20.4M6.3 10.6h11.4v2.8H6.3z"/></symbol>
+  <symbol id="i-pending" viewBox="0 0 24 24"><path fill="#4285F4" fill-rule="evenodd" d="M12 2.2a9.8 9.8 0 1 0 0 19.6 9.8 9.8 0 0 0 0-19.6m0 3.4a6.4 6.4 0 1 1 0 12.8 6.4 6.4 0 0 1 0-12.8"/><path fill="#FBBC05" d="M12 2.2A9.8 9.8 0 0 1 21.8 12h-3.4A6.4 6.4 0 0 0 12 5.6z"/></symbol>
+  <symbol id="i-error" viewBox="0 0 24 24"><path fill="#4285F4" fill-rule="evenodd" d="M2.8 2.8h18.4v18.4H2.8zm2.8 2.8v12.8h12.8V5.6z"/><path fill="#EA4335" d="m7.1 15.3 8.2-8.2 1.7 1.7-8.2 8.2z"/></symbol>
+  <symbol id="i-legal" viewBox="0 0 24 24"><path fill="#4285F4" d="M12 2.2 22.4 8.4H1.6z"/><path fill="#FBBC05" d="M4.6 10.2h2.8v7.4H4.6zm6 0h2.8v7.4h-2.8zm6 0h2.8v7.4h-2.8z"/><path fill="#34A853" d="M2 19.2h20v2.6H2z"/></symbol>
+  <symbol id="i-policy" viewBox="0 0 24 24"><path fill="#4285F4" d="M5 2.2h8.6l5.4 5.4v14.2H5z"/><path fill="#FBBC05" d="M13.6 2.2 19 7.6h-5.4z"/><path fill="#34A853" d="M7.8 12h8.4v2H7.8zm0 3.8h8.4v2H7.8z"/></symbol>
+  <symbol id="i-offence" viewBox="0 0 24 24"><path fill="#4285F4" d="M3.8 2.2h2.6v19.6H3.8z"/><path fill="#EA4335" d="M6.4 3.4h13.4l-3.1 4.3 3.1 4.3H6.4z"/></symbol>
+  <symbol id="i-sourced" viewBox="0 0 24 24"><path fill="#34A853" d="M6 18a4.7 4.7 0 0 1 0-6.7l2.9-2.9 2.1 2.1-2.9 2.9a1.8 1.8 0 0 0 2.5 2.5l2.9-2.9 2.1 2.1-2.9 2.9A4.7 4.7 0 0 1 6 18"/><path fill="#4285F4" d="M18 6a4.7 4.7 0 0 1 0 6.7l-2.9 2.9-2.1-2.1 2.9-2.9a1.8 1.8 0 0 0-2.5-2.5l-2.9 2.9L8.4 8.9l2.9-2.9A4.7 4.7 0 0 1 18 6"/></symbol>
+  <symbol id="i-unsourced" viewBox="0 0 24 24"><path fill="#EA4335" d="M6 18a4.7 4.7 0 0 1 0-6.7l2.4-2.4 2.1 2.1-2.4 2.4a1.8 1.8 0 0 0 2.5 2.5l2.4-2.4 2.1 2.1-2.4 2.4A4.7 4.7 0 0 1 6 18M18 6a4.7 4.7 0 0 1 0 6.7l-2.4 2.4-2.1-2.1 2.4-2.4a1.8 1.8 0 0 0-2.5-2.5l-2.4 2.4L8.9 8.4l2.4-2.4A4.7 4.7 0 0 1 18 6"/><path fill="#FBBC05" d="m3.6 5.3 1.7-1.7 15.4 15.4-1.7 1.7z"/></symbol>
+  <symbol id="i-frame" viewBox="0 0 24 24"><path fill="#4285F4" d="M2.4 2.4h8.4V5H5v5.8H2.4z"/><path fill="#EA4335" d="M21.6 2.4v8.4H19V5h-5.8V2.4z"/><path fill="#FBBC05" d="M2.4 21.6v-8.4H5V19h5.8v2.6z"/><path fill="#34A853" d="M21.6 21.6h-8.4V19H19v-5.8h2.6z"/><circle cx="12" cy="12" r="2.4" fill="#4285F4"/></symbol>
+  <symbol id="i-human" viewBox="0 0 24 24"><circle cx="12" cy="7.2" r="4.4" fill="#4285F4"/><path fill="#34A853" d="M3.4 21.6a8.6 8.6 0 0 1 17.2 0z"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path fill="#FBBC05" d="M12 2a6.4 6.4 0 0 1 6.4 6.4v5.2l1.9 2.8H3.7l1.9-2.8V8.4A6.4 6.4 0 0 1 12 2"/><path fill="#4285F4" d="M9.2 17.8h5.6a2.8 2.8 0 0 1-5.6 0"/><circle cx="18.8" cy="5.2" r="3.4" fill="#EA4335"/></symbol>
+  <symbol id="i-pipeline" viewBox="0 0 24 24"><path fill="#4285F4" d="m2 5.1 2.6-2.6L14.1 12l-9.5 9.5L2 18.9 8.9 12z"/><path fill="#34A853" d="m11.5 5.1 2.6-2.6L23.6 12l-9.5 9.5-2.6-2.6 6.9-6.9z"/></symbol>
+  <symbol id="i-ingest" viewBox="0 0 24 24"><path fill="#4285F4" d="M2.2 9.4h19.6v12.2H2.2z"/><path fill="#FBBC05" d="M2.2 3.8h19.6v5.2H2.2z"/><path fill="#EA4335" d="m6.4 3.8-2.6 5.2h3.2l2.6-5.2z"/><path fill="#34A853" d="m13.6 3.8-2.6 5.2h3.2l2.6-5.2z"/></symbol>
+  <symbol id="i-transcription" viewBox="0 0 24 24"><path fill="#4285F4" d="M2.4 10h2.6v4H2.4z"/><path fill="#EA4335" d="M7.4 6.2h2.6v11.6H7.4z"/><path fill="#FBBC05" d="M12.4 3.2h2.6v17.6h-2.6z"/><path fill="#34A853" d="M17.4 7.6h2.6v8.8h-2.6z"/></symbol>
+  <symbol id="i-analyst" viewBox="0 0 24 24"><path fill="#FBBC05" d="M12 4.4c5.7 0 9.8 5.4 9.8 7.6s-4.1 7.6-9.8 7.6S2.2 14.2 2.2 12 6.3 4.4 12 4.4"/><circle cx="12" cy="12" r="3.8" fill="#4285F4"/></symbol>
+  <symbol id="i-adjudicator" viewBox="0 0 24 24"><path fill="#4285F4" d="M10.9 3.4h2.2v16.2h-2.2z"/><path fill="#4285F4" d="M7 19.4h10v2.4H7z"/><path fill="#EA4335" d="M3 5.4h18v2.2H3z"/><path fill="#FBBC05" d="M4.1 8.6 7.2 15H1zm15.8 0L23 15h-6.2z"/></symbol>
+  <symbol id="i-guard" viewBox="0 0 24 24"><path fill="#4285F4" d="M12 1.8 3.4 5.1v6c0 .3 0 .6.1.9H12z"/><path fill="#EA4335" d="m12 1.8 8.6 3.3v6c0 .3 0 .6-.1.9H12z"/><path fill="#34A853" d="M3.8 12.9c1 4.7 4.4 7.4 8.2 9.3v-9.3z"/><path fill="#FBBC05" d="M20.2 12.9c-1 4.7-4.4 7.4-8.2 9.3v-9.3z"/></symbol>
+  <symbol id="i-publisher" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2.8" fill="#4285F4"/><path d="M7.6 7.6a6.2 6.2 0 0 0 0 8.8M16.4 7.6a6.2 6.2 0 0 1 0 8.8" fill="none" stroke="#34A853" stroke-width="2.3"/><path d="M4.4 4.4a10.7 10.7 0 0 0 0 15.2M19.6 4.4a10.7 10.7 0 0 1 0 15.2" fill="none" stroke="#FBBC05" stroke-width="2.3"/></symbol>
+  <symbol id="i-remediator" viewBox="0 0 24 24"><path d="M8.8 15 19.6 3.2M15.2 15 4.4 3.2" fill="none" stroke="#EA4335" stroke-width="2.5"/><circle cx="6.4" cy="18.2" r="3" fill="none" stroke="#4285F4" stroke-width="2.3"/><circle cx="17.6" cy="18.2" r="3" fill="none" stroke="#4285F4" stroke-width="2.3"/></symbol>
+  <!-- The five fix methods, as the picker offers them. Each one is the
+       gesture it performs, not a wrench: one frame stamped over a span
+       (overlay), one edit carried onward through it (track), every frame
+       repainted (per_frame), two ends kept with the middle generated
+       (bridge), the whole span handed back rewritten (omni). -->
+  <symbol id="m-omni" viewBox="0 0 24 24"><path fill="#4285F4" d="M1.8 8.4h13.4v12H1.8z"/><path fill="#34A853" d="M3.6 10.2h9.8v8.4H3.6z"/><path fill="#FBBC05" d="M18.4 2.8 20 6.4 23.6 8 20 9.6 18.4 13.2 16.8 9.6 13.2 8 16.8 6.4z"/></symbol>
+  <symbol id="m-bridge" viewBox="0 0 24 24"><path fill="#4285F4" d="M2.2 5.6h5.6v12.8H2.2zm14 0h5.6v12.8h-5.6z"/><path fill="#FBBC05" d="M7.8 10.2h2.2v3.6H7.8zm3.1 0h2.2v3.6h-2.2zm3.1 0h2.2v3.6H14z"/></symbol>
+  <symbol id="m-overlay" viewBox="0 0 24 24"><path fill="#4285F4" d="M2.4 8.6h12.6v12.6H2.4z"/><path fill="#EA4335" d="M9 2.8h12.6v12.6H9z"/></symbol>
+  <symbol id="m-track" viewBox="0 0 24 24"><path fill="#34A853" d="M2.2 7.8h8.2v8.4H2.2z"/><path fill="#FBBC05" d="m12.2 7.2 4.6 4.8-4.6 4.8z"/><path fill="#4285F4" d="m17.4 7.2 4.6 4.8-4.6 4.8z"/></symbol>
+  <symbol id="m-per_frame" viewBox="0 0 24 24"><path fill="#4285F4" d="M2.4 2.4h8.8v8.8H2.4z"/><path fill="#EA4335" d="M12.8 2.4h8.8v8.8h-8.8z"/><path fill="#FBBC05" d="M2.4 12.8h8.8v8.8H2.4z"/><path fill="#34A853" d="M12.8 12.8h8.8v8.8h-8.8z"/></symbol>
+  <symbol id="i-verifier" viewBox="0 0 24 24"><path d="M20.6 13.6A8.8 8.8 0 1 1 18 6" fill="none" stroke="#34A853" stroke-width="2.4"/><path fill="#34A853" d="M21.8 2.6v6.2h-6.2z"/><path fill="#4285F4" d="m10.7 16.2-3.6-3.6 1.9-1.9 1.7 1.7 4.6-5 2 1.8z"/></symbol>
+
+  <symbol id="d-alcohol_tobacco_drugs" viewBox="0 0 24 24"><path fill="#EA4335" d="M5.4 3h13.2l-5.2 8.6v6.6h3.4v2.8H7.2v-2.8h3.4v-6.6z"/><path fill="#FBBC05" d="M6.6 5.4h10.8l-1.7 2.8H8.3z"/></symbol>
+  <symbol id="d-religious_symbols_practices" viewBox="0 0 24 24"><path fill="#4285F4" d="M12 2.2c3.4 2.2 5.4 5 5.4 8.2H6.6c0-3.2 2-6 5.4-8.2"/><path fill="#FBBC05" d="M5.2 12.4h13.6v9.4H5.2z"/><path fill="#34A853" d="M10.4 15.6h3.2v6.2h-3.2z"/></symbol>
+  <symbol id="d-modesty_dress_body" viewBox="0 0 24 24"><path fill="#4285F4" d="M8.6 2.4h6.8l3 3-2.4 2.4-1.2-1.2v3H8.2v-3L7 8.8 4.6 6.4z"/><path fill="#34A853" d="M8.2 10.2h7.6l2.4 11.4H5.8z"/></symbol>
+  <symbol id="d-gesture_body_language" viewBox="0 0 24 24"><path fill="#FBBC05" d="M9 10V4.6a2.2 2.2 0 0 1 4.4 0V10h5a2.2 2.2 0 0 1 2.1 2.8l-2 7A2.6 2.6 0 0 1 16 21.6H9z"/><path fill="#4285F4" d="M2.6 10.4h4.8v11.2H2.6z"/></symbol>
+  <symbol id="d-food_and_animals" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.4" fill="#34A853"/><circle cx="12" cy="12" r="5" fill="#FBBC05"/><path fill="#4285F4" d="M3.6 2.4h1.8v8H3.6zM7 2.4h1.8v8H7z"/><path fill="#EA4335" d="M18.6 2.4h1.8v19.2h-1.8z"/></symbol>
+  <symbol id="d-gender_portrayal" viewBox="0 0 24 24"><circle cx="7.4" cy="6.6" r="3.4" fill="#4285F4"/><path fill="#4285F4" d="M1.4 21.4a6 6 0 0 1 12 0z"/><circle cx="16.6" cy="6.6" r="3.4" fill="#EA4335"/><path fill="#EA4335" d="M10.6 21.4a6 6 0 0 1 12 0z"/></symbol>
+  <symbol id="d-sexual_orientation_gender_id" viewBox="0 0 24 24"><path fill="none" stroke="#4285F4" stroke-width="2.6" d="M8.4 16.6a5.2 5.2 0 1 1 0-10.4 5.2 5.2 0 0 1 0 10.4"/><path fill="none" stroke="#EA4335" stroke-width="2.6" d="M15.6 16.6a5.2 5.2 0 1 1 0-10.4 5.2 5.2 0 0 1 0 10.4"/></symbol>
+  <symbol id="d-children_and_minors" viewBox="0 0 24 24"><circle cx="16.4" cy="5.8" r="3.2" fill="#4285F4"/><path fill="#4285F4" d="M10.8 21.6a5.6 5.6 0 0 1 11.2 0z"/><circle cx="6" cy="10.4" r="2.6" fill="#FBBC05"/><path fill="#34A853" d="M1.4 21.6a4.6 4.6 0 0 1 9.2 0z"/></symbol>
+  <symbol id="d-national_symbols_politics" viewBox="0 0 24 24"><path fill="#4285F4" d="M3.6 2.2h2.4v19.6H3.6z"/><path fill="#EA4335" d="M6 3.4h14.4v3.6H6z"/><path fill="#FBBC05" d="M6 7h14.4v3.6H6z"/><path fill="#34A853" d="M6 10.6h14.4v3.6H6z"/></symbol>
+  <symbol id="d-health_claims_pharma" viewBox="0 0 24 24"><path fill="#EA4335" d="M4.4 12 12 4.4a5.4 5.4 0 0 1 7.6 7.6L12 19.6z" /><path fill="#4285F4" d="M12 4.4a5.4 5.4 0 0 1 7.6 7.6L15.8 15.8 8.2 8.2z"/><path fill="#34A853" d="M10.6 9.8h1.9v2h2v1.9h-2v2h-1.9v-2h-2v-1.9h2z"/></symbol>
+  <symbol id="d-gambling_and_finance" viewBox="0 0 24 24"><path fill="#FBBC05" fill-rule="evenodd" d="M3.4 3.4h17.2v17.2H3.4zm2.8 2.8v11.6h11.6V6.2z"/><circle cx="9" cy="9" r="1.8" fill="#EA4335"/><circle cx="15" cy="15" r="1.8" fill="#4285F4"/><circle cx="15" cy="9" r="1.8" fill="#34A853"/><circle cx="9" cy="15" r="1.8" fill="#34A853"/></symbol>
+  <symbol id="d-violence_and_weapons" viewBox="0 0 24 24"><path fill="#EA4335" d="m12 1.6 2.8 5.6 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 8.1l6.2-.9z"/><path fill="#FBBC05" d="m12 6.6 1.4 2.9 3.2.5-2.3 2.2.5 3.2-2.8-1.5-2.8 1.5.5-3.2-2.3-2.2 3.2-.5z"/></symbol>
+  <symbol id="d-language_profanity_idiom" viewBox="0 0 24 24"><path fill="#4285F4" d="M2.6 3.4h18.8v13.2H12l-5.4 4.8v-4.8H2.6z"/><path fill="#FBBC05" d="M6.4 7.6h3v3h-3z"/><path fill="#EA4335" d="M10.6 7.6h3v3h-3z"/><path fill="#34A853" d="M14.8 7.6h3v3h-3z"/></symbol>
+  <symbol id="d-humour_irony_satire" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.6" fill="#FBBC05"/><circle cx="8.6" cy="9.6" r="1.8" fill="#4285F4"/><circle cx="15.4" cy="9.6" r="1.8" fill="#4285F4"/><path fill="#EA4335" d="M5.8 13.6h12.4a6.2 6.2 0 0 1-12.4 0"/></symbol>
+  <symbol id="d-superstition_number_colour" viewBox="0 0 24 24"><path fill="#4285F4" d="M11.4 11.4V4.6a3.4 3.4 0 1 1 0 6.8"/><path fill="#EA4335" d="M12.6 11.4h6.8a3.4 3.4 0 1 1-6.8 0"/><path fill="#FBBC05" d="M12.6 12.6v6.8a3.4 3.4 0 1 1 0-6.8"/><path fill="#34A853" d="M11.4 12.6H4.6a3.4 3.4 0 1 1 6.8 0"/></symbol>
+  <symbol id="d-photosensitivity_sensory" viewBox="0 0 24 24"><path fill="#FBBC05" d="M13.6 1.8 5.2 13.4h5L9.4 22.2l9-12.2h-5.4z"/><path fill="#4285F4" d="M1.4 3.4h2.4v3.4H1.4zM20.2 17.2h2.4v3.4h-2.4z"/></symbol>
+  <symbol id="d-text_legibility" viewBox="0 0 24 24"><path fill="#4285F4" d="M3.4 4.2h17.2v3H13.5v12.6h-3V7.2H3.4z"/><path fill="#EA4335" d="M3.4 12.6h5v2.4h-5z"/><path fill="#FBBC05" d="M3.4 16.8h5v2.4h-5z"/><path fill="#34A853" d="M16.2 12.6h4.4v6.6h-4.4z"/></symbol>
+  <symbol id="d-comparative_claims" viewBox="0 0 24 24"><path fill="#4285F4" d="M2.6 12.6h4.4v9H2.6z"/><path fill="#EA4335" d="M9.8 7.4h4.4v14.2H9.8z"/><path fill="#34A853" d="M17 2.6h4.4v19H17z"/><path fill="#FBBC05" d="M2.6 2.6h4.4v2.6H2.6z"/></symbol>
+
+  <symbol id="n-new" viewBox="0 0 24 24"><path fill="#4285F4" d="M12 2.4 18.6 9.6H5.4z"/><path fill="#EA4335" d="M9.8 9.6h4.4v7H9.8z"/><path fill="#FBBC05" d="M2.6 18.4h8.2v3H2.6z"/><path fill="#34A853" d="M13.2 18.4h8.2v3h-8.2z"/></symbol>
+  <symbol id="n-board" viewBox="0 0 24 24"><path fill="#4285F4" d="M2.4 2.6h19.2v5.2H2.4z"/><path fill="#EA4335" d="M2.4 9.4h8.6v5.2H2.4z"/><path fill="#FBBC05" d="M12.6 9.4h9v5.2h-9z"/><path fill="#34A853" d="M2.4 16.2h19.2v5.2H2.4z"/></symbol>
+  <!-- the archive: a stack of runs, newest on top. Its own mark now,
+       because one icon was doing the board and the archive at once. -->
+  <symbol id="n-runs" viewBox="0 0 24 24"><path fill="#FBBC05" d="M5.6 2.6h12.8v3.1H5.6z"/><path fill="#34A853" d="M3.8 7h16.4v3.1H3.8z"/><path fill="#4285F4" d="M2 11.4h20v10H2z"/><path fill="#EA4335" d="M4.6 14h7.2v2.2H4.6z"/><path fill="#fff" fill-opacity=".85" d="M4.6 17.6h11.2v1.8H4.6z"/></symbol>
+  <symbol id="n-feed" viewBox="0 0 24 24"><circle cx="4.6" cy="5.6" r="2.4" fill="#4285F4"/><path fill="#4285F4" d="M9 4.2h12.4v2.8H9z"/><circle cx="4.6" cy="12" r="2.4" fill="#FBBC05"/><path fill="#FBBC05" d="M9 10.6h12.4v2.8H9z"/><circle cx="4.6" cy="18.4" r="2.4" fill="#34A853"/><path fill="#34A853" d="M9 17h12.4v2.8H9z"/></symbol>
+  <symbol id="n-timeline" viewBox="0 0 24 24"><path fill="#EA4335" d="M2.4 4h11v3.4h-11z"/><path fill="#FBBC05" d="M6.4 10.3h15.2v3.4H6.4z"/><path fill="#34A853" d="M2.4 16.6h13.2V20H2.4z"/><path fill="#4285F4" d="M20.4 16.6h1.2V20h-1.2z"/></symbol>
+  <symbol id="n-cut" viewBox="0 0 24 24"><path fill="#4285F4" d="M2.4 4.4h19.2v15.2H2.4z"/><path fill="#FBBC05" d="M4.6 6.4h2.8v2.8H4.6zm0 5.2h2.8v2.8H4.6zm0 5.2h2.8v-2.8H4.6z"/><path fill="#EA4335" d="M16.6 6.4h2.8v2.8h-2.8zm0 5.2h2.8v2.8h-2.8z"/><path fill="#34A853" d="m10.2 8.4 5.2 3.6-5.2 3.6z"/></symbol>
+  <symbol id="n-library" viewBox="0 0 24 24"><path fill="#4285F4" d="M2.6 3.4h4.2v17.2H2.6z"/><path fill="#EA4335" d="M7.8 3.4H12v17.2H7.8z"/><path fill="#FBBC05" d="M13 3.4h4.2v17.2H13z"/><path fill="#34A853" d="m18.2 4.6 3.4 1-4 15.4-2.4-.7z"/></symbol>
+  <symbol id="n-market" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.4" fill="none" stroke="#4285F4" stroke-width="2.4"/><path fill="none" stroke="#34A853" stroke-width="2.2" d="M2.8 12h18.4"/><path fill="none" stroke="#FBBC05" stroke-width="2.2" d="M12 2.6c3.4 3.6 3.4 15.2 0 18.8-3.4-3.6-3.4-15.2 0-18.8"/></symbol>
+  <symbol id="i-noted" viewBox="0 0 24 24"><path fill="#4285F4" fill-rule="evenodd" d="M12 1.8a10.2 10.2 0 1 0 0 20.4 10.2 10.2 0 0 0 0-20.4m-1.3 5.4h2.6v2.6h-2.6zm0 4.4h2.6v6.4h-2.6z"/></symbol>
+</defs></svg>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><defs>
+<symbol id="c-CA-QC" viewBox="0 0 100 100"><path d="M20.6 77.6L18.2 75.5L17.4 74.7L15.4 73.8L14.7 72.0L14.9 70.7L13.4 69.9L13.2 68.2L11.9 66.7L11.8 65.7L12.5 64.7L12.4 63.4L10.5 62.1L9.4 59.7L8.6 58.3L7.6 57.4L6.9 56.5L6.3 55.5L5.1 56.1L4.0 57.3L3.0 55.9L2.2 55.0L1.1 54.5L0.0 54.4L0.0 42.7L0.0 35.1L2.1 35.6L3.9 36.6L5.1 36.8L6.1 36.0L7.5 35.3L9.1 35.6L10.8 34.7L12.7 34.2L13.5 35.0L14.3 34.5L14.6 33.6L15.3 33.8L17.3 35.6L18.8 34.2L18.9 35.8L20.3 35.4L20.7 34.8L22.1 35.0L23.8 35.8L26.5 36.6L28.0 36.9L29.1 36.8L30.7 37.8L29.1 38.8L31.1 39.3L34.2 39.0L35.1 38.7L36.4 39.9L37.6 38.9L36.4 38.0L37.2 37.3L38.5 37.2L39.4 37.0L40.4 37.5L41.5 38.6L42.8 38.4L44.8 39.4L46.5 39.0L48.2 39.1L48.0 37.8L49.0 37.5L50.8 38.2L50.8 40.1L51.5 38.5L52.4 38.5L52.9 36.5L51.7 35.2L50.4 34.4L50.5 32.1L51.8 30.6L53.3 30.9L54.5 31.8L56.0 34.2L55.0 35.2L57.1 35.6L57.1 37.7L58.6 36.1L60.0 37.4L59.6 38.9L60.7 40.3L61.9 38.8L62.7 37.0L62.8 34.8L64.4 34.9L66.1 35.2L67.6 36.3L67.7 37.3L66.8 38.4L67.6 39.5L67.5 40.5L65.3 41.9L63.7 42.2L62.5 41.6L62.2 42.6L61.1 44.4L60.8 45.2L59.4 46.6L57.8 46.8L56.9 47.6L56.9 49.0L55.5 49.2L54.1 50.9L52.9 53.2L52.5 54.8L52.4 57.2L54.1 57.5L54.6 59.4L55.1 61.0L56.7 60.6L58.8 61.5L59.9 62.3L60.8 63.2L62.2 63.8L63.4 64.6L65.2 64.8L66.5 65.0L66.3 66.7L66.6 68.8L67.5 71.1L69.1 73.0L70.0 72.4L70.6 70.3L70.0 67.0L69.2 65.9L71.0 65.0L72.3 63.5L73.0 62.1L72.9 60.8L72.1 59.0L70.7 57.5L72.1 55.3L71.6 53.5L71.2 50.3L72.0 49.8L73.9 50.4L75.1 50.6L76.0 50.0L77.1 50.7L78.5 51.9L78.8 52.7L80.8 52.9L80.8 54.6L81.2 57.2L82.2 57.5L83.0 58.7L84.7 57.5L85.7 55.3L86.5 54.3L87.4 56.2L88.8 58.8L90.1 61.2L89.6 62.5L91.1 63.7L92.2 64.8L94.0 65.4L94.7 66.0L95.1 67.8L96.0 68.0L96.5 68.8L96.6 71.1L95.7 71.9L94.9 72.6L93.1 73.3L91.6 75.0L89.7 75.3L87.3 74.9L85.6 74.9L84.4 75.0L83.5 76.5L82.0 77.4L80.4 80.1L79.1 82.0L80.1 81.7L81.9 79.0L84.3 77.3L86.0 77.1L87.0 78.1L85.9 79.5L86.2 81.7L86.6 83.2L88.1 84.2L90.0 83.9L91.1 81.6L91.2 83.1L91.9 83.9L90.5 85.2L88.0 86.4L86.9 87.2L85.6 88.7L84.7 88.6L84.7 86.8L86.7 85.1L84.9 85.2L83.6 85.5L82.9 84.3L82.9 81.5L82.4 80.9L81.6 81.3L81.2 80.7L80.4 82.3L80.0 83.9L79.6 84.8L79.1 85.1L78.7 85.7L76.6 85.7L74.9 85.7L74.3 86.1L73.1 87.6L72.6 88.5L71.6 88.5L70.5 88.6L70.0 88.9L70.3 89.9L68.8 91.1L67.6 91.5L66.3 92.6L65.6 92.2L65.8 91.0L66.3 89.9L66.6 88.7L66.4 86.9L66.2 85.0L65.0 84.1L64.9 83.5L64.4 83.1L63.8 82.8L63.5 81.9L62.6 81.2L61.7 80.5L60.6 79.7L59.6 79.0L58.5 79.6L56.8 79.0L55.9 79.3L54.8 78.7L53.6 78.4L52.8 78.2L52.3 76.8L51.9 77.6L49.5 77.5L45.7 77.6L41.8 77.6L38.4 77.6L35.0 77.6L31.7 77.6L28.2 77.6L27.1 77.6L23.8 77.6L20.6 77.6ZM70.4 29.7L71.5 28.9L74.0 30.0L75.6 30.9L75.7 31.8L77.8 31.4L79.0 32.7L81.7 33.5L82.7 34.3L83.8 36.2L81.7 37.2L84.4 38.5L86.2 39.0L87.8 40.8L89.6 41.0L89.2 42.4L87.2 44.8L85.9 43.9L84.1 41.9L82.6 42.2L82.5 43.4L83.7 44.6L85.2 45.5L85.7 46.1L86.4 48.1L86.0 49.5L84.6 49.0L81.7 47.4L83.3 49.1L84.5 50.4L84.7 51.1L81.6 50.3L79.2 49.1L77.8 48.1L78.2 47.5L76.5 46.4L74.9 45.4L74.9 46.0L71.6 46.4L70.7 45.7L71.4 44.2L73.5 44.1L75.9 43.9L75.5 43.1L75.9 42.1L77.4 40.1L77.0 39.2L76.6 38.5L74.9 37.5L72.6 36.8L73.3 36.3L72.1 35.0L71.1 34.9L70.2 34.2L69.6 34.8L67.6 35.1L63.4 34.6L61.1 34.0L59.2 33.7L58.3 33.0L59.5 32.1L57.8 32.0L57.5 30.0L58.4 28.1L59.5 27.3L62.4 26.8L61.6 28.1L62.5 29.4L63.6 27.7L66.4 26.9L68.4 29.0L68.2 30.3L70.4 29.7ZM55.9 10.2L57.6 9.8L58.9 9.7L61.2 9.4L62.8 8.6L64.2 8.7L65.4 9.3L66.3 8.2L67.8 7.9L69.8 7.7L73.3 7.6L73.9 7.8L77.2 7.4L79.6 7.6L82.1 7.7L85.1 7.9L87.5 8.1L89.6 8.7L86.8 10.1L84.0 10.5L83.0 11.0L85.5 11.0L82.8 12.2L81.0 12.8L79.0 14.5L76.7 14.8L76.0 15.2L72.5 15.5L74.1 15.7L73.3 16.1L74.3 17.1L73.2 17.8L71.4 18.4L70.9 19.2L69.3 19.8L71.4 20.2L68.4 21.9L65.4 21.3L62.1 21.6L60.4 21.4L58.3 21.3L58.2 20.3L60.2 19.8L59.7 18.4L60.4 18.2L63.4 19.1L61.9 17.8L60.0 17.4L60.9 16.6L63.0 16.1L63.3 15.4L61.7 14.6L61.2 13.6L64.3 13.6L65.2 13.9L66.9 13.1L64.4 12.9L60.4 13.0L58.4 12.3L57.5 11.5L56.2 10.9L55.9 10.2ZM39.0 28.2L40.3 29.1L41.0 31.1L41.4 32.5L43.3 33.5L45.3 34.5L45.2 35.4L43.3 35.6L44.0 36.4L43.7 37.1L41.6 36.8L39.7 36.2L38.3 36.4L36.2 37.0L33.3 37.4L31.3 37.5L30.7 36.6L29.2 36.0L28.2 36.3L26.8 34.6L27.5 34.4L29.3 34.1L30.9 34.2L32.4 33.8L30.2 33.3L27.7 33.5L26.1 33.4L25.5 32.7L28.2 31.9L26.4 31.9L24.4 31.4L25.4 29.8L26.2 29.0L29.2 27.8L30.4 28.2L29.8 29.1L32.3 28.5L33.9 29.5L35.2 28.5L36.2 29.2L37.1 31.2L37.7 30.3L36.9 28.2L37.9 27.9L39.0 28.2ZM96.7 72.8L96.1 74.1L95.3 75.9L96.0 75.2L96.8 75.6L96.4 76.3L97.4 76.9L97.9 76.4L99.1 77.0L98.7 78.5L99.5 78.2L99.6 79.3L100.0 80.5L99.5 82.4L98.3 82.0L98.5 80.4L96.9 81.9L96.2 81.8L97.0 80.8L95.9 80.4L94.7 80.5L92.5 80.4L92.3 79.8L93.0 79.1L92.5 78.5L93.5 77.3L94.7 74.0L95.4 72.9L96.4 72.2L96.7 72.8ZM59.8 25.6L58.0 25.3L55.0 24.6L54.6 23.5L54.5 22.5L53.3 21.6L51.0 21.4L49.7 20.7L50.1 19.9L52.4 20.0L53.7 20.7L55.9 20.7L56.9 21.3L56.6 22.1L57.9 22.6L58.6 23.1L60.2 23.1L61.8 23.3L63.6 22.9L65.9 22.7L67.8 22.8L69.0 23.6L69.2 24.5L68.5 25.0L66.8 25.5L65.4 25.2L62.1 25.5L59.8 25.6ZM37.6 22.6L38.6 22.2L39.7 22.3L39.9 23.3L39.3 24.3L35.4 24.6L32.6 25.5L30.8 25.5L30.7 24.9L33.1 24.0L27.9 24.2L26.4 23.9L27.9 21.9L29.0 21.3L32.2 22.0L34.2 23.2L36.1 23.3L34.5 21.4L35.6 20.6L36.7 20.9L37.1 21.8L37.6 22.6ZM50.9 12.8L51.7 12.2L52.9 12.1L52.4 11.6L55.0 11.5L56.4 12.6L58.3 13.0L60.2 13.4L61.1 14.8L62.5 15.4L60.9 16.0L58.8 17.6L56.8 17.7L54.5 17.5L53.3 16.6L53.3 15.9L54.2 15.3L52.1 15.4L50.8 14.7L50.1 13.7L50.9 12.8ZM64.6 44.6L65.9 45.3L67.2 45.9L67.3 46.9L68.1 46.7L68.9 47.4L67.9 48.0L66.2 47.5L65.5 46.6L64.4 47.7L62.8 48.8L62.4 47.6L60.9 47.8L61.9 46.8L62.0 45.1L62.4 43.3L63.2 43.4L63.4 44.3L64.0 44.0L64.6 44.6ZM22.0 25.4L23.6 25.9L26.5 26.0L27.6 26.6L28.8 27.4L27.4 27.9L24.6 29.4L23.2 30.8L23.2 31.7L20.3 32.7L19.7 31.8L17.1 30.7L17.5 29.9L18.3 28.4L19.3 27.0L18.2 25.8L22.0 25.4Z"/></symbol>
+<symbol id="c-US" viewBox="0 0 100 100"><path d="M37.3 34.9L40.5 34.9L43.8 34.9L44.9 34.9L48.3 34.9L51.6 34.9L55.0 34.9L58.4 34.9L62.2 34.9L66.0 34.9L68.4 34.9L68.7 34.4L68.9 35.1L70.1 35.5L71.2 35.7L72.3 36.1L73.2 36.0L74.6 36.3L76.0 35.9L77.0 36.4L78.1 37.0L79.0 37.5L79.9 37.9L80.3 38.4L80.8 38.8L81.3 39.0L82.5 40.1L82.7 41.4L83.0 42.7L82.6 43.5L82.1 44.3L81.9 44.8L82.4 45.4L83.9 44.6L85.1 44.4L86.6 43.7L86.5 43.1L86.8 42.6L87.9 42.6L88.9 42.6L89.3 42.0L90.6 40.9L91.1 40.6L92.8 40.6L94.9 40.6L95.4 40.2L96.3 39.3L96.6 38.2L97.4 37.1L98.6 37.3L99.1 37.7L99.1 39.6L99.8 40.4L98.8 41.6L97.6 42.1L96.5 42.5L95.9 43.4L95.7 44.4L96.0 45.2L96.4 44.7L96.6 45.4L95.9 45.7L94.5 45.9L93.4 46.0L92.4 46.4L94.1 46.2L92.8 46.9L92.1 46.9L91.9 48.2L91.1 49.3L90.8 48.8L90.9 49.5L90.6 50.6L89.9 51.8L90.2 50.7L89.6 50.2L89.5 49.0L89.3 49.6L89.5 50.5L88.7 50.3L89.5 50.7L89.6 52.1L90.0 52.7L90.2 54.1L89.5 55.2L88.3 55.6L87.6 56.5L87.0 56.5L86.4 57.1L85.0 58.5L84.4 59.2L83.9 60.0L83.7 61.0L83.9 62.0L84.3 63.2L84.8 64.3L84.8 64.9L85.3 66.5L85.3 67.5L85.2 68.0L84.9 68.9L84.1 68.9L83.9 68.3L82.9 66.7L82.3 65.6L82.2 65.1L82.4 64.1L82.1 63.4L81.2 62.2L79.6 62.6L78.9 61.9L78.2 61.5L76.9 61.7L75.9 61.5L75.1 61.6L74.8 62.2L74.8 62.8L74.0 63.3L73.2 63.3L72.3 62.5L71.3 62.7L70.5 62.4L69.8 62.5L68.9 62.8L67.9 63.9L66.7 64.5L66.1 65.2L65.9 65.8L65.9 66.8L65.9 67.5L65.7 68.0L64.9 67.7L64.0 67.3L63.7 66.6L63.5 65.6L62.8 64.8L62.4 63.9L61.9 63.0L61.1 62.4L60.1 62.4L59.4 63.5L58.5 63.1L57.9 62.7L57.6 61.9L57.3 61.1L56.6 60.5L56.0 60.1L55.6 59.6L53.7 59.6L53.7 60.1L52.8 60.2L50.6 60.2L48.0 59.2L46.3 58.5L45.0 58.3L43.7 58.4L43.5 57.7L42.8 56.9L42.3 56.7L41.5 56.2L41.1 55.9L40.1 55.7L39.6 54.7L38.6 53.3L37.6 51.3L37.2 50.5L36.3 49.3L36.1 48.1L35.5 47.3L35.8 46.1L35.8 44.9L35.4 43.8L35.8 42.5L36.0 41.2L36.1 39.9L35.9 38.0L35.5 36.7L35.2 36.1L37.0 36.3L37.6 37.6L37.7 36.1L37.3 34.9ZM0.8 76.2L1.4 77.1L1.0 77.5L0.4 77.9L0.2 77.3L0.0 76.8L0.2 76.1L0.8 76.2ZM3.2 22.1L3.9 22.2L4.4 22.6L3.4 23.3L2.3 23.9L1.7 23.5L1.6 22.8L2.6 22.3L3.2 22.1Z"/></symbol>
+<symbol id="c-ID" viewBox="0 0 100 100"><path d="M51.8 13.9L61.4 13.6L69.7 7.5L71.1 9.4L64.4 17.7L58.1 19.3L50.1 17.6L36.1 18.1L28.8 19.3L27.6 25.6L35.1 33.0L39.6 29.3L55.2 26.4L54.6 30.3L50.9 29.0L47.3 34.0L39.9 37.2L47.8 47.9L46.3 50.8L53.8 60.5L53.8 66.0L49.3 68.4L46.0 65.5L50.0 58.6L41.8 61.9L39.7 59.6L40.8 56.3L34.8 51.4L35.4 43.3L29.8 45.8L30.5 55.6L30.9 67.5L25.6 68.8L22.0 66.3L24.4 58.6L23.1 50.5L19.6 50.5L17.0 44.7L20.4 39.2L21.6 32.6L25.8 20.0L27.6 16.5L34.7 10.3L41.2 12.8L51.8 13.9ZM93.7 3.0L94.3 7.6L99.2 8.3L100.0 11.8L99.6 19.1L95.2 18.3L94.0 23.4L97.4 27.8L95.1 28.8L91.7 23.5L89.2 12.8L90.9 6.1L93.7 3.0ZM12.7 91.3L17.9 90.6L20.0 94.2L10.3 95.8L4.5 97.0L0.0 96.9L2.9 92.1L7.5 92.0L9.7 89.0L12.7 91.3ZM38.5 92.7L44.1 92.1L51.6 89.0L50.4 93.7L37.8 96.1L26.7 95.0L26.6 92.0L33.3 90.2L38.5 92.7Z"/></symbol>
+<symbol id="c-BR" viewBox="0 0 100 100"><path d="M52.5 100.0L51.8 98.5L52.9 97.3L51.4 95.6L49.5 94.2L46.9 92.5L45.9 92.6L43.4 90.6L41.7 90.9L45.1 87.4L48.0 84.9L49.7 83.9L51.8 82.5L51.8 80.4L50.6 78.9L49.3 79.4L49.8 77.9L50.2 76.4L50.2 75.0L49.3 74.5L48.3 75.0L47.4 74.9L47.1 73.9L46.8 71.5L46.4 70.7L44.7 70.1L43.6 70.6L41.0 70.1L41.1 66.6L40.4 65.2L41.2 64.6L40.9 63.2L41.6 62.0L42.1 60.0L41.5 58.4L40.1 57.7L39.8 56.7L40.2 55.2L35.3 55.1L34.4 52.1L35.1 52.1L35.1 51.0L34.6 50.2L34.5 48.8L33.0 48.0L31.4 48.0L30.4 47.3L28.7 46.8L27.7 45.8L24.8 45.4L22.1 43.1L22.3 41.4L22.0 40.4L22.3 38.5L18.9 38.9L17.6 39.9L15.4 40.9L14.8 41.7L13.5 41.7L11.7 41.5L10.2 42.0L9.1 41.7L9.3 37.8L7.2 39.3L5.0 39.2L4.0 37.8L2.3 37.7L2.9 36.6L1.5 35.0L0.4 32.7L1.1 32.3L1.1 31.2L2.6 30.4L2.3 29.1L3.0 28.2L3.2 27.0L6.1 25.2L8.1 24.7L10.7 24.5L11.9 17.4L11.9 16.3L11.5 14.9L10.4 13.9L10.4 12.1L11.9 11.6L12.4 11.9L12.4 10.9L11.0 10.7L10.9 9.0L15.9 9.1L16.7 8.2L17.4 9.0L17.9 10.5L18.4 10.2L19.8 11.6L21.7 11.4L22.2 10.6L24.1 10.0L25.1 9.6L25.4 8.5L27.2 7.8L27.1 7.3L25.0 7.0L24.6 5.4L24.7 3.7L23.6 3.0L25.9 3.1L27.9 3.8L28.7 3.2L30.5 2.8L33.3 1.8L34.2 0.8L33.9 0.1L35.2 0.0L35.8 0.6L35.5 1.7L36.3 2.1L36.9 3.3L36.2 4.2L35.8 6.4L36.5 7.7L36.6 8.9L38.2 10.1L39.4 10.2L39.7 9.7L40.5 9.6L41.7 9.1L42.5 8.4L43.9 8.7L44.5 8.6L45.9 8.8L46.1 8.3L45.7 7.8L45.9 7.0L46.9 7.2L48.1 7.0L49.6 7.5L50.7 8.0L51.5 7.4L52.0 7.5L52.4 8.2L53.6 8.0L54.6 7.0L55.3 5.1L56.8 2.8L57.7 2.7L58.3 4.1L59.7 8.6L61.1 9.0L61.1 10.8L59.2 12.9L60.0 13.6L64.5 14.0L64.6 16.6L66.5 14.9L69.7 15.9L73.9 17.4L75.1 18.9L74.7 20.3L77.6 19.6L82.6 20.9L86.3 20.8L90.1 22.9L93.3 25.8L95.2 26.5L97.4 26.6L98.3 27.5L99.2 30.7L99.6 32.3L98.6 36.5L97.3 38.2L93.7 41.7L92.1 44.6L90.3 46.9L89.6 46.9L88.9 48.8L89.1 53.6L88.4 57.6L88.1 59.2L87.3 60.3L86.9 63.7L84.3 67.0L83.9 69.7L81.9 70.8L81.3 72.3L78.5 72.3L74.5 73.3L72.8 74.4L69.9 75.2L67.0 77.2L64.8 79.8L64.4 81.7L64.9 83.1L64.4 85.7L63.8 86.9L62.1 88.4L59.3 92.9L57.0 94.9L55.3 96.1L54.2 98.5L52.5 100.0Z"/></symbol>
+<symbol id="c-FR" viewBox="0 0 100 100"><path d="M84.3 19.1L88.0 22.1L99.1 24.2L95.2 32.0L94.2 40.1L92.1 42.0L88.6 41.0L88.8 43.8L83.2 50.2L83.1 55.4L86.8 53.6L89.4 58.6L89.1 61.8L91.4 66.0L88.7 69.5L90.7 78.3L94.9 79.7L94.0 84.7L87.0 91.1L71.7 88.0L60.4 91.7L59.5 98.5L50.6 100.0L41.9 94.9L39.0 97.3L24.8 92.2L21.7 87.7L25.7 80.9L27.2 58.3L19.2 46.4L13.5 40.6L1.6 36.3L0.9 28.0L10.9 25.5L23.9 28.4L21.4 15.6L28.8 20.5L46.8 11.6L49.1 2.3L55.9 0.0L57.0 4.0L60.6 4.2L64.2 8.7L69.6 14.1L73.6 13.2L80.4 18.4L82.1 19.4L84.3 19.1Z"/></symbol>
+<symbol id="c-NG" viewBox="0 0 100 100"><path d="M0.0 73.9L0.5 60.1L0.3 54.7L1.9 49.3L4.4 46.7L8.5 41.4L7.6 39.1L9.3 35.6L7.4 30.6L7.7 27.7L8.3 20.1L10.7 16.7L11.9 11.8L14.1 9.9L23.1 8.9L31.6 12.1L34.7 15.3L39.0 15.5L43.0 13.4L53.2 17.8L57.5 17.6L62.5 13.9L67.4 14.2L69.8 13.0L74.3 13.5L80.9 16.0L87.4 11.2L89.4 11.6L95.1 20.9L96.7 20.7L100.0 24.1L99.1 25.7L98.6 28.5L91.6 35.1L89.3 40.5L88.1 45.0L86.4 46.9L84.7 52.9L80.2 56.4L78.9 60.7L77.0 64.1L76.2 67.7L70.4 70.6L65.7 67.1L62.5 67.2L57.5 72.2L55.0 72.3L51.0 80.5L48.9 86.5L40.1 89.6L36.9 89.2L33.7 91.1L27.0 90.9L22.5 85.6L19.7 79.4L13.7 73.8L7.4 73.9L0.0 73.9Z"/></symbol>
+<symbol id="c-AE" viewBox="0 0 100 100"><path d="M0.0 50.7L3.7 49.6L4.5 55.8L20.7 52.2L37.9 52.8L50.4 53.5L64.6 38.1L80.1 23.5L93.2 9.5L97.2 17.3L100.0 35.2L89.4 35.3L87.7 50.2L91.4 53.3L82.0 57.8L81.9 67.1L75.9 76.5L75.3 85.7L71.1 90.5L8.7 79.0L0.8 56.0L0.0 50.7Z"/></symbol>
+<symbol id="c-TH" viewBox="0 0 100 100"><path d="M74.7 41.7L68.5 40.8L60.0 42.0L55.7 47.7L57.3 55.9L51.4 52.8L45.7 52.9L46.7 47.6L40.8 47.6L40.3 55.1L36.8 65.0L34.6 71.0L35.1 75.9L39.4 76.1L42.0 82.3L43.2 88.2L46.9 92.1L50.9 92.9L54.4 96.4L52.2 99.2L47.8 100.0L47.3 96.5L41.9 93.5L40.8 94.8L38.2 92.1L37.0 88.8L33.5 84.9L30.3 81.7L29.2 85.7L28.0 81.9L28.7 77.7L30.6 71.2L33.8 64.2L37.5 57.9L34.9 51.7L35.0 48.5L34.2 44.8L29.8 39.4L28.2 35.9L30.5 34.7L32.9 28.8L30.2 24.3L26.0 19.4L22.8 13.4L25.6 12.2L28.7 4.8L33.3 4.5L37.2 1.6L41.0 0.0L43.8 2.1L44.2 6.2L48.7 6.5L47.0 13.6L47.2 19.7L54.2 15.7L56.2 16.9L60.0 16.7L61.4 14.3L66.4 14.8L71.4 20.3L71.8 27.0L77.2 32.9L76.9 38.7L74.7 41.7Z"/></symbol>
+<symbol id="c-IN" viewBox="0 0 100 100"><path d="M98.3 26.3L98.5 27.6L97.3 28.3L97.6 30.6L95.2 29.9L90.9 32.4L91.0 34.5L89.2 37.5L89.0 39.3L87.6 42.3L85.0 41.5L84.8 45.2L84.1 46.5L84.4 48.0L82.8 48.9L81.1 43.1L80.1 43.1L79.6 45.4L77.8 43.6L78.8 41.5L80.3 41.3L81.8 38.2L79.9 37.6L76.8 37.6L73.7 37.1L73.4 34.6L71.8 34.4L69.2 32.9L68.0 35.3L70.4 37.3L68.3 38.6L67.6 39.9L69.6 40.9L69.1 43.1L70.2 45.8L70.7 48.8L70.2 50.1L68.0 50.1L63.9 50.9L64.1 53.6L62.3 55.7L57.5 58.2L53.8 62.5L51.3 64.7L48.0 67.1L48.0 68.8L46.4 69.7L43.4 71.0L41.8 71.2L40.8 74.0L41.5 78.7L41.7 81.7L40.3 85.1L40.3 91.3L38.6 91.5L37.0 94.3L38.1 95.5L35.0 96.5L33.9 99.0L32.6 100.0L29.4 96.6L27.9 91.5L26.6 87.9L25.5 86.1L23.7 82.6L22.9 78.1L22.3 75.8L19.3 70.8L17.9 63.8L16.9 59.2L16.9 54.8L16.3 51.4L11.4 53.5L9.1 53.1L4.8 48.7L6.4 47.4L5.4 46.0L1.5 42.9L3.7 40.4L11.0 40.5L10.3 37.3L8.5 35.5L8.1 32.7L5.9 31.1L9.6 27.3L13.4 27.5L16.9 23.7L19.0 20.0L22.2 16.4L22.2 13.8L25.0 11.7L22.3 9.9L21.2 7.5L20.0 4.3L21.6 2.7L26.7 3.6L30.4 3.1L33.6 0.0L37.1 4.3L36.8 7.2L38.1 9.1L38.0 10.9L35.6 10.4L36.6 14.5L39.8 16.8L44.4 19.3L42.3 20.9L41.0 24.3L44.2 25.7L47.4 27.5L51.7 29.5L56.3 30.0L58.2 31.8L60.7 32.2L64.7 33.0L67.5 33.0L67.9 31.5L67.4 29.2L67.7 27.7L69.7 26.9L70.0 29.8L70.1 30.5L73.1 31.9L75.2 31.3L78.0 31.6L80.7 31.4L80.9 29.2L79.6 28.1L82.2 27.6L85.3 24.9L89.1 22.6L91.9 23.5L94.2 21.9L95.8 24.2L94.7 25.7L98.3 26.3Z"/></symbol>
+<symbol id="c-DE" viewBox="0 0 100 100"><path d="M79.6 16.0L81.5 22.6L79.2 26.1L82.2 30.7L84.2 37.7L83.6 42.2L87.0 50.5L83.3 51.8L81.1 50.3L79.1 52.8L73.2 55.3L70.2 58.6L64.2 61.4L65.7 65.3L66.5 70.8L70.7 73.9L75.3 79.5L72.4 85.5L69.5 87.2L70.7 95.6L69.9 97.8L67.3 95.2L63.4 94.8L57.6 97.1L50.3 96.6L49.2 100.0L45.0 96.4L42.6 97.1L33.8 93.1L32.1 95.9L25.1 95.9L26.2 86.6L30.3 77.7L18.5 75.3L14.7 71.9L15.1 66.2L13.5 63.2L14.4 54.4L13.0 40.8L18.0 40.8L20.0 35.9L22.1 23.9L20.6 19.5L22.1 16.8L29.0 16.1L30.5 18.9L36.1 12.5L34.2 7.6L33.8 0.3L40.0 2.0L45.2 0.0L45.4 5.0L53.7 8.1L53.6 12.7L61.9 10.2L66.5 6.7L75.7 11.8L79.6 16.0Z"/></symbol>
+<symbol id="c-TR" viewBox="0 0 100 100"><path d="M99.9 62.3L97.3 63.5L95.5 61.7L89.3 60.9L87.0 61.9L80.9 63.0L78.0 62.9L71.9 65.4L67.5 65.4L64.7 64.2L58.8 66.0L57.0 64.7L56.8 68.5L55.3 70.0L53.9 71.5L51.9 68.4L54.0 65.9L50.7 66.4L46.2 64.9L42.6 68.8L34.5 69.6L30.2 65.9L24.4 65.7L23.2 68.5L19.5 69.3L14.3 65.7L8.5 65.8L5.4 59.0L1.5 55.3L4.1 50.0L0.7 46.7L6.6 40.2L14.8 39.9L17.0 34.8L27.2 35.7L33.6 31.3L39.8 29.3L48.7 29.2L58.0 34.0L65.6 36.6L71.8 35.6L76.4 36.2L82.7 32.6L88.4 32.3L93.5 35.6L94.4 38.0L93.9 41.3L97.9 43.0L100.0 45.0L96.3 47.0L98.0 54.8L97.0 56.9L99.9 62.3ZM0.4 30.6L5.8 28.5L10.4 29.4L11.1 32.0L15.7 34.2L14.7 35.9L8.4 36.3L6.1 38.4L1.7 42.0L0.0 38.9L0.1 37.5L1.3 36.7L3.0 32.4L0.4 30.6Z"/></symbol>
+<symbol id="c-BE" viewBox="0 0 100 100"><path d="M100.0 36.9L96.9 66.2L89.7 67.9L86.8 92.2L62.7 72.4L48.7 75.8L29.5 55.3L16.7 37.9L4.0 37.2L0.0 22.0L22.0 13.4L42.1 16.8L67.5 7.8L84.9 26.8L100.0 36.9Z"/></symbol>
+<symbol id="c-CN" viewBox="0 0 100 100"><path d="M10.7 36.6L10.6 35.5L11.7 34.9L10.3 31.4L13.5 30.6L14.3 30.1L15.5 26.4L18.7 27.1L19.6 26.2L19.7 24.1L21.1 23.9L22.3 22.6L22.9 22.4L23.4 23.8L24.7 24.9L27.1 25.7L28.2 27.3L27.6 29.7L28.1 30.6L30.1 31.0L32.3 31.3L34.3 32.5L35.3 32.8L36.0 34.6L37.0 35.9L38.8 35.8L42.1 36.3L44.3 36.0L45.9 36.3L48.3 37.5L50.3 37.5L51.0 38.2L52.9 37.1L55.5 36.4L58.0 36.3L59.9 35.6L61.0 34.5L62.2 33.8L61.9 33.1L61.4 32.3L62.3 31.0L63.2 31.2L64.9 31.6L66.5 30.5L69.0 29.7L70.2 28.4L71.3 27.8L73.7 27.5L75.0 27.7L75.1 27.0L73.7 25.6L72.4 24.9L71.1 25.7L69.5 25.4L68.6 25.6L68.1 24.8L69.3 22.7L70.1 21.2L72.1 22.0L74.3 20.7L74.3 19.8L75.8 17.6L76.7 16.9L76.7 15.8L75.8 15.3L77.1 14.3L79.2 13.9L81.3 13.9L83.8 14.5L85.2 15.2L86.2 17.3L86.8 18.2L87.4 19.4L88.0 21.4L90.8 22.1L92.8 23.6L93.4 25.5L95.9 25.5L97.3 24.7L100.0 24.1L99.1 25.9L98.5 26.7L98.0 28.9L96.9 30.9L94.9 30.5L93.5 31.3L93.9 33.0L93.7 35.4L92.8 35.5L92.9 36.5L91.8 35.3L91.1 36.5L88.6 37.4L88.9 38.4L87.5 38.4L86.7 37.7L85.6 39.2L83.8 40.3L82.5 41.6L80.2 42.2L79.0 43.2L77.2 43.7L78.1 42.8L77.8 42.0L79.0 40.6L78.2 39.5L76.8 40.2L74.9 41.7L73.9 43.0L72.3 43.1L71.5 44.0L72.3 45.4L73.7 45.8L73.7 46.7L75.0 47.3L76.8 45.8L78.3 46.6L79.4 46.7L79.6 47.7L77.3 48.3L76.5 49.4L75.0 50.4L74.1 51.9L75.9 53.0L76.5 55.0L77.5 56.9L78.6 58.5L78.6 60.0L77.6 60.6L78.0 61.7L78.9 62.3L78.7 64.0L78.3 65.6L77.3 65.8L76.2 68.0L74.8 70.7L73.3 73.1L71.1 75.0L68.8 76.7L67.0 77.0L66.0 77.9L65.4 77.2L64.5 78.2L62.2 79.3L60.5 79.6L59.9 81.7L59.0 81.9L58.6 80.4L59.0 79.6L56.8 78.9L56.0 79.3L54.4 78.7L53.6 77.9L53.9 76.7L52.4 76.3L51.6 75.6L50.2 76.7L48.6 76.9L47.3 76.9L46.4 77.4L45.6 77.7L45.8 80.0L45.0 80.0L44.8 78.6L43.6 79.2L42.9 78.9L41.7 78.1L42.1 76.4L41.1 76.0L40.7 74.1L39.0 74.4L39.2 72.0L40.7 70.3L40.8 68.6L40.8 67.0L40.0 66.6L39.5 65.4L38.6 65.5L36.8 65.2L37.3 64.3L36.6 63.1L35.4 63.9L34.1 63.4L32.2 64.7L30.7 66.3L29.4 66.5L28.7 66.0L27.8 65.9L26.6 65.4L25.8 66.0L24.7 67.5L24.5 65.9L23.5 66.3L21.6 66.1L19.8 65.6L18.5 64.7L17.2 64.3L16.7 63.3L15.7 63.0L14.1 61.7L12.8 61.1L12.1 61.6L9.9 60.1L8.3 58.8L7.8 56.6L9.0 56.9L9.0 55.8L8.4 54.8L8.5 53.1L6.8 50.7L4.1 49.9L3.6 48.3L2.4 47.3L2.1 46.7L1.9 45.6L1.9 44.8L0.9 44.3L0.4 44.5L0.0 42.6L0.5 42.1L1.8 40.7L2.9 40.3L4.6 40.6L5.3 39.3L7.4 39.0L7.9 38.2L10.5 37.1ZM58.4 86.1L57.0 85.5L57.0 83.7L57.8 82.8L59.6 82.2L60.5 82.3L60.9 83.1L60.1 84.0L59.8 85.1L58.4 86.1Z"/></symbol>
+<symbol id="c-UK" viewBox="0 0 100 100"><path d="M44.2 60.3L45.2 53.6L40.6 46.5L32.3 44.3L30.7 41.2L33.1 36.0L30.9 32.9L27.2 38.3L26.8 27.2L23.4 21.3L25.9 9.4L31.1 0.1L36.6 1.0L44.8 0.0L37.5 12.5L44.4 10.9L51.9 11.0L50.1 20.3L44.0 30.7L51.0 31.4L51.6 32.6L57.6 46.2L62.3 48.1L66.4 61.2L68.4 65.8L76.6 68.0L75.8 75.3L72.3 78.7L75.0 84.7L68.9 90.7L59.8 90.6L48.3 93.8L45.1 91.5L40.6 96.9L34.3 95.6L29.5 100.0L25.9 97.7L35.9 85.6L42.0 83.1L31.3 81.2L29.4 76.6L36.5 73.0L32.8 66.8L34.1 59.3L44.2 60.3Z"/></symbol>
+<symbol id="c-JP" viewBox="0 0 100 100"><path d="M74.6 43.9L69.5 50.8L69.6 57.9L67.5 63.4L68.4 66.9L65.5 71.7L58.4 74.9L48.6 75.4L40.6 83.2L36.8 80.6L36.6 75.4L26.9 77.0L20.3 80.2L13.7 80.3L19.4 85.4L15.7 97.1L12.0 100.0L9.3 97.3L10.7 91.1L7.2 89.1L4.9 84.4L10.2 82.3L13.1 77.9L18.7 74.4L22.8 69.7L34.0 67.6L39.9 69.0L45.8 56.8L49.5 60.1L57.7 53.2L60.9 50.5L64.4 42.1L63.5 34.3L65.8 30.0L71.8 28.7L74.8 38.3L74.6 43.9ZM89.9 11.0L93.9 8.0L95.1 15.8L86.8 17.7L81.9 24.5L73.1 19.8L70.1 27.3L63.9 27.4L63.1 20.6L65.9 15.3L71.8 14.9L73.5 5.4L75.1 0.0L81.7 7.2L86.0 9.5L89.9 11.0ZM21.5 83.2L24.6 79.1L27.7 79.9L30.0 77.0L34.1 78.5L34.9 80.9L31.7 85.0L29.4 82.8L26.5 84.4L25.1 88.5L21.4 86.5L21.5 83.2Z"/></symbol>
+<symbol id="c-SA" viewBox="0 0 100 100"><path d="M1.5 23.4L6.8 24.3L8.9 22.7L10.0 20.8L13.7 20.1L14.4 18.3L16.0 17.4L11.3 12.2L20.8 9.6L21.7 8.8L27.4 10.3L34.5 13.9L47.9 24.4L56.7 24.8L61.0 25.3L62.2 27.8L65.5 27.6L67.4 32.1L69.7 33.3L70.5 35.1L73.8 37.3L74.1 39.5L73.6 41.2L74.2 43.0L75.6 44.4L76.2 46.1L76.9 47.4L78.3 48.4L79.7 48.1L80.6 50.0L80.8 51.3L82.6 56.5L96.9 59.1L97.8 58.0L100.0 61.7L96.8 72.1L82.6 77.4L68.9 79.3L64.4 81.7L61.0 87.2L58.8 88.0L57.6 86.3L55.8 86.5L51.2 86.0L50.3 85.5L44.8 85.6L43.5 86.1L41.6 84.7L40.3 87.3L40.8 89.5L38.7 91.2L38.1 88.9L36.7 87.4L36.3 85.3L33.9 83.4L31.3 79.1L30.0 74.8L26.7 71.2L24.6 70.4L21.4 65.4L20.9 61.8L21.1 58.7L18.4 52.9L16.1 50.9L13.6 49.8L12.0 46.9L12.3 45.7L10.9 43.0L9.5 41.8L7.7 37.9L4.8 33.7L2.4 30.2L0.0 30.2L0.7 27.3L1.0 25.5L1.5 23.4Z"/></symbol>
+</defs></svg>
+<header class="topbar">
+  <div class="wrap">
+    <a class="brand" href="/">
+      <img class="brand-logo" src="/static/logo.png?v=1788785885" alt="" aria-hidden="true">
+      <span class="brand-name">THE MEDIA CUSTOMS</span>
+      <span class="brand-sub">LAUNCH CONTROL</span>
+      
+      <span class="brand-with" aria-label="Built with Google Cloud Agent Builder and Grafana">
+        <img class="brand-adk" src="/static/logo-adk.png?v=1788785885"
+             alt="Google Cloud Agent Builder" width="28" height="28">
+        <i class="brand-bar" aria-hidden="true"></i>
+        <img class="brand-grafana" src="/static/powered-by-grafana.png?v=1788785885"
+             alt="Powered by Grafana" width="95" height="22">
+      </span>
+    </a>
+    <div class="topbar-right">
+      
+      <a id="beacon" class="beacon" href="/runs" hidden></a>
+      <span class="mode-switch" role="group" aria-label="Mode">
+        <a class="" href="/agent"><svg class="ic"><use href="#i-adjudicator"/></svg>Agent</a>
+        
+        <a class="on" href="/runs"><svg class="ic"><use href="#n-board"/></svg>Studio</a>
+      </span>
+      
+      <span class="theme-switch" role="group" aria-label="Style mode">
+        <button type="button" class="tbtn" data-set-theme="" title="Dark: the launch-control room">Dark</button>
+        <button type="button" class="tbtn" data-set-theme="studio" title="Light: for daylight and print">Light</button>
+      </span>
+    </div>
+  </div>
+</header>
+
+
+
+
+<nav class="runnav">
+  <div class="wrap screens">
+    <a class="tab " href="/new"><svg class="ic"><use href="#n-new"/></svg>New clearance run</a>
+    <a class="tab on" href="/runs"><svg class="ic"><use href="#n-runs"/></svg>Recent runs</a>
+    <a class="tab " href="/library"><svg class="ic"><use href="#n-library"/></svg>Library</a>
+    <a class="tab " href="/search"><svg class="ic"><use href="#i-analyst"/></svg>Frame search</a>
+    <a class="tab " href="/insight"><svg class="ic"><use href="#i-analyst"/></svg>Intelligence</a>
+    <a class="tab " href="/grafana"><svg class="ic"><use href="#i-publisher"/></svg>Grafana resources</a>
+  </div>
+</nav>
+<nav class="runnav">
+  
+  <div class="wrap crumb">
+    <a class="crumb-up" href="/runs"><svg class="ic"><use href="#n-runs"/></svg>All runs</a>
+    <span class="crumb-sep" aria-hidden="true">/</span>
+    <span class="crumb-here mono">run_959b162a0f25</span>
+    <span class="crumb-asset">test_ad.mp4</span>
+    <span class="runnav-right">
+      
+      
+      <span class="runstat label" title="This run, across every market">
+        <b class="s-cleared">4</b> cleared
+        <i aria-hidden="true">/</i>
+        <b class="s-blocked">3</b> blocked
+        
+        <i aria-hidden="true">/</i>
+        <b>3.14</b> EUR
+      </span>
+      
+      <span class="pill s-cleared"><svg class="ic"><use href="#i-cleared"/></svg>done</span>
+    </span>
+  </div>
+  
+  <div class="wrap lifecycle" aria-label="Run lifecycle">
+    
+    
+    
+    <span class="lc lc-done"><svg class="ic"><use href="#i-cleared"/></svg>upload</span>
+    
+    
+    <span class="lc-sep" aria-hidden="true"></span>
+    
+    <a class="lc lc-done" href="/runs/run_959b162a0f25/mission"><svg class="ic"><use href="#i-cleared"/></svg>processing</a>
+    
+    
+    <span class="lc-sep" aria-hidden="true"></span>
+    
+    <a class="lc lc-done" href="/runs/run_959b162a0f25/frames"><svg class="ic"><use href="#i-cleared"/></svg>findings</a>
+    
+    
+    <span class="lc-sep" aria-hidden="true"></span>
+    
+    <a class="lc lc-current" href="/runs/run_959b162a0f25"><svg class="ic"><use href="#i-pending"/></svg>decision</a>
+    
+    
+    <span class="lc-sep" aria-hidden="true"></span>
+    
+    <span class="lc lc-todo">fix</span>
+    
+    
+    <span class="lc-sep" aria-hidden="true"></span>
+    
+    <span class="lc lc-todo">verified</span>
+    
+    
+    <span class="lc-cta">
+      <span class="lc-why">36 findings still open. Every fix is priced in euro before you press.</span>
+      <a class="chip on" href="/runs/run_959b162a0f25/markets/FR">Fix FR&#39;s findings &rarr;</a>
+    </span>
+  </div>
+  <div class="wrap screens">
+    <a class="tab on" href="/runs/run_959b162a0f25"><svg class="ic"><use href="#n-board"/></svg>Launch board</a>
+    <a class="tab " href="/runs/run_959b162a0f25/mission"><svg class="ic"><use href="#n-feed"/></svg>Mission feed</a>
+    <a class="tab " href="/runs/run_959b162a0f25/frames"><svg class="ic"><use href="#i-frame"/></svg>Frame board</a>
+    <a class="tab " href="/runs/run_959b162a0f25/timeline"><svg class="ic"><use href="#n-timeline"/></svg>Timeline</a>
+    <a class="tab " href="/runs/run_959b162a0f25/cutting"><svg class="ic"><use href="#n-cut"/></svg>Cutting room</a>
+  </div>
+  
+  <div class="wrap markets-row">
+    <span class="lvl-tag label">global</span>
+    
+    
+    <a class="tab mk-cleared "
+       href="/runs/run_959b162a0f25/markets/GLOBAL"
+       title="GLOBAL: cleared">
+      <svg class="ic"><use href="#d-national_symbols_politics"/></svg>
+      GLOBAL</a>
+    
+
+  </div>
+  
+  <div class="wrap markets-row">
+    <span class="lvl-tag label">continental</span>
+    
+    
+    <a class="tab mk-cleared "
+       href="/runs/run_959b162a0f25/markets/EU"
+       title="EU: cleared">
+      <svg class="ic"><use href="#n-market"/></svg>
+      EU</a>
+    
+
+  </div>
+  
+  <div class="wrap markets-row">
+    <span class="lvl-tag label">national</span>
+    
+    
+    <a class="tab mk-blocked "
+       href="/runs/run_959b162a0f25/markets/AE"
+       title="AE: blocked">
+      <svg class="ic lvl country"><use href="#c-AE"/></svg>AE</a>
+    
+    
+    <a class="tab mk-cleared "
+       href="/runs/run_959b162a0f25/markets/DE"
+       title="DE: cleared">
+      <svg class="ic lvl country"><use href="#c-DE"/></svg>DE</a>
+    
+    
+    <a class="tab mk-blocked "
+       href="/runs/run_959b162a0f25/markets/FR"
+       title="FR: blocked">
+      <svg class="ic lvl country"><use href="#c-FR"/></svg>FR</a>
+    
+    
+    <a class="tab mk-blocked "
+       href="/runs/run_959b162a0f25/markets/SA"
+       title="SA: blocked">
+      <svg class="ic lvl country"><use href="#c-SA"/></svg>SA</a>
+    
+    
+    <a class="tab mk-cleared "
+       href="/runs/run_959b162a0f25/markets/UK"
+       title="UK: cleared">
+      <svg class="ic lvl country"><use href="#c-UK"/></svg>UK</a>
+    
+
+  </div>
+  
+  <div class="wrap markets-row">
+    <span class="lvl-tag label">channel</span>
+    
+    
+    <a class="tab mk-at_risk "
+       href="/runs/run_959b162a0f25/markets/BE-VRT"
+       title="BE-VRT: at risk">
+      <svg class="ic"><use href="#n-cut"/></svg>
+      BE-VRT</a>
+    
+
+  </div>
+  
+</nav>
+<main class="wrap">
+
+
+
+
+
+<section class="hero board-hero" data-run="run_959b162a0f25" id="board">
+ <div class="board-hero-text">
+  <div class="rule-row">
+    <span class="label">Launch verdict</span>
+    <span class="pill s-blocked" id="flag"><span class="dot"></span>NO GO</span>
+  </div>
+  <h1 class="headline" id="headline">CLEARED FOR LAUNCH IN 4 OF 8 MARKETS</h1>
+  <p class="subline" id="subline">
+    
+      <strong>FR, AE, SA, BE-VRT</strong> are holding the campaign. Open a market room for the statute behind every finding.
+    
+  </p>
+  
+  
+  
+  <div class="verdict-strip" id="strip">
+    <span class="v-blocked" data-market="AE" title="AE: blocked"></span><span class="v-blocked" data-market="FR" title="FR: blocked"></span><span class="v-blocked" data-market="SA" title="SA: blocked"></span><span class="v-at_risk" data-market="BE-VRT" title="BE-VRT: at_risk"></span><span class="v-cleared" data-market="DE" title="DE: cleared"></span><span class="v-cleared" data-market="EU" title="EU: cleared"></span><span class="v-cleared" data-market="GLOBAL" title="GLOBAL: cleared"></span><span class="v-cleared" data-market="UK" title="UK: cleared"></span>
+  </div>
+  <div class="specs">
+    <div class="spec"><span class="label">Asset</span><span class="value">test_ad.mp4</span></div>
+    <div class="spec"><span class="label">Duration</span><span class="value">00:56.1</span></div>
+    <div class="spec"><span class="label">Markets</span><span class="value">GLOBAL / EU / FR / DE / UK / AE / SA / BE-VRT</span></div>
+    <div class="spec"><span class="label">Started</span><span class="value">2026-09-07 11:33:08</span></div>
+    <div class="spec"><span class="label">Run</span><span class="value">run_959b162a0f25</span></div>
+  </div>
+ </div>
+ 
+ 
+ <a class="board-poster rotating" href="/runs/run_959b162a0f25/cutting"
+    title="Open the cutting room" style="--frames:5">
+   <span class="board-poster-stack">
+     
+       
+       <img src="/runs/run_959b162a0f25/poster.jpg?at=4.49" style="--i:0"
+            alt="test_ad.mp4 at 4.49s" loading="lazy">
+       
+       <img src="/runs/run_959b162a0f25/poster.jpg?at=15.72" style="--i:1"
+            alt="test_ad.mp4 at 15.72s" loading="lazy">
+       
+       <img src="/runs/run_959b162a0f25/poster.jpg?at=26.95" style="--i:2"
+            alt="test_ad.mp4 at 26.95s" loading="lazy">
+       
+       <img src="/runs/run_959b162a0f25/poster.jpg?at=38.18" style="--i:3"
+            alt="test_ad.mp4 at 38.18s" loading="lazy">
+       
+       <img src="/runs/run_959b162a0f25/poster.jpg?at=49.41" style="--i:4"
+            alt="test_ad.mp4 at 49.41s" loading="lazy">
+       
+     
+     
+     <video class="board-preview" data-hoverplay muted loop playsinline
+            preload="metadata" src="/runs/run_959b162a0f25/preview.mp4"
+            aria-label="A few seconds of test_ad.mp4"></video>
+   </span>
+   <span class="board-poster-cap">
+     <svg class="ic"><use href="#n-cut"/></svg>00:56.1
+   </span>
+ </a>
+ 
+</section>
+
+<section>
+  <div class="rule-row">
+    <span class="label">Where the problems are</span>
+    
+    <a class="chip" href="https://dreamystairs2355.grafana.net/public-dashboards/35f3ef6746614fd0948172de3e64c11d?from=1788780783289&amp;to=1788780849438" target="_blank" rel="noreferrer" data-grafana>open in Grafana</a>
+  </div>
+  <p class="subline" style="max-width:92ch;font-size:13.5px">
+    One lane per category the analyst can see, across this film's own clock. Coloured where a
+    market objected, flat where we looked and nobody minded. The axis is the run's mapped
+    clock: wall second t0+n <em>is</em> film second n.
+  </p>
+  
+  
+  <iframe class="boardlanes live" src="https://customs-grafana-akap4ao72a-ew.a.run.app/d/customs-lanes/customs?var-asset=test_ad&amp;var-run=run_959b162a0f25&amp;kiosk&amp;theme=light&amp;from=1788780788289&amp;to=1788780844438"
+          title="Problem lanes, live from Grafana" loading="lazy"></iframe>
+  <p class="label" style="margin-top:8px">live grafana &middot; hover a segment
+    for its values, click one to remediate the scene it sits on</p>
+  
+</section>
+
+<section>
+  <div class="rule-row"><span class="label">Market tiles</span></div>
+  <div class="tiles" id="tiles">
+    
+    <a class="tile t-blocked" id="tile-AE" href="/runs/run_959b162a0f25/markets/AE">
+      <span class="tile-top">
+        <span class="tile-code">AE</span>
+        <span class="pill s-blocked" data-role="state"><svg class="ic"><use href="#i-blocked"/></svg>blocked</span>
+      </span>
+      <span class="tile-name">United Arab Emirates</span>
+      
+      <svg class="outline" aria-hidden="true"><use href="#c-AE"/></svg>
+      
+      <span class="tile-stats">
+        <span><b data-role="findings">12</b> findings</span>
+        <span><b data-role="open">9</b> still open</span>
+        <span><svg class="ic ic-human"><use href="#i-human"/></svg><b data-role="blocked">1</b> need a human</span>
+      </span>
+      
+      
+      <span class="tile-kinds">
+        
+        <svg class="ic kind" title="sexual orientation gender id"><use href="#d-sexual_orientation_gender_id"/></svg>
+        
+        <svg class="ic kind" title="alcohol tobacco drugs"><use href="#d-alcohol_tobacco_drugs"/></svg>
+        
+        <svg class="ic kind" title="modesty dress body"><use href="#d-modesty_dress_body"/></svg>
+        
+        <svg class="ic kind" title="comparative claims"><use href="#d-comparative_claims"/></svg>
+        
+        <svg class="ic kind" title="health claims pharma"><use href="#d-health_claims_pharma"/></svg>
+        
+        <svg class="ic kind" title="gesture body language"><use href="#d-gesture_body_language"/></svg>
+        
+        
+      </span>
+      
+
+      
+      <img class="tilespark" src="/runs/run_959b162a0f25/markets/AE/spark.svg"
+           alt="" loading="lazy" onerror="this.remove()">
+      <span class="tile-go"><span>Open market room</span><span>&rarr;</span></span>
+    </a>
+    
+    <a class="tile t-blocked" id="tile-FR" href="/runs/run_959b162a0f25/markets/FR">
+      <span class="tile-top">
+        <span class="tile-code">FR</span>
+        <span class="pill s-blocked" data-role="state"><svg class="ic"><use href="#i-blocked"/></svg>blocked</span>
+      </span>
+      <span class="tile-name">France</span>
+      
+      <svg class="outline" aria-hidden="true"><use href="#c-FR"/></svg>
+      
+      <span class="tile-stats">
+        <span><b data-role="findings">13</b> findings</span>
+        <span><b data-role="open">7</b> still open</span>
+        <span><svg class="ic ic-human"><use href="#i-human"/></svg><b data-role="blocked">0</b> need a human</span>
+      </span>
+      
+      
+      <span class="tile-kinds">
+        
+        <svg class="ic kind" title="alcohol tobacco drugs"><use href="#d-alcohol_tobacco_drugs"/></svg>
+        
+        <svg class="ic kind" title="comparative claims"><use href="#d-comparative_claims"/></svg>
+        
+        <svg class="ic kind" title="health claims pharma"><use href="#d-health_claims_pharma"/></svg>
+        
+        <svg class="ic kind" title="text legibility"><use href="#d-text_legibility"/></svg>
+        
+        
+      </span>
+      
+
+      
+      <img class="tilespark" src="/runs/run_959b162a0f25/markets/FR/spark.svg"
+           alt="" loading="lazy" onerror="this.remove()">
+      <span class="tile-go"><span>Open market room</span><span>&rarr;</span></span>
+    </a>
+    
+    <a class="tile t-blocked" id="tile-SA" href="/runs/run_959b162a0f25/markets/SA">
+      <span class="tile-top">
+        <span class="tile-code">SA</span>
+        <span class="pill s-blocked" data-role="state"><svg class="ic"><use href="#i-blocked"/></svg>blocked</span>
+      </span>
+      <span class="tile-name">Saudi Arabia</span>
+      
+      <svg class="outline" aria-hidden="true"><use href="#c-SA"/></svg>
+      
+      <span class="tile-stats">
+        <span><b data-role="findings">13</b> findings</span>
+        <span><b data-role="open">9</b> still open</span>
+        <span><svg class="ic ic-human"><use href="#i-human"/></svg><b data-role="blocked">1</b> need a human</span>
+      </span>
+      
+      
+      <span class="tile-kinds">
+        
+        <svg class="ic kind" title="alcohol tobacco drugs"><use href="#d-alcohol_tobacco_drugs"/></svg>
+        
+        <svg class="ic kind" title="sexual orientation gender id"><use href="#d-sexual_orientation_gender_id"/></svg>
+        
+        <svg class="ic kind" title="modesty dress body"><use href="#d-modesty_dress_body"/></svg>
+        
+        <svg class="ic kind" title="comparative claims"><use href="#d-comparative_claims"/></svg>
+        
+        <svg class="ic kind" title="health claims pharma"><use href="#d-health_claims_pharma"/></svg>
+        
+        
+      </span>
+      
+
+      
+      <img class="tilespark" src="/runs/run_959b162a0f25/markets/SA/spark.svg"
+           alt="" loading="lazy" onerror="this.remove()">
+      <span class="tile-go"><span>Open market room</span><span>&rarr;</span></span>
+    </a>
+    
+    <a class="tile t-at_risk" id="tile-BE-VRT" href="/runs/run_959b162a0f25/markets/BE-VRT">
+      <span class="tile-top">
+        <span class="tile-code">BE-VRT</span>
+        <span class="pill s-at_risk" data-role="state"><svg class="ic"><use href="#i-at-risk"/></svg>at risk</span>
+      </span>
+      <span class="tile-name">VRT (Belgium, Flanders)</span>
+      
+      <span class="chan-mark" aria-hidden="true">VRT</span>
+      
+      <span class="tile-stats">
+        <span><b data-role="findings">15</b> findings</span>
+        <span><b data-role="open">11</b> still open</span>
+        <span><svg class="ic ic-human"><use href="#i-human"/></svg><b data-role="blocked">0</b> need a human</span>
+      </span>
+      
+      
+      <span class="tile-kinds">
+        
+        <svg class="ic kind" title="alcohol tobacco drugs"><use href="#d-alcohol_tobacco_drugs"/></svg>
+        
+        <svg class="ic kind" title="comparative claims"><use href="#d-comparative_claims"/></svg>
+        
+        <svg class="ic kind" title="health claims pharma"><use href="#d-health_claims_pharma"/></svg>
+        
+        <svg class="ic kind" title="text legibility"><use href="#d-text_legibility"/></svg>
+        
+        
+      </span>
+      
+
+      
+      <img class="tilespark" src="/runs/run_959b162a0f25/markets/BE-VRT/spark.svg"
+           alt="" loading="lazy" onerror="this.remove()">
+      <span class="tile-go"><span>Open market room</span><span>&rarr;</span></span>
+    </a>
+    
+    <a class="tile t-cleared" id="tile-DE" href="/runs/run_959b162a0f25/markets/DE">
+      <span class="tile-top">
+        <span class="tile-code">DE</span>
+        <span class="pill s-cleared" data-role="state"><svg class="ic"><use href="#i-cleared"/></svg>cleared</span>
+      </span>
+      <span class="tile-name">Germany</span>
+      
+      <svg class="outline" aria-hidden="true"><use href="#c-DE"/></svg>
+      
+      <span class="tile-stats">
+        <span><b data-role="findings">3</b> findings</span>
+        
+        <span><svg class="ic ic-human"><use href="#i-human"/></svg><b data-role="blocked">0</b> need a human</span>
+      </span>
+      
+      
+      <span class="tile-kinds">
+        
+        <svg class="ic kind" title="comparative claims"><use href="#d-comparative_claims"/></svg>
+        
+        <svg class="ic kind" title="health claims pharma"><use href="#d-health_claims_pharma"/></svg>
+        
+        
+      </span>
+      
+
+      
+      <img class="tilespark" src="/runs/run_959b162a0f25/markets/DE/spark.svg"
+           alt="" loading="lazy" onerror="this.remove()">
+      <span class="tile-go"><span>Open market room</span><span>&rarr;</span></span>
+    </a>
+    
+    <a class="tile t-cleared" id="tile-EU" href="/runs/run_959b162a0f25/markets/EU">
+      <span class="tile-top">
+        <span class="tile-code">EU</span>
+        <span class="pill s-cleared" data-role="state"><svg class="ic"><use href="#i-cleared"/></svg>cleared</span>
+      </span>
+      <span class="tile-name">European Union</span>
+      
+      <svg class="outline" aria-hidden="true"><use href="#c-EU"/></svg>
+      
+      <span class="tile-stats">
+        <span><b data-role="findings">2</b> findings</span>
+        
+        <span><svg class="ic ic-human"><use href="#i-human"/></svg><b data-role="blocked">0</b> need a human</span>
+      </span>
+      
+      
+      <span class="tile-kinds">
+        
+        <svg class="ic kind" title="comparative claims"><use href="#d-comparative_claims"/></svg>
+        
+        <svg class="ic kind" title="health claims pharma"><use href="#d-health_claims_pharma"/></svg>
+        
+        
+      </span>
+      
+
+      
+      <img class="tilespark" src="/runs/run_959b162a0f25/markets/EU/spark.svg"
+           alt="" loading="lazy" onerror="this.remove()">
+      <span class="tile-go"><span>Open market room</span><span>&rarr;</span></span>
+    </a>
+    
+    <a class="tile t-cleared" id="tile-GLOBAL" href="/runs/run_959b162a0f25/markets/GLOBAL">
+      <span class="tile-top">
+        <span class="tile-code">GLOBAL</span>
+        <span class="pill s-cleared" data-role="state"><svg class="ic"><use href="#i-cleared"/></svg>cleared</span>
+      </span>
+      <span class="tile-name">Global baseline</span>
+      
+      <svg class="outline" aria-hidden="true"><use href="#c-GLOBAL"/></svg>
+      
+      <span class="tile-stats">
+        <span><b data-role="findings">2</b> findings</span>
+        
+        <span><svg class="ic ic-human"><use href="#i-human"/></svg><b data-role="blocked">0</b> need a human</span>
+      </span>
+      
+      
+      <span class="tile-kinds">
+        
+        <svg class="ic kind" title="comparative claims"><use href="#d-comparative_claims"/></svg>
+        
+        <svg class="ic kind" title="health claims pharma"><use href="#d-health_claims_pharma"/></svg>
+        
+        
+      </span>
+      
+
+      
+      <img class="tilespark" src="/runs/run_959b162a0f25/markets/GLOBAL/spark.svg"
+           alt="" loading="lazy" onerror="this.remove()">
+      <span class="tile-go"><span>Open market room</span><span>&rarr;</span></span>
+    </a>
+    
+    <a class="tile t-cleared" id="tile-UK" href="/runs/run_959b162a0f25/markets/UK">
+      <span class="tile-top">
+        <span class="tile-code">UK</span>
+        <span class="pill s-cleared" data-role="state"><svg class="ic"><use href="#i-cleared"/></svg>cleared</span>
+      </span>
+      <span class="tile-name">United Kingdom</span>
+      
+      <svg class="outline" aria-hidden="true"><use href="#c-UK"/></svg>
+      
+      <span class="tile-stats">
+        <span><b data-role="findings">4</b> findings</span>
+        
+        <span><svg class="ic ic-human"><use href="#i-human"/></svg><b data-role="blocked">0</b> need a human</span>
+      </span>
+      
+      
+      <span class="tile-kinds">
+        
+        <svg class="ic kind" title="photosensitivity sensory"><use href="#d-photosensitivity_sensory"/></svg>
+        
+        <svg class="ic kind" title="comparative claims"><use href="#d-comparative_claims"/></svg>
+        
+        <svg class="ic kind" title="health claims pharma"><use href="#d-health_claims_pharma"/></svg>
+        
+        
+      </span>
+      
+
+      
+      <img class="tilespark" src="/runs/run_959b162a0f25/markets/UK/spark.svg"
+           alt="" loading="lazy" onerror="this.remove()">
+      <span class="tile-go"><span>Open market room</span><span>&rarr;</span></span>
+    </a>
+    
+  </div>
+</section>
+
+<section>
+  <div class="rule-row"><span class="label">Instrument panel</span></div>
+  <p class="subline" style="margin-top:-4px;margin-bottom:18px;max-width:96ch;font-size:14.5px">The Publisher agent built these dashboards over MCP during this run, and the alert rules on them are what wake the Remediator. Live panels, rendered straight out of that Grafana with the service account the agent used.</p>
+  
+  <div class="embed-grid">
+    <div class="embed">
+      
+      <iframe src="https://customs-grafana-akap4ao72a-ew.a.run.app/d/customs-overview/customs?var-asset=test_ad&amp;var-run=run_959b162a0f25&amp;kiosk&amp;theme=light&amp;from=1788779888289&amp;to=now" title="Market clearance status, live from Grafana" loading="lazy"></iframe>
+      
+      <div class="embed-note">Market clearance status for every asset this instance is tracking, on the current clock, not just this run. It moves again every time a remediation resolves a finding. <a class="cite" href="https://dreamystairs2355.grafana.net/public-dashboards/572d542e26ea4384b206deab8589e63e?from=1788779888289&amp;to=now" target="_blank" rel="noreferrer">Open the overview</a></div>
+    </div>
+    <div class="embed">
+      <a href="https://dreamystairs2355.grafana.net/public-dashboards/35f3ef6746614fd0948172de3e64c11d?from=1788780783289&amp;to=1788780849438" target="_blank" rel="noreferrer">
+        <img src="/runs/run_959b162a0f25/panels/timeline.png" alt="Risk by market across the timecode, from Grafana">
+      </a>
+      <div class="embed-note">Risk by market across the ad's own timecode, on this run's mapped clock, with every finding and remediation drawn on it as an annotation. <a class="cite" href="https://dreamystairs2355.grafana.net/public-dashboards/35f3ef6746614fd0948172de3e64c11d?from=1788780783289&amp;to=1788780849438" target="_blank" rel="noreferrer">Open the timeline</a></div>
+    </div>
+  </div>
+  
+</section>
+
+<section>
+  <div class="rule-row"><span class="label">Go deeper</span></div>
+  <div class="cards">
+    <a class="card" href="/runs/run_959b162a0f25/mission">
+      
+      <svg class="ic card-ic"><use href="#n-feed"/></svg>
+      <span class="label">Live</span>
+      <h3>Mission feed</h3>
+      <p>The agents' own log as it happens: every shot transcribed, every rule judged, every citation grounded, every stage error admitted.</p>
+    </a>
+    <a class="card" href="/runs/run_959b162a0f25/cutting">
+      <svg class="ic card-ic"><use href="#n-cut"/></svg>
+      <span class="label">24 change records</span>
+      <h3>Cutting room</h3>
+      <p>Original against localized master, with the before and after still behind every edit the Remediator made.</p>
+    </a>
+  </div>
+</section>
+
+
+<section>
+  <div class="rule-row">
+    <span class="label">Add analysis</span>
+    <span class="right label">observations already stored &middot; no re-ingest</span>
+  </div>
+  <details class="fixer addmore">
+    <summary class="btn"><svg class="ic"><use href="#n-market"/></svg>Clear this asset for another market</summary>
+    <p class="subline" style="max-width:88ch;font-size:13.5px">
+      The screenshots, the transcript and the analyst's reading of them describe the film,
+      not a jurisdiction, so a second market does not need the asset opened again. Picking
+      one here starts at the adjudicator: its rules are held against the observations this
+      run already has, and only the judging and the citations cost anything.
+    </p>
+    <form method="post" action="/runs/run_959b162a0f25/analysis">
+      <div class="levels">
+        
+        <details class="level">
+          <summary>
+            <span class="lv-name">national</span>
+            <span class="lv-blurb">one country&#39;s law and self-regulation</span>
+            <span class="lv-count mono">11</span>
+          </summary>
+          
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="BE">
+              
+              <svg class="ic lvl country"><use href="#c-BE"/></svg>
+              
+              <span class="code">BE</span>
+              <span class="name">Belgium</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+          </div>
+          
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="BR">
+              
+              <svg class="ic lvl country"><use href="#c-BR"/></svg>
+              
+              <span class="code">BR</span>
+              <span class="name">Brazil</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="CA-QC">
+              
+              <svg class="ic lvl country"><use href="#c-CA-QC"/></svg>
+              
+              <span class="code">CA-QC</span>
+              <span class="name">Canada (Quebec)</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="CN">
+              
+              <svg class="ic lvl country"><use href="#c-CN"/></svg>
+              
+              <span class="code">CN</span>
+              <span class="name">China</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="ID">
+              
+              <svg class="ic lvl country"><use href="#c-ID"/></svg>
+              
+              <span class="code">ID</span>
+              <span class="name">Indonesia</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="IN">
+              
+              <svg class="ic lvl country"><use href="#c-IN"/></svg>
+              
+              <span class="code">IN</span>
+              <span class="name">India</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="JP">
+              
+              <svg class="ic lvl country"><use href="#c-JP"/></svg>
+              
+              <span class="code">JP</span>
+              <span class="name">Japan</span>
+              <span class="regime chip">9 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="NG">
+              
+              <svg class="ic lvl country"><use href="#c-NG"/></svg>
+              
+              <span class="code">NG</span>
+              <span class="name">Nigeria</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="TH">
+              
+              <svg class="ic lvl country"><use href="#c-TH"/></svg>
+              
+              <span class="code">TH</span>
+              <span class="name">Thailand</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="TR">
+              
+              <svg class="ic lvl country"><use href="#c-TR"/></svg>
+              
+              <span class="code">TR</span>
+              <span class="name">Turkey</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="US">
+              
+              <svg class="ic lvl country"><use href="#c-US"/></svg>
+              
+              <span class="code">US</span>
+              <span class="name">United States</span>
+              <span class="regime chip">13 rules</span>
+            </label>
+            
+          </div>
+          
+        </details>
+        
+        <details class="level">
+          <summary>
+            <span class="lv-name">channel</span>
+            <span class="lv-blurb">a broadcaster&#39;s own acceptance rules on top of its country&#39;s, so a channel with no pack of its own carries exactly its country&#39;s count</span>
+            <span class="lv-count mono">79</span>
+          </summary>
+          
+          
+          <div class="fam label">United Arab Emirates</div>
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="AE-ABUDHABI">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">AE-ABUDHABI</span>
+              <span class="name">Abu Dhabi TV</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="AE-DUBAITV">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">AE-DUBAITV</span>
+              <span class="name">Dubai TV</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="AE-MBC4">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">AE-MBC4</span>
+              <span class="name">MBC 4</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="AE-SAMA">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">AE-SAMA</span>
+              <span class="name">Sama Dubai</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="AE-SHARJAH">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">AE-SHARJAH</span>
+              <span class="name">Sharjah TV</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+          </div>
+          
+          
+          <div class="fam label">Belgium</div>
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="BE-PLAY">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">BE-PLAY</span>
+              <span class="name">Play (Belgium, Flanders)</span>
+              <span class="regime chip">11 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="BE-RTBF">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">BE-RTBF</span>
+              <span class="name">RTBF</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="BE-RTL">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">BE-RTL</span>
+              <span class="name">RTL TVI</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="BE-VTM">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">BE-VTM</span>
+              <span class="name">VTM (Belgium, Flanders)</span>
+              <span class="regime chip">11 rules</span>
+            </label>
+            
+          </div>
+          
+          
+          <div class="fam label">Brazil</div>
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="BR-BAND">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">BR-BAND</span>
+              <span class="name">Band</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="BR-GLOBO">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">BR-GLOBO</span>
+              <span class="name">TV Globo</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="BR-RECORD">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">BR-RECORD</span>
+              <span class="name">Record TV</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="BR-REDETV">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">BR-REDETV</span>
+              <span class="name">RedeTV!</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="BR-SBT">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">BR-SBT</span>
+              <span class="name">SBT</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+          </div>
+          
+          
+          <div class="fam label">Canada (Quebec)</div>
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="CAQC-NOOVO">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">CAQC-NOOVO</span>
+              <span class="name">Noovo</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="CAQC-RC">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">CAQC-RC</span>
+              <span class="name">Radio-Canada</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="CAQC-RDS">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">CAQC-RDS</span>
+              <span class="name">RDS</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="CAQC-TELEQ">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">CAQC-TELEQ</span>
+              <span class="name">Tele-Quebec</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="CAQC-TVA">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">CAQC-TVA</span>
+              <span class="name">TVA</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+          </div>
+          
+          
+          <div class="fam label">China</div>
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="CN-CCTV1">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">CN-CCTV1</span>
+              <span class="name">CCTV-1</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="CN-CCTV3">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">CN-CCTV3</span>
+              <span class="name">CCTV-3</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="CN-HUNAN">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">CN-HUNAN</span>
+              <span class="name">Hunan TV</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="CN-JIANGSU">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">CN-JIANGSU</span>
+              <span class="name">Jiangsu TV</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="CN-ZHEJIANG">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">CN-ZHEJIANG</span>
+              <span class="name">Zhejiang TV</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+          </div>
+          
+          
+          <div class="fam label">Germany</div>
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="DE-ARD">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">DE-ARD</span>
+              <span class="name">ARD Das Erste</span>
+              <span class="regime chip">14 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="DE-PRO7">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">DE-PRO7</span>
+              <span class="name">ProSieben</span>
+              <span class="regime chip">14 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="DE-RTL">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">DE-RTL</span>
+              <span class="name">RTL</span>
+              <span class="regime chip">14 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="DE-SAT1">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">DE-SAT1</span>
+              <span class="name">Sat.1</span>
+              <span class="regime chip">14 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="DE-ZDF">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">DE-ZDF</span>
+              <span class="name">ZDF</span>
+              <span class="regime chip">14 rules</span>
+            </label>
+            
+          </div>
+          
+          
+          <div class="fam label">France</div>
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="FR-ARTE">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">FR-ARTE</span>
+              <span class="name">Arte</span>
+              <span class="regime chip">16 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="FR-CANAL">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">FR-CANAL</span>
+              <span class="name">Canal+</span>
+              <span class="regime chip">16 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="FR-F2">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">FR-F2</span>
+              <span class="name">France 2</span>
+              <span class="regime chip">16 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="FR-M6">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">FR-M6</span>
+              <span class="name">M6</span>
+              <span class="regime chip">16 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="FR-TF1">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">FR-TF1</span>
+              <span class="name">TF1</span>
+              <span class="regime chip">16 rules</span>
+            </label>
+            
+          </div>
+          
+          
+          <div class="fam label">Indonesia</div>
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="ID-ANTV">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">ID-ANTV</span>
+              <span class="name">ANTV</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="ID-INDOSIAR">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">ID-INDOSIAR</span>
+              <span class="name">Indosiar</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="ID-RCTI">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">ID-RCTI</span>
+              <span class="name">RCTI</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="ID-SCTV">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">ID-SCTV</span>
+              <span class="name">SCTV</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="ID-TRANSTV">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">ID-TRANSTV</span>
+              <span class="name">Trans TV</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+          </div>
+          
+          
+          <div class="fam label">India</div>
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="IN-COLORS">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">IN-COLORS</span>
+              <span class="name">Colors</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="IN-DD">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">IN-DD</span>
+              <span class="name">DD National</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="IN-SONY">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">IN-SONY</span>
+              <span class="name">Sony Entertainment</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="IN-STARPLUS">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">IN-STARPLUS</span>
+              <span class="name">Star Plus</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="IN-ZEETV">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">IN-ZEETV</span>
+              <span class="name">Zee TV</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+          </div>
+          
+          
+          <div class="fam label">Japan</div>
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="JP-FUJI">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">JP-FUJI</span>
+              <span class="name">Fuji TV</span>
+              <span class="regime chip">9 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="JP-NHK">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">JP-NHK</span>
+              <span class="name">NHK General</span>
+              <span class="regime chip">9 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="JP-NTV">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">JP-NTV</span>
+              <span class="name">Nippon TV</span>
+              <span class="regime chip">9 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="JP-TBS">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">JP-TBS</span>
+              <span class="name">TBS</span>
+              <span class="regime chip">9 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="JP-TVASAHI">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">JP-TVASAHI</span>
+              <span class="name">TV Asahi</span>
+              <span class="regime chip">9 rules</span>
+            </label>
+            
+          </div>
+          
+          
+          <div class="fam label">Nigeria</div>
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="NG-AIT">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">NG-AIT</span>
+              <span class="name">AIT</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="NG-ARISE">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">NG-ARISE</span>
+              <span class="name">Arise News</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="NG-CHANNELS">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">NG-CHANNELS</span>
+              <span class="name">Channels TV</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="NG-NTA">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">NG-NTA</span>
+              <span class="name">NTA</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="NG-TVC">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">NG-TVC</span>
+              <span class="name">TVC News</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+          </div>
+          
+          
+          <div class="fam label">Saudi Arabia</div>
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="SA-ALARABIYA">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">SA-ALARABIYA</span>
+              <span class="name">Al Arabiya</span>
+              <span class="regime chip">12 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="SA-MBC1">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">SA-MBC1</span>
+              <span class="name">MBC 1</span>
+              <span class="regime chip">12 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="SA-ROTANA">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">SA-ROTANA</span>
+              <span class="name">Rotana Khalijia</span>
+              <span class="regime chip">12 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="SA-SAUDITV">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">SA-SAUDITV</span>
+              <span class="name">Saudi TV 1</span>
+              <span class="regime chip">12 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="SA-SSC">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">SA-SSC</span>
+              <span class="name">SSC Sports</span>
+              <span class="regime chip">12 rules</span>
+            </label>
+            
+          </div>
+          
+          
+          <div class="fam label">Thailand</div>
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="TH-CH3">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">TH-CH3</span>
+              <span class="name">Channel 3</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="TH-CH7">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">TH-CH7</span>
+              <span class="name">Channel 7</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="TH-ONE31">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">TH-ONE31</span>
+              <span class="name">One 31</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="TH-THAIPBS">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">TH-THAIPBS</span>
+              <span class="name">Thai PBS</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="TH-WORKPOINT">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">TH-WORKPOINT</span>
+              <span class="name">Workpoint TV</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+          </div>
+          
+          
+          <div class="fam label">Turkey</div>
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="TR-ATV">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">TR-ATV</span>
+              <span class="name">ATV</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="TR-KANALD">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">TR-KANALD</span>
+              <span class="name">Kanal D</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="TR-SHOWTV">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">TR-SHOWTV</span>
+              <span class="name">Show TV</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="TR-STAR">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">TR-STAR</span>
+              <span class="name">Star TV</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="TR-TRT1">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">TR-TRT1</span>
+              <span class="name">TRT 1</span>
+              <span class="regime chip">10 rules</span>
+            </label>
+            
+          </div>
+          
+          
+          <div class="fam label">United Kingdom</div>
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="UK-BBC1">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">UK-BBC1</span>
+              <span class="name">BBC One</span>
+              <span class="regime chip">11 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="UK-C4">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">UK-C4</span>
+              <span class="name">Channel 4</span>
+              <span class="regime chip">11 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="UK-C5">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">UK-C5</span>
+              <span class="name">Channel 5</span>
+              <span class="regime chip">11 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="UK-ITV1">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">UK-ITV1</span>
+              <span class="name">ITV1</span>
+              <span class="regime chip">11 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="UK-SKY">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">UK-SKY</span>
+              <span class="name">Sky Max</span>
+              <span class="regime chip">11 rules</span>
+            </label>
+            
+          </div>
+          
+          
+          <div class="fam label">United States</div>
+          
+          <div class="markets">
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="US-ABC">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">US-ABC</span>
+              <span class="name">ABC</span>
+              <span class="regime chip">13 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="US-CBS">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">US-CBS</span>
+              <span class="name">CBS</span>
+              <span class="regime chip">13 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="US-CW">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">US-CW</span>
+              <span class="name">The CW</span>
+              <span class="regime chip">13 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="US-FOX">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">US-FOX</span>
+              <span class="name">Fox</span>
+              <span class="regime chip">13 rules</span>
+            </label>
+            
+            <label class="market-pick">
+              <input type="checkbox" name="markets" value="US-NBC">
+              
+              <svg class="ic lvl"><use href="#n-cut"/></svg>
+              
+              <span class="code">US-NBC</span>
+              <span class="name">NBC</span>
+              <span class="regime chip">13 rules</span>
+            </label>
+            
+          </div>
+          
+        </details>
+        
+      </div>
+      <div class="fix-foot">
+        <span class="label">Judged against the 8 markets already on this run</span>
+        <button class="btn go" type="submit">Run the analysis</button>
+      </div>
+    </form>
+  </details>
+</section>
+
+
+
+</main>
+<footer>
+  <div class="wrap">
+    <span class="label">The Media Customs // one asset, every market, before it ships</span>
+    <span class="label">Grafana is upstream of the work, not a report produced afterwards</span>
+  </div>
+</footer>
+<script src="/static/customs.js?v=1788785885" defer></script>
+</body>
+</html>

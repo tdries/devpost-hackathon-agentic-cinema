@@ -635,7 +635,7 @@ src/customs/
 markets/          21 packs → 98 jurisdictions → 128 rules
 grafana/dashboards/  9 dashboards, provisioned as JSON
 grafana-viewer/   stock grafana-oss that is allowed to be framed
-tests/            24 files, 589 tests
+tests/            23 files, 610 tests
 ```
 
 **Built with:** Python · FastAPI · Google Cloud Agent Builder (ADK) · Gemini (vision, text, TTS, image) · Veo 3.1 · Gemini Omni · Grafana Cloud (Mimir, Loki, MCP) · ffmpeg · SQLite · Cloud Run
