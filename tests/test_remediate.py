@@ -1228,3 +1228,28 @@ def test_a_grouped_patch_lands_through_the_union_of_the_groups_boxes():
         [100, 100, 300, 300]
     lead.box = []
     assert remediate._group_box(lead, [thighs], pathlib.Path("/nope.png")) == []
+
+
+def test_a_prop_swap_may_not_trade_one_banned_prop_for_another():
+    """chg_824e9538e678, on a real run: asked to "replace each cigarette,
+    cigar, tobacco pack", Omni turned a cigar into a cigarette. One banned
+    item for another banned item -- the smallest edit that satisfied the
+    sentence, and no fix at all.
+
+    The system caught it (EU-TOB-01 fired on the re-observation and the
+    verifier reopened the finding), so what needed changing was the
+    instruction: the list names what to remove, and the constraint on the
+    REPLACEMENT has to be said out loud.
+    """
+    swap = remediate._DEFAULT_REPLACEMENT["prop_swap"]
+
+    lowered = swap.lower()
+    assert "must not itself be" in lowered
+    for banned in ("alcohol", "tobacco", "smoking device", "drug"):
+        assert banned in lowered, banned
+    # the specific trap, named so nobody re-litigates it
+    assert "cigar changed into a cigarette" in lowered
+    # and the effect, not just the object: a swapped prop that still smokes
+    # is what the analyst is now told to log
+    for effect in ("lit", "smoking", "vapour", "ash"):
+        assert effect in lowered, effect

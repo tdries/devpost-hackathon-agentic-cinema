@@ -284,12 +284,25 @@ _DEFAULT_REPLACEMENT = {
         # cannot name only alcohol: a Parliament cigarette pack was being
         # sent "replace each alcoholic drink, bottle and glass", the same
         # category collapse that put a green can into a modesty shot.
+        #
+        # And the list is a list of things to REMOVE, which had to be said
+        # out loud: given "replace each cigarette, cigar, tobacco pack",
+        # Omni swapped a cigar for a cigarette (chg_824e9538e678) -- one
+        # banned item for another banned item, the smallest edit that
+        # satisfied the sentence. EU-TOB-01 fired again on the
+        # re-observation and the verifier reopened the finding, which is
+        # the system working; the instruction is what was wrong.
         "Replace each alcoholic drink, bottle, glass, cigarette, cigar, "
-        "tobacco pack or ashtray that is already visible with a permitted "
-        "equivalent for {market_name} -- tea in the same style of glass in "
-        "place of a drink, a pen or nothing at all in place of a cigarette, "
-        "a closed box with no branding in place of a pack -- keeping the "
-        "same number of items in the same places and adding none."
+        "pipe, e-cigarette, tobacco pack or ashtray that is already "
+        "visible with a permitted equivalent for {market_name} -- tea in "
+        "the same style of glass in place of a drink, a pen or nothing at "
+        "all in place of anything smoked, a closed box with no branding in "
+        "place of a pack -- keeping the same number of items in the same "
+        "places and adding none. The replacement must not itself be "
+        "alcohol, tobacco, a smoking device or a drug in any form: a cigar "
+        "changed into a cigarette is the same finding again. Nothing in "
+        "the finished shot may be lit, smoking, or giving off vapour, ash "
+        "or embers."
     ),
 }
 
