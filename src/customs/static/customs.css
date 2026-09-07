@@ -1402,6 +1402,15 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
 .agent-head .label { display: inline-flex; align-items: center; gap: 8px; }
 
 .agent-log { flex: 1; overflow-y: auto; padding: 14px; display: grid; gap: 12px; align-content: start; }
+/* Before the first turn there is nothing to scroll, and a log that claims
+   the leftover height put a hand's width of blank panel between the
+   greeting and the buttons under it. Until a conversation exists, the log
+   is only as tall as the sentence in it and the starters sit right below;
+   the moment a second message lands it grows and scrolls as before. */
+.agent-log:has(> .ag-msg:only-child) { flex: 0 0 auto; overflow: visible; }
+.agentscreen:has(.agent-log > .ag-msg:only-child) { height: auto; min-height: 0; }
+.agent:has(.agent-log > .ag-msg:only-child) { align-items: start; }
+.agent:has(.agent-log > .ag-msg:only-child) .agent-canvas { min-height: 420px; }
 .ag-msg { display: grid; grid-template-columns: 18px 1fr; gap: 11px; align-items: start; }
 .ag-msg .ic { margin-top: 2px; }
 .ag-body { min-width: 0; }
@@ -1539,6 +1548,22 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
 /* one nav row per jurisdiction level, labelled */
 .runnav .wrap.markets-row { min-height: 40px; gap: 2px; }
 .runnav .wrap.markets-row + .markets-row { border-top: 1px solid var(--line); }
+/* one strip, in ladder order */
+.runnav .markets-row.ladder { flex-wrap: wrap; align-items: center;
+  row-gap: 0; }
+.lvl-sep { width: 1px; align-self: stretch; margin: 8px 8px;
+  background: var(--line); flex: none; }
+/* a country standing for its broadcasters, and the list it opens */
+.mkfold { position: relative; }
+.mkfold > summary { list-style: none; cursor: pointer; display: inline-flex;
+  align-items: center; gap: 6px; }
+.mkfold > summary::-webkit-details-marker { display: none; }
+.mkfold[open] > summary { color: var(--ink); }
+.mkfold-list { position: absolute; top: 100%; left: 0; z-index: 30;
+  display: flex; flex-direction: column; min-width: 148px; padding: 4px;
+  border: 1px solid var(--line-2); border-radius: var(--radius);
+  background: var(--panel); box-shadow: 0 10px 26px rgba(0, 0, 0, .16); }
+.mkfold-list .tab { padding: 7px 9px; }
 .lvl-tag {
   flex: none; width: 88px; padding-right: 10px;
   font-size: 9px; letter-spacing: 0.18em; color: var(--ink-3);
@@ -2881,6 +2906,11 @@ video.runthumb { object-fit: cover; background: var(--well); }
 .cardlanes.drawn { height: 100%; object-fit: contain; object-position: left top; }
 .cardviz[data-viz="live"] .cardlanes.drawn,
 .cardviz[data-viz="drawn"] .cardlanes.live { display: none; }
+/* The drawing carries its own labels in its own gutter, so the shared icon
+   column beside it was a second copy of the same six marks. Only the live
+   panel needs borrowed labels: Grafana cannot draw a taxonomy glyph. */
+.cardviz[data-viz="drawn"] .cardgrid-keys { display: none; }
+.cardviz[data-viz="drawn"] .cardgrid { grid-template-columns: 1fr; }
 /* No viewer deployed: the drawing is the only chart, and it keeps the
    height it had rather than being cropped to a panel that is not there. */
 .cardviz:not([data-viz]) .cardplot, .cardplot:not(:has(.cardlanes.live)) {

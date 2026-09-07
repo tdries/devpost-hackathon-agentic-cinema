@@ -58,22 +58,47 @@
     <a class="tab {% if screen == 'timeline' %}on{% endif %}" href="/runs/{{ run.id }}/timeline"><svg class="ic"><use href="#n-timeline"/></svg>Timeline</a>
     <a class="tab {% if screen == 'cutting' %}on{% endif %}" href="/runs/{{ run.id }}/cutting"><svg class="ic"><use href="#n-cut"/></svg>Cutting room</a>
   </div>
-  {% for row in market_rows(run) %}
-  <div class="wrap markets-row">
-    <span class="lvl-tag label">{{ row.level }}</span>
-    {% for m in row.markets %}
+  {# The ladder, as one line. It was four stacked rows -- global,
+     continental, national, channel -- each labelled and each holding two
+     or three codes, which spent a quarter of every run screen saying very
+     little and left a ragged edge where the labels ran out of things to
+     label. One strip in ladder order instead, the marks carrying the
+     level, and each country's broadcasters folded behind it: BE-VRT,
+     BE-VTM, BE-PLAY and BE-RTBF side by side read as four countries. #}
+  <div class="wrap markets-row ladder">
+    <span class="lvl-tag label">markets</span>
+    {% for tier in market_ladder(run) %}
+    {% if not loop.first %}<span class="lvl-sep" aria-hidden="true"></span>{% endif %}
+    {% for m in tier.markets %}
+    {% if m.children %}
+    <details class="mkfold">
+      <summary class="tab mk-{{ m.state }}"
+               title="{{ m.children | length }} broadcaster(s) of {{ m.code }}: {{ m.children | map(attribute='code') | join(', ') }}">
+        <svg class="ic lvl country"><use href="#c-{{ m.code }}"/></svg>{{ m.code }}
+        <b class="foldn">{{ m.children | length }}</b>
+      </summary>
+      <span class="mkfold-list">
+        {% for c in m.children %}
+        <a class="tab mk-{{ c.state }}{{ ' mk-elsewhere' if c.elsewhere }} {% if screen == 'market' and market == c.code and not c.elsewhere %}on{% endif %}"
+           href="/runs/{{ c.run }}/markets/{{ c.code }}"
+           title="{{ c.code }}: {{ c.state.replace('_', ' ') }}{{ ' -- judged in another clearance of this same file' if c.elsewhere }}">
+          <svg class="ic"><use href="#n-cut"/></svg>{{ c.code }}</a>
+        {% endfor %}
+      </span>
+    </details>
+    {% else %}
     {# A market judged in another pass of the same file links into the run
        that holds it, marked, rather than being absent from this strip --
        one film, every market it has ever been judged against. #}
     <a class="tab mk-{{ m.state }}{{ ' mk-elsewhere' if m.elsewhere }} {% if screen == 'market' and market == m.code and not m.elsewhere %}on{% endif %}"
        href="/runs/{{ m.run }}/markets/{{ m.code }}"
        title="{{ m.code }}: {{ m.state.replace('_', ' ') }}{{ ' -- judged in another clearance of this same file' if m.elsewhere }}">
-      {% if row.level == 'channel' %}<svg class="ic"><use href="#n-cut"/></svg>
-      {% elif row.level == 'global' %}<svg class="ic"><use href="#d-national_symbols_politics"/></svg>
-      {% elif row.level == 'continental' %}<svg class="ic"><use href="#n-market"/></svg>
+      {% if tier.level == 'channel' %}<svg class="ic"><use href="#n-cut"/></svg>
+      {% elif tier.level == 'global' %}<svg class="ic"><use href="#d-national_symbols_politics"/></svg>
+      {% elif tier.level == 'continental' %}<svg class="ic"><use href="#n-market"/></svg>
       {% else %}<svg class="ic lvl country"><use href="#c-{{ m.code }}"/></svg>{% endif %}{{ m.code }}</a>
+    {% endif %}
     {% endfor %}
-
+    {% endfor %}
   </div>
-  {% endfor %}
 </nav>

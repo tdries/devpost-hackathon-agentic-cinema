@@ -1477,6 +1477,44 @@ def market_rows(run) -> list[dict]:
     return rows
 
 
+def market_ladder(run) -> list[dict]:
+    """The whole ladder as ONE strip, with broadcasters folded.
+
+    market_rows gives a row per level, which was four stacked lines of two
+    or three codes each: a lot of vertical space on every run screen and a
+    ragged left edge where the labels ran out of things to label. This is
+    the same information as one line -- global, continental, national, and
+    then a fold per country holding its channels -- because the ladder is
+    a sequence and a reader steers by it.
+
+    A fold rather than a row: BE-VRT, BE-VTM, BE-PLAY and BE-RTBF side by
+    side read as four countries. One BE chip carrying their worst verdict
+    reads as Belgium, and the four are one click away.
+    """
+    all_packs = market_packs()
+    tiers = []
+    for row in market_rows(run):
+        if row["level"] != "channel":
+            tiers.append(row)
+            continue
+        families: dict[str, list[dict]] = {}
+        for pill in row["markets"]:
+            pack = all_packs.get(pill["code"])
+            parent = (pack.parent if pack and pack.parent else "") or "other"
+            families.setdefault(parent, []).append(pill)
+        folded = []
+        for parent, children in families.items():
+            worst = max(children,
+                        key=lambda c: _STATE_RANK.get(c["state"], 0))
+            folded.append({"code": parent, "state": worst["state"],
+                           "run": children[0]["run"], "elsewhere": None,
+                           "children": sorted(children,
+                                              key=lambda c: c["code"])})
+        tiers.append({"level": "channel",
+                      "markets": sorted(folded, key=lambda f: f["code"])})
+    return tiers
+
+
 def clearance_gauge(states: dict) -> str:
     """How much is still open before this run clears, as a gauge.
 
@@ -1665,6 +1703,7 @@ def run_lifecycle(run) -> dict:
 
 
 templates.env.globals["market_rows"] = market_rows
+templates.env.globals["market_ladder"] = market_ladder
 templates.env.globals["run_lifecycle"] = run_lifecycle
 
 # -- the front door --

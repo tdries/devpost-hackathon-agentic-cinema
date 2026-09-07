@@ -1376,21 +1376,47 @@ def test_agent_mode_talks_to_vertex_on_the_endpoint_that_has_the_models(monkeypa
     assert os.environ["GOOGLE_GENAI_USE_VERTEXAI"] == "true"
 
 
-def test_the_run_nav_puts_each_jurisdiction_level_on_its_own_labelled_row(client):
-    """A run can cover a baseline, a continent, countries and broadcasters at
-    once; one flat strip of codes hides which is which."""
+def test_the_run_nav_is_one_ladder_with_the_broadcasters_folded(client):
+    """A run can cover a baseline, a continent, countries and broadcasters
+    at once, and this used to be four stacked labelled rows: a quarter of
+    every run screen spent saying very little, with a ragged edge where
+    the labels ran out of things to label.
+
+    One strip in ladder order now. The marks carry the level, and each
+    country's broadcasters fold behind it -- BE-VRT, BE-VTM and BE-PLAY
+    side by side read as three countries.
+    """
     test_client, store, _run, _ = client
     run = store.create_run(asset_path=ASSET,
                            markets=["GLOBAL", "EU", "FR", "BE", "BE-VRT", "FR-M6"])
     page = test_client.get(f"/runs/{run.id}")
     assert page.status_code == 200
-    for level in ("global", "continental", "national", "channel"):
-        assert f'<span class="lvl-tag label">{level}</span>' in page.text
-    # and the rows carry the right members
     body = page.text
-    channel_row = body.split('>channel</span>')[1][:400]
-    assert "BE-VRT" in channel_row and "FR-M6" in channel_row
-    assert "GLOBAL" not in channel_row
+
+    # one strip, not one per level
+    assert body.count('class="wrap markets-row ladder"') == 1
+    assert body.count('class="lvl-tag label"') == 1
+
+    # the ladder itself, in order, with the territories as tabs. Matched
+    # loosely on purpose: the icon branch leaves a newline between the
+    # glyph and the code, and this test is about the order of the rungs.
+    strip = body.split('class="wrap markets-row ladder"', 1)[1].split("</div>", 1)[0]
+    flat = " ".join(strip.split())
+    for code in ("GLOBAL", "EU", "FR", "BE"):
+        assert f"{code}</a>" in flat, code
+    assert flat.index("GLOBAL</a>") < flat.index("EU</a>") < flat.index("FR</a>")
+
+    # and the channels behind their own country, one fold each
+    assert strip.count('<details class="mkfold">') == 2, "BE and FR"
+    fold = strip.split('<details class="mkfold">')[1]
+    assert "BE-VRT" in fold and 'class="mkfold-list"' in fold
+
+    ladder = app_module.market_ladder(store.get_run(run.id))
+    assert [tier["level"] for tier in ladder] == [
+        "global", "continental", "national", "channel"]
+    channels = next(t for t in ladder if t["level"] == "channel")
+    assert [m["code"] for m in channels["markets"]] == ["BE", "FR"]
+    assert sum(len(m["children"]) for m in channels["markets"]) == 2
 
 
 def test_the_generated_seconds_are_downloadable(client, tmp_path):
