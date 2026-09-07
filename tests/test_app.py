@@ -1534,7 +1534,7 @@ def test_a_restore_that_fails_the_first_time_still_gets_its_runs(tmp_path, monke
     assert "Stale file handle" in notes[0]  # and it said so
 
 
-def test_the_mission_feed_has_a_second_tab_for_what_came_out_of_the_run(console):
+def test_what_came_out_of_the_run_is_a_screen_beside_the_cutting_room(console):
     """The feed says what is happening; nothing said what it produced.
 
     Checking a generated clip meant knowing the change id and typing a URL,
@@ -1543,13 +1543,24 @@ def test_the_mission_feed_has_a_second_tab_for_what_came_out_of_the_run(console)
     with the container. Those two frames are the entire brief Veo was
     given: without them there is no way to tell whether it invented
     something or was handed it.
+
+    It was a tab on the mission feed for a while, which is the wrong place:
+    the feed is the event log, and what the models made is a question about
+    the film. It is a screen of its own now, next to the cutting room.
     """
     client, store, _launched, _jobs = console
     run = store.create_run(asset_path="/x/ad.mp4", markets=["SA"])
 
-    body = client.get(f"/runs/{run.id}/mission").text
-    assert 'data-mtab="live"' in body and 'data-mtab="made"' in body
+    body = client.get(f"/runs/{run.id}/generated").text
     assert "Nothing generated yet" in body      # honest empty state
+    # and it is reachable from every screen in the run, beside the cutting room
+    nav = client.get(f"/runs/{run.id}/cutting").text
+    assert f'href="/runs/{run.id}/generated"' in nav
+    cutting = nav.index(f'href="/runs/{run.id}/cutting"')
+    assert nav.index(f'href="/runs/{run.id}/generated"') > cutting
+    # the feed keeps the log and nothing else
+    feed = client.get(f"/runs/{run.id}/mission").text
+    assert "data-mtab" not in feed
 
     changes = Path(app_module.run_dir(run)) / "changes"
     changes.mkdir(parents=True, exist_ok=True)
@@ -1563,7 +1574,7 @@ def test_the_mission_feed_has_a_second_tab_for_what_came_out_of_the_run(console)
         (changes / name).write_bytes(b"\x89PNG\r\n\x1a\n")
     (changes / "chg_abc123_bridge.mp4").write_bytes(b"\x00")
 
-    body = client.get(f"/runs/{run.id}/mission").text
+    body = client.get(f"/runs/{run.id}/generated").text
     assert "Nothing generated yet" not in body
     assert "chg_abc123_anchor_head.png" in body, "the first frame Veo was given"
     assert "chg_abc123_anchor_tail.png" in body, "and the last"
@@ -1648,6 +1659,28 @@ def test_a_run_card_draws_its_own_lanes_when_there_is_no_viewer(client):
     # card has one chart and no switch to offer
     assert "<iframe" not in body
     assert "data-viz-pick" not in body
+
+
+def test_hovering_a_dot_can_play_that_second_of_the_film(client):
+    """The drawn chart's dots are hoverable, and the hover has to land on
+    the right moment.
+
+    The card's clip is the whole film in about five seconds -- a timelapse,
+    not the first five seconds -- so a dot at 42s is nowhere near 42s of
+    that clip. The chart carries the film's own length and each dot the
+    second it sits at, which is the only pair that maps one to the other.
+    """
+    from customs import spark
+    svg = spark.lanes([{"dimension": "alcohol",
+                        "events": [{"t": 42.0, "flagged": True, "severity": 95,
+                                    "obs": "obs_1", "market": "FR"}]}],
+                      duration=56.1, ruler=False)
+    assert 'data-duration="56.100"' in svg
+    assert 'class="lane-dot hit"' in svg and 'data-t="42.0"' in svg
+    # and the console asks for that chart as markup, not as a picture, or
+    # no pointer event would ever reach a dot
+    assert "img.cardlanes.drawn" in (
+        Path(app_module.__file__).parent / "static" / "customs.js").read_text()
 
 
 def test_one_palette_governs_the_app_and_grafana(client):

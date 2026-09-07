@@ -185,6 +185,53 @@
       boot();
     };
 
+    /* Hovering a dot plays that moment of the film.
+       Two things have to be true for that: the chart has to be real markup
+       rather than an <img> -- no event reaches inside a picture -- and the
+       moment has to be mapped, because the card's clip is the whole film
+       in about five seconds. The chart carries the film's length and each
+       dot the second it sits at, so the fraction is the same in both. */
+    var scrub = function (card, holder) {
+      var svg = holder.querySelector("svg");
+      var row = card.closest(".runcard");
+      var video = row ? row.querySelector("video.runthumb") : null;
+      var span = svg ? parseFloat(svg.dataset.duration) : 0;
+      if (!video || !span) { return; }
+      holder.addEventListener("pointerover", function (event) {
+        var dot = event.target.closest ? event.target.closest(".lane-dot") : null;
+        if (!dot) { return; }
+        if (video.preload !== "auto") { video.preload = "auto"; video.load(); }
+        var at = parseFloat(dot.dataset.t) / span;
+        var seek = function () {
+          try { video.currentTime = Math.max(0, Math.min(0.999, at)) * (video.duration || 0); } catch (e) {}
+          var playing = video.play();
+          if (playing && playing.catch) { playing.catch(function () {}); }
+        };
+        if (video.readyState >= 1) { seek(); }
+        else { video.addEventListener("loadedmetadata", seek, { once: true }); }
+      });
+    };
+
+    /* The drawn chart arrives as an <img> and is swapped for the markup the
+       first time this reader asks for drawn: it costs a fetch nobody makes
+       who never leaves the live panel. */
+    var inline = function (card) {
+      var img = card.querySelector("img.cardlanes.drawn");
+      if (!img || card.dataset.inlined) { return; }
+      card.dataset.inlined = "1";
+      window.fetch(img.getAttribute("src"))
+        .then(function (r) { return r.ok ? r.text() : ""; })
+        .then(function (svg) {
+          if (!svg || svg.indexOf("<svg") === -1) { return; }
+          var slot = document.createElement("span");
+          slot.className = "cardlanes drawn";
+          slot.innerHTML = svg;
+          img.parentNode.replaceChild(slot, img);
+          scrub(card, slot);
+        })
+        .catch(function () { /* the <img> stays, and still draws */ });
+    };
+
     var apply = function (card) {
       card.dataset.viz = mode;
       var picks = card.parentElement
@@ -194,7 +241,7 @@
         button.classList.toggle("on", on);
         button.setAttribute("aria-pressed", on ? "true" : "false");
       });
-      if (mode === "live") { wake(card); }
+      if (mode === "live") { wake(card); } else { inline(card); }
     };
 
     Array.prototype.forEach.call(cards, apply);
@@ -532,24 +579,6 @@
     });
   });
 
-
-  /* ---------- 1b. the mission feed's two tabs ---------- */
-
-  (function () {
-    var buttons = document.querySelectorAll("[data-mtab]");
-    if (!buttons.length) { return; }
-    buttons.forEach(function (b) {
-      b.addEventListener("click", function () {
-        var want = b.getAttribute("data-mtab");
-        buttons.forEach(function (other) {
-          var name = other.getAttribute("data-mtab");
-          other.classList.toggle("on", name === want);
-          var panel = document.getElementById("mtab-" + name);
-          if (panel) { panel.hidden = name !== want; }
-        });
-      });
-    });
-  })();
 
   /* ---------- 1c. "show what was spotted" ----------
      A green rectangle over the evidence frame, per thumbnail, off by

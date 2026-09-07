@@ -57,6 +57,10 @@
     <a class="tab {% if screen == 'frames' %}on{% endif %}" href="/runs/{{ run.id }}/frames"><svg class="ic"><use href="#i-frame"/></svg>Frame board</a>
     <a class="tab {% if screen == 'timeline' %}on{% endif %}" href="/runs/{{ run.id }}/timeline"><svg class="ic"><use href="#n-timeline"/></svg>Timeline</a>
     <a class="tab {% if screen == 'cutting' %}on{% endif %}" href="/runs/{{ run.id }}/cutting"><svg class="ic"><use href="#n-cut"/></svg>Cutting room</a>
+    {# Next door to the cutting room, where it belongs: what the models made
+       is a question about the film, and it spent its life behind a tab on
+       the event log. #}
+    <a class="tab {% if screen == 'generated' %}on{% endif %}" href="/runs/{{ run.id }}/generated"><svg class="ic"><use href="#i-remediator"/></svg>Generated content</a>
   </div>
   {# The ladder, as one line. It was four stacked rows -- global,
      continental, national, channel -- each labelled and each holding two

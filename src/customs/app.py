@@ -3319,6 +3319,19 @@ def mission_page(request: Request, run_id: str):
                  stage_prose=narrate.STAGE_PROSE, made=made,
                  last_id=events[-1]["id"] if events else 0, screen="mission")
 
+@app.get("/runs/{run_id}/generated", response_class=HTMLResponse)
+def generated_page(request: Request, run_id: str):
+    """What the models made for this run, beside the cutting room.
+
+    It was a second tab on the mission feed, which is the event log: "what
+    is happening" and "what came out of it" are different questions, and
+    the second one is about the film. So it sits next to the two masters.
+    """
+    run = _run_or_404(run_id)
+    return _page(request, "generated.html", run=run,
+                 made=generated_items(run), screen="generated")
+
+
 @app.get("/runs/{run_id}/feed")
 async def mission_stream(request: Request, run_id: str):
     """Server-sent events: every store event for this run, as it lands.

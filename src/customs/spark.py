@@ -143,7 +143,12 @@ def lanes(rows: list[dict], duration: float, *, width: int = 1180,
     row_h = max(row_h, icon + 6)
     height = len(rows) * row_h + (26 if ruler else 10)
     inner = width - pad_left - 12
+    # The film's own length, on the chart. A dot knows what second it is
+    # at; only this says what fraction of the film that second is, which is
+    # what turns hovering a dot into playing that moment -- the card's clip
+    # is the whole film in five seconds, so the mapping needs both.
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" class="lanes" '
+           f'data-duration="{duration:.3f}" '
            f'width="{width}" height="{height}" viewBox="0 0 {width} {height}">']
     if defs:
         out.append(defs)
