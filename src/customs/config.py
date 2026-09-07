@@ -169,6 +169,23 @@ def is_withheld(asset: str) -> bool:
     return asset in WITHHELD_ASSETS
 
 
+def scope_logql(expr: str) -> str:
+    """A LogQL expression with every stream selector scoped to the corpus.
+
+    For queries this project does not write: agent mode hands the model the
+    label schema and lets it compose its own LogQL, which is the whole
+    point of that screen and also a way for a withheld film to be named in
+    an answer. Every selector mentioning this app gets the matcher, once.
+    """
+    matcher = withheld_matcher()
+    if not matcher or not expr:
+        return expr
+    return re.sub(
+        r'\{([^{}]*app\s*=\s*"customs"[^{}]*)\}',
+        lambda m: "{" + m.group(1) + ("" if "asset!~" in m.group(1) else matcher) + "}",
+        expr)
+
+
 def withheld_matcher(label: str = "asset") -> str:
     """A LogQL label matcher excluding the withheld corpus, or "".
 

@@ -3465,6 +3465,44 @@ def test_footage_this_instance_may_not_publish_is_not_shown_anywhere(console):
     assert all(a in logql("cigar") for a in WITHHELD_ASSETS[:3])
 
 
+def test_the_page_that_prints_every_query_does_not_print_the_film_titles(console):
+    """The neatest way to leak the list was to publish the filter. The
+    Grafana resources page prints every panel's expression verbatim, and
+    the matcher is a regex made of twenty-four film titles, so for one
+    deploy the only screen still naming a Chanel spot and three reels of
+    studio cartoons was the screen explaining how they are excluded.
+    """
+    client, _store, _launched, _jobs = console
+
+    page = client.get("/grafana").text
+    for title in ("COCO_MADEMOISELLE", "BOND_JAMES_BOND", "Cigars_in_cartoons",
+                  "Coca-Cola", "Heinz", "catwalk"):
+        assert title not in page, title
+    # the clause is still shown, by name, because the reader does need to
+    # know the panels are scoped
+    assert "asset!~&lt;withheld&gt;" in page or "asset!~<withheld>" in page
+
+
+def test_the_agents_own_queries_are_scoped_to_the_corpus_too():
+    """Agent mode hands the model the label schema and lets it compose its
+    own LogQL, which is the point of that screen and also a way for a film
+    the console will not show to be named in an answer. Every selector it
+    writes is scoped before it runs, once, and a PromQL expression is left
+    alone because the metrics carry no titles.
+    """
+    from customs.config import scope_logql, withheld_matcher
+
+    composed = 'sum by (asset) (count_over_time({app="customs", kind="finding"}[7d]))'
+    scoped = scope_logql(composed)
+    assert scoped.count("asset!~") == 1
+    assert withheld_matcher() in scoped
+    # idempotent: a schema example that already carries it is not doubled
+    assert scope_logql(scoped).count("asset!~") == 1
+    # and nothing is invented around a metric query
+    assert scope_logql("sum(customs_risk)") == "sum(customs_risk)"
+    assert scope_logql("") == ""
+
+
 def test_every_framed_loki_query_excludes_the_withheld_corpus():
     """The console filters its own queries in code; the framed panels are
     Grafana's, and Grafana reads the JSON in grafana/dashboards. A panel

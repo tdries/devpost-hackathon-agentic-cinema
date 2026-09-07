@@ -33,7 +33,7 @@ from dataclasses import dataclass, field
 
 from customs import adjudicate, costs, packs, scope as scope_mod
 from customs import state
-from customs.config import settings
+from customs.config import scope_logql, settings
 from customs.store import Store
 
 SYSTEM_PROMPT = """You are the operator's counterpart inside The Media Customs,
@@ -329,7 +329,7 @@ def dashboard_spec(title: str, run_id: str, group_by: str) -> dict:
     # kind!="observation" rather than kind="finding": the 471 lines pushed
     # before the kind label existed carry no kind at all, and Loki treats an
     # absent label as empty, so only the negative matcher sees the history.
-    stream = '{app="customs", kind!="observation"}'
+    stream = scope_logql('{app="customs", kind!="observation"}')
     if label in _MIMIR_LABELS:
         # dimension is a property of the observation, not of the finding, so
         # it never reached a Loki line: grouping findings by it there found
@@ -427,7 +427,7 @@ def chart_spec(title: str, panels: list[dict], time_from: str = "now-7d") -> dic
     for i, panel in enumerate(panels):
         kind = (panel.get("type") or "timeseries").strip()
         source = _SOURCES.get((panel.get("source") or "loki").strip(), _SOURCES["loki"])
-        expr = (panel.get("expr") or "").strip()
+        expr = scope_logql((panel.get("expr") or "").strip())
         # An instant query is one value per series (a bar, a slice, a stat).
         # A range query is a line over time. Getting this wrong is why a
         # barchart sometimes draws a time series instead of bars.
@@ -710,6 +710,11 @@ def build_agent(store: Store, turn: Turn, run_id: str = ""):
         from customs.grafana_ops import GrafanaOps
         turn.calls.append({"tool": "query", "source": source, "expr": expr[:160]})
         expr = expr.replace("$__range", f"{int(window_hours)}h")
+        # The model composes this expression itself, which is the point of
+        # this screen and also a way for a film the console will not show to
+        # be named in an answer. Scoped after the echo above, so the trace
+        # still reads as what the agent asked for.
+        expr = scope_logql(expr)
         try:
             with GrafanaOps(settings) as ops:
                 rows = (ops.loki_instant(expr) if source.lower().startswith("l")

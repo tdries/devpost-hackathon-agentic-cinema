@@ -87,11 +87,25 @@ _PUBLIC = {
 
 
 def _query_of(target: dict) -> str:
-    """The one line that says what a panel asks for."""
+    """The one line that says what a panel asks for.
+
+    With the withheld-corpus matcher collapsed to a name. This page prints
+    every expression verbatim, and the matcher is a regex made of the
+    twenty-four film titles the console will not show -- so the one screen
+    whose job is to explain the queries was, briefly, the only screen still
+    naming a Chanel spot and three reels of studio cartoons. The reader
+    loses nothing: what the clause does is exactly what its name says, and
+    config.WITHHELD_ASSETS is where the list belongs.
+    """
+    from customs.config import withheld_matcher
+
+    matcher = withheld_matcher()
     for key in ("expr", "query", "target"):
         value = target.get(key)
         if isinstance(value, str) and value.strip():
-            return value.strip()
+            query = value.strip()
+            return query.replace(matcher, ", asset!~<withheld>") if matcher \
+                else query
     return ""
 
 
