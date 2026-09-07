@@ -3889,3 +3889,74 @@ def test_the_guards_refusal_ends_in_a_decision_somebody_made(console):
     assert client.post(f"/runs/{run.id}/findings/{blocked.id}/decision",
                        data={"outcome": "escalate"},
                        follow_redirects=False).status_code == 303
+
+
+def test_every_screen_inside_a_run_carries_the_runs_own_numbers(console):
+    """Deep in the cutting room there was no way to tell whether the run
+    had finished, what was still blocked, or what it had cost: the four
+    numbers lived on the board and the board was two clicks away.
+
+    Computed in one place rather than in the eight routes that render a run
+    screen, which is also what stops them disagreeing.
+    """
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    store.record_spend("bridge", 3.68, run.id, "fnd_x")
+
+    for path in ("", "/mission", "/frames", "/timeline", "/cutting",
+                 "/markets/FR"):
+        page = client.get(f"/runs/{run.id}{path}").text
+        assert 'class="runstat' in page, path
+        assert "3.68</b> EUR" in page.replace(">3.68", "3.68"), path
+
+    # the numbers are the market states, not a second opinion about them
+    from customs.app import market_states, run_stat
+    states = market_states(run)
+    stat = run_stat(run)
+    assert stat["markets"] == len(states)
+    assert stat["blocked"] == sum(1 for s in states.values()
+                                  if s["clearance"] == "blocked" or s["errored"])
+    assert stat["eur"] == 3.68
+
+
+def test_the_cutting_room_shows_what_was_objected_to_and_what_changed(console):
+    """A before and after pair is a claim. What makes it evidence is the
+    box on the thing that was objected to, and the analyst's own sentence
+    on either side of the edit -- the second one from the verifier's
+    re-observation of that shot, which is a real pass rather than an
+    assertion that the fix worked.
+
+    The box is drawn over the image and never into it: that PNG is what the
+    remediation edited and what Veo was anchored on.
+    """
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    finding = next(f for f in store.findings(run.id) if f.observation_id)
+    # the stills have to exist: a change record naming a file that is not
+    # in this run's changes/ directory deliberately renders nothing
+    from customs.app import run_dir
+
+    stills = run_dir(run) / "changes"
+    stills.mkdir(parents=True, exist_ok=True)
+    for name in ("b.png", "a.png"):
+        (stills / name).write_bytes(b"\x89PNG\r\n\x1a\n")
+    store.add_change(ChangeRecord(
+        id="chg_seen", run_id=run.id, finding_id=finding.id,
+        method="prop_swap", description="swapped the bottle for a carafe",
+        before_frame=str(stills / "b.png"), after_frame=str(stills / "a.png")))
+    # the verifier's own re-observation of the same shot, stored the way
+    # verify.py stores them: the shot's id with a per-verification suffix
+    before = next(o for o in store.observations(run.id)
+                  if o.id == finding.observation_id)
+    store.add_observations(run.id, [Observation(
+        # six hex, which is what verify.py's uuid4().hex[:6] mints
+        id=f"{before.id}_v9f1c2a", shot_id=before.shot_id,
+        t_start=before.t_start, t_end=before.t_end, dimension=before.dimension,
+        statement="A carafe of water stands where the bottle was.",
+        evidence_frame="", confidence=0.9)])
+
+    page = client.get(f"/runs/{run.id}/cutting").text
+    assert f'data-box-for="{before.id}"' in page
+    assert "show what was objected to" in page
+    assert before.statement in page
+    assert "A carafe of water stands where the bottle was." in page

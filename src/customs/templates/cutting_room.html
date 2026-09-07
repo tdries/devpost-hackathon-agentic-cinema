@@ -57,14 +57,37 @@
       </div>
       {% if item.before or item.after %}
       <div class="change-body">
-        <div class="frame">
+        <div class="frame fb-frame">
           <span class="label">Before</span>
-          {% if item.before %}<img src="/runs/{{ run.id }}/stills/{{ item.before }}" alt="frame before the edit" loading="lazy">{% else %}<p class="subline">still not on disk</p>{% endif %}
+          {# The box goes OVER the image, never into it: this PNG is what
+             the remediation edited and what Veo was anchored on. Same
+             mechanism as the frame board, and the same reason. #}
+          <div class="fb-shot" data-box-for="{{ item.box_for }}" data-run="{{ run.id }}">
+            {% if item.before %}<img src="/runs/{{ run.id }}/stills/{{ item.before }}" alt="frame before the edit" loading="lazy">{% else %}<p class="subline">still not on disk</p>{% endif %}
+            <svg class="fb-box" viewBox="0 0 1000 1000" preserveAspectRatio="none" hidden aria-hidden="true"></svg>
+          </div>
+          {% if item.box_for %}
+          <label class="fb-boxtoggle label">
+            <input type="checkbox" class="box-toggle"> show what was objected to
+            <span class="box-note"></span>
+          </label>
+          {% endif %}
         </div>
         <div class="frame">
           <span class="label">After</span>
           {% if item.after %}<img src="/runs/{{ run.id }}/stills/{{ item.after }}" alt="frame after the edit" loading="lazy">{% else %}<p class="subline">still not on disk</p>{% endif %}
         </div>
+      </div>
+      {% endif %}
+      {% if item.said_before or item.said_after %}
+      {# The analyst's own words on both sides. The verifier re-observed the
+         shot after the edit, so the second sentence is a caption from a
+         real pass rather than a claim that the fix worked. #}
+      <div class="change-said">
+        <div><span class="label">The analyst saw</span>
+          <p>{{ item.said_before or 'no caption kept for this frame' }}</p></div>
+        <div><span class="label">And after the edit</span>
+          <p>{{ item.said_after or 'the verifier has not re-observed this shot' }}</p></div>
       </div>
       {% endif %}
       <div class="change-why">

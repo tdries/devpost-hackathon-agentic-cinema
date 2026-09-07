@@ -2608,6 +2608,22 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
 .mg-working { background: rgba(66, 133, 244, 0.16); border-color: var(--g-blue); }
 /* "nothing observed" has no fill by design, so its legend swatch needs an
    outline to exist at all */
+/* the analyst's sentence on either side of an edit */
+.change-said { display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+  padding: 12px 0 0; border-top: 1px solid var(--line); margin-top: 10px; }
+.change-said p { margin: 4px 0 0; font-size: 13px; line-height: 1.5; }
+@media (max-width: 760px) { .change-said { grid-template-columns: 1fr; } }
+
+/* the run's own four numbers, on every screen inside it */
+.runstat { display: inline-flex; align-items: baseline; gap: 6px;
+  margin-right: 12px; color: var(--ink-3); white-space: nowrap; }
+.runstat b { font-family: var(--mono); font-size: 12.5px; color: var(--ink); }
+.runstat i { color: var(--line); font-style: normal; }
+.runstat b.s-cleared { color: var(--cleared); }
+.runstat b.s-blocked { color: var(--blocked); }
+.runstat b.s-working { color: var(--g-blue); }
+@media (max-width: 900px) { .runstat { display: none; } }
+
 /* one country's broadcasters, folded */
 .famfold { border-top: 1px solid var(--line); }
 .famfold > summary {

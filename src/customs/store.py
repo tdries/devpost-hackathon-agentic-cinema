@@ -182,6 +182,19 @@ class Store:
             "SELECT COALESCE(SUM(eur), 0) FROM spend WHERE day = ?", (day,)).fetchone()
         return float(row[0] or 0.0)
 
+    @_locked
+    def spent_on_run(self, run_id: str) -> float:
+        """Everything this run's fixes have cost, on any day.
+
+        spent_today_on answers a budget question and is therefore scoped to
+        a day. This answers "what did this commercial cost", which is a
+        fact about the run and does not stop being true at midnight.
+        """
+        row = self._conn.execute(
+            "SELECT COALESCE(SUM(eur), 0) FROM spend WHERE run_id = ?",
+            (run_id,)).fetchone()
+        return float(row[0] or 0.0)
+
     def spent_today_on(self, run_ids, now: float | None = None) -> float:
         """What today's generation cost, counting only these runs.
 

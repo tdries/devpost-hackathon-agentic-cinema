@@ -478,6 +478,8 @@
      tick and never again. Nothing is ever drawn into the image itself --
      that PNG is what a remediation edits and what Veo is anchored on. */
 
+  /* The cutting room reuses this: same markup, same route, same reason
+     (the box is never drawn into the PNG a remediation edits). */
   document.querySelectorAll(".box-toggle").forEach(function (input) {
     var wrap = input.closest(".fb-frame");
     if (!wrap) { return; }

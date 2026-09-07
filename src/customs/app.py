@@ -1509,7 +1509,30 @@ def _page(request: Request, name: str, **context):
     # any of them may embed a panel. Set explicitly by a caller if it has a
     # reason to; otherwise read from the cookie base.html mirrors.
     context.setdefault("gtheme", gtheme(request))
+    # Every screen inside a run gets the same four numbers, computed here
+    # rather than in the eight routes that render one: cleared, blocked,
+    # fixing, and what the fixes have cost. A person deep in the cutting
+    # room could not see whether the run was finished without going back
+    # to the board.
+    run = context.get("run")
+    if run is not None and "runstat" not in context:
+        context["runstat"] = run_stat(run)
     return templates.TemplateResponse(request, name, context)
+
+
+def run_stat(run) -> dict:
+    """The four numbers every run screen carries in its header."""
+    states = market_states(run)
+    fixing = sum(1 for s in states.values() if s.get("working"))
+    return {
+        "cleared": sum(1 for s in states.values()
+                       if s["clearance"] == "cleared" and not s["errored"]),
+        "blocked": sum(1 for s in states.values()
+                       if s["clearance"] == "blocked" or s["errored"]),
+        "fixing": fixing,
+        "markets": len(states),
+        "eur": store().spent_on_run(run.id),
+    }
 
 
 def run_lifecycle(run) -> dict:
@@ -3467,15 +3490,38 @@ def cutting_room(request: Request, run_id: str):
     run = _run_or_404(run_id)
     directory = run_dir(run)
     by_id = {f.id: f for f in store().findings(run.id)}
+    # What the analyst said before the edit, and what it said after. The
+    # verifier re-observes every shot a change touched and stores those
+    # observations with a per-verification suffix on the id, so the "after"
+    # sentence is a real caption from a real pass rather than a claim: the
+    # newest re-observation of the same shot in the same dimension.
+    observations = store().observations(run.id)
+    said = {o.id: o for o in observations}
+    # verify.py stamps a re-observation as "{original id}_v{6 hex}", one
+    # token per verification pass, which is what distinguishes a caption
+    # written after an edit from the one that found the problem.
+    reobserved: dict[tuple[str, str], object] = {}
+    for obs in observations:
+        if re.fullmatch(r"v[0-9a-f]{6}", obs.id.rsplit("_", 1)[-1]):
+            reobserved[(obs.shot_id, obs.dimension)] = obs
     changes = []
     for change in store().changes(run.id):
         finding = by_id.get(change.finding_id)
+        before_obs = said.get(finding.observation_id) if finding else None
+        after_obs = None
+        if before_obs is not None:
+            after_obs = reobserved.get((before_obs.shot_id, before_obs.dimension))
         changes.append({
             "change": change,
             "finding": finding,
             "market": finding.market if finding else "",
             "before": _still_name(directory, change.before_frame),
             "after": _still_name(directory, change.after_frame),
+            # the box is drawn over the before frame by the browser, from
+            # the observation that found the thing in the first place
+            "box_for": before_obs.id if before_obs is not None else "",
+            "said_before": before_obs.statement if before_obs is not None else "",
+            "said_after": after_obs.statement if after_obs is not None else "",
             # only a bridge leaves generated footage behind
             "generated": (directory / "changes" / f"{change.id}_bridge.mp4").is_file()
                          or (directory / "changes" / f"{change.id}_omni.mp4").is_file(),

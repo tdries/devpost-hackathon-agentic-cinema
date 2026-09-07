@@ -16,6 +16,20 @@
     <span class="crumb-here mono">{{ run.id }}</span>
     <span class="crumb-asset">{{ run.asset_path.split('/')[-1] }}</span>
     <span class="runnav-right">
+      {# The same four numbers on every screen inside the run. Deep in the
+         cutting room there was no way to tell whether the run was
+         finished without going back to the board. #}
+      {% if runstat %}
+      <span class="runstat label" title="This run, across every market">
+        <b class="s-cleared">{{ runstat.cleared }}</b> cleared
+        <i aria-hidden="true">/</i>
+        <b class="s-blocked">{{ runstat.blocked }}</b> blocked
+        {% if runstat.fixing %}<i aria-hidden="true">/</i>
+        <b class="s-working">{{ runstat.fixing }}</b> fixing{% endif %}
+        <i aria-hidden="true">/</i>
+        <b>{{ '%.2f'|format(runstat.eur) }}</b> EUR
+      </span>
+      {% endif %}
       <span class="pill s-{{ run_state }}"><svg class="ic"><use href="#i-{{ run_state.replace('_', '-') }}"/></svg>{{ run.status }}</span>
     </span>
   </div>
