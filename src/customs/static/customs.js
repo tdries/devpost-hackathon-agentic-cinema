@@ -1534,13 +1534,28 @@
       var b = bubble.getBoundingClientRect();
       var lit = box ? Math.min(box.height + pad * 2,
                                window.innerHeight * 0.74) : 0;
+      var gap = 18;
       var top, left;
       if (box) {
-        /* under the spotlight if it fits, over it if not */
-        top = (box.top + lit + b.height + 30 < window.innerHeight)
-          ? box.top + lit - pad + 18
-          : box.top - pad - b.height - 18;
-        left = Math.min(Math.max(12, box.left), window.innerWidth - b.width - 12);
+        /* Beside the spotlight when the spotlit thing is narrow enough to
+           leave room -- a bubble under a verdict pill covers the headline
+           the verdict is about, which is the one thing the reader was sent
+           here to look at. Under it, or over it, otherwise. */
+        var beside = box.width < window.innerWidth * 0.55;
+        var right = window.innerWidth - (box.right + gap) - 12 >= b.width;
+        var left_ = box.left - gap - 12 >= b.width;
+        if (beside && (right || left_)) {
+          left = right ? box.right + gap : box.left - gap - b.width;
+          top = box.top + lit / 2 - b.height / 2;
+        } else if (box.top + lit + b.height + 30 < window.innerHeight) {
+          top = box.top + lit - pad + gap;
+          left = Math.min(Math.max(12, box.left),
+                          window.innerWidth - b.width - 12);
+        } else {
+          top = box.top - pad - b.height - gap;
+          left = Math.min(Math.max(12, box.left),
+                          window.innerWidth - b.width - 12);
+        }
       } else {
         top = (window.innerHeight - b.height) / 2;
         left = (window.innerWidth - b.width) / 2;
