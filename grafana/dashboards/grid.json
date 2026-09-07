@@ -44,7 +44,7 @@
   "panels": [
     {
       "type": "status-history",
-      "title": "",
+      "title": "Occurrences per scene",
       "gridPos": {
         "h": 15,
         "w": 24,
@@ -144,7 +144,8 @@
         "overrides": []
       },
       "id": 1,
-      "interval": "4s"
+      "interval": "4s",
+      "description": ""
     }
   ],
   "schemaVersion": 39,

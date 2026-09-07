@@ -107,6 +107,41 @@
 
   /* An agent's message is data, not markup: it carries model-written text
      and file paths, so it is escaped before it reaches innerHTML. */
+  /* The paragraph that explains the screen, folded away.
+     Almost every screen opened with a paragraph about the screen, so the
+     first thing on a page whose subject is a verdict was prose about the
+     page. It is still one click away, the choice is remembered across
+     screens, and with no JS it simply stays visible -- which is what it
+     did before. Two pages opt out with .keep: on the door and the
+     "already analysed" page the prose IS the content. */
+  (function () {
+    var KEY = "customs-explain";
+    var open = false;
+    try { open = window.localStorage.getItem(KEY) === "open"; } catch (e) { open = false; }
+    var prose = document.querySelectorAll("h1.pagetitle + p.subline:not(.keep)");
+    Array.prototype.forEach.call(prose, function (para) {
+      var title = para.previousElementSibling;
+      if (!title) { return; }
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "explain-btn";
+      button.title = "What this screen is";
+      button.setAttribute("aria-label", "What this screen is");
+      button.innerHTML = '<svg class="ic"><use href="#i-noted"/></svg>';
+      para.hidden = !open;
+      button.setAttribute("aria-expanded", open ? "true" : "false");
+      button.addEventListener("click", function () {
+        var showing = para.hidden;
+        para.hidden = !showing;
+        button.setAttribute("aria-expanded", showing ? "true" : "false");
+        try {
+          window.localStorage.setItem(KEY, showing ? "open" : "closed");
+        } catch (e) { /* private window: the toggle still works this visit */ }
+      });
+      title.appendChild(button);
+    });
+  })();
+
   function escapeHtml(text) {
     var d = document.createElement("div");
     d.textContent = text == null ? "" : String(text);

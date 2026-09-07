@@ -37,8 +37,12 @@ seen, box the speaker if they are visible, otherwise return [0, 0, 0, 0].
 Log products, drinks, food, clothing and skin exposure, gestures, symbols,
 flags, religious items, text visible on screen (quote it exactly), claims
 made in speech (quote them), humor devices, physical contact between people,
-who is present, and anything flashing or strobing. Statements must be
-verifiable from the pixels or audio alone."""
+who is present, and anything flashing or strobing. Log smoke, vapour, ash
+and a lit ember as their own elements, even when you cannot see what is
+producing them: a fix that swapped a lit cigar for a chili pepper and left
+the smoke streaming from the character's mouth was re-observed as clean and
+signed off, because nothing in this list had asked about the smoke.
+Statements must be verifiable from the pixels or audio alone."""
 
 _RESPONSE_SCHEMA = {
     "type": "array",

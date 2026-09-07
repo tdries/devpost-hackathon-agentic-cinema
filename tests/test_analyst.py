@@ -418,3 +418,23 @@ def test_keyframes_are_declared_as_the_format_they_actually_are(tmp_path):
                     "-i", "testsrc2=s=64x48:d=1:r=10", str(clip)], check=True)
     out = media.extract_keyframes(clip, Shot("shot_0", 0.0, 1.0), tmp_path, per_shot=1)
     assert out and out[0].suffix == ".png"
+
+
+def test_the_analyst_is_told_to_log_smoke_and_not_just_the_cigarette():
+    """A prop swap fixed the object and left the effect. The cutting room
+    has a frame of it: a cartoon parrot whose lit cigar became a chili
+    pepper while smoke still streamed from its beak, and the verifier
+    signed the fix off -- correctly, by its own lights, because the
+    re-observation logged products and gestures and had never been asked
+    about smoke.
+
+    Verification is only as good as what the analyst is told to look at,
+    which is why this is pinned rather than left to the wording of the day.
+    """
+    from customs.analyst import PROMPT
+
+    lowered = PROMPT.lower()
+    for element in ("smoke", "vapour", "ash", "lit ember"):
+        assert element in lowered, element
+    # and it has to survive a source with nothing visibly producing it
+    assert "even when you cannot see" in lowered

@@ -208,6 +208,10 @@ def judge(run_id: str, observations: list[Observation], pack: MarketPack,
         return []
 
     findings = []
+    # (rule id, window) -> the finding already standing for that violation,
+    # so a second observation of the same dimension on the same shot folds
+    # into it instead of listing the rule twice at the same seconds.
+    by_window: dict[tuple[str, float, float], Finding] = {}
     for i, item in enumerate(raw):
         if not isinstance(item, dict):
             _emit(
@@ -291,6 +295,30 @@ def judge(run_id: str, observations: list[Observation], pack: MarketPack,
             )
             continue
 
+        # One violation, not two. A shot with two cigarettes in it gets two
+        # observations of alcohol_tobacco_drugs, both pairings trigger the
+        # same rule, and both carry the shot's own window -- so the market
+        # room listed EU-TOB-01 twice, at the same seconds, under the same
+        # evidence frame, which reads as the system double-counting rather
+        # than as the shot having two of something.
+        #
+        # Collapsed on (rule, window), keeping the harsher reading. The
+        # citation is a function of the rule and the market and not of the
+        # observation (see CITATION_PROMPT), so the first one paid for it
+        # and this pairing needs no call of its own.
+        window = (rule.id, round(obs.t_start, 3), round(obs.t_end, 3))
+        prior = by_window.get(window)
+        if prior is not None:
+            severity = max(0, rule.severity + severity_adjust)
+            if not prior.sourced:
+                severity = min(severity, UNSOURCED_SEVERITY_CAP)
+            _emit(on_event,
+                  f"folded a second {rule.id} on the same span for "
+                  f"{pack.market} ({obs.id} after {prior.observation_id})")
+            if severity > prior.severity:
+                prior.severity, prior.rationale = severity, rationale
+            continue
+
         _emit(on_event, f"citation check -> {pack.market} {rule.id} for {obs.id}")
         _, chunks = generate_grounded(
             settings.model_text,
@@ -329,6 +357,7 @@ def judge(run_id: str, observations: list[Observation], pack: MarketPack,
             box=list(obs.box or []),
             shot_id=obs.shot_id,
         ))
+        by_window[window] = findings[-1]
 
     if on_verdict is not None:
         on_verdict(list(verdicts.values()))

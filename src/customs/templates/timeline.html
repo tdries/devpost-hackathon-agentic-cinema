@@ -6,7 +6,7 @@
 <section class="hero" style="padding-bottom:22px">
   <div class="rule-row"><span class="label">Timeline</span></div>
   <h1 class="pagetitle"><svg class="ic"><use href="#n-timeline"/></svg>Timeline</h1>
-  <p class="subline">Where it goes wrong, second by second. One lane per market on the commercial's own clock. Hover a segment for the triggering frame and the infraction behind it; click through for the market room. Green segments were violations the crew fixed and the verifier confirmed.</p>
+  <p class="subline">Where it goes wrong, second by second. One lane per market on the commercial's own clock. Hover a segment for the triggering frame and the infraction behind it; click through for the market room. Green is a violation the crew fixed and the verifier confirmed, which is not the same square as one that cleared on the first pass: the key below names all five.</p>
 </section>
 
 {% if matrix %}
@@ -80,9 +80,18 @@
     </div>
     {% endif %}
   </div>
+  {# Five things this grid can draw, and it used to name two of them. The
+     intro said green was "violations the crew fixed and the verifier
+     confirmed" while the key called it "cleared", which are different
+     claims about the same square: one says it was broken and is mended,
+     the other says it was never broken. A square nobody looked at was not
+     labelled at all. #}
   <div class="mx2-key label">
-    <span><i class="sw mx2-block"></i>blocking</span>
-    <span><i class="sw mx2-fixed"></i>cleared</span>
+    <span><i class="sw mg-hot mg-block"></i>blocking</span>
+    <span><i class="sw mg-hot"></i>open, below the blocking line</span>
+    <span><i class="sw mg-fixed"></i>fixed and verified</span>
+    <span><i class="sw mg-clean"></i>cleared first time</span>
+    <span><i class="sw sw-none"></i>nothing observed</span>
     <span>click a square to remediate the scene it sits on</span>
     {% if embeds and embeds.viewer %}
     <a class="cite" href="{{ embeds.viewer.grid }}" target="_blank" rel="noreferrer">open the panel in Grafana</a>

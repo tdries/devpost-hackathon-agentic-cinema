@@ -1901,12 +1901,16 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
 }
 .swarm-row {
   display: flex; gap: 30px; align-items: center; white-space: nowrap;
-  opacity: .5; will-change: transform;
+  /* A texture, not a picture. At .5 the drifting glyphs read as content
+     and competed with the one sentence on the page they sit behind; a
+     reviewer's note for the landing hero, and the same swarm is on the
+     archive's. Low enough to be felt rather than read. */
+  opacity: .15; will-change: transform;
 }
 .swarm-row .ic { width: 60px; height: 60px; flex: none; }
 .swarm-row:nth-child(1) { animation: drift-l 96s linear infinite; }
-.swarm-row:nth-child(2) { animation: drift-r 132s linear infinite; opacity: .34; }
-.swarm-row:nth-child(3) { animation: drift-l 116s linear infinite; opacity: .42; }
+.swarm-row:nth-child(2) { animation: drift-r 132s linear infinite; opacity: .1; }
+.swarm-row:nth-child(3) { animation: drift-l 116s linear infinite; opacity: .12; }
 @keyframes drift-l { from { transform: translateX(0); } to { transform: translateX(-33%); } }
 @keyframes drift-r { from { transform: translateX(-33%); } to { transform: translateX(0); } }
 @media (prefers-reduced-motion: reduce) { .swarm-row { animation: none; } }
@@ -2602,6 +2606,20 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
 .mg-hot { background: rgba(251, 188, 5, 0.18); border-color: var(--g-yellow); color: var(--g-yellow); }
 .mg-hot.mg-block { background: rgba(234, 67, 53, 0.18); border-color: var(--blocked); color: var(--blocked); }
 .mg-working { background: rgba(66, 133, 244, 0.16); border-color: var(--g-blue); }
+/* "nothing observed" has no fill by design, so its legend swatch needs an
+   outline to exist at all */
+/* the info toggle that folds a screen's own explanation away */
+.explain-btn {
+  appearance: none; border: 1px solid var(--line); background: var(--well);
+  color: var(--ink-2); border-radius: 999px; cursor: pointer;
+  margin-left: 10px; padding: 3px; line-height: 0; vertical-align: middle;
+}
+.explain-btn:hover { border-color: var(--g-blue); color: var(--g-blue); }
+.explain-btn .ic { width: 17px; height: 17px; }
+.explain-btn[aria-expanded="true"] { background: var(--ground-2); }
+
+.mx2-key .sw.sw-none { border: 1px dashed var(--line); background: none; }
+.mx2-key .sw.mg-clean { opacity: 1; }
 
 /* the market room's scene header: its opening and closing frame, then what
    the scene is */

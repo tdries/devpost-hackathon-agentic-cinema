@@ -299,8 +299,11 @@ def test_judge_drops_triggered_item_with_null_rationale(monkeypatch):
     assert any("rationale" in w.lower() for w in warnings), f"expected an empty-rationale warning, got: {events}"
 
 def test_judge_clamps_severity_adjust_into_neg20_0(monkeypatch):
-    obs_low = _obs(id="obs_low")
-    obs_high = _obs(id="obs_high")
+    # Two shots, not two readings of one: a second observation on the SAME
+    # span folds into the first finding now (see the test below), and this
+    # test is about the clamp.
+    obs_low = _obs(id="obs_low", t_start=0.0, t_end=1.0)
+    obs_high = _obs(id="obs_high", t_start=4.0, t_end=5.0)
     rule = _rule(severity=90)
     pack = _pack([rule])
 
@@ -320,6 +323,53 @@ def test_judge_clamps_severity_adjust_into_neg20_0(monkeypatch):
     by_obs = {f.observation_id: f for f in findings}
     assert by_obs["obs_low"].severity == 70   # 90 + clamp(-999) == 90 + (-20)
     assert by_obs["obs_high"].severity == 90  # 90 + clamp(5) == 90 + 0
+
+def test_two_observations_of_one_shot_are_one_finding_per_rule(monkeypatch):
+    """A shot with two cigarettes in it gets two observations of
+    alcohol_tobacco_drugs. Both pairings trigger the same rule, and both
+    carry the shot's own window, so the market room listed EU-TOB-01 twice
+    at the same seconds under the same evidence frame -- which reads as the
+    system double-counting rather than as the shot having two of something.
+
+    One violation, one row, and the harsher of the two readings survives.
+    The citation is not paid for twice either: it is a function of the rule
+    and the market, never of the observation.
+    """
+    first = _obs(id="obs_a", statement="A lit cigarette.")
+    second = _obs(id="obs_b", statement="A second lit cigarette.")
+    rule = _rule(severity=80)
+    pack = _pack([rule])
+    citations = []
+
+    monkeypatch.setattr(adjudicate, "generate_json", lambda model, parts, schema: [
+        {"observation_id": "obs_a", "rule_id": rule.id, "triggers": True,
+         "severity_adjust": -10, "rationale": "one cigarette"},
+        {"observation_id": "obs_b", "rule_id": rule.id, "triggers": True,
+         "severity_adjust": 0, "rationale": "and another"},
+    ])
+
+    def cite(model, prompt):
+        citations.append(prompt)
+        return "ok", [{"uri": "https://example.com/x", "title": "t"}]
+
+    monkeypatch.setattr(adjudicate, "generate_grounded", cite)
+
+    events = []
+    findings = adjudicate.judge("run_1", [first, second], pack,
+                                on_event=lambda a, m: events.append(m))
+
+    assert len(findings) == 1, [f.id for f in findings]
+    assert findings[0].severity == 80, "the harsher reading, not the first one"
+    assert len(citations) == 1, "the second pairing needs no call of its own"
+    assert any("folded" in m for m in events), events
+
+    # both verdicts are still recorded: each pairing was really judged, and
+    # an acquittal or a duplicate objection is history either way
+    seen = []
+    adjudicate.judge("run_1", [first, second], pack,
+                     on_verdict=lambda v: seen.extend(v))
+    assert len(seen) == 2
+
 
 def test_judge_caps_severity_at_40_when_unsourced(monkeypatch):
     obs = _obs()

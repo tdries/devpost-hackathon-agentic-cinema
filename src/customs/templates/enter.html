@@ -7,7 +7,7 @@
     <svg class="ic"><use href="#i-{{ 'legal' if role == 'judge' else 'human' }}"/></svg>
     Come in as {{ role }}
   </h1>
-  <p class="subline" style="max-width:60ch">{{ blurb }}</p>
+  <p class="subline keep" style="max-width:60ch">{{ blurb }}</p>
 
   <form class="enter-form" method="post" action="/enter/{{ role }}">
     {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}

@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 {% block title %}Launch board {{ run.id }}{% endblock %}
-{% block topbar_right %}<a class="tab" href="/runs"><svg class="ic"><use href="#n-board"/></svg>All runs</a>{% endblock %}
+{# No "All runs" in the topbar: the breadcrumb one line below says it, and
+   the board carried both -- the same link twice, eighty pixels apart, in a
+   bar that also holds a mode switch and a theme switch. One navigation
+   model, and the way up belongs with the run it is up FROM. #}
 {% block nav %}{% include "_runnav.html" %}{% endblock %}
 {% block main %}
 
