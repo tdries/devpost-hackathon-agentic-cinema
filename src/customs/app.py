@@ -122,6 +122,21 @@ async def lifespan(_app: FastAPI):
             log.debug("omni preflight skipped: %s", exc)
 
     threading.Thread(target=ask, name="omni-preflight", daemon=True).start()
+
+    # A fix runs in a thread of this process, so anything still marked
+    # "remediating" now belongs to a process that no longer exists: a
+    # deploy that landed mid-fix, or a crash. Nothing is coming back for
+    # it. Reopened here rather than left to draw "Working" forever on the
+    # board -- which is what eight findings did for an hour after two
+    # deploys killed the work behind them.
+    try:
+        for run_id, finding_id in store().release_orphaned_remediations():
+            store().emit(run_id, "remediator",
+                         f"reopened {finding_id}: the fix it was waiting on "
+                         f"died with the previous instance, so the finding is "
+                         f"open again rather than working forever")
+    except Exception as exc:  # noqa: BLE001 -- a sweep cannot break boot
+        log.warning("orphaned remediation sweep failed: %s", exc)
     yield
 
 

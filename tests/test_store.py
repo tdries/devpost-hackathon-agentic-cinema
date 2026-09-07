@@ -245,3 +245,51 @@ def test_recent_runs_lists_the_newest_first_and_includes_a_run_never_started(tmp
     assert listed[0].t0 is None
     assert listed[0].markets == ["SA", "US"]
     assert len(store.recent_runs(limit=1)) == 1
+
+
+def test_a_fix_orphaned_by_a_deploy_is_reopened_not_left_working(tmp_path):
+    """Remediation runs in a thread of this process. A finding still marked
+    "remediating" when the process boots therefore belongs to a process
+    that no longer exists -- a deploy that landed mid-fix -- and nothing is
+    coming back for it. Eight of them drew "Working" on the board for an
+    hour before this existed.
+
+    Only that status is touched: an open finding is untouched, and so is
+    one the verifier already resolved.
+    """
+    from customs.store import Store
+
+    store = Store(tmp_path / "runs.db")
+    run = store.create_run(asset_path="/tmp/ad.mp4", markets=["FR"])
+    store.add_findings([
+        Finding(id="fnd_working", run_id=run.id, observation_id="o1",
+                market="FR", rule_id="FR-ALC-01", klass="legal", severity=90,
+                t_start=1.0, t_end=2.0, rationale="r", citation_ref="c",
+                citation_url="", sourced=True, remediable=True,
+                remediation_blocked=False, blocked_reason="",
+                status="remediating", scope="segment"),
+        Finding(id="fnd_open", run_id=run.id, observation_id="o2",
+                market="FR", rule_id="FR-TOB-01", klass="legal", severity=95,
+                t_start=3.0, t_end=4.0, rationale="r", citation_ref="c",
+                citation_url="", sourced=True, remediable=True,
+                remediation_blocked=False, blocked_reason="",
+                status="open", scope="segment"),
+        Finding(id="fnd_done", run_id=run.id, observation_id="o3",
+                market="FR", rule_id="FR-CMP-01", klass="policy", severity=55,
+                t_start=5.0, t_end=6.0, rationale="r", citation_ref="c",
+                citation_url="", sourced=True, remediable=True,
+                remediation_blocked=False, blocked_reason="",
+                status="resolved", scope="segment"),
+    ])
+
+    released = store.release_orphaned_remediations()
+    assert released == [(run.id, "fnd_working")]
+
+    by_id = {f.id: f for f in store.findings(run.id)}
+    assert by_id["fnd_working"].status == "open"
+    assert by_id["fnd_open"].status == "open"
+    assert by_id["fnd_done"].status == "resolved"
+
+    # and a second boot has nothing left to do
+    assert store.release_orphaned_remediations() == []
+
