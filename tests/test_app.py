@@ -1617,10 +1617,11 @@ def test_a_run_card_draws_its_own_lanes_when_there_is_no_viewer(client):
     test_client, _, run, _ = client
     body = test_client.get("/runs").text
     assert 'class="runspark"' not in body, "one chart per card, not two"
-    assert 'class="cardlanes"' in body and "/lanes.svg" in body
-    assert "onerror=\"this.remove()\"" in body, "a run with no series just has no chart"
-    # and with no viewer configured, nothing tries to iframe Grafana
+    assert 'class="cardlanes drawn"' in body and "/lanes.svg" in body
+    # and with no viewer configured, nothing tries to iframe Grafana: the
+    # card has one chart and no switch to offer
     assert "<iframe" not in body
+    assert "data-viz-pick" not in body
 
 
 def test_one_palette_governs_the_app_and_grafana(client):
@@ -2989,24 +2990,43 @@ def test_the_archive_pays_for_nine_cards_and_asks_before_the_rest(console):
     assert client.get("/runs?all=1").text.count('class="runrow') == 12
 
 
-def test_the_archive_caps_how_many_grafanas_it_boots(console, monkeypatch):
-    """loading="lazy" was supposed to make one live panel per card
-    survivable. Measured against the real page it was not: thirty-nine
-    frames and thirty-nine videos kept a browser from reaching
-    domcontentloaded in thirty seconds. The cards a visitor actually looks
-    at get the live panel; the rest keep the SVG they always had."""
+def test_every_card_carries_both_charts_and_boots_neither_by_itself(console, monkeypatch):
+    """A card has two charts of the same run: the panel Grafana draws and
+    the drawing this app makes. The reader picks, live is the default, and
+    the choice is one switch for the whole archive.
+
+    What must NOT happen is the page booting a Grafana per card. A lazy
+    iframe loads the moment it is anywhere near the viewport, and
+    thirty-nine of those kept a real browser from reaching
+    domcontentloaded in thirty seconds -- so the frames leave the server
+    inert, with their URL in data-src, and customs.js activates them one
+    at a time on approach.
+    """
     import dataclasses
     client, store, _launched, _jobs = console
-    for n in range(app_module.LIVE_LANE_CARDS + 3):
+    for n in range(4):
         _judged_run(store, asset=f"runs/uploads/{n}/film_{n}.mp4")
     monkeypatch.setattr(app_module, "settings", dataclasses.replace(
         app_module.settings, grafana_viewer_url="https://viewer.example.run.app"))
 
     page = client.get("/runs").text
-    live = page.count('class="cardlanes live"')
-    drawn = page.count('class="cardlanes"')
-    assert live == app_module.LIVE_LANE_CARDS, f"{live} live panels"
-    assert drawn >= 3, "the rest still draw their own lanes"
+    cards = page.count('class="cardviz"')
+    assert cards >= 4, f"{cards} cards"
+    # both charts on every card, and the switch to choose between them
+    assert page.count('class="cardlanes live"') == cards
+    assert page.count('class="cardlanes drawn"') == cards
+    assert page.count('data-viz-pick="live"') == cards
+
+    # not one of the card frames has a src: nothing boots on paint
+    frames = re.findall(r'<iframe class="cardlanes live"[^>]*>', page)
+    assert frames and all(" src=" not in f for f in frames), frames[:1]
+    assert all("data-src=" in f for f in frames)
+    # the panel is pinned to the rows the icons name, so they cannot drift
+    assert all("var-dim=" in f for f in frames)
+
+    # the archive's own instance-wide panel is a different thing and does
+    # load: it is one, at the top, not one per card
+    assert 'class="archlive"' in page
 
 
 def test_a_door_asks_for_its_word(console):
@@ -3963,3 +3983,67 @@ def test_the_cutting_room_shows_what_was_objected_to_and_what_changed(console):
     assert "show what was objected to" in page
     assert before.statement in page
     assert "A carafe of water stands where the bottle was." in page
+
+
+def test_a_card_shows_the_same_six_lanes_whatever_the_run_found(console, monkeypatch):
+    """Eleven icons on one card beside two on the next reads as two
+    different products. Every card draws six lanes: the run's own
+    dimensions, worst first, and then the categories this system watched
+    for and did not see, faint.
+
+    The live panel is pinned to exactly the dimensions with an icon beside
+    them, so the rows line up one for one rather than by luck -- and both
+    lists are sorted the same way, because Loki's own order is not stable.
+    """
+    import dataclasses
+
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    monkeypatch.setattr(app_module, "settings", dataclasses.replace(
+        app_module.settings, grafana_viewer_url="https://viewer.example.run.app"))
+
+    lanes = app_module.card_lanes(run, app_module.market_states(run))
+    assert len(lanes) == app_module.CARD_LANES
+    seen = [row["dimension"] for row in lanes if row["seen"]]
+    unseen = [row["dimension"] for row in lanes if not row["seen"]]
+    assert seen, "this fixture observed something"
+    assert seen == sorted(seen), "display order is the panel's order"
+    assert not set(seen) & set(unseen)
+
+    page = client.get(f"/runs/{run.id}").text if False else client.get("/runs").text
+    # one icon per slot, and the unfilled ones marked as such
+    card = page.split('class="cardgrid-keys"', 1)[1].split("</span>", 1)[0]
+    assert card.count("<svg") == app_module.CARD_LANES
+    assert 'class="ic unseen"' in page
+    assert "watched for, not seen" in page
+
+    # the panel is told which rows it may draw, and it is exactly those
+    frame = re.search(r'<iframe class="cardlanes live"[^>]*>', page).group(0)
+    for dimension in seen:
+        assert dimension in frame
+    for dimension in unseen:
+        assert dimension not in frame.split("var-dim=", 1)[1]
+
+
+def test_a_running_run_rings_its_thumbnail_not_the_whole_card(console):
+    """A ring around the card put a rainbow between every card and its
+    neighbour and read as decoration. Around the picture, with the star on
+    its corner, it reads as "this one is running" -- which is the only
+    thing it was ever for.
+
+    The wrapper exists because the ring is a pseudo-element and a <video>
+    is a replaced element with no ::before to give.
+    """
+    client, store, _launched, _jobs = console
+    idle = _judged_run(store, asset="/tmp/finished.mp4")
+    busy = store.create_run(asset_path="/tmp/running.mp4", markets=["FR"])
+    store.set_run_status(busy.id, "running")
+
+    page = client.get("/runs").text
+    wraps = re.findall(r'<span class="runthumbwrap( sparkle)?"', page)
+    assert wraps, page[:200]
+    assert " sparkle" in "".join(w or "" for w in wraps), "the running one rings"
+    assert any(w is None or w == "" for w in wraps), "the finished one does not"
+    # and the card itself no longer wears it
+    assert 'class="runrow sparkle"' not in page
+    assert idle.id in page and busy.id in page

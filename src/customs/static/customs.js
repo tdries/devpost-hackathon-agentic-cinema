@@ -142,6 +142,87 @@
     });
   })();
 
+  /* ---------- 1d. live panel or drawn chart, per card ----------
+     Every archive card carries both: the panel Grafana draws and the SVG
+     this app draws. Live is the default because it is the real thing, and
+     the switch is remembered for the whole archive at once -- nobody wants
+     to make that choice thirty-five times.
+
+     The live frame is inert markup (data-src) until a card is actually
+     approached, and then one at a time. A lazy iframe loads the moment it
+     is anywhere near the viewport, and thirty-nine of them booting a
+     Grafana each is what kept a real browser off this page for thirty
+     seconds. */
+  (function () {
+    var KEY = "customs-cardviz";
+    var cards = document.querySelectorAll(".cardviz");
+    if (!cards.length) { return; }
+
+    var mode = "live";
+    try { mode = window.localStorage.getItem(KEY) || "live"; } catch (e) { mode = "live"; }
+
+    var pending = [];
+    var booting = false;
+
+    var boot = function () {
+      if (booting || !pending.length) { return; }
+      var frame = pending.shift();
+      if (!frame || frame.dataset.src === undefined) { boot(); return; }
+      booting = true;
+      frame.src = frame.dataset.src;
+      delete frame.dataset.src;
+      /* One Grafana at a time, and a beat between them: the tenant is on
+         read limits and a panel that trips one renders its own error text
+         inside an iframe this page cannot style. */
+      window.setTimeout(function () { booting = false; boot(); }, 700);
+    };
+
+    var wake = function (card) {
+      var frame = card.querySelector(".cardlanes.live");
+      if (!frame || frame.dataset.src === undefined) { return; }
+      if (card.dataset.viz !== "live") { return; }
+      if (pending.indexOf(frame) === -1) { pending.push(frame); }
+      boot();
+    };
+
+    var apply = function (card) {
+      card.dataset.viz = mode;
+      var picks = card.parentElement
+        ? card.parentElement.querySelectorAll("[data-viz-pick]") : [];
+      Array.prototype.forEach.call(picks, function (button) {
+        var on = button.dataset.vizPick === mode;
+        button.classList.toggle("on", on);
+        button.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+      if (mode === "live") { wake(card); }
+    };
+
+    Array.prototype.forEach.call(cards, apply);
+
+    document.addEventListener("click", function (event) {
+      var button = event.target.closest ? event.target.closest("[data-viz-pick]") : null;
+      if (!button) { return; }
+      event.preventDefault();
+      mode = button.dataset.vizPick === "drawn" ? "drawn" : "live";
+      try { window.localStorage.setItem(KEY, mode); } catch (e) { /* private window */ }
+      Array.prototype.forEach.call(document.querySelectorAll(".cardviz"), apply);
+    });
+
+    if (window.IntersectionObserver) {
+      var watcher = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            wake(entry.target);
+            watcher.unobserve(entry.target);
+          }
+        });
+      }, { rootMargin: "300px" });
+      Array.prototype.forEach.call(cards, function (card) { watcher.observe(card); });
+    } else {
+      Array.prototype.forEach.call(cards, wake);
+    }
+  })();
+
   function escapeHtml(text) {
     var d = document.createElement("div");
     d.textContent = text == null ? "" : String(text);

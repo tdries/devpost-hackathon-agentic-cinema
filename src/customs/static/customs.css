@@ -1644,7 +1644,7 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
   border: 1px solid var(--line-2); background: var(--well); flex: none;
 }
 .runlist.as-rows .runrow { align-items: center; gap: 12px; }
-.runlist:not(.as-rows) .runthumb { width: 100%; margin-bottom: 10px; }
+.runlist:not(.as-rows) .runthumb { width: 100%; margin-bottom: 0; }
 
 /* The line under the progress bar: what an agent said most recently. It
    fades in on change so a new message is noticed without the eye having to
@@ -1758,7 +1758,7 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
 .runlist:not(.as-rows) .runrow .asset { order: 3; font-size: 15px; }
 .runlist:not(.as-rows) .runrow .when { order: 4; }
 .runlist:not(.as-rows) .runrow .flags { order: 5; margin-top: 2px; }
-.runlist:not(.as-rows) .runthumb { order: 1; }
+.runlist:not(.as-rows) .runthumbwrap { order: 1; }
 
 /* The severity profile inside a run card.
 
@@ -2856,7 +2856,80 @@ video.runthumb { object-fit: cover; background: var(--well); }
 .cardgrid-keys .ic { opacity: 0.85;
   width: min(14px, calc(var(--panel-h) / var(--rows) - 4px));
   height: min(14px, calc(var(--panel-h) / var(--rows) - 4px)); }
+/* A slot nothing filled. Not padding: a category this system watched for
+   and did not see, which is worth a mark rather than a gap. */
+.cardgrid-keys .ic.unseen { opacity: 0.22; }
 .runlist.as-rows .cardgrid { display: none; }
+
+/* One chart at a time, and the plot cropped to its own rows.
+   Grafana draws a header above every panel -- the title, and its own
+   attribution badge -- which pushed the squares down by a row's worth and
+   left the icons beside them pointing at nothing. The frame is taller than
+   its box by exactly that header and pulled up through it, so what remains
+   is the plot, top-aligned with the first icon. */
+.cardplot { position: relative; overflow: hidden; display: block;
+  height: var(--panel-h); border-radius: 4px; }
+.cardplot .cardlanes { position: absolute; inset: 0; width: 100%; }
+.cardlanes.live { height: calc(100% + 34px); margin-top: -34px; border: 0;
+  background: transparent; }
+.cardlanes.drawn { height: 100%; object-fit: contain; object-position: left top; }
+.cardviz[data-viz="live"] .cardlanes.drawn,
+.cardviz[data-viz="drawn"] .cardlanes.live { display: none; }
+/* No viewer deployed: the drawing is the only chart, and it keeps the
+   height it had rather than being cropped to a panel that is not there. */
+.cardviz:not([data-viz]) .cardplot, .cardplot:not(:has(.cardlanes.live)) {
+  height: auto; }
+.cardplot:not(:has(.cardlanes.live)) .cardlanes.drawn { position: static; height: auto; }
+
+/* the thumbnail's own wrapper, so a running run can wear the ring */
+.runthumbwrap { display: block; position: relative; line-height: 0;
+  border-radius: 6px; }
+.runlist:not(.as-rows) .runthumbwrap { order: 1; margin-bottom: 10px; }
+.runlist:not(.as-rows) .runthumbwrap .runthumb { width: 100%; margin: 0; }
+.runthumbwrap.sparkle::before { border-radius: 7px; }
+/* the star sits on the picture's top right corner, inside the card */
+.runthumbwrap.sparkle::after { top: -6px; right: -2px; }
+
+/* a country standing for its broadcasters */
+.pill.folded .foldn { font-family: var(--mono); font-size: 10px;
+  padding: 0 4px; border-radius: 999px; background: var(--line);
+  color: var(--ink-2); font-weight: 400; }
+
+/* which chart this card is showing */
+.vizswap { position: absolute; top: 8px; left: 8px; z-index: 2;
+  display: inline-flex; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--panel); overflow: hidden; opacity: 0;
+  transition: opacity .15s ease; }
+.runcard:hover .vizswap, .vizswap:focus-within { opacity: 1; }
+.vizswap button { appearance: none; border: 0; background: none; cursor: pointer;
+  font-family: var(--mono); font-size: 10px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--ink-3); padding: 3px 9px; }
+.vizswap button.on { background: var(--ground-2); color: var(--ink); }
+.vizswap button:hover { color: var(--ink); }
+
+/* the way in: the one control on a card that names the verb */
+.cardgo { position: absolute; right: 12px; bottom: 12px; z-index: 3;
+  display: inline-flex; align-items: center; text-decoration: none;
+  border-radius: 999px; padding: 3px; isolation: isolate; }
+.cardgo-ring { position: absolute; inset: 0; border-radius: 999px;
+  background: conic-gradient(from var(--spk),
+    #4285F4, #EA4335, #FBBC05, #34A853, #4285F4);
+  animation: spk-spin 3.4s linear infinite; }
+.cardgo-face { position: relative; z-index: 1; display: inline-flex;
+  align-items: center; gap: 8px; padding: 9px 16px; border-radius: 999px;
+  background: var(--panel); color: var(--ink);
+  font-family: var(--mono); font-size: 12px; letter-spacing: .1em; }
+.cardgo .ic { width: 17px; height: 17px; }
+.cardgo:hover .cardgo-face { background: var(--ground-2); }
+.cardgo:hover .cardgo-ring { animation-duration: 1.1s; }
+.cardgo:focus-visible .cardgo-face { outline: 2px solid var(--g-blue);
+  outline-offset: 2px; }
+/* The list view is a table of rows; a rainbow button per row would be a
+   fairground. The whole row stays the link there, as it was. */
+.runlist.as-rows .cardgo, .runlist.as-rows .vizswap { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .cardgo-ring { animation: none; }
+}
 
 /* deleting a run: a quiet control that only shows itself on approach */
 .runcard { position: relative; display: block; }

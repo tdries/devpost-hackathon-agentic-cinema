@@ -850,7 +850,7 @@ def problem_lanes(run, compact: bool = False) -> str:
     record exists to make visible.
     """
     lanes = _lanes_from_grafana(run) or _lanes_from_store(run)
-    if not lanes:
+    if not lanes and not compact:
         return ""
     # worst first, so the lane that blocks a market is the top line
     rows = [{"dimension": d, "events": sorted(e, key=lambda x: x["t"])}
@@ -858,10 +858,17 @@ def problem_lanes(run, compact: bool = False) -> str:
                                key=lambda kv: -max((x["severity"] for x in kv[1]),
                                                    default=0))]
     if compact:
-        # A card is not a page. Six lanes is what fits under a thumbnail
-        # without the card becoming a chart with a title, and they are the
-        # six that matter because rows are already worst-first.
-        rows = rows[:6]
+        # A card is not a page, and every card is the same card: the six
+        # rows here are card_lanes' six, in card_lanes' order, so a reader
+        # switching this drawing for the live panel beside it sees the same
+        # categories in the same places. Rows the run never observed come
+        # through with no events and are drawn faint.
+        events_of = {row["dimension"]: row["events"] for row in rows}
+        rows = [{"dimension": slot["dimension"],
+                 "events": events_of.get(slot["dimension"], [])}
+                for slot in card_lanes(run, market_states(run))]
+        if not any(row["events"] for row in rows):
+            return ""
         # A card chart is drawn at 560 and displayed at about 330, so an
         # icon is on screen at roughly six tenths of the size it is
         # written at. At 20 that put the taxonomy glyphs at ~12px, which
@@ -895,26 +902,9 @@ def _kinds_found(findings) -> list[str]:
     return [d for d, _ in sorted(worst.items(), key=lambda kv: -kv[1])]
 
 
-# How many archive cards frame a live Grafana panel. Beyond this they use
-# the app's own SVG: see the note in the archive route.
-#
-# Two, not six. Six cards plus the instance-wide history panel meant seven
-# Grafana applications booting in one browser on the one page most people
-# open first, each firing its own panel queries at the same Grafana Cloud
-# tenant in the same second. Since the trial ended that tenant is on the
-# free plan's read limits, and a panel that trips one renders Grafana's own
-# error text inside its iframe -- which the page cannot catch or style,
-# because the iframe is cross-origin. Two still shows a visitor that these
-# are live panels rather than pictures; the rest keep the SVG, which the
-# archive route's own note says is indistinguishable at card size.
-#
-# One, not two. A card's panel is windowed to its run's mapped clock, and
-# the second card is by definition an older run -- old enough, on this
-# instance, that its telemetry was re-pushed out of band and its stored t0
-# no longer points at where its samples are, so the panel answered "No
-# data" on the page most people open first. The newest run is the one whose
-# clock is certainly right.
-LIVE_LANE_CARDS = 1
+# Every card now carries both charts and boots the live one on approach,
+# one at a time (customs.js). The old cap lived here because a page of
+# lazy iframes all load at once; the queue replaced the cap.
 
 # The one run a stranger should see first, and it has to carry the whole
 # argument: 77 findings across seven dimensions and eight jurisdictions at
@@ -1529,13 +1519,42 @@ def pill_groups(run, states: dict) -> list[dict]:
         (channel if level == "channel" else geo).append((code, state))
     out = []
     for label, items in (("geo", geo), ("channel", channel)):
-        if items:
-            # NOT "items": Jinja resolves group.items to dict.items, the
-            # bound method, and iterating that is a TypeError at render.
-            out.append({"label": label,
-                        "markets": [{"code": c, "state": tile_state(st)}
-                                    for c, st in sorted(items)]})
+        if not items:
+            continue
+        markets = [{"code": c, "state": tile_state(st)} for c, st in sorted(items)]
+        if label == "channel":
+            # Collapsed under the country they hang off. A card that
+            # cleared five Belgian broadcasters and three German ones
+            # showed eight codes in a row and read as eight countries;
+            # what a reader wants first is "Belgium, five channels, one of
+            # them blocking", and the codes on request.
+            markets = _by_country(markets, all_packs)
+        # NOT "items": Jinja resolves group.items to dict.items, the
+        # bound method, and iterating that is a TypeError at render.
+        out.append({"label": label, "markets": markets,
+                    "folded": label == "channel"})
     return out
+
+
+# Worst wins when a country's channels disagree: a fold that reads
+# "cleared" over a blocking broadcaster is worse than no fold at all.
+_STATE_RANK = {"blocked": 3, "at_risk": 2, "noted": 1, "pending": 1,
+               "cleared": 0}
+
+
+def _by_country(markets: list[dict], all_packs: dict) -> list[dict]:
+    """Channel pills grouped under their parent country, worst state first."""
+    families: dict[str, list[dict]] = {}
+    for pill in markets:
+        pack = all_packs.get(pill["code"])
+        parent = (pack.parent if pack and pack.parent else "") or "other"
+        families.setdefault(parent, []).append(pill)
+    out = []
+    for parent, pills in families.items():
+        worst = max(pills, key=lambda p: _STATE_RANK.get(p["state"], 0))
+        out.append({"code": parent, "state": worst["state"],
+                    "children": pills})
+    return sorted(out, key=lambda f: (-_STATE_RANK.get(f["state"], 0), f["code"]))
 
 
 def _page(request: Request, name: str, **context):
@@ -2622,6 +2641,60 @@ def _by_film(runs) -> dict[str, list]:
     return grouped
 
 
+# How many lanes a card draws, always, whatever the run found.
+#
+# Cards with eleven icons beside cards with two read as two different
+# products. Six is what fits under a thumbnail, so six it is on every card:
+# the run's own dimensions first, worst first, and dimmed marks for the rest
+# of the slots -- which are not filler, they are the categories this system
+# watched for and did not see.
+CARD_LANES = 6
+
+
+def _card_panel(run, theme: str, lanes: list[dict]) -> str:
+    """The squares panel for one card, pinned to the rows it draws beside.
+
+    var-dim is a textbox on customs-grid, so this is the panel being told
+    which dimensions it may show: exactly the ones with an icon next to
+    them, in the order the icons are in.
+    """
+    url = (embeds(run, theme).get("viewer") or {}).get("squares", "")
+    seen = [row["dimension"] for row in lanes if row["seen"]]
+    if not url or not seen:
+        return ""
+    return f"{url}&var-dim={quote('|'.join(seen))}"
+
+
+def card_lanes(run, states: dict) -> list[dict]:
+    """The six rows a card draws: [{dimension, seen}], display order.
+
+    Chosen by severity and then DISPLAYED alphabetically, because the live
+    panel beside these icons sorts its own rows by dimension name (see the
+    sortBy on customs-grid). Selection is about importance; order is about
+    two halves of one picture agreeing.
+
+    Read from this run's own rows rather than from Loki: a page of cards
+    cannot afford a query each, which is the whole reason the lane chart is
+    a separate lazily-fetched URL in the first place.
+    """
+    db = store()
+    worst: dict[str, int] = {}
+    for finding in db.findings(run.id):
+        dimension = telemetry._dimension_for(finding.market, finding.rule_id)
+        if dimension and dimension != "none":
+            worst[dimension] = max(worst.get(dimension, 0), finding.severity)
+    observed = {o.dimension for o in db.observations(run.id)
+                if o.dimension and o.dimension != "none"}
+    ranked = sorted(observed, key=lambda d: (-worst.get(d, 0), d))
+    seen = sorted(ranked[:CARD_LANES])
+    # The slots nothing filled: taxonomy order, so the same absent category
+    # lands in the same place on every card of the archive.
+    spare = [d for d in sorted(packs.taxonomy())
+             if d not in observed][:CARD_LANES - len(seen)]
+    return ([{"dimension": d, "seen": True} for d in seen]
+            + [{"dimension": d, "seen": False} for d in spare])
+
+
 def _run_rows(runs, by_asset: dict[str, list], offset: int = 0,
               theme: str = "light") -> list[dict]:
     """One row per film, ready for the card template.
@@ -2635,23 +2708,20 @@ def _run_rows(runs, by_asset: dict[str, list], offset: int = 0,
              "groups": pill_groups(run, st),
              "busy": run.status in ("created", "running")
                      or any(v["working"] for v in st.values()),
-             # The card's lanes, live from the viewer -- but only for the
-             # first few. loading="lazy" was supposed to make one per card
-             # survivable; measured, it was not. Thirty-nine frames and
-             # thirty-nine videos kept a real browser from reaching
-             # domcontentloaded in thirty seconds, because a lazy iframe
-             # still loads the moment it is anywhere near the viewport and
-             # every one of them boots a Grafana. The cards a visitor
-             # actually looks at get the live panel; the rest keep the SVG,
-             # which is what every card had before and is indistinguishable
-             # at that size.
-             "live_lanes": ((embeds(run, theme).get("viewer") or {}).get("squares", "")
-                            if i < LIVE_LANE_CARDS else ""),
-             # The row labels Grafana cannot draw. Same set and same order
-             # the panel resolves from Loki -- both come from this run's
-             # observations -- so the icons line up with the squares.
-             "dims": sorted({o.dimension for o in store().observations(run.id)
-                             if o.dimension and o.dimension != "none"}),
+             # Both charts, on every card, and the reader picks. The live
+             # panel is the one Grafana draws and the drawn one is the
+             # console's own SVG; they answer the same question and only
+             # one is ever in the document at a time.
+             #
+             # Every card carries the live URL now, where before only the
+             # first did. What made that unaffordable was not the panel, it
+             # was thirty-nine of them booting at once because a lazy
+             # iframe loads the moment it is anywhere near the viewport.
+             # The URL is handed to the page as data and customs.js
+             # activates one at a time, on approach, so the cost is what is
+             # actually being looked at.
+             "live_lanes": _card_panel(run, theme, lanes := card_lanes(run, st)),
+             "dims": lanes,
              "gauge": clearance_gauge(st)}
             for i, run in enumerate(runs, start=offset)]
 

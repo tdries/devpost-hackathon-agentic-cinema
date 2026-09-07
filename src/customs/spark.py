@@ -167,8 +167,14 @@ def lanes(rows: list[dict], duration: float, *, width: int = 1180,
         y = top + i * row_h
         out.append(f'<line x1="{pad_left}" y1="{y:.1f}" x2="{width - 12}" y2="{y:.1f}" '
                    f'stroke="currentColor" stroke-opacity=".13" stroke-width="1"/>')
+        # A row with nothing in it is not padding: it is a category this
+        # system watched for and did not see, and every card carries the
+        # same six so the archive reads as one product rather than a
+        # different chart per film. Faint, because "looked, nothing here"
+        # should not shout as loudly as a finding.
+        faint = ' opacity=".3"' if not row["events"] else ''
         out.append(f'<use href="#d-{row["dimension"]}" x="4" '
-                   f'y="{y - icon / 2:.1f}" '
+                   f'y="{y - icon / 2:.1f}"{faint} '
                    f'width="{icon}" height="{icon}"/>')
         for ev in row["events"]:
             x = pad_left + (min(ev["t"], duration) / duration) * inner
