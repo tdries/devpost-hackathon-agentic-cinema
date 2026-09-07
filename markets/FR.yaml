@@ -1,5 +1,7 @@
 market: FR
 name: France
+level: national
+parent: EU
 regulators: [ARPP, Arcom]
 pre_clearance: advisory        # none | advisory | mandatory
 rules:

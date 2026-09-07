@@ -150,6 +150,33 @@ def estimate(method: str, span: float) -> float:
     return math.ceil(raw * 100) / 100
 
 
+# --- what the models will still answer to -------------------------------
+#
+# One method in this table rests on a preview alias with a published end
+# date: gemini-omni-flash-preview deprecates 2026-09-30, and judging runs
+# past it. When the model stops resolving, the honest console greys the
+# method out with a sentence, rather than offering a button whose only
+# outcome is a stack trace.
+#
+# The reason is a string set from outside (genai_client.probe_omni at
+# startup, or a real call that learned it the hard way) and empty means
+# available. Nothing in this module ever probes: costs is arithmetic and
+# stays offline, which is why the whole test suite can price a bridge
+# without credentials.
+_omni_gone = ""
+
+
+def set_omni_unavailable(reason: str) -> None:
+    """Record that Omni's configured model will not answer, and why."""
+    global _omni_gone
+    _omni_gone = reason
+
+
+def omni_unavailable() -> str:
+    """The reason Omni cannot run, or "" when it can."""
+    return _omni_gone
+
+
 def available(method: str, span: float, spent_today: float) -> tuple[bool, str]:
     """Whether this method may run on this span right now, and why not.
 
@@ -174,6 +201,8 @@ def available(method: str, span: float, spent_today: float) -> tuple[bool, str]:
                            f"{per_frame_edits(span)} frames costs {price:.2f} EUR.")
         return True, ""
     if method == "omni":
+        if _omni_gone:
+            return False, _omni_gone
         if span > OMNI_MAX_SPAN_S:
             return False, (f"{span:.1f}s is longer than Omni will take in one "
                            f"piece ({OMNI_MAX_SPAN_S:.0f}s). Cut the finding's "

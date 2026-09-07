@@ -1,5 +1,7 @@
 market: TR
 name: Turkey
+level: national
+parent: GLOBAL
 regulators: [RTUK, Reklam Kurulu]
 pre_clearance: none        # none | advisory | mandatory
 rules:

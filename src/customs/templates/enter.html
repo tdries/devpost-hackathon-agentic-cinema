@@ -17,6 +17,14 @@
     <button class="btn go" type="submit">Come in</button>
   </form>
 
+  {% if role == 'visitor' %}
+  {# The spending routes send everyone here, judges included, and a judge
+     held to the visitor's cap cannot do the one thing they came to do. #}
+  <p class="fix-why">Judging this submission? The
+    <a href="/enter/judge{% if next %}?next={{ next }}{% endif %}">judge door</a>
+    takes the same form and lifts the cap.</p>
+  {% endif %}
+
   {% if wrong %}
   <p class="fix-why" role="alert" style="color:var(--blocked)">
     That is not the password for this door.</p>

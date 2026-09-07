@@ -1,5 +1,7 @@
 market: AE
 name: United Arab Emirates
+level: national
+parent: GLOBAL
 regulators: [UAE Media Council, ESMA]
 pre_clearance: advisory        # none | advisory | mandatory
 rules:

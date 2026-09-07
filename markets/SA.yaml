@@ -1,5 +1,7 @@
 market: SA
 name: Saudi Arabia
+level: national
+parent: GLOBAL
 regulators: [GAM, SFDA]
 pre_clearance: advisory        # none | advisory | mandatory
 rules:

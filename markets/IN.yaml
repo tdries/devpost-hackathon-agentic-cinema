@@ -1,5 +1,7 @@
 market: IN
 name: India
+level: national
+parent: GLOBAL
 regulators: [ASCI, MIB]
 pre_clearance: none        # none | advisory | mandatory
 rules:

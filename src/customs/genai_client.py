@@ -176,6 +176,47 @@ class OmniQuota(RuntimeError):
     """
 
 
+_OMNI_GONE = ("404", "not_found", "not found", "was not found",
+              "is not supported", "unsupported model", "does not exist")
+
+
+def probe_omni() -> tuple[bool, str]:
+    """Does the configured Omni model still answer? Asked once per process.
+
+    `gemini-omni-flash-preview` is the alias that actually works today and
+    Google deprecates it on 2026-09-30, while the 1.1 preview that replaces
+    it is access gated. Judging runs past that date, so the console has to
+    be able to find out that its most impressive fix method has gone away
+    and say so, instead of offering a button whose only outcome is a stack
+    trace. Flip OMNI_MODEL in the environment and the next cold start
+    re-probes: no code deploy.
+
+    Deliberately one-sided. Only an answer that unambiguously means "no
+    such model" takes the method away; expired credentials, a quota error,
+    a network blip or an SDK that has no metadata for preview models all
+    leave it exactly as available as it is today, because greying out a
+    working method over a flaky metadata call is the worse mistake. A real
+    call that dies on a missing model reports it too (see the handler in
+    generate_omni_edit), so the truth arrives either way.
+    """
+    from customs import costs
+
+    model = settings.model_omni
+    try:
+        client().models.get(model=model)
+    except Exception as exc:  # noqa: BLE001 -- the classification IS the point
+        said = str(exc).lower()
+        if any(marker in said for marker in _OMNI_GONE):
+            reason = (f"Omni's model ({model}) no longer answers on this "
+                      f"project, so this method cannot run. Set OMNI_MODEL "
+                      f"to a current one and restart. Everything else in "
+                      f"this list still works.")
+            costs.set_omni_unavailable(reason)
+            return False, reason
+        return True, ""
+    return True, ""
+
+
 def generate_omni_edit(instruction: str, clip_path, out_path,
                        poll_s: float = 10.0, timeout_s: float = 600.0):
     """Gemini Omni, video-to-video: edit this clip as instructed.
@@ -230,6 +271,16 @@ def generate_omni_edit(instruction: str, clip_path, out_path,
                 "this is an access gate wearing a quota error (the granted "
                 "quota reads 10 and request one still 429s); the configured "
                 "alias should not hit it.") from exc
+        if any(marker in message.lower() for marker in _OMNI_GONE):
+            # The preview alias reached its end date mid-process. Tell
+            # costs, so the picker greys the method out for every later
+            # click instead of serving this same failure again.
+            from customs import costs
+            reason = (f"Omni's model ({settings.model_omni}) no longer "
+                      f"answers on this project, so this method cannot "
+                      f"run. Set OMNI_MODEL to a current one and restart.")
+            costs.set_omni_unavailable(reason)
+            raise RuntimeError(reason) from exc
         if "prohibited_content" in message or "third-party content" in message:
             # Omni checks its INPUT -- a famous cartoon reel and the Chanel
             # spot were both refused over "interests of third-party content

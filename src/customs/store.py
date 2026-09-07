@@ -236,7 +236,17 @@ class Store:
         rows = self._conn.execute(
             "SELECT data FROM runs ORDER BY rowid DESC LIMIT ?", (int(limit),)
         ).fetchall()
-        return [RunRecord.from_json(json.loads(r[0])) for r in rows]
+        runs = [RunRecord.from_json(json.loads(r[0])) for r in rows]
+        # The withheld corpus never reaches a list. Filtered here rather
+        # than at eight call sites (the archive, the intelligence board's
+        # posters, the agent's context, the frame index, the "already
+        # analysed" lookup) because every caller of this method is a
+        # reading path and every one of them wants the same answer.
+        # config.WITHHELD_ASSETS says which films and why; nothing is
+        # deleted, and emptying that tuple brings them all back.
+        from customs.config import is_withheld
+        return [r for r in runs
+                if not is_withheld(Path(r.asset_path).stem or r.asset_path)]
 
     @_locked
     def _write_run(self, run: RunRecord) -> None:

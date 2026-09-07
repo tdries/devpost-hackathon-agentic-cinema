@@ -74,6 +74,7 @@ import shutil
 import threading
 import time
 import uuid
+from contextlib import asynccontextmanager
 from functools import lru_cache
 from pathlib import Path
 from urllib.parse import quote
@@ -92,7 +93,7 @@ from customs import (adjudicate, agentmode, analyst, costs, grafana_map, media,
                      scope as scope_mod, search, spark, state as state_mod,
                      verify)
 from customs.fetch import FetchError, fetch_youtube
-from customs.config import settings
+from customs.config import is_withheld, settings, withheld_matcher
 from customs.media import MediaError, probe_duration
 from customs.store import Store
 
@@ -102,9 +103,32 @@ log = logging.getLogger("customs.app")
 # publishing a try-it-now button for every POST the console has, including
 # delete, remediate and the alert webhook. The routes are unchanged and the
 # schema is still generated in code; it is simply not served.
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """One question on the way up: does Omni's model still exist?
+
+    In a thread, because a cold start should not wait on a metadata call,
+    and never fatal: the probe's own rule is that only an unambiguous "no
+    such model" takes the method away, so a container with no credentials
+    (every test run, for one) boots exactly as it does today.
+    """
+    def ask() -> None:
+        try:
+            from customs.genai_client import probe_omni
+            ok, why = probe_omni()
+            if not ok:
+                log.warning("omni preflight: %s", why)
+        except Exception as exc:  # noqa: BLE001 -- a preflight cannot break boot
+            log.debug("omni preflight skipped: %s", exc)
+
+    threading.Thread(target=ask, name="omni-preflight", daemon=True).start()
+    yield
+
+
 app = FastAPI(title="Customs Launch Control",
               description="Ad clearance crew: console, mission feed, alert webhook",
-              docs_url=None, redoc_url=None, openapi_url=None)
+              docs_url=None, redoc_url=None, openapi_url=None,
+              lifespan=lifespan)
 
 
 @app.middleware("http")
@@ -468,8 +492,16 @@ def uploads_dir() -> Path:
 # -- reading a run --
 
 def _run_or_404(run_id: str):
+    """The run, or a 404 -- including for a run this instance will not show.
+
+    Twenty-five routes go through here (the board, the market rooms, every
+    frame, poster, preview and localized master), which is why the
+    withheld corpus is refused here and not in each of them. Nothing is
+    deleted: the rows and the files stay, and config.WITHHELD_ASSETS is
+    the whole of the policy.
+    """
     run = store().get_run(run_id)
-    if run is None:
+    if run is None or is_withheld(Path(run.asset_path).stem or run.asset_path):
         raise HTTPException(status_code=404, detail=f"unknown run: {run_id}")
     return run
 
@@ -623,7 +655,7 @@ def _lanes_from_grafana(run) -> dict[str, list]:
     provenance, not its existence -- the store still has the same facts.
     """
     asset = Path(run.asset_path).stem or run.asset_path
-    query = (f'{{app="customs", kind="observation", '
+    query = (f'{{app="customs", kind="observation"{withheld_matcher()}, '
              f'asset="{re.sub(chr(34), "", asset)}"}} | json')
     try:
         from customs.grafana_ops import GrafanaOps
@@ -759,11 +791,18 @@ def _kinds_found(findings) -> list[str]:
     return [d for d, _ in sorted(worst.items(), key=lambda kv: -kv[1])]
 
 
-# The one run a stranger should see first: a real commercial with findings,
-# a Veo-generated bridge in its cutting room and a verified fix. Both doors
-# point at it -- the judge's archive pins it, the visitor's empty state and
-# the launcher link it -- because the run that proves the product was
-# otherwise sitting unmarked at position six of thirty-five.
+# The one run a stranger should see first: a commercial with findings
+# across three dimensions, seven markets judged, four cleared, and eight
+# fixes that landed and were verified. Both doors point at it -- the
+# judge's archive pins it, the visitor's empty state and the launcher link
+# it -- because the run that proves the product was otherwise sitting
+# unmarked at position six of thirty-five.
+#
+# It used to be a Chanel spot with a famous actor in it, which is a strange
+# thing for a rights-clearance tool to lead with. This one is the ad this
+# project generated with Veo and loaded with its own documented landmines
+# (docs/samples/landmines.yaml), so Google's tools made the film and then
+# failed it.
 # ponytail: hardcoded id, becomes a computed best-run when the archive churns
 # How many archive cards frame a live Grafana panel. Beyond this they use
 # the app's own SVG: see the note in the archive route.
@@ -779,12 +818,20 @@ def _kinds_found(findings) -> list[str]:
 # archive route's own note says is indistinguishable at card size.
 LIVE_LANE_CARDS = 2
 
-SHOWCASE_RUN = "run_c61fa291681f"
+SHOWCASE_RUN = "run_3ea5230a429f"
 
 
 def _showcase(db) -> str:
-    """The showcase run's id, or "" when this store does not hold it."""
-    return SHOWCASE_RUN if db.get_run(SHOWCASE_RUN) else ""
+    """The showcase run's id, or "" when this store cannot show it.
+
+    Withheld as well as missing: get_run answers for the whole store, and
+    pinning "Start here" to a film every route refuses would be a link to
+    a 404 on the busiest page here.
+    """
+    run = db.get_run(SHOWCASE_RUN)
+    if run is None or is_withheld(Path(run.asset_path).stem or run.asset_path):
+        return ""
+    return SHOWCASE_RUN
 
 
 def market_states(run) -> dict[str, dict]:
@@ -947,10 +994,17 @@ def embeds(run, theme: str = "light") -> dict[str, str]:
     The two windows are deliberately different, because the two pages sit on
     different clocks (telemetry.py's module docstring is the reference):
 
-      overview   now-6h..now      status metrics are stamped at the real
+      overview   t0-15m..now      status metrics are stamped at the real
                                   clock, and they move again every time a
                                   remediation resolves a finding, so the
-                                  page has to follow the present.
+                                  window has to reach the present. It is
+                                  anchored at the run's own start rather
+                                  than at now-6h, which is the same window
+                                  on the day of a clearance and an empty
+                                  panel on every day after it: judging runs
+                                  for weeks, and a judge opening a
+                                  three-week-old run was shown "No data"
+                                  by a panel that had the data all along.
       timeline   t0..t0+duration  the risk series is written on the run's
                                   mapped clock, where wall time t0+n IS video
                                   second n, so this window is the ad's own
@@ -964,6 +1018,14 @@ def embeds(run, theme: str = "light") -> dict[str, str]:
     # Light, like the rest of the console now is. A theme-following iframe
     # would mean re-sourcing it on every toggle, and there is one theme to
     # follow.
+    # Both overview URLs share it: the panels reduce with lastNotNull and
+    # filter by asset, so a window that merely CONTAINS the run reads
+    # correctly. A run that never started has no metrics under any window,
+    # and 30 days is the honest outer bound of what the store still holds.
+    since = (f"{int((run.t0 - 900) * 1000)}" if run.t0 is not None
+             else "now-30d")
+    overview_window = f"from={since}&to=now"
+
     viewer = {}
     if settings.grafana_viewer_url:
         base = settings.grafana_viewer_url
@@ -985,10 +1047,10 @@ def embeds(run, theme: str = "light") -> dict[str, str]:
             "grid": f"{base}/d/customs-grid/the-grid?{common}&{window}",
             "lanes": f"{base}/d/customs-lanes/customs?{common}&{window}",
             "timeline": f"{base}/d/customs-timeline/customs?{common}&{window}",
-            "overview": f"{base}/d/customs-overview/customs?{common}&from=now-6h&to=now",
+            "overview": f"{base}/d/customs-overview/customs?{common}&{overview_window}",
         }
 
-    overview = f"{settings.grafana_public_overview}?from=now-6h&to=now"
+    overview = f"{settings.grafana_public_overview}?{overview_window}"
     # The lane panel is not one of the two public pages, so this one lands on
     # the stack itself and asks the operator to be logged in. It was a
     # host-relative /d/customs-lanes before, which is a path on THIS app --
@@ -1559,12 +1621,24 @@ def enter_form(request: Request, role: str, wrong: int = 0,
     """
     if role not in ROLES:
         raise HTTPException(status_code=404, detail=f"unknown door: {role}")
+    # What the word is actually for, on both doors. The judge blurb used to
+    # promise "the archive, the findings and every run this instance has
+    # performed", which is a fair description of what is behind the door and
+    # a misleading one about the door: all of that is open to anyone with
+    # the link. The only thing either word governs is spending.
     return _page(request, "enter.html", role=role, wrong=bool(wrong),
                  screen="landing", next=_safe_next(next_),
-                 blurb=("The archive, the findings and every run this instance has "
-                        "performed." if role == "judge" else
-                        "Clear your own commercial. Generation is capped at "
-                        f"{VISITOR_DAILY_EUR:.2f} EUR a day per visitor."))
+                 blurb=("Reading needs no password, and this door is not how "
+                        "you get to it: the archive, every finding, every "
+                        "statute and every chart are open. The word here "
+                        "lifts the visitor's "
+                        f"{VISITOR_DAILY_EUR:.2f} EUR a day generation cap, "
+                        "so a judge can watch the fix loop run on the card."
+                        if role == "judge" else
+                        "Reading needs no password. Starting a clearance "
+                        "does, because it calls models on a real card: "
+                        f"generation is capped at {VISITOR_DAILY_EUR:.2f} "
+                        "EUR a day per visitor."))
 
 
 @app.post("/enter/{role}")
@@ -2308,10 +2382,13 @@ def insight(request: Request):
     # Each of these is the panel's own expression, sort_desc included, and
     # each panel carries the same two sorts this function applies, so the
     # axis is not merely sorted the same way: it is the same answer.
+    # The same matcher the panels carry, so the axis and the bars are still
+    # answering one question. config.WITHHELD_ASSETS is why it exists.
+    keep = withheld_matcher()
     dims = _ranked('sort_desc(sum by (dimension) (count_over_time({app="customs", '
-                   'kind="finding"}[30d])))', "dimension")
+                   f'kind="finding"{keep}}}[30d])))', "dimension")
     markets = _ranked('sort_desc(sum by (market) (count_over_time({app="customs", '
-                      'kind="finding"}[30d])))', "market")
+                      f'kind="finding"{keep}}}[30d])))', "market")
     # Which mark a market wears is a question about its level, not its
     # code: the sprite holds sixteen countries, and EU, GLOBAL and every
     # broadcaster channel are not among them. Same rule the run nav uses,
@@ -2331,7 +2408,7 @@ def insight(request: Request):
     # and loses its poster: the block is what the store says, and inventing
     # a still for it would be worse than an empty frame.
     films = _ranked('sort_desc(max by (asset) (max_over_time({app="customs", '
-                    'kind="finding"} | json | unwrap severity [30d])))',
+                    f'kind="finding"{keep}}} | json | unwrap severity [30d])))',
                     "asset")
     newest: dict[str, str] = {}
     for r in store().recent_runs(500):
@@ -2479,7 +2556,12 @@ def all_runs(request: Request, all: int = 0, offset: int = 0,
     if settings.grafana_viewer_url and not scoped:
         live_history = (f"{settings.grafana_viewer_url}/d-solo/customs-history/"
                         f"customs?panelId=1&kiosk&theme={gtheme(request)}"
-                        f"&from=now-7d&to=now")
+                        # 30 days, which is what the dashboard itself
+                        # defaults to and what the log store keeps: a
+                        # 7-day window on an archive whose newest run is
+                        # ten days old is a panel that shows nothing about
+                        # a page full of runs.
+                        f"&from=now-30d&to=now")
     films = len(rows)
     if fragment:
         # the cards alone, in the same markup the first page used

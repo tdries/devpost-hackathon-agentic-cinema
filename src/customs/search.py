@@ -84,6 +84,15 @@ def _compile(text: str) -> re.Pattern | None:
 def logql(text: str, dimension: str = "", flagged: str = "") -> str:
     """The stream selector plus the line filter, as Loki will see it."""
     selector = ['app="customs"', 'kind="observation"']
+    # Frame search reads across every run in the store, which is exactly
+    # the surface the withheld corpus must not reach: a search for
+    # "cigar" used to answer with three reels of studio cartoons.
+    # config.WITHHELD_ASSETS is the list and the reasoning.
+    from customs.config import withheld_matcher
+
+    keep = withheld_matcher()
+    if keep:
+        selector.append(keep.lstrip(", "))
     # Whitelisted against the taxonomy, never interpolated raw: a
     # dimension of 'x" } |~ "' rewrote the stream selector and read
     # whatever else the tenant holds. There are eighteen legal values and

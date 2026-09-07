@@ -36,7 +36,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "sort_desc(max by (asset) (max_over_time({app=\"customs\", kind=\"finding\"} | json | unwrap severity [$__range])))",
+          "expr": "sort_desc(max by (asset) (max_over_time({app=\"customs\", kind=\"finding\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`} | json | unwrap severity [$__range])))",
           "editorMode": "code",
           "queryType": "instant",
           "legendFormat": "{{asset}}"
@@ -133,7 +133,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "sum(count_over_time({app=\"customs\", kind=\"finding\"}[$__range]))",
+          "expr": "sum(count_over_time({app=\"customs\", kind=\"finding\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`}[$__range]))",
           "editorMode": "code",
           "queryType": "instant"
         }
@@ -188,7 +188,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "count(sum by (asset) (count_over_time({app=\"customs\", kind=\"observation\"}[$__range])))",
+          "expr": "count(sum by (asset) (count_over_time({app=\"customs\", kind=\"observation\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`}[$__range])))",
           "editorMode": "code",
           "queryType": "instant"
         }
@@ -243,7 +243,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "count(sum by (market) (count_over_time({app=\"customs\", kind=\"finding\"}[$__range])))",
+          "expr": "count(sum by (market) (count_over_time({app=\"customs\", kind=\"finding\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`}[$__range])))",
           "editorMode": "code",
           "queryType": "instant"
         }
@@ -298,7 +298,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "count(sum by (rule_id) (count_over_time({app=\"customs\", kind=\"finding\"}[$__range])))",
+          "expr": "count(sum by (rule_id) (count_over_time({app=\"customs\", kind=\"finding\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`}[$__range])))",
           "editorMode": "code",
           "queryType": "instant"
         }
@@ -353,7 +353,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "sum(count_over_time({app=\"customs\", kind=\"observation\"}[$__range]))",
+          "expr": "sum(count_over_time({app=\"customs\", kind=\"observation\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`}[$__range]))",
           "editorMode": "code",
           "queryType": "instant"
         }
@@ -408,7 +408,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "sum(count_over_time({app=\"customs\", kind=\"verdict\"}[$__range]))",
+          "expr": "sum(count_over_time({app=\"customs\", kind=\"verdict\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`}[$__range]))",
           "editorMode": "code",
           "queryType": "instant"
         }
@@ -463,7 +463,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "sort_desc(sum by (dimension) (count_over_time({app=\"customs\", kind=\"finding\"}[$__range])))",
+          "expr": "sort_desc(sum by (dimension) (count_over_time({app=\"customs\", kind=\"finding\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`}[$__range])))",
           "editorMode": "code",
           "queryType": "instant",
           "legendFormat": "{{dimension}}"
@@ -552,7 +552,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "sort_desc(sum by (market) (count_over_time({app=\"customs\", kind=\"finding\"}[$__range])))",
+          "expr": "sort_desc(sum by (market) (count_over_time({app=\"customs\", kind=\"finding\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`}[$__range])))",
           "editorMode": "code",
           "queryType": "instant",
           "legendFormat": "{{market}}"
@@ -639,7 +639,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "sum by (dimension, market) (count_over_time({app=\"customs\", kind=\"finding\"}[$__range]))",
+          "expr": "sum by (dimension, market) (count_over_time({app=\"customs\", kind=\"finding\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`}[$__range]))",
           "editorMode": "code",
           "queryType": "instant"
         }
@@ -739,7 +739,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "sum by (rule_id, market, asset) (max_over_time({app=\"customs\", kind=\"finding\"} | json | unwrap severity [$__range]))",
+          "expr": "sum by (rule_id, market, asset) (max_over_time({app=\"customs\", kind=\"finding\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`} | json | unwrap severity [$__range]))",
           "editorMode": "code",
           "queryType": "instant"
         }
@@ -792,7 +792,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "sort_desc(max by (market) (max_over_time({app=\"customs\", kind=\"finding\"} | json | unwrap severity [$__range])))",
+          "expr": "sort_desc(max by (market) (max_over_time({app=\"customs\", kind=\"finding\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`} | json | unwrap severity [$__range])))",
           "editorMode": "code",
           "queryType": "instant",
           "legendFormat": "{{market}}"
@@ -958,7 +958,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "sum by (klass) (count_over_time({app=\"customs\", kind=\"finding\"}[1d]))",
+          "expr": "sum by (klass) (count_over_time({app=\"customs\", kind=\"finding\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`}[1d]))",
           "editorMode": "code",
           "queryType": "range",
           "legendFormat": "{{klass}}"
@@ -1069,7 +1069,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "sort_desc(sum by (verdict) (count_over_time({app=\"customs\", kind=\"verdict\"}[$__range])))",
+          "expr": "sort_desc(sum by (verdict) (count_over_time({app=\"customs\", kind=\"verdict\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`}[$__range])))",
           "editorMode": "code",
           "queryType": "instant",
           "legendFormat": "{{verdict}}"
@@ -1163,7 +1163,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "topk(15, sum by (rule_id, klass, market) (count_over_time({app=\"customs\", kind=\"finding\"}[$__range])))",
+          "expr": "topk(15, sum by (rule_id, klass, market) (count_over_time({app=\"customs\", kind=\"finding\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`}[$__range])))",
           "editorMode": "code",
           "queryType": "instant"
         }
@@ -1241,7 +1241,7 @@
             "type": "loki",
             "uid": "grafanacloud-logs"
           },
-          "expr": "{app=\"customs\", kind=\"finding\"} | json",
+          "expr": "{app=\"customs\", kind=\"finding\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`} | json",
           "editorMode": "code",
           "queryType": "range"
         }

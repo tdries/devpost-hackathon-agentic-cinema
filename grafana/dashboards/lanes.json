@@ -1,143 +1,143 @@
 {
- "uid": "customs-lanes",
- "title": "Where the problems are",
- "tags": [
-  "customs"
- ],
- "timezone": "utc",
- "editable": true,
- "time": {
-  "from": "now-24h",
-  "to": "now"
- },
- "templating": {
-  "list": [
-   {
-    "name": "asset",
-    "type": "query",
-    "datasource": {
-     "type": "loki",
-     "uid": "grafanacloud-logs"
-    },
-    "query": {
-     "label": "asset",
-     "refId": "asset",
-     "stream": "{app=\"customs\", kind=\"observation\"}",
-     "type": 1
-    },
-    "refresh": 1,
-    "includeAll": false,
-    "definition": "label_values({app=\"customs\", kind=\"observation\"}, asset)"
-   },
-   {
-    "name": "run",
-    "type": "textbox",
-    "query": "",
-    "current": {
-     "text": "",
-     "value": ""
-    },
-    "label": "run id"
-   }
-  ]
- },
- "panels": [
-  {
-   "type": "state-timeline",
-   "title": "Every category the analyst can see, across the film's own clock",
-   "gridPos": {
-    "h": 15,
-    "w": 24,
-    "x": 0,
-    "y": 0
-   },
-   "datasource": {
-    "type": "loki",
-    "uid": "grafanacloud-logs"
-   },
-   "targets": [
+  "uid": "customs-lanes",
+  "title": "Where the problems are",
+  "tags": [
+    "customs"
+  ],
+  "timezone": "utc",
+  "editable": true,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "templating": {
+    "list": [
+      {
+        "name": "asset",
+        "type": "query",
+        "datasource": {
+          "type": "loki",
+          "uid": "grafanacloud-logs"
+        },
+        "query": {
+          "label": "asset",
+          "refId": "asset",
+          "stream": "{app=\"customs\", kind=\"observation\"}",
+          "type": 1
+        },
+        "refresh": 1,
+        "includeAll": false,
+        "definition": "label_values({app=\"customs\", kind=\"observation\"}, asset)"
+      },
+      {
+        "name": "run",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "label": "run id"
+      }
+    ]
+  },
+  "panels": [
     {
-     "expr": "max by (dimension) (max_over_time({app=\"customs\", kind=\"observation\", asset=\"$asset\"} | json | run_id=\"$run\" | unwrap max_severity [$__interval]))",
-     "queryType": "range",
-     "refId": "A",
-     "legendFormat": "{{dimension}}",
-     "datasource": {
-      "type": "loki",
-      "uid": "grafanacloud-logs"
-     },
-     "interval": "4s"
-    }
-   ],
-   "options": {
-    "mergeValues": true,
-    "showValue": "never",
-    "rowHeight": 0.68,
-    "alignValue": "center",
-    "legend": {
-     "displayMode": "list",
-     "placement": "bottom",
-     "showLegend": false
-    },
-    "tooltip": {
-     "mode": "single",
-     "sort": "none"
-    }
-   },
-   "fieldConfig": {
-    "defaults": {
-     "thresholds": {
-      "mode": "absolute",
-      "steps": [
-       {
-        "color": "#34A853",
-        "value": null
-       },
-       {
-        "color": "#FBBC05",
-        "value": 40
-       },
-       {
-        "color": "#EA4335",
-        "value": 70
-       }
-      ]
-     },
-     "color": {
-      "mode": "thresholds"
-     },
-     "custom": {
-      "fillOpacity": 78,
-      "lineWidth": 0,
-      "spanNulls": false
-     },
-     "min": 0,
-     "max": 100,
-     "unit": "short",
-     "mappings": [
-      {
-       "type": "value",
-       "options": {
-        "0": {
-         "text": "seen, nobody objected",
-         "index": 0
+      "type": "state-timeline",
+      "title": "Every category the analyst can see, across the film's own clock",
+      "gridPos": {
+        "h": 15,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "loki",
+        "uid": "grafanacloud-logs"
+      },
+      "targets": [
+        {
+          "expr": "max by (dimension) (max_over_time({app=\"customs\", kind=\"observation\", asset=\"$asset\", asset!~`^(15296080_1080_1920_24fps|1984_Apple_s_Macintosh_Commercial_HD_|20_second_marketing_ad|8427734-uhd_2160_3840_25fps|A_Little_Kindness_in_the_Drive_Thru|Ai_ki_-_Ready_When_You_Are_FR_|BOND_JAMES_BOND|Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_|Cigars_in_cartoons_-_part_1_of_3|Cigars_in_cartoons_-_part_2_of_3|Cigars_in_cartoons_-_part_3_of_3|Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial|Ed_s_Heinz_Ad|Johnny_Bravo_s_Best_Scene|On_the_trail_of_COCO_MADEMOISELLE|PS3_Baby_commercial|Pingu_angry|SLING_BABY___Doritos_Commercial___superbowl_commercials|Self_Control_Who_I_McDonald_s|_-_24___FRANCE_24_Arabic_1080p_h264_youtube_|boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_|catwalk|run_195aafbd5cc9_localized_ID-INDOSIAR|run_1fc6782fb14e_localized_CA-QC)$`} | json | run_id=\"$run\" | unwrap max_severity [$__interval]))",
+          "queryType": "range",
+          "refId": "A",
+          "legendFormat": "{{dimension}}",
+          "datasource": {
+            "type": "loki",
+            "uid": "grafanacloud-logs"
+          },
+          "interval": "4s"
         }
-       }
-      }
-     ],
-     "links": [
-      {
-       "title": "Remediate now (Omni rewrite)",
-       "url": "https://customs-app-akap4ao72a-ew.a.run.app/launch/remediate?run=${run}&dimension=${__field.labels.dimension}&t=${__value.time}&method=omni",
-       "targetBlank": true
-      }
-     ]
-    },
-    "overrides": []
-   },
-   "id": 1,
-   "interval": "4s"
-  }
- ],
- "schemaVersion": 39,
- "description": "Every observation dimension across a run's own mapped clock. Coloured by the worst severity any market attached to it, so a flat lane is a category that was looked at and cleared."
+      ],
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "rowHeight": 0.68,
+        "alignValue": "center",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#34A853",
+                "value": null
+              },
+              {
+                "color": "#FBBC05",
+                "value": 40
+              },
+              {
+                "color": "#EA4335",
+                "value": 70
+              }
+            ]
+          },
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "fillOpacity": 78,
+            "lineWidth": 0,
+            "spanNulls": false
+          },
+          "min": 0,
+          "max": 100,
+          "unit": "short",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "seen, nobody objected",
+                  "index": 0
+                }
+              }
+            }
+          ],
+          "links": [
+            {
+              "title": "Remediate now (Omni rewrite)",
+              "url": "https://customs-app-akap4ao72a-ew.a.run.app/launch/remediate?run=${run}&dimension=${__field.labels.dimension}&t=${__value.time}&method=omni",
+              "targetBlank": true
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "id": 1,
+      "interval": "4s"
+    }
+  ],
+  "schemaVersion": 39,
+  "description": "Every observation dimension across a run's own mapped clock. Coloured by the worst severity any market attached to it, so a flat lane is a category that was looked at and cleared."
 }

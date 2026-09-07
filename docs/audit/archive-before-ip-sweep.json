@@ -1,0 +1,230 @@
+{
+  "taken": "2026-09-07T05:35:50+00:00",
+  "instance": "https://customs-app-akap4ao72a-ew.a.run.app",
+  "runs": [
+    {
+      "run": "run_2da7ec1a4d0f",
+      "asset": "1000052420.mp4",
+      "state": "go 1/1",
+      "findings": 0,
+      "resolved": 0
+    },
+    {
+      "run": "run_2dec43667265",
+      "asset": "15296080_1080_1920_24fps.mp4",
+      "state": "no_go 0/1",
+      "findings": 1,
+      "resolved": 0
+    },
+    {
+      "run": "run_0dc3aa64fab0",
+      "asset": "1984_Apple_s_Macintosh_Commercial_HD_.mp4",
+      "state": "no_go 0/1",
+      "findings": 9,
+      "resolved": 1
+    },
+    {
+      "run": "run_62c75794f29f",
+      "asset": "20_second_marketing_ad.mp4",
+      "state": "go 10/10",
+      "findings": 5,
+      "resolved": 0
+    },
+    {
+      "run": "run_33e5f7fe2bc6",
+      "asset": "8427734-uhd_2160_3840_25fps.mp4",
+      "state": "no_go 1/3",
+      "findings": 4,
+      "resolved": 0
+    },
+    {
+      "run": "run_3891af30080b",
+      "asset": "_-_24___FRANCE_24_Arabic_1080p_h264_youtube_.mp4",
+      "state": "no_go 2/4",
+      "findings": 1,
+      "resolved": 0
+    },
+    {
+      "run": "run_cb870548494b",
+      "asset": "A_Little_Kindness_in_the_Drive_Thru.mp4",
+      "state": "go 6/6",
+      "findings": 2,
+      "resolved": 1
+    },
+    {
+      "run": "run_195aafbd5cc9",
+      "asset": "Ai_ki_-_Ready_When_You_Are_FR_.mp4",
+      "state": "go 1/1",
+      "findings": 1,
+      "resolved": 1
+    },
+    {
+      "run": "run_92c8c61c2148",
+      "asset": "BOND_JAMES_BOND.mp4",
+      "state": "no_go 1/2",
+      "findings": 3,
+      "resolved": 0
+    },
+    {
+      "run": "run_d33f3afea667",
+      "asset": "boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_.mp4",
+      "state": "no_go 1/3",
+      "findings": 5,
+      "resolved": 0
+    },
+    {
+      "run": "run_6fe4e0ddb2e8",
+      "asset": "catwalk.mp4",
+      "state": "no_go 2/3",
+      "findings": 11,
+      "resolved": 0
+    },
+    {
+      "run": "run_2fcfec861f04",
+      "asset": "Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_.mp4",
+      "state": "go 5/5",
+      "findings": 25,
+      "resolved": 1
+    },
+    {
+      "run": "run_b2021b183715",
+      "asset": "Cigars_in_cartoons_-_part_1_of_3.mp4",
+      "state": "no_go 2/7",
+      "findings": 208,
+      "resolved": 2
+    },
+    {
+      "run": "run_d230ae545492",
+      "asset": "Cigars_in_cartoons_-_part_2_of_3.mp4",
+      "state": "no_go 1/2",
+      "findings": 29,
+      "resolved": 4
+    },
+    {
+      "run": "run_822012613452",
+      "asset": "Cigars_in_cartoons_-_part_3_of_3.mp4",
+      "state": "no_go 1/2",
+      "findings": 8,
+      "resolved": 0
+    },
+    {
+      "run": "run_075119874b7c",
+      "asset": "Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial.mp4",
+      "state": "go 1/1",
+      "findings": 0,
+      "resolved": 0
+    },
+    {
+      "run": "run_bf6b4a1145ee",
+      "asset": "Ed_s_Heinz_Ad.mp4",
+      "state": "no_go 1/4",
+      "findings": 14,
+      "resolved": 0
+    },
+    {
+      "run": "run_804f7b687c72",
+      "asset": "ember_lounge.mp4",
+      "state": "no_go 2/6",
+      "findings": 15,
+      "resolved": 3
+    },
+    {
+      "run": "run_687ab589290a",
+      "asset": "GS_20250728_K-068.mov",
+      "state": "go 3/3",
+      "findings": 0,
+      "resolved": 0
+    },
+    {
+      "run": "run_5293e1b2086b",
+      "asset": "GS_20250728_K1-013.mov",
+      "state": "go 1/1",
+      "findings": 0,
+      "resolved": 0
+    },
+    {
+      "run": "run_c4244cce3947",
+      "asset": "Johnny_Bravo_s_Best_Scene.mp4",
+      "state": "go 10/10",
+      "findings": 3,
+      "resolved": 0
+    },
+    {
+      "run": "run_756a578ac899",
+      "asset": "mette.MOV",
+      "state": "go 1/1",
+      "findings": 0,
+      "resolved": 0
+    },
+    {
+      "run": "run_8b76dc2db0cb",
+      "asset": "On_the_trail_of_COCO_MADEMOISELLE.mp4",
+      "state": "no_go 4/6",
+      "findings": 4,
+      "resolved": 0
+    },
+    {
+      "run": "run_c61fa291681f",
+      "asset": "On_the_trail_of_COCO_MADEMOISELLE.mp4",
+      "state": "no_go 1/3",
+      "findings": 4,
+      "resolved": 1
+    },
+    {
+      "run": "run_9a3c38b3c99d",
+      "asset": "Pingu_angry.mp4",
+      "state": "go 51/51",
+      "findings": 0,
+      "resolved": 0
+    },
+    {
+      "run": "run_aa0137ac21c3",
+      "asset": "PS3_Baby_commercial.mp4",
+      "state": "go 10/10",
+      "findings": 2,
+      "resolved": 1
+    },
+    {
+      "run": "run_cdca986b749a",
+      "asset": "run_195aafbd5cc9_localized_ID-INDOSIAR.mp4",
+      "state": "no_go 4/6",
+      "findings": 16,
+      "resolved": 2
+    },
+    {
+      "run": "run_1888660b5c27",
+      "asset": "run_1fc6782fb14e_localized_CA-QC.mp4",
+      "state": "no_go 10/13",
+      "findings": 31,
+      "resolved": 0
+    },
+    {
+      "run": "run_6bba23a5764d",
+      "asset": "solstice_rooftop.mp4",
+      "state": "no_go 3/6",
+      "findings": 10,
+      "resolved": 0
+    },
+    {
+      "run": "run_3ea5230a429f",
+      "asset": "test.mp4",
+      "state": "no_go 4/7",
+      "findings": 19,
+      "resolved": 8
+    },
+    {
+      "run": "run_f76d521c8873",
+      "asset": "Untitled.mov",
+      "state": "go 2/2",
+      "findings": 0,
+      "resolved": 0
+    },
+    {
+      "run": "run_d0a139b9dae5",
+      "asset": "voltage_runway.mp4",
+      "state": "no_go 4/6",
+      "findings": 2,
+      "resolved": 0
+    }
+  ]
+}

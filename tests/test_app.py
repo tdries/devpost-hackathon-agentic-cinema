@@ -2026,9 +2026,22 @@ def test_both_doors_open_and_remember_which_one_you_chose(console):
     """
     client, _store, _launched, _jobs = console
 
+    # The judge's door on the landing page goes straight to the archive:
+    # reading is open, and asking a judge for a password before showing
+    # them pages that were never gated reads either as theatre or as a
+    # leak. The word still exists for the thing it governs, and the
+    # visitor's door -- the one that leads to spending -- still asks.
     body = client.get("/").text
-    assert 'href="/enter/judge"' in body
+    assert 'class="door door-judge" href="/runs"' in body
     assert 'href="/enter/visitor"' in body
+    assert "No password: reading is open" in body
+
+    # and the judge door is still there for a judge who wants to spend,
+    # signposted from the door the spending routes actually send them to
+    stopped = client.get("/enter/visitor?next=/new").text
+    assert 'href="/enter/judge?next=/new"' in stopped
+    for door in ("judge", "visitor"):
+        assert "Reading needs no password" in client.get(f"/enter/{door}").text
 
     judge = _enter(client, "judge")
     assert judge.status_code == 303
@@ -3402,6 +3415,127 @@ def test_the_intelligence_board_labels_grafana_with_the_console_s_own_icons(
     from customs import grafana_map
     uids = {d.uid for d in grafana_map.dashboards()}
     assert "customs-insight" in uids
+
+
+def test_footage_this_instance_may_not_publish_is_not_shown_anywhere(console):
+    """Devpost puts the rights to a submission's content on the entrant,
+    and this archive grew out of whatever was to hand: a Chanel spot with a
+    famous actor in it, a Bond clip, three reels of studio cartoons, brand
+    ads, two stock clips. A rights-clearance tool is the last thing that
+    should be borrowing footage.
+
+    Hidden rather than deleted, on the operator's instruction: the rows and
+    the files stay exactly where they are and every read path stops
+    answering for them. So the archive does not list it, the run's own page
+    is a 404 like any unknown run, and the cross-run queries exclude it by
+    label -- while the corpus this project generated with Veo is untouched.
+    """
+    from customs.config import WITHHELD_ASSETS, is_withheld
+
+    client, store, _launched, _jobs = console
+    withheld = _judged_run(store, asset="/tmp/BOND_JAMES_BOND.mp4")
+    ours = _judged_run(store, asset="/tmp/ember_lounge.mp4")
+
+    assert is_withheld("BOND_JAMES_BOND") and not is_withheld("ember_lounge")
+
+    # the archive lists one of the two, and it is ours
+    archive = client.get("/runs?all=1").text
+    assert ours.id in archive
+    assert withheld.id not in archive
+    assert "BOND_JAMES_BOND" not in archive
+
+    # 404, and by the same words any unknown run gets: a page that
+    # explained itself would be a page that names the film
+    assert client.get(f"/runs/{withheld.id}").status_code == 404
+    assert client.get(f"/runs/{withheld.id}/poster.jpg").status_code == 404
+    assert client.get(f"/runs/{withheld.id}/mission").status_code == 404
+    assert client.get(f"/runs/{ours.id}").status_code == 200
+
+    # the store's own listing path is where that happens, so everything
+    # built on it (the boards, the agent's context, the frame index)
+    # inherits it rather than repeating it
+    listed = {r.id for r in store.recent_runs(50)}
+    assert ours.id in listed and withheld.id not in listed
+    assert store.get_run(withheld.id) is not None, "hidden, not deleted"
+
+    # and every cross-run Loki query carries the label matcher
+    from customs.search import logql
+    for query in (logql("cigar"), logql("")):
+        assert "asset!~" in query
+    assert all(a in logql("cigar") for a in WITHHELD_ASSETS[:3])
+
+
+def test_every_framed_loki_query_excludes_the_withheld_corpus():
+    """The console filters its own queries in code; the framed panels are
+    Grafana's, and Grafana reads the JSON in grafana/dashboards. A panel
+    whose expression is just {app="customs", kind="finding"} charts the
+    whole tenant, which is how the intelligence board came to show a row of
+    studio cartoons under a paragraph about this project's own corpus.
+
+    So the matcher has to be in the files, and this is the thing that
+    notices when config.WITHHELD_ASSETS changes and the files do not.
+    """
+    import json
+    from pathlib import Path as _Path
+
+    from customs.config import withheld_matcher
+
+    matcher = withheld_matcher()
+    assert matcher, "the whole test is about this constant being non-empty"
+    for path in sorted(_Path("grafana/dashboards").glob("*.json")):
+        for panel in json.loads(path.read_text())["panels"]:
+            for target in panel.get("targets", []):
+                expr = target.get("expr") or ""
+                if (target.get("datasource") or {}).get("type") != "loki":
+                    continue
+                if 'app="customs"' not in expr:
+                    continue
+                assert matcher.lstrip(", ") in expr, (
+                    f"{path.name} panel {panel['id']} charts the whole "
+                    f"tenant. Run scripts/stamp_withheld_dashboards.py")
+
+
+def test_no_framed_panel_goes_blank_on_a_quiet_instance():
+    """Judging runs for weeks after the deadline, and this instance is
+    quiet on most of those days. Every framed panel therefore has to be
+    windowed to where the data IS, not to the last few hours: the launch
+    board's overview was pinned to now-6h, so a judge opening a
+    three-week-old run was told "No data" by a panel holding every number
+    it needed.
+
+    The mapped-clock panels (grid, lanes, timeline) are windowed to the
+    run itself by embed_url and are not the subject here. This is about
+    the wall-clock ones.
+    """
+    import json
+    from pathlib import Path as _Path
+
+    from customs.app import embeds
+    from customs.schema import RunRecord
+
+    run = RunRecord(id="run_quiet", asset_path="/tmp/ember_lounge.mp4",
+                    t0=1_700_000_000.0, status="judged", markets=["EU"])
+    over = embeds(run)["overview"]
+    assert "now-6h" not in over
+    # anchored a quarter of an hour before the run's own first sample
+    assert f"from={int((run.t0 - 900) * 1000)}" in over
+    assert "to=now" in over, "and open at the present, so a fix today moves it"
+
+    # a run that never started has no samples under any window; 30 days is
+    # the outer bound of what the store still holds
+    assert "from=now-30d" in embeds(
+        RunRecord(id="run_new", asset_path="/tmp/x.mp4", t0=None,
+                  status="created", markets=[])
+    )["overview"]
+
+    # and no wall-clock dashboard ships a window narrower than that either,
+    # because /grafana/{uid}.png renders whatever the dashboard stores
+    mapped = {"grid.json", "lanes.json", "timeline.json"}
+    for path in sorted(_Path("grafana/dashboards").glob("*.json")):
+        if path.name in mapped:
+            continue
+        window = json.loads(path.read_text())["time"]["from"]
+        assert window == "now-30d", f"{path.name} stores {window}"
 
 
 def test_the_intelligence_board_survives_a_dead_grafana(console, monkeypatch):

@@ -1,5 +1,7 @@
 market: TH
 name: Thailand
+level: national
+parent: GLOBAL
 regulators: [Thai FDA, NBTC]
 pre_clearance: advisory        # none | advisory | mandatory
 rules:

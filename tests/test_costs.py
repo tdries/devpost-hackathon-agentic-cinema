@@ -158,3 +158,75 @@ def test_omni_is_priced_by_the_second_and_capped_at_ten():
     ok, why = costs.available("omni", 8.0, costs.DAILY_BUDGET_EUR - 0.10)
     assert not ok and "budget" in why.lower()
     assert costs.available("omni", 8.0, 0.0) == (True, "")
+
+
+def test_omni_greys_itself_out_when_its_model_is_gone():
+    """gemini-omni-flash-preview is the alias that works today and Google
+    deprecates it on 2026-09-30. Judging runs past that date, so the
+    console has to be able to learn that its most impressive fix method is
+    gone and say so in the picker, rather than offering a button whose
+    only outcome is a stack trace.
+
+    Everything else in the list is unaffected: one model going away is not
+    an outage.
+    """
+    from customs import costs
+
+    try:
+        assert costs.available("omni", 4.0, 0.0) == (True, "")
+        costs.set_omni_unavailable("Omni's model no longer answers here.")
+
+        ok, why = costs.available("omni", 4.0, 0.0)
+        assert not ok and "no longer answers" in why
+        assert costs.available("bridge", 4.0, 0.0)[0]
+        assert costs.available("track", 4.0, 0.0)[0]
+
+        # and the picker the operator actually sees carries the reason, which
+        # is what market_room.html greys the row out with
+        rows = {o["key"]: o for o in costs.options(4.0, 0.0)}
+        assert rows["omni"]["available"] is False
+        assert "no longer answers" in rows["omni"]["why_not"]
+        assert rows["bridge"]["available"] is True
+    finally:
+        costs.set_omni_unavailable("")
+
+
+def test_the_omni_preflight_only_believes_an_unambiguous_no_such_model(monkeypatch):
+    """One-sided on purpose. A missing model takes the method away; an
+    expired credential, a quota error or an SDK with no metadata for
+    preview models leaves it exactly as available as it is today, because
+    greying out a working method over a flaky metadata call is the worse
+    mistake of the two.
+    """
+    from customs import costs, genai_client
+
+    class FakeModels:
+        def __init__(self, raise_with): self.raise_with = raise_with
+        def get(self, model):
+            if self.raise_with:
+                raise RuntimeError(self.raise_with)
+            return {"name": model}
+
+    class FakeClient:
+        def __init__(self, raise_with): self.models = FakeModels(raise_with)
+
+        def __call__(self): return self
+
+    def with_error(text):
+        monkeypatch.setattr(genai_client, "client", FakeClient(text))
+        costs.set_omni_unavailable("")
+        return genai_client.probe_omni()
+
+    try:
+        assert with_error("") == (True, "")
+        assert with_error("404 NOT_FOUND: Publisher Model not found")[0] is False
+        assert costs.omni_unavailable(), "a missing model is recorded"
+
+        for benign in ("Reauthentication is needed",
+                       "429 Quota exceeded for base model",
+                       "503 The service is currently unavailable"):
+            ok, why = with_error(benign)
+            assert ok and why == "", benign
+            assert not costs.omni_unavailable(), benign
+    finally:
+        costs.set_omni_unavailable("")

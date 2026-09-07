@@ -1,5 +1,7 @@
 market: ID
 name: Indonesia
+level: national
+parent: GLOBAL
 regulators: [KPI, Komdigi]
 pre_clearance: none        # none | advisory | mandatory
 rules:

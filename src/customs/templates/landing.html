@@ -33,11 +33,17 @@
     <div class="doors">
       <span class="doors-label label">Come in as</span>
       <div class="doors-row">
-        <a class="door door-judge" href="/enter/judge">
+        {# Straight in, no word asked. Reading every run, finding, statute
+           and chart is open by design, and this door used to hand a judge
+           a password form for pages that were never gated -- which reads
+           either as theatre or as a leak, depending on which one you
+           believe. The word still exists, one screen further on, for the
+           only thing it governs: spending the generation budget. #}
+        <a class="door door-judge" href="/runs">
           <svg class="ic"><use href="#i-adjudicator"/></svg>
           <span class="door-text">
             <span class="door-title">I'm a Devpost judge</span>
-            <span class="door-sub">Straight to the runs already cleared, with the evidence behind every finding</span>
+            <span class="door-sub">Straight to the runs already cleared, with the evidence behind every finding. No password: reading is open</span>
           </span>
           <span class="door-go" aria-hidden="true">&rarr;</span>
         </a>

@@ -1,5 +1,7 @@
 market: CA-QC
 name: Canada (Quebec)
+level: national
+parent: GLOBAL
 regulators: [OPC, RACJ, CRTC]
 pre_clearance: advisory        # none | advisory | mandatory
 rules:

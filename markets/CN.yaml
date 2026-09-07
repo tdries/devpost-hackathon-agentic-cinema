@@ -1,5 +1,7 @@
 market: CN
 name: China
+level: national
+parent: GLOBAL
 regulators: [SAMR, NRTA]
 pre_clearance: advisory        # none | advisory | mandatory
 rules:

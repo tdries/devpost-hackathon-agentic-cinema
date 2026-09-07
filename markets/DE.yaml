@@ -1,5 +1,7 @@
 market: DE
 name: Germany
+level: national
+parent: EU
 regulators: [Landesmedienanstalten, KJM]
 pre_clearance: none        # none | advisory | mandatory
 rules:

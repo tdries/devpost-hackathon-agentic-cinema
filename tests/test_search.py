@@ -141,9 +141,15 @@ def test_the_filters_reach_loki_as_labels_and_the_pattern_as_a_line_filter():
     search.frames(ops, "rabbit", dimension="food_and_animals",
                   flagged="yes", mode="literal")
 
-    assert ops.asked == ('{app="customs", kind="observation", '
-                         'dimension="food_and_animals", flagged="yes"} '
-                         '|~ "(?i)rabbit"')
+    # minus the withheld-corpus matcher, which every cross-run query now
+    # carries and which has its own test
+    from customs.config import withheld_matcher
+
+    assert ops.asked.replace(withheld_matcher(), "") == (
+        '{app="customs", kind="observation", '
+        'dimension="food_and_animals", flagged="yes"} '
+        '|~ "(?i)rabbit"')
+    assert withheld_matcher() in ops.asked
 
 
 def test_a_capped_result_says_so_rather_than_reporting_the_limit_as_a_count():
@@ -429,6 +435,9 @@ def test_a_dimension_cannot_rewrite_the_stream_selector():
 
     query = search.logql("x", dimension=hostile)
 
-    assert query == '{app="customs", kind="observation"} |~ "(?i)x"'
+    from customs.config import withheld_matcher
+
+    assert query.replace(withheld_matcher(), "") == \
+        '{app="customs", kind="observation"} |~ "(?i)x"'
     assert "leak" not in query
     assert search.logql("x", dimension="food_and_animals").count("dimension=") == 1

@@ -32,7 +32,12 @@ def test_fr_pack_loads_with_alc_01():
     fr = packs["FR"]
     assert isinstance(fr, MarketPack)
     assert fr.market == "FR"
-    assert 6 <= len(fr.rules) <= 12
+    # France is in the EU, so its resolved set is its own rules plus
+    # everything the continental pack resolves. A bounded magic range used
+    # to stand here, and it was the only thing that noticed the ladder had
+    # been wired up.
+    assert fr.parent == "EU"
+    assert len(fr.rules) == len(fr.own_rules) + len(packs["EU"].rules)
     alc = next(r for r in fr.rules if r.id == "FR-ALC-01")
     assert isinstance(alc, MarketRule)
     assert alc.dimension == "alcohol_tobacco_drugs"
@@ -87,6 +92,32 @@ def test_every_national_pack_has_at_least_five_rules():
         if pack.level != "national":
             continue
         assert len(pack.rules) >= 5, f"{market} has only {len(pack.rules)} rules"
+
+
+def test_every_pack_but_the_global_one_inherits_from_somewhere():
+    """The ladder, enforced. The launch board tells an operator that every
+    market inherits the global baseline, and for a long time that was true
+    of Belgium and of nobody else: fifteen national packs declared no
+    parent, so a German commercial was judged against German law with no
+    ICC baseline underneath it and the 98-jurisdiction claim rested on
+    channels that inherited an empty set.
+
+    EU members hang off EU, which hangs off GLOBAL; everyone else hangs off
+    GLOBAL directly (the United Kingdom included, which is a Brexit fact
+    rather than a geography one). Only the baseline itself is an orphan.
+    """
+    packs = load(MARKETS_DIR)
+    orphans = [c for c, p in packs.items() if not p.parent]
+    assert orphans == ["GLOBAL"], f"unparented: {sorted(orphans)}"
+    for code, pack in packs.items():
+        if code == "GLOBAL":
+            continue
+        assert pack.inherited > 0, f"{code} inherits nothing"
+        assert pack.rules, f"{code} resolves no rules at all"
+    # and the baseline really is underneath every one of them
+    baseline = {r.id for r in packs["GLOBAL"].own_rules}
+    for code, pack in packs.items():
+        assert baseline <= {r.id for r in pack.rules}, f"{code} misses the baseline"
 
 
 def test_a_channel_inherits_its_country_and_everything_above_it():

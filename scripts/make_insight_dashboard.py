@@ -23,9 +23,11 @@ stay stable: the console embeds them by id.
     python scripts/make_insight_dashboard.py
 """
 import json
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(Path(__file__).resolve().parent), str(ROOT / "src")]
 OUT = ROOT / "grafana" / "dashboards" / "insight.json"
 
 LOKI = {"type": "loki", "uid": "grafanacloud-logs"}
@@ -410,6 +412,19 @@ def main() -> int:
     for p in PANELS:
         if p["id"] != 60:
             p["gridPos"]["y"] += 8
+    # Every Loki query leaves here already excluding the withheld corpus,
+    # so regenerating this board cannot quietly put a Chanel spot and three
+    # reels of studio cartoons back on it. Same function the other
+    # dashboards are stamped with.
+    from stamp_withheld_dashboards import stamp
+
+    from customs.config import withheld_matcher
+    matcher = withheld_matcher()
+    for panel in PANELS:
+        for target in panel.get("targets", []):
+            if (target.get("datasource") or {}).get("type") == "loki":
+                target["expr"] = stamp(target["expr"], matcher)
+
     OUT.write_text(json.dumps(DASHBOARD, indent=2) + "\n")
     kinds = sorted({p["type"] for p in PANELS})
     print(f"{OUT.relative_to(ROOT)}: {len(PANELS)} panels, "

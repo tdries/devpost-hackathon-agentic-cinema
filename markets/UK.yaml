@@ -1,5 +1,7 @@
 market: UK
 name: United Kingdom
+level: national
+parent: GLOBAL
 regulators: [Ofcom, ASA, Clearcast]
 pre_clearance: mandatory        # none | advisory | mandatory
 rules:

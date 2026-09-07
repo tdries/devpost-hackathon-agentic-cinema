@@ -1,4 +1,5 @@
 import os
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -114,3 +115,75 @@ class Settings:
         )
 
 settings = Settings.load()
+
+# --- footage this instance will not show --------------------------------
+#
+# Devpost puts the rights to everything in a submission on the entrant,
+# and this archive grew during development out of whatever was to hand: a
+# Chanel spot with a famous actor in it, a Bond clip, three reels of studio
+# cartoons, a Doritos Super Bowl ad, half a dozen brand films and two stock
+# clips. None of it is ours to publish, Omni and Veo both refuse most of it
+# at the input anyway, and a rights-clearance tool is the last thing that
+# should be borrowing footage. What stays is the corpus this project made
+# with Veo: ember_lounge, solstice_rooftop, voltage_runway and the test ad.
+#
+# Hidden, not deleted, and deliberately so: every row, frame and log line
+# stays exactly where it is, and the console stops listing, querying and
+# serving them. Deleting a name from this tuple brings its run back
+# whole. docs/audit/archive-before-ip-sweep.json is the inventory as it
+# stood when the list was drawn.
+#
+# Names are file stems, which is what `asset` means everywhere in this
+# system: the label on every metric and log line, the Grafana variable,
+# and what asset_key() reduces a run to.
+WITHHELD_ASSETS = (
+    "15296080_1080_1920_24fps",
+    "1984_Apple_s_Macintosh_Commercial_HD_",
+    "20_second_marketing_ad",
+    "8427734-uhd_2160_3840_25fps",
+    "A_Little_Kindness_in_the_Drive_Thru",
+    "Ai_ki_-_Ready_When_You_Are_FR_",
+    "BOND_JAMES_BOND",
+    "Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_",
+    "Cigars_in_cartoons_-_part_1_of_3",
+    "Cigars_in_cartoons_-_part_2_of_3",
+    "Cigars_in_cartoons_-_part_3_of_3",
+    "Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial",
+    "Ed_s_Heinz_Ad",
+    "Johnny_Bravo_s_Best_Scene",
+    "On_the_trail_of_COCO_MADEMOISELLE",
+    "PS3_Baby_commercial",
+    "Pingu_angry",
+    "SLING_BABY___Doritos_Commercial___superbowl_commercials",
+    "Self_Control_Who_I_McDonald_s",
+    "_-_24___FRANCE_24_Arabic_1080p_h264_youtube_",
+    "boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_",
+    "catwalk",
+    "run_195aafbd5cc9_localized_ID-INDOSIAR",
+    "run_1fc6782fb14e_localized_CA-QC",
+)
+
+
+def is_withheld(asset: str) -> bool:
+    """Is this asset stem one the console will not show?"""
+    return asset in WITHHELD_ASSETS
+
+
+def withheld_matcher(label: str = "asset") -> str:
+    """A LogQL label matcher excluding the withheld corpus, or "".
+
+    Returned with its leading comma so it drops into a stream selector:
+    `{app="customs", kind="finding"<here>}`. Negative rather than an
+    allowlist, because a visitor's own clearance has to keep appearing on
+    the cross-run boards the moment it lands, and only these named films
+    are the problem.
+    """
+    if not WITHHELD_ASSETS:
+        return ""
+    # Backticks, and a narrow escape. LogQL lexes a double-quoted string
+    # Go-style before the regex engine ever sees it, so re.escape's `\-`
+    # comes back as "parse error: invalid char escape"; a backtick string
+    # is raw, and only RE2's own metacharacters need escaping inside it.
+    alts = "|".join(re.sub(r"([.^$*+?()\[\]{}|\\`])", r"\\\1", a)
+                    for a in WITHHELD_ASSETS)
+    return f", {label}!~`^({alts})$`"

@@ -1,5 +1,7 @@
 market: NG
 name: Nigeria
+level: national
+parent: GLOBAL
 regulators: [ARCON, NBC]
 pre_clearance: mandatory        # none | advisory | mandatory
 rules:

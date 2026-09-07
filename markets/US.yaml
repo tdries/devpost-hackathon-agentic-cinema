@@ -1,5 +1,7 @@
 market: US
 name: United States
+level: national
+parent: GLOBAL
 regulators: [FTC, FCC, FDA]
 pre_clearance: none        # none | advisory | mandatory
 rules:
