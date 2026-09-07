@@ -26,7 +26,7 @@ Prometheus rejects backdated samples, so we probed the ingest window and mapped 
 
 ### Accomplishments that we're proud of
 
-The loop actually closes, on the live instance: a Grafana alert wakes the Remediator, both anchor frames are edited and checked, Veo generates the bridge, the craft gate accepts the recomposite, the Verifier re-observes the changed shot with the same instrument that found the problem, the metric drops, and Grafana resolves the alert on its own. There are runs in the public archive with a finding marked *verified fixed* and the raw generated clip beside the before/after. At the milestone gate, the crew caught five of the six gate-scored landmines with zero empty rationales, and the French alcohol finding carried a live Legifrance citation; the control shots produced zero false positives. We shipped 21 market packs resolving to 98 jurisdictions with 128 rules, every rule naming a real statute or code, and 504 offline tests keep the whole thing honest.
+The loop actually closes, on the live instance: a Grafana alert wakes the Remediator, both anchor frames are edited and checked, Veo generates the bridge, the craft gate accepts the recomposite, the Verifier re-observes the changed shot with the same instrument that found the problem, the metric drops, and Grafana resolves the alert on its own. There are runs in the public archive with a finding marked *verified fixed* and the raw generated clip beside the before/after. At the milestone gate, the crew caught five of the six gate-scored landmines with zero empty rationales, and the French alcohol finding carried a live Legifrance citation; the control shots produced zero false positives. We shipped 21 market packs resolving to 98 jurisdictions with 128 rules, every rule naming a real statute or code, and 599 offline tests keep the whole thing honest.
 
 ### What we learned
 
@@ -43,7 +43,7 @@ python, google-gemini, google-adk, agent-builder, vertex-ai, grafana, grafana-cl
 ## Links
 
 - GitHub repo: https://github.com/tdries/devpost-hackathon-agentic-cinema
-- Live instance: https://customs-app-akap4ao72a-ew.a.run.app (the judge door's password is DEVPOST; reading needs nothing)
+- Live instance: https://customs-app-akap4ao72a-ew.a.run.app -- **nothing is gated for reading**. The archive, every run, every finding with its statute and citation, the rule library, frame search, the intelligence board and the Grafana inventory are all open: click "I'm a Devpost judge" and you are in. The pinned "Start here" run shows the whole loop end to end. The word DEVPOST is only needed to SPEND: starting a clearance, judging more markets or running a fix calls models on a real card, and the judge door lifts the visitor's EUR 1.00 a day cap on that
 - Demo video: https://youtu.be/YOUTUBE_VIDEO_ID (record and replace)
 
 ## Track

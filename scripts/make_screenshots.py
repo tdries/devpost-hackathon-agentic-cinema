@@ -49,7 +49,7 @@ def main() -> int:
     # The showcase run: seven markets judged, three dimensions, eight fixes
     # landed and verified, and a film this project generated rather than
     # borrowed. app.SHOWCASE_RUN is the same id.
-    ap.add_argument("--run", default="run_3ea5230a429f")
+    ap.add_argument("--run", default="run_5299053b6a62")
     ap.add_argument("--market", default="AE",
                     help="the market room and cutting room to shoot")
     ap.add_argument("--cookie", default="customs-role=judge")

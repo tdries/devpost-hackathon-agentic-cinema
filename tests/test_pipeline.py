@@ -521,3 +521,32 @@ def test_judge_more_refuses_a_run_it_cannot_reuse(tmp_path):
     run = store.create_run(asset_path=str(tmp_path / "ad.mp4"), markets=["BE"])
     with pytest.raises(ValueError, match="no observations"):
         pipeline.judge_more(store, run, ["FR"], 2.0)
+
+
+def test_a_market_judged_after_it_errored_is_no_longer_errored(tmp_path):
+    """Vertex answers a share of any parallel fan-out with 429
+    RESOURCE_EXHAUSTED, so one market of eight losing its judging pass is
+    an ordinary Tuesday. The event log is append-only and the tile read
+    "error" for the life of the run even after a later pass judged the
+    market properly, because the first stage_error was still in there.
+
+    The last word about a market is the one that counts.
+    """
+    from customs import pipeline
+    from customs.store import Store
+
+    store = Store(tmp_path / "runs.db")
+    run = store.create_run(asset_path="/tmp/ad.mp4", markets=["UK", "FR"])
+
+    store.emit(run.id, "adjudicator", "stage_error: market=UK: ClientError(429)")
+    store.emit(run.id, "adjudicator", "stage_error: market=FR: ClientError(429)")
+    assert pipeline.errored_markets(store, run.id) == {"UK", "FR"}
+
+    # the retry lands for UK only
+    store.emit(run.id, "adjudicator", "UK clearance -> blocked (3 finding(s))")
+    assert pipeline.errored_markets(store, run.id) == {"FR"}
+
+    # and a market that errors AGAIN after a good pass is errored again
+    store.emit(run.id, "adjudicator", "stage_error: market=UK: ClientError(429)")
+    assert pipeline.errored_markets(store, run.id) == {"FR", "UK"}
+

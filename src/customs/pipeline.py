@@ -156,8 +156,19 @@ def errored_markets(store: Store, run_id: str) -> set[str]:
     errored: set[str] = set()
     prefix = "stage_error: market="
     for _id, _ts, agent, message in store.events_since(run_id, 0):
-        if agent == "adjudicator" and message.startswith(prefix):
+        if agent != "adjudicator":
+            continue
+        if message.startswith(prefix):
             errored.add(message[len(prefix):].split(":", 1)[0])
+        elif " clearance -> " in message:
+            # A later pass judged it after all, so the earlier failure is
+            # history rather than the run's state. Vertex answers a share
+            # of a parallel fan-out with 429 RESOURCE_EXHAUSTED, and until
+            # this line a market that lost that race wore an error tile
+            # for the life of the run even once it had been judged
+            # properly: the log grows, it is never rewritten, and the last
+            # word about a market is the one that counts.
+            errored.discard(message.split(" clearance -> ", 1)[0].strip())
     return errored
 
 def run(asset_path, markets: list[str], store: Store, workdir) -> RunRecord:

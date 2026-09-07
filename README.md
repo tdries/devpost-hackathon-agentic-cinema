@@ -89,7 +89,7 @@ The output is two things: **a decision** (can this air here, and on what evidenc
 
 | | |
 |---|---|
-| **Jurisdictions** | 21 market packs resolving to a global baseline, the EU, 16 countries and 80 broadcasters, 757 market-rule pairings once inheritance resolves |
+| **Jurisdictions** | 21 market packs resolving to a global baseline, the EU, 16 countries and 80 broadcasters, 1,063 market-rule pairings once inheritance resolves |
 | **Rules** | every one naming a real statute, broadcaster code or cultural norm, with a live citation |
 | **Dimensions** | one fixed taxonomy the analyst emits and every rule is written against |
 | **Repair methods** | from a €0.04 single-frame patch to a €3.68 Veo-generated bridge, priced in euro before you press |
@@ -529,7 +529,7 @@ GLOBAL  ── the baseline nobody escapes
           └─ RTL, TF1, VRT …  ── broadcaster codes, stricter than the law
 ```
 
-21 pack files, 128 authored rules, resolving to **98 selectable jurisdictions** (1 global, 1 continental, 16 national, 80 channel) and **757 market-rule pairings**. Every rule names its `basis` in prose and carries a citation. The class split is 94 `legal` / 25 `policy` / 9 `offence`, and class matters: an `offence`-class finding never blocks a market on its own, and never triggers an automatic edit.
+21 pack files, 128 authored rules, resolving to **98 selectable jurisdictions** (1 global, 1 continental, 16 national, 80 channel) and **1,063 market-rule pairings**. Every rule names its `basis` in prose and carries a citation. The class split is 94 `legal` / 25 `policy` / 9 `offence`, and class matters: an `offence`-class finding never blocks a market on its own, and never triggers an automatic edit.
 
 <details>
 <summary><b>Adding a market</b></summary>
@@ -602,10 +602,11 @@ The suite exists because most of this system's failure modes are silent: a guard
 > [!WARNING]
 > This is a hackathon build. The following are known, deliberate, and load-bearing to say out loud.
 
-- **Only Belgium is actually wired into the ladder.** 15 of the 16 national packs declare no `parent`, so they inherit nothing, not even the global baseline. The inheritance machinery works and is tested; the packs simply have not been re-parented yet.
-- **Omni refuses third-party IP.** Gemini Omni declines to edit footage containing recognisable third-party content, which makes the famous-cartoons reel un-editable by that method. The refusal is quoted verbatim in the mission feed and nothing is charged. Patch methods remain the path for that footage.
+- **The ladder is wired, and one rung of it is thin.** Every pack now declares its parent, so a German commercial is judged against German law, the AVMSD and the global baseline, and the 80 channel nodes inherit through their country (this was the honest limit here until 2026-09-07: fifteen national packs declared no parent and inherited nothing). What remains thin is the channel rung itself: three Belgian broadcasters have pack files of their own and the other 77 are names that inherit their country and add nothing.
+- **The corpus is deliberately small.** The archive shows the four commercials this project generated with Veo, because they are the ones it holds the rights to. Everything borrowed during development is hidden rather than deleted (`config.WITHHELD_ASSETS`, twenty-four films): the rows, frames and log lines are all still there, every read path refuses them, and emptying that tuple brings them back.
+- **Omni refuses third-party IP.** Gemini Omni declines to edit footage containing recognisable third-party content, which is one of the reasons the corpus above is our own. The refusal is quoted verbatim in the mission feed and nothing is charged. Patch methods remain the path for that footage.
 - **Veo has a celebrity filter.** A bridge over a shot it reads as depicting a public figure is refused with support code 15236754. Never charged, and a retry cannot help: the footage is the refusal.
-- **The Omni model id is a deliberately old alias.** `gemini-omni-flash-preview` deprecates 2026-09-30; the newer `1.1` preview is access-gated behind a quota error that granting quota does not clear.
+- **The Omni model id is a deliberately old alias.** `gemini-omni-flash-preview` deprecates 2026-09-30; the newer `1.1` preview is access-gated behind a quota error that granting quota does not clear. A preflight asks the model whether it still exists on the way up, so when that date passes the picker greys the method out with a sentence instead of offering a button that can only fail; `OMNI_MODEL` in the environment re-probes on the next cold start.
 - **Image-generation quota is 2/min** on this project pending a support case, which is why `per_frame` is slow.
 - **Grafana Cloud cannot be framed**, so live panels come from the self-hosted viewer described above. Annotation markers are blank in the framed panels: they live in the Cloud instance's own database, not in Loki.
 - **A single Cloud Run instance.** SQLite plus one writer thread is the concurrency model. It survives the parallel fan-out because every stage opens its own connection and only the guard writes findings.

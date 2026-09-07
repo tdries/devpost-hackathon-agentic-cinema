@@ -1965,6 +1965,19 @@ def add_analysis(request: Request, run_id: str,
         return PlainTextResponse(f"No market pack for: {', '.join(unknown)}.",
                                  status_code=400)
     fresh = store().add_run_markets(run.id, chosen)
+    # A market already on the run whose judging pass died is asked for
+    # again. Vertex answers a share of any parallel fan-out with 429
+    # RESOURCE_EXHAUSTED, and add_run_markets only ever reports what is
+    # NEW -- so the one market that lost that race was unreachable from
+    # the console forever, wearing an error tile on a run that could
+    # otherwise be finished with one click.
+    retries = [m for m in chosen
+               if m not in fresh and m in pipeline.errored_markets(store(), run.id)]
+    if retries:
+        store().emit(run.id, "pipeline",
+                     f"retrying {len(retries)} market(s) that errored: "
+                     f"{', '.join(retries)}")
+    fresh = fresh + retries
     if not fresh:
         # everything asked for was already judged: say so rather than
         # spending a model call to reach the same verdict twice
