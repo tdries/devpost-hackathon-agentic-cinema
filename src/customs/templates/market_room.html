@@ -33,6 +33,11 @@
         <a class="chip" href="/runs/{{ run.id }}/markets/{{ market }}/certificate.pdf"
            target="_blank" rel="noreferrer">
           <svg class="ic"><use href="#i-legal"/></svg>certificate (PDF)</a>
+        {# For the findings this console should not fix itself: the same
+           spans, on the editor's own timeline, coloured and annotated. #}
+        <a class="chip" href="/runs/{{ run.id }}/markets/{{ market }}/markers.csv"
+           title="Every finding as a timeline marker: Resolve and Premiere both read this">
+          <svg class="ic"><use href="#n-timeline"/></svg>markers (CSV)</a>
       </span>
     </span>
   </div>

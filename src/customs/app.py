@@ -89,7 +89,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from customs import (adjudicate, agentmode, analyst, certificate, costs,
-                     grafana_map, media,
+                     grafana_map, markers, media,
                      narrate, packs, replyfmt, persist, pipeline, remediate,
                      scope as scope_mod, search, spark, state as state_mod,
                      telemetry, verify)
@@ -3164,6 +3164,42 @@ def market_certificate(run_id: str, market: str):
     name = f"clearance-{market}-{Path(run.asset_path).stem}-{stamp}.pdf"
     return Response(pdf, media_type="application/pdf", headers={
         "Content-Disposition": f'inline; filename="{name}"'})
+
+
+@app.get("/runs/{run_id}/markets/{market}/markers.{fmt}")
+def market_markers(run_id: str, market: str, fmt: str):
+    """This market's findings as markers, for the suite the fix happens in.
+
+    The console can fix a span itself and often should. For the rest, the
+    person who fixes it has the master open in Resolve or Premiere, and
+    what they need is the timecodes on their own timeline, in the right
+    colour, with the statute in the note. csv or edl; both carry the frame
+    rate they were written at, because HH:MM:SS:FF means nothing without
+    it.
+    """
+    if fmt not in ("csv", "edl"):
+        raise HTTPException(status_code=404, detail="markers are csv or edl")
+    run = _run_or_404(run_id)
+    if market not in run.markets:
+        raise HTTPException(status_code=404,
+                            detail=f"run {run_id} does not cover {market}")
+    findings = store().findings(run.id, market)
+    asset = Path(run.asset_path)
+    fps = media.probe_fps(asset) if asset.is_file() else 25.0
+    stem = f"{market}-{asset.stem}"
+    if fmt == "csv":
+        body = markers.as_csv(findings, fps, asset=asset.name)
+        media_type = "text/csv"
+    else:
+        body = markers.as_edl(findings, fps, title=f"CUSTOMS {market} {asset.stem}")
+        media_type = "text/plain"
+    return Response(body, media_type=f"{media_type}; charset=utf-8", headers={
+        # An editor wants the file, not a tab full of it.
+        "Content-Disposition": f'attachment; filename="markers-{stem}.{fmt}"',
+        # The rate is in the file, and in the response, because a marker
+        # list at the wrong rate drifts a frame a second and looks correct.
+        "X-Customs-Fps": f"{fps:g}",
+    })
 
 
 @app.get("/runs/{run_id}/markets/{market}", response_class=HTMLResponse)

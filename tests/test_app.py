@@ -3780,3 +3780,54 @@ def test_the_axis_breaks_a_tie_the_way_the_panel_beside_it_does(monkeypatch):
     # BOND_JAMES, boro_Comet as BOND_JAMES, then anything capitalised.
     assert order == ["BOND_JAMES", "boro_Comet", "solstice", "quiet_ad"]
     app_module._insight_cache.clear()
+
+
+def test_findings_leave_as_timeline_markers_for_the_suite(console):
+    """The console can fix a span itself and often should. For the rest,
+    the person who fixes it has the master open in Resolve or Premiere, and
+    what they need is not a web page: it is the timecodes on their own
+    timeline, in the right colour, with the statute in the note.
+
+    Both formats carry the rate they were written at, because HH:MM:SS:FF
+    is a frame off per second at the wrong one and looks perfectly
+    plausible while it drifts.
+    """
+    from customs.markers import timecode
+
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    findings = store.findings(run.id, "FR")
+
+    csv_out = client.get(f"/runs/{run.id}/markets/FR/markers.csv")
+    assert csv_out.status_code == 200
+    assert "attachment" in csv_out.headers["content-disposition"]
+    rows = [r for r in csv_out.text.splitlines() if r.strip()]
+    assert rows[0] == "Name,Start,End,Duration,Color,Notes"
+    assert len(rows) == 1 + len(findings)
+    body = csv_out.text
+    for finding in findings:
+        assert finding.rule_id in body
+        # the statute travels with the marker, because that is what an
+        # editor reads while deciding what to do about it
+        if finding.citation_ref:
+            assert finding.citation_ref[:24] in body
+
+    # a blocking legal finding is red; anything already verified is green
+    assert "Red" in body
+
+    edl = client.get(f"/runs/{run.id}/markets/FR/markers.edl")
+    assert edl.status_code == 200
+    assert edl.text.startswith("TITLE: CUSTOMS FR")
+    assert "FCM: NON-DROP FRAME" in edl.text
+    assert "* COMMENT:" in edl.text
+
+    # anything else is a 404 rather than an empty file with a nice name
+    assert client.get(f"/runs/{run.id}/markets/FR/markers.xml").status_code == 404
+    assert client.get(f"/runs/{run.id}/markets/JP/markers.csv").status_code == 404
+
+    # and the timecode itself: 25 fps, so a second is 25 frames and 1.04s
+    # is frame 1 of second 1 rather than a rounding surprise
+    assert timecode(0.0, 25.0) == "00:00:00:00"
+    assert timecode(1.04, 25.0) == "00:00:01:01"
+    assert timecode(61.5, 25.0) == "00:01:01:13"
+    assert timecode(-3.0, 25.0) == "00:00:00:00"

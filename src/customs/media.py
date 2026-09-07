@@ -607,6 +607,29 @@ def composite_matte(base, patch, box, t_start: float, t_end: float, out_path,
     return Path(out_path)
 
 
+def probe_fps(path, default: float = 25.0) -> float:
+    """The video stream's frame rate, as a float.
+
+    Wanted by exactly one thing: a marker list for an editing suite, where
+    a timecode is HH:MM:SS:FF and the FF is meaningless without the rate.
+    ffprobe reports it as a rational ("24000/1001"), which is the honest
+    form for 23.976 and the reason this does not just read avg_frame_rate
+    as a number. Falls back rather than raising: a marker list at 25 with
+    the rate written in its own header beats no marker list.
+    """
+    try:
+        out = _run([
+            "ffprobe", "-v", "error", "-select_streams", "v:0",
+            "-show_entries", "stream=r_frame_rate",
+            "-of", "default=noprint_wrappers=1:nokey=1", str(path),
+        ], timeout=_TIMEOUT).stdout.strip().splitlines()[0]
+        num, _, den = out.partition("/")
+        rate = float(num) / float(den or 1)
+        return rate if rate > 0 else default
+    except Exception:  # noqa: BLE001 -- a rate nobody can read is the default
+        return default
+
+
 def probe_frames(path) -> int:
     """How many video frames the file actually contains.
 
