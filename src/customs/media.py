@@ -725,6 +725,64 @@ def _psnr(a, b, *, exclude: tuple[float, float] | None = None) -> float | None:
     return float("inf") if m.group(1) == "inf" else float(m.group(1))
 
 
+# What a fix disturbed that it was not asked to disturb.
+#
+# QC_MIN_PSNR_DB above asks the question in TIME: leave the rest of the film
+# alone. This asks it in SPACE, inside the span the edit was allowed to
+# change, with the finding's own boxes painted out of BOTH files so the
+# intended change cancels and only the collateral shows.
+#
+# Measured, on this project's own reel, for one Omni rewrite of a 7 second
+# shot: 23.7 dB unmasked, 29.6 dB with the box masked, against 49 dB for
+# the footage outside the span. So Omni does not patch an object, it
+# re-renders the shot -- which is what makes it work on a scene a patch
+# cannot reach, and also means "only what you name changes" is a claim
+# about intent rather than about pixels.
+#
+# Not a gate, deliberately. One sample cannot tell a legitimate re-render
+# from a wrecked frame, and a threshold guessed from it would reject every
+# Omni edit this system makes. The number is measured, published and shown;
+# the day there are twenty of them, the floor can be set from data.
+# ponytail: reported, not enforced. DRIFT_FLOOR_DB is where it would go.
+DRIFT_FLOOR_DB = None
+
+
+def collateral_drift(before, after, span: tuple[float, float],
+                     boxes: list[list[float]] | None = None) -> float | None:
+    """PSNR in dB inside `span`, ignoring the regions the edit could change.
+
+    `boxes` are the finding's own [ymin, xmin, ymax, xmax] rectangles on
+    the 0..1000 scale the analyst records. Painted black in both inputs,
+    which is what makes the comparison about everything else.
+    """
+    t0, t1 = float(span[0]), float(span[1])
+    if t1 <= t0:
+        return None
+    keep = (f"trim=start={t0:.3f}:end={t1:.3f},setpts=N/FRAME_RATE/TB")
+    mask = ""
+    for box in boxes or []:
+        if len(box) != 4:
+            continue
+        y0, x0, y1, x1 = (max(0.0, min(1000.0, float(v))) for v in box)
+        if y1 <= y0 or x1 <= x0:
+            continue
+        mask += (f",drawbox=x=iw*{x0 / 1000:.4f}:y=ih*{y0 / 1000:.4f}"
+                 f":w=iw*{(x1 - x0) / 1000:.4f}:h=ih*{(y1 - y0) / 1000:.4f}"
+                 f":color=black:t=fill")
+    lavfi = (f"[0:v]{keep}{mask}[a];[1:v]{keep}{mask}[b];[a][b]psnr")
+    try:
+        proc = _run([
+            "ffmpeg", "-nostdin", "-i", str(before), "-i", str(after),
+            "-lavfi", lavfi, "-f", "null", "-",
+        ], timeout=_encode_timeout(t1 - t0 + 10))
+    except Exception:  # noqa: BLE001 -- an unmeasurable edit is not a failed one
+        return None
+    m = re.search(r"average:([0-9.]+|inf)", proc.stderr)
+    if not m:
+        return None
+    return float("inf") if m.group(1) == "inf" else float(m.group(1))
+
+
 def _cap_frames(filt: str, frame_count: int) -> str:
     """Cap a filtergraph's [v] output at frame_count frames, inside the graph.
 
@@ -748,7 +806,8 @@ def _cap_frames(filt: str, frame_count: int) -> str:
     return f"{filt[:-3]},trim=end_frame={frame_count}[v]"
 
 
-def craft_check(before, after, *, span: tuple[float, float] | None = None) -> dict:
+def craft_check(before, after, *, span: tuple[float, float] | None = None,
+                boxes: list[list[float]] | None = None) -> dict:
     """Is the edited master still the same film as the one it came from?
 
     verify.confirm only ever re-asks whether the RULE still fires. Nothing
@@ -760,6 +819,9 @@ def craft_check(before, after, *, span: tuple[float, float] | None = None) -> di
       frames      a dropped frame is invisible in a duration comparison
       resolution  a resample is a quality loss nobody asked for
       psnr        how far the footage OUTSIDE the edit was disturbed
+      collateral_db  how far the footage INSIDE the span was disturbed
+                  away from the boxes the edit was actually about (see
+                  collateral_drift). Reported, never enforced.
 
     Returns {"ok", "failures", ...measurements}. It measures; the caller
     decides.
@@ -790,12 +852,19 @@ def craft_check(before, after, *, span: tuple[float, float] | None = None) -> di
                 f"footage the edit should not have touched was disturbed: "
                 f"{psnr:.2f} dB {where} (floor {QC_MIN_PSNR_DB:.0f})")
 
+    # "drift" below is the LENGTH drift in seconds and predates this;
+    # collateral drift is a different question in a different unit.
+    collateral = None
+    if span:
+        collateral = collateral_drift(before, after, span, boxes)
+
     return {
         "ok": not failures, "failures": failures,
         "duration_before": d_before, "duration_after": d_after, "drift": drift,
         "frames_before": f_before, "frames_after": f_after,
         "resolution_before": r_before, "resolution_after": r_after,
         "psnr": psnr,
+        "collateral_db": collateral,
     }
 
 

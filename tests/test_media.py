@@ -1,4 +1,5 @@
 import subprocess, time, pytest
+from pathlib import Path
 from customs import media
 
 @pytest.fixture(scope="session")
@@ -864,3 +865,40 @@ def test_the_relight_matte_is_drawn_once_not_evaluated_per_frame(tmp_path):
     source = inspect.getsource(media.apply_relight)
     assert "geq=" not in source, "the per-pixel evaluator is what was slow"
     assert "alphamerge" in source
+
+
+def test_collateral_drift_asks_what_the_edit_disturbed_that_it_should_not(tmp_path):
+    """The craft gate's PSNR asks the question in time: leave the rest of
+    the film alone. This asks it in space, inside the span the edit was
+    allowed to change, with the finding's own boxes painted out of BOTH
+    files so the intended change cancels and only the collateral shows.
+
+    Measured on the project's own reel for one Omni rewrite: 23.7 dB
+    unmasked, 29.6 dB with the box masked, against 49 dB outside the span.
+    Which is the finding: Omni does not patch an object, it re-renders the
+    shot.
+    """
+    source = Path("docs/samples/test_ad.mp4")
+    if not source.is_file():  # pragma: no cover - the sample is in the repo
+        pytest.skip("no sample reel")
+
+    # A file compared with itself has nothing to report, masked or not:
+    # infinite PSNR, which is what "changed nothing" means in this unit.
+    same = media.collateral_drift(source, source, (0.0, 2.0), [[300, 300, 700, 700]])
+    assert same == float("inf")
+
+    # A degenerate span is not a measurement, and says so rather than
+    # returning a number nobody can interpret
+    assert media.collateral_drift(source, source, (2.0, 2.0), []) is None
+    assert media.collateral_drift(source, source, (5.0, 1.0), []) is None
+
+    # An unreadable file is not a failed edit
+    assert media.collateral_drift(tmp_path / "nope.mp4", source, (0.0, 1.0), []) is None
+
+    # A box that cannot be a box is ignored rather than crashing the graph
+    assert media.collateral_drift(source, source, (0.0, 1.0),
+                                  [[0, 0, 0, 0], [1, 2, 3], []]) == float("inf")
+
+    # and it is reported, never enforced: one sample cannot tell a
+    # legitimate re-render from a wrecked frame
+    assert media.DRIFT_FLOOR_DB is None

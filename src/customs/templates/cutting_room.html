@@ -53,6 +53,14 @@
         {% if item.market %}<span class="chip on">{{ item.market }}</span>{% endif %}
         {% if item.finding %}<span class="rule-id">{{ item.finding.rule_id }}</span>{% endif %}
         {% if item.finding %}<span class="mono" style="font-size:12px;color:var(--ink-3)">{{ item.finding.t_start | timecode }} to {{ item.finding.t_end | timecode }}</span>{% endif %}
+        {% if item.change.collateral_db is not none %}
+        {# What this edit disturbed inside the span that it was not asked
+           to. A patch leaves it high; an Omni rewrite re-renders the shot,
+           which is the honest cost of the one method that can reach a
+           scene a patch cannot. #}
+        <span class="chip" title="PSNR inside the edited span with the objected-to region masked out of both files: higher means less was disturbed around it">
+          <svg class="ic"><use href="#i-frame"/></svg>{{ '%.1f'|format(item.change.collateral_db) }} dB around the fix</span>
+        {% endif %}
         <span class="runid" style="margin-left:auto">{{ item.change.id }}</span>
       </div>
       {% if item.before or item.after %}

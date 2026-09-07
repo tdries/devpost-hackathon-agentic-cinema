@@ -1348,8 +1348,14 @@ def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
     # looks. So the staged file is interrogated BEFORE it becomes the
     # master, and a failure puts the finding back exactly like any other
     # remediation failure: the master is untouched and the alert stays up.
+    # The finding's own box, so the gate can also say how much of the span
+    # changed AWAY from the thing that was objected to. A grouped edit
+    # answers several findings at once, so every box in the company counts
+    # as intended.
+    intended = [f.box for f in [finding, *company] if getattr(f, "box", None)]
     craft = media.craft_check(base, staged,
-                              span=(finding.t_start, finding.t_end))
+                              span=(finding.t_start, finding.t_end),
+                              boxes=intended)
     if craft["failures"]:
         store.update_finding_status(finding.id, "open", run_id=run.id)
         for other in company:
@@ -1362,13 +1368,21 @@ def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
                    f"the same film; {master.name} untouched, {finding.id} back to open")
         raise RemediationError(
             f"{method} failed the craft gate: {'; '.join(craft['failures'])}")
-    store.emit(run.id, "remediator",
-               f"craft gate passed: length {craft['duration_after']:.3f}s, "
-               f"{craft['frames_after']} frames, "
-               f"{craft['psnr']:.1f} dB outside the edit"
-               if craft.get("psnr") is not None else
-               f"craft gate passed: length {craft['duration_after']:.3f}s, "
-               f"{craft['frames_after']} frames")
+    passed = (f"craft gate passed: length {craft['duration_after']:.3f}s, "
+              f"{craft['frames_after']} frames")
+    if craft.get("psnr") is not None:
+        passed += f", {craft['psnr']:.1f} dB outside the edit"
+    if craft.get("collateral_db") is not None:
+        # What the edit disturbed inside the span that it was not asked to:
+        # a patch leaves this high, an Omni rewrite re-renders the shot and
+        # leaves it far lower. Reported so a person can see which happened.
+        passed += f", {craft['collateral_db']:.1f} dB inside it away from the box"
+        try:
+            from customs import telemetry
+            telemetry.push_drift(run, finding, method, craft["collateral_db"])
+        except Exception as exc:  # noqa: BLE001 -- the fix stands regardless
+            log.warning("drift telemetry failed for %s: %s", finding.id, exc)
+    store.emit(run.id, "remediator", passed)
 
     staged.replace(master)
     after = _still(master, change_id, "after", finding, changes_dir)
@@ -1376,6 +1390,7 @@ def _apply_locked(run, finding: Finding, method: str, workdir: Path, store,
     change = ChangeRecord(
         id=change_id, run_id=run.id, finding_id=finding.id, method=method,
         description=edit, before_frame=str(before), after_frame=str(after),
+        collateral_db=craft.get("collateral_db"),
     )
     store.add_change(change)
     store.emit(run.id, "remediator",

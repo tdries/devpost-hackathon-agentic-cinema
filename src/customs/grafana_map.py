@@ -173,6 +173,15 @@ SERIES = (
      "sample": "how many times one stage failed on this asset: a tool that "
                "silently skips a shot is worse than one that admits it",
      "read_by": "Overview, and the stage-error alert"},
+    {"name": "customs_collateral_drift", "clock": "current",
+     "labels": ("asset", "market", "rule_id", "method"),
+     "sample": "PSNR in dB inside an edited span, with the boxes the edit "
+               "was about painted out of both files: how much of the shot "
+               "changed that nobody asked to change. A patch leaves this "
+               "high; an Omni rewrite re-renders the shot and leaves it far "
+               "lower, which is the honest cost of a method that can fix a "
+               "scene a patch cannot reach",
+     "read_by": "the change record in the cutting room, and the mission feed"},
     # The only two series here that are not about a commercial.
     # What the models cost in tokens, which is the other half of the bill.
     {"name": "gen_ai_client_token_usage", "clock": "current",

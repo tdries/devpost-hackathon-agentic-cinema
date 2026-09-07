@@ -564,6 +564,21 @@ def push_model_usage(model: str, operation: str, *, input_tokens: int,
     _otlp_push(metrics)
 
 
+def push_drift(run: RunRecord, finding: Finding, method: str,
+               drift_db: float) -> None:
+    """How much of the span an edit disturbed away from its own target.
+
+    media.collateral_drift in dB, labelled by the method that produced it,
+    on the real clock: the interesting series is not one edit's number but
+    the distribution per method, which is what says whether Omni patches an
+    object or re-renders a shot.
+    """
+    _otlp_push({"customs_collateral_drift": [_data_point(
+        float(drift_db), time.time(),
+        {"asset": _asset_label(run), "market": finding.market,
+         "rule_id": finding.rule_id, "method": method})]})
+
+
 def push_spend(spent_today: float, budget_total: float) -> None:
     """The day's generation ledger, as two series on the real clock.
 

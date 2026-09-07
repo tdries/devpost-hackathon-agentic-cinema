@@ -932,7 +932,7 @@ LIVE_LANE_CARDS = 1
 # (docs/samples/landmines.yaml), so Google's tools made the film and then
 # failed it.
 # ponytail: hardcoded id, becomes a computed best-run when the archive churns
-SHOWCASE_RUN = "run_5299053b6a62"
+SHOWCASE_RUN = "run_959b162a0f25"
 
 
 def _showcase(db) -> str:

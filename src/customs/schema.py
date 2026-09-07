@@ -129,6 +129,11 @@ class ChangeRecord(_JsonMixin):
     description: str
     before_frame: str
     after_frame: str
+    # PSNR in dB inside the edited span with the finding's own boxes masked
+    # out of both files: what this edit disturbed that it was not asked to.
+    # Defaulted because every change record written before it existed has
+    # no such measurement, and inventing one would be worse than None.
+    collateral_db: float | None = None
 
 @dataclass
 class RunRecord(_JsonMixin):
