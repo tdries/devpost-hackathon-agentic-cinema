@@ -1442,7 +1442,12 @@
     });
   }
 
-  show(0);
+  /* A deep link to one slide: /tour?slide=6 opens on that one. One-based,
+     like the counter in the corner, so a link matches what the reader
+     sees -- and it is how these slides get captured for the README. */
+  var wanted = parseInt(
+    new URLSearchParams(window.location.search).get("slide"), 10);
+  show(wanted > 0 ? wanted - 1 : 0);
   tick();
 })();
 
@@ -1473,11 +1478,16 @@
     var rail = stops.map(function (_s, i) {
       return '<i class="' + (i <= index ? "on" : "") + '"></i>';
     }).join("");
+    /* The words go in as text, not as markup -- and not through the
+       escapeHtml further up this file, which lives inside another closure:
+       reaching for it from here threw a ReferenceError and the whole
+       spotlight silently did not paint. */
     bubble.innerHTML =
       '<span class="wb-step">stop ' + (index + 1) + " of " + stops.length +
-      "</span><h3>" + escapeHtml(stop.title) + "</h3><p>" +
-      escapeHtml(stop.body) + '</p><div class="wb-rail">' + rail + "</div>" +
+      '</span><h3></h3><p></p><div class="wb-rail">' + rail + "</div>" +
       '<div class="wb-foot"></div>';
+    bubble.querySelector("h3").textContent = stop.title;
+    bubble.querySelector("p").textContent = stop.body;
     document.body.appendChild(veil);
     if (target) { document.body.appendChild(hole); }
     document.body.appendChild(bubble);
@@ -1508,32 +1518,43 @@
       var pad = 8;
       var box = target ? target.getBoundingClientRect() : null;
       if (box && target) {
-        hole.style.top = (box.top + window.scrollY - pad) + "px";
-        hole.style.left = (box.left + window.scrollX - pad) + "px";
+        /* Viewport coordinates, and the hole and the bubble are both
+           fixed: page coordinates meant adding scrollY to everything and
+           landing in the wrong place whenever the scroll had not settled. */
+        hole.style.top = (box.top - pad) + "px";
+        hole.style.left = (box.left - pad) + "px";
         hole.style.width = (box.width + pad * 2) + "px";
-        hole.style.height = (box.height + pad * 2) + "px";
+        /* Some hooks are whole lists two thousand pixels tall. A spotlight
+           that size lights the page rather than a thing in it, so it stops
+           at three quarters of the window and points at the top of it. */
+        hole.style.height = Math.min(box.height + pad * 2,
+                                     window.innerHeight * 0.74) + "px";
         veil.style.display = "none";        /* the hole's own shadow is the veil */
       }
       var b = bubble.getBoundingClientRect();
+      var lit = box ? Math.min(box.height + pad * 2,
+                               window.innerHeight * 0.74) : 0;
       var top, left;
       if (box) {
-        var below = box.bottom + window.scrollY + 18;
-        var above = box.top + window.scrollY - b.height - 18;
-        top = (box.bottom + b.height + 40 < window.innerHeight + window.scrollY)
-          ? below : Math.max(window.scrollY + 12, above);
-        left = Math.min(
-          Math.max(12, box.left + window.scrollX),
-          window.scrollX + window.innerWidth - b.width - 12);
+        /* under the spotlight if it fits, over it if not */
+        top = (box.top + lit + b.height + 30 < window.innerHeight)
+          ? box.top + lit - pad + 18
+          : box.top - pad - b.height - 18;
+        left = Math.min(Math.max(12, box.left), window.innerWidth - b.width - 12);
       } else {
-        top = window.scrollY + Math.max(24, (window.innerHeight - b.height) / 2);
-        left = window.scrollX + Math.max(12, (window.innerWidth - b.width) / 2);
+        top = (window.innerHeight - b.height) / 2;
+        left = (window.innerWidth - b.width) / 2;
       }
-      bubble.style.top = top + "px";
-      bubble.style.left = left + "px";
+      /* and it stays on screen whatever the target did */
+      bubble.style.top = Math.min(Math.max(top, 12),
+                                  window.innerHeight - b.height - 12) + "px";
+      bubble.style.left = Math.max(12, left) + "px";
     };
 
     if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      var still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      target.scrollIntoView({ behavior: still ? "auto" : "smooth",
+                              block: "center" });
       /* after the smooth scroll settles, and again on anything that moves */
       window.setTimeout(place, 420);
     }
