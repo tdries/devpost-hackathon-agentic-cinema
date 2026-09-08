@@ -63,9 +63,16 @@ class Method:
 
 # Ordered as an operator would choose, not as the pipeline grew: the two
 # that regenerate pixels lead, because they are the ones that actually fix a
-# scene whose premise is the violation, and the patch methods follow for the
-# shots that barely move. Price is on every row, so leading with the
-# expensive ones costs nobody anything.
+# scene whose premise is the violation, and the patch that fits a locked-off
+# shot follows. Price is on every row, so leading with the expensive ones
+# costs nobody anything.
+#
+# "Propagate the change" (track) and "Repaint every frame" (per_frame) are
+# not offered. Both were tagged a poor fit on nearly every finding the
+# console actually shows, and per_frame cannot run at all against a 2/min
+# image quota -- a four second span is half an hour of waiting. The patch
+# family is still reachable: plan() chooses within it, and the estimator
+# below still prices both because it is asked about them elsewhere.
 METHODS = (
     Method("omni", "Rewrite with Omni",
            "Hands the span itself to Gemini Omni, which edits the footage "
@@ -78,18 +85,6 @@ METHODS = (
     Method("overlay", "Patch one frame",
            "Edits a single frame and holds it over the span.",
            "low", "a locked-off shot, where nothing moves"),
-    Method("track", "Propagate the change",
-           "Edits one frame, divides its lighting out, and multiplies the "
-           "resulting colour change into every live frame of the span. The "
-           "shot keeps its own motion, light and grain.",
-           "low", "any shot where the thing to change holds still in frame"),
-    Method("per_frame", "Repaint every frame",
-           "Edits the offending region on every frame of the span and "
-           "composites each one back through the finding's own matte. The "
-           "footage is the brand's throughout; only the object changes.",
-           "high", "a target that deforms or is occluded, where one edit "
-                   "cannot be propagated: a bottle travelling to a mouth, a "
-                   "garment on a moving body"),
 )
 
 _BY_KEY = {m.key: m for m in METHODS}

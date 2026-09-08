@@ -952,7 +952,10 @@ SHOWCASE_RUN = "run_959b162a0f25"
 # rather than a URL, because the page builds three of them: the thumbnail,
 # the iframe the first click writes, and the link out.
 WALKTHROUGH_VIDEO = "zvr6GpmULr0"
-WALKTHROUGH_START = 10
+# From the top. It opened ten seconds in to skip a title card, which is a
+# guess about someone else's attention: a reader who pressed play asked for
+# the film, not for the middle of it. Zero means no start parameter at all.
+WALKTHROUGH_START = 0
 
 
 def _showcase(db) -> str:

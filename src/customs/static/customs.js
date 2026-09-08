@@ -170,34 +170,64 @@
     try { mode = window.localStorage.getItem(KEY) || "live"; } catch (e) { mode = "live"; }
 
     var pending = [];
-    var booting = false;
+    var booting = 0;
+    /* Three at a time, not one and not all of them. A beat between them was
+       never a queue: the next frame started 300ms later whether the last one
+       had painted or not, so nine panels booted a Grafana each inside three
+       seconds, the single small viewer instance took all nine at once, and
+       not one of them finished. Measured on the deployed archive: zero cards
+       live after a hundred seconds, every one of them showing the drawing
+       instead. A slot opens when a panel paints, and three of them share the
+       viewer without swamping it. */
+    var MAX_LIVE = 3;
 
     var boot = function () {
-      if (booting || !pending.length) { return; }
-      var frame = pending.shift();
-      if (!frame || frame.dataset.src === undefined) { boot(); return; }
-      booting = true;
-      /* The card shows its own drawing until this frame has actually
-         painted, so a reader scrolling the archive never meets an empty
-         white box where a chart belongs. */
-      frame.addEventListener("load", function () {
-        var card = frame.closest(".cardviz");
-        if (card) { card.classList.add("booted"); }
-      }, { once: true });
-      frame.src = frame.dataset.src;
-      delete frame.dataset.src;
-      /* One Grafana at a time, and a beat between them: the tenant is on
-         read limits and a panel that trips one renders its own error text
-         inside an iframe this page cannot style. */
-      window.setTimeout(function () { booting = false; boot(); }, 300);
+      while (booting < MAX_LIVE && pending.length) {
+        var frame = pending.shift();
+        if (!frame || frame.dataset.src === undefined) { continue; }
+        booting += 1;
+        (function (f) {
+          var freed = false;
+          var free = function () {
+            if (freed) { return; }
+            freed = true;
+            booting -= 1;
+            boot();
+          };
+          /* The card shows its own drawing until this frame has actually
+             painted, so a reader scrolling the archive never meets an empty
+             white box where a chart belongs. */
+          f.addEventListener("load", function () {
+            var card = f.closest(".cardviz");
+            if (card) { card.classList.add("booted"); }
+            free();
+          }, { once: true });
+          f.src = f.dataset.src;
+          delete f.dataset.src;
+          /* A panel that never paints must not hold its slot forever. */
+          window.setTimeout(free, 15000);
+        })(frame);
+      }
+    };
+
+    /* Near enough to be worth a Grafana. The observer below says the same
+       thing on scroll; this is for the cards that are already on screen when
+       the page arrives, and for the ones on screen when a reader switches
+       back to live. */
+    var near = function (card) {
+      var box = card.getBoundingClientRect();
+      var tall = window.innerHeight || document.documentElement.clientHeight;
+      return box.top < tall + 300 && box.bottom > -300;
     };
 
     var wake = function (card) {
       var frame = card.querySelector(".cardlanes.live");
-      if (!frame || frame.dataset.src === undefined) { return; }
-      if (card.dataset.viz !== "live") { return; }
+      if (!frame || frame.dataset.src === undefined) { return false; }
+      if (card.dataset.viz !== "live") { return false; }
+      if (!near(card)) { return false; }
       if (pending.indexOf(frame) === -1) { pending.push(frame); }
       boot();
+      return true;
     };
 
     /* Hovering a dot plays that moment of the film.
@@ -273,8 +303,11 @@
     if (window.IntersectionObserver) {
       var watcher = new IntersectionObserver(function (entries) {
         entries.forEach(function (entry) {
-          if (entry.isIntersecting) {
-            wake(entry.target);
+          /* Only stop watching a card that actually took its panel. A card
+             passed over while the reader was on the drawing would otherwise
+             be unobserved having booted nothing, and switching back to live
+             left it drawn for the rest of the visit. */
+          if (entry.isIntersecting && wake(entry.target)) {
             watcher.unobserve(entry.target);
           }
         });

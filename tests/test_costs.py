@@ -37,17 +37,18 @@ def test_every_option_is_priced_and_says_what_it_is_for():
     opts = costs.options(3.0, spent_today=0.0)
     # the two that regenerate pixels lead: they are what actually fixes a
     # scene whose premise is the violation, and every row carries its price
-    assert [o["key"] for o in opts] == ["omni", "bridge", "overlay",
-                                        "track", "per_frame"]
+    # track and per_frame are no longer offered: a poor fit on nearly every
+    # finding the console shows, and per_frame cannot run against a 2/min
+    # image quota. costs.estimate still prices both, they are just not doors.
+    assert [o["key"] for o in opts] == ["omni", "bridge", "overlay"]
     for o in opts:
         assert o["eur"] > 0 and o["length"] and o["complexity"] and o["best_for"]
-    # track was a promise for most of this project's life and is now the
-    # relight propagation: one edit, its lighting divided out, the colour
-    # change multiplied into every live frame inside the finding's matte
-    assert next(o for o in opts if o["key"] == "track")["available"]
-    # and it costs one image edit, not a regeneration
-    assert next(o for o in opts if o["key"] == "track")["eur"] == \
-        next(o for o in opts if o["key"] == "overlay")["eur"]
+    # track and per_frame are priced but not offered: plan() still chooses
+    # within the patch family, so the estimator has to answer for them, and
+    # track costs one image edit rather than a regeneration
+    assert {"track", "per_frame"}.isdisjoint({o["key"] for o in opts})
+    assert costs.estimate("track", 3.0) == costs.estimate("overlay", 3.0)
+    assert costs.estimate("per_frame", 3.0) > costs.estimate("overlay", 3.0)
 
 
 def test_three_concrete_choices_per_finding():

@@ -99,10 +99,14 @@ pre {
   height: 2.05ex;
   width: auto;
   vertical-align: -0.35ex;
-  margin-right: 1.1mm;
+  margin-right: 0.2mm;
 }
 h3 .ico, h4 .ico { height: 2.3ex; vertical-align: -0.4ex; }
-td .ico { margin-right: 0.9mm; }
+td .ico { margin-right: 0.1mm; }
+/* the stage column has to hold a mark and the word "Adjudicators" on one line */
+.stages td:nth-child(1), .stages th:nth-child(1) { width: 6mm; }
+.stages td:nth-child(2), .stages th:nth-child(2) { width: 30mm; }
+
 .dimgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.4mm 4mm; margin-bottom: 4mm; }
 .dimgrid span { display: flex; align-items: center; font-size: 9.4pt; padding: 1.1mm 0;
   border-bottom: 1px solid var(--hair); }

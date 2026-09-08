@@ -72,10 +72,10 @@ something you cannot open.</p>
 
 <h3>What it produces</h3>
 <ul>
-<li>{ic("i-cleared")}A decision per market, cleared, at risk or blocked, with the evidence behind each.</li>
-<li>{ic("n-cut")}A localized master per market, with only the failing seconds touched.</li>
-<li>{ic("i-legal")}A clearance certificate as a PDF, every finding and statute on it.</li>
-<li>{ic("n-timeline")}Marker files for an editing suite, colour-coded by what the finding does.</li>
+<li>[[ic:i-cleared]]A decision per market, cleared, at risk or blocked, with the evidence behind each.</li>
+<li>[[ic:n-cut]]A localized master per market, with only the failing seconds touched.</li>
+<li>[[ic:i-legal]]A clearance certificate as a PDF, every finding and statute on it.</li>
+<li>[[ic:n-timeline]]Marker files for an editing suite, colour-coded by what the finding does.</li>
 </ul>
 
 <div class="panel note"><h4>One sentence to remember</h4>
@@ -90,7 +90,7 @@ page(head("chapter 02", "How it thinks",
           "So the two never mix.") + f'''
 <p>One multimodal analyst watches each shot a single time and writes down what it sees, in
 neutral language, with a timecode and a box. It is forbidden an opinion. It writes
-<i>a woman raises a glass of red wine</i>, never <i>this violates French law</i>. That sentence is filed under {ic("d-alcohol_tobacco_drugs")}alcohol, tobacco and drugs, and every rule about drink in every pack is written against that same dimension.</p>
+<i>a woman raises a glass of red wine</i>, never <i>this violates French law</i>. That sentence is filed under [[ic:d-alcohol_tobacco_drugs]]alcohol, tobacco and drugs, and every rule about drink in every pack is written against that same dimension.</p>
 
 <p>That single fact sheet then goes to every selected market at once. One adjudicator per
 jurisdiction reads it against its own rulebook and grounds each citation against a live
@@ -109,7 +109,7 @@ questions with separate answers, which is what makes a disagreement resolvable.<
 <p>The analyst may only emit observations under eighteen dimensions, and every one of the
 128 rules is written against one of them. That is what makes the join between a fact and a
 market's opinion a lookup rather than an argument.</p>
-<div class="dimgrid"><span>{ic("d-alcohol_tobacco_drugs")}alcohol, tobacco, drugs</span><span>{ic("d-religious_symbols_practices")}religious symbols</span><span>{ic("d-modesty_dress_body")}modesty and dress</span><span>{ic("d-gesture_body_language")}gesture and body language</span><span>{ic("d-food_and_animals")}food and animals</span><span>{ic("d-gender_portrayal")}gender portrayal</span><span>{ic("d-sexual_orientation_gender_id")}orientation, gender id</span><span>{ic("d-children_and_minors")}children and minors</span><span>{ic("d-national_symbols_politics")}national symbols</span><span>{ic("d-health_claims_pharma")}health claims, pharma</span><span>{ic("d-gambling_and_finance")}gambling and finance</span><span>{ic("d-violence_and_weapons")}violence and weapons</span><span>{ic("d-language_profanity_idiom")}language and idiom</span><span>{ic("d-humour_irony_satire")}humour and satire</span><span>{ic("d-superstition_number_colour")}superstition, colour</span><span>{ic("d-photosensitivity_sensory")}photosensitivity</span><span>{ic("d-text_legibility")}on-screen text</span><span>{ic("d-comparative_claims")}comparative claims</span></div>
+<div class="dimgrid"><span>[[ic:d-alcohol_tobacco_drugs]]alcohol, tobacco, drugs</span><span>[[ic:d-religious_symbols_practices]]religious symbols</span><span>[[ic:d-modesty_dress_body]]modesty and dress</span><span>[[ic:d-gesture_body_language]]gesture and body language</span><span>[[ic:d-food_and_animals]]food and animals</span><span>[[ic:d-gender_portrayal]]gender portrayal</span><span>[[ic:d-sexual_orientation_gender_id]]orientation, gender id</span><span>[[ic:d-children_and_minors]]children and minors</span><span>[[ic:d-national_symbols_politics]]national symbols</span><span>[[ic:d-health_claims_pharma]]health claims, pharma</span><span>[[ic:d-gambling_and_finance]]gambling and finance</span><span>[[ic:d-violence_and_weapons]]violence and weapons</span><span>[[ic:d-language_profanity_idiom]]language and idiom</span><span>[[ic:d-humour_irony_satire]]humour and satire</span><span>[[ic:d-superstition_number_colour]]superstition, colour</span><span>[[ic:d-photosensitivity_sensory]]photosensitivity</span><span>[[ic:d-text_legibility]]on-screen text</span><span>[[ic:d-comparative_claims]]comparative claims</span></div>
 </table>
 <div class="panel"><h4>The ladder</h4>
 Markets inherit. A run against a Belgian broadcaster is judged against that channel's own
@@ -132,17 +132,17 @@ generation begins. The fix starts because a chart said so.</div>
 ''')
 
 page(head("chapter 03, continued", "The eight stages",
-          "What each one does, and what it leaves behind for you to open.") + '''
-<table>
+          "What each one does, and what it leaves behind for you to open.") + f'''
+<table class="stages">
 <tr><th>#</th><th>Stage</th><th>What happens</th><th>What it leaves behind</th></tr>
-<tr><td class="mono">1</td><td>{ic("i-human")}<b>You</b></td><td>Hand it a master and tick the markets.</td><td>The run, in the archive.</td></tr>
-<tr><td class="mono">2</td><td>{ic("i-ingest")}<b>Ingest</b></td><td>Cuts the film into shots, pulls the audio and a transcript.</td><td>Shots and keyframes.</td></tr>
-<tr><td class="mono">3</td><td>{ic("i-analyst")}<b>Analyst</b></td><td>Watches each shot once. Neutral, timecoded, boxed observations.</td><td>Loki lines, <code>kind=observation</code>.</td></tr>
-<tr><td class="mono">4</td><td>{ic("i-adjudicator")}<b>Adjudicators</b></td><td>One per market, in parallel, each against its own rulebook, each citation grounded.</td><td>Findings, with statutes.</td></tr>
-<tr><td class="mono">5</td><td>{ic("i-publisher")}<b>Publisher</b></td><td>Pushes metrics and lines, and builds the run's dashboards and alert rules.</td><td>Mimir series, annotations, 9 boards.</td></tr>
-<tr><td class="mono">6</td><td>{ic("i-alert")}<b>Alert</b></td><td>A blocking finding trips a rule Grafana is already evaluating.</td><td>A webhook call into the service.</td></tr>
-<tr><td class="mono">7</td><td>{ic("i-remediator")}<b>Remediator</b></td><td>Plans, prices and edits the failing span. One edit per shot.</td><td>A change record and a staged file.</td></tr>
-<tr><td class="mono">8</td><td>{ic("i-verifier")}<b>Verifier</b></td><td>Re-runs the real analyst on the changed shots.</td><td>Fixed, or the finding back to open.</td></tr>
+<tr><td class="mono">1</td><td>[[ic:i-human]]<b>You</b></td><td>Hand it a master and tick the markets.</td><td>The run, in the archive.</td></tr>
+<tr><td class="mono">2</td><td>[[ic:i-ingest]]<b>Ingest</b></td><td>Cuts the film into shots, pulls the audio and a transcript.</td><td>Shots and keyframes.</td></tr>
+<tr><td class="mono">3</td><td>[[ic:i-analyst]]<b>Analyst</b></td><td>Watches each shot once. Neutral, timecoded, boxed observations.</td><td>Loki lines, <code>kind=observation</code>.</td></tr>
+<tr><td class="mono">4</td><td>[[ic:i-adjudicator]]<b>Adjudicators</b></td><td>One per market, in parallel, each against its own rulebook, each citation grounded.</td><td>Findings, with statutes.</td></tr>
+<tr><td class="mono">5</td><td>[[ic:i-publisher]]<b>Publisher</b></td><td>Pushes metrics and lines, and builds the run's dashboards and alert rules.</td><td>Mimir series, annotations, 9 boards.</td></tr>
+<tr><td class="mono">6</td><td>[[ic:i-alert]]<b>Alert</b></td><td>A blocking finding trips a rule Grafana is already evaluating.</td><td>A webhook call into the service.</td></tr>
+<tr><td class="mono">7</td><td>[[ic:i-remediator]]<b>Remediator</b></td><td>Plans, prices and edits the failing span. One edit per shot.</td><td>A change record and a staged file.</td></tr>
+<tr><td class="mono">8</td><td>[[ic:i-verifier]]<b>Verifier</b></td><td>Re-runs the real analyst on the changed shots.</td><td>Fixed, or the finding back to open.</td></tr>
 </table>
 <div class="panel"><h4>Where each stage shows up in the console</h4>
 Stages 2 to 4 are the mission feed and the frame board. Stage 5 is the launch board and
@@ -152,7 +152,7 @@ cutting room. Nothing happens that you cannot afterwards open and read.</div>
 
 # -------------------------------------------------------- 04 before you start
 page(head("chapter 04", "Before you start",
-          "What you need, what it costs, and the things it will refuse to do.") + '''
+          "What you need, what it costs, and the things it will refuse to do.") + f'''
 <h3>Access</h3>
 <p>Reading is never gated. The archive, every run, every finding with its statute and
 citation, the rule library, frame search, the intelligence board and the Grafana inventory
@@ -175,13 +175,13 @@ actually bounds a stranger's spend.</div>
 
 <h3>What it will not do</h3>
 <ul>
-<li>{ic("i-guard")}<b>It will not auto-edit a protected characteristic.</b> Two rules in the corpus are
+<li>[[ic:i-guard]]<b>It will not auto-edit a protected characteristic.</b> Two rules in the corpus are
 written on one, and a finding matching either is handed to a person instead. Chapter 14.</li>
-<li>{ic("i-publisher")}<b>It will not spend past the day.</b> A budget alert pauses automatic remediation when
+<li>[[ic:i-alert]]<b>It will not spend past the day.</b> A budget alert pauses automatic remediation when
 what is left drops below the price of the most expensive single fix. Chapter 22.</li>
-<li>{ic("i-error")}<b>It will not keep an edit that damaged the film.</b> The craft gate discards it and
+<li>[[ic:i-error]]<b>It will not keep an edit that damaged the film.</b> The craft gate discards it and
 the finding goes back to open. Chapter 12.</li>
-<li>{ic("i-verifier")}<b>It will not trust a model's word that a fix worked.</b> The verifier re-observes.</li>
+<li>[[ic:i-verifier]]<b>It will not trust a model's word that a fix worked.</b> The verifier re-observes.</li>
 </ul>
 
 <div class="panel stop"><h4>Read this before you upload borrowed footage</h4>
@@ -245,9 +245,9 @@ page(head("chapter 07", "The verdict",
 <h3>Reading a tile</h3>
 <table>
 <tr><th>State</th><th>Means</th><th>Do</th></tr>
-<tr><td>{ic("i-cleared")}<b>Cleared</b></td><td>No finding in this market blocks.</td><td>Take the master and the certificate.</td></tr>
-<tr><td>{ic("i-at-risk")}<b>At risk</b></td><td>Findings exist but none is at the blocking line, or a citation could not be resolved so its severity is capped.</td><td>Read them. This is a judgement call, not a machine one.</td></tr>
-<tr><td>{ic("i-blocked")}<b>Blocked</b></td><td>At least one open, sourced finding is at or over the line.</td><td>Open the market room and fix or accept.</td></tr>
+<tr><td>[[ic:i-cleared]]<b>Cleared</b></td><td>No finding in this market blocks.</td><td>Take the master and the certificate.</td></tr>
+<tr><td>[[ic:i-at-risk]]<b>At risk</b></td><td>Findings exist but none is at the blocking line, or a citation could not be resolved so its severity is capped.</td><td>Read them. This is a judgement call, not a machine one.</td></tr>
+<tr><td>[[ic:i-blocked]]<b>Blocked</b></td><td>At least one open, sourced finding is at or over the line.</td><td>Open the market room and fix or accept.</td></tr>
 </table>
 
 <p>Under the tiles is the crew's own lanes dashboard, live from Grafana and clickable. It
@@ -315,8 +315,8 @@ page(head("chapter 10", "One market in full",
 <tr><td><b>Statute</b></td><td>The regulator's own words, and the citation resolved at judging time.</td></tr>
 <tr><td><b>Sourced</b></td><td>Whether that citation resolved. Unsourced findings cannot trigger a fix.</td></tr>
 </table>
-<p>Two takeaways sit at the top of the room: the clearance certificate as a PDF, and the marker
-files, both per market and both described in chapter 21. When three jurisdictions object to the
+<p>Two takeaways sit at the top of the room: the certificate as a PDF and the marker files,
+both per market and both described in chapter 21. When three jurisdictions object to the
 same two seconds, that is one shot with three objections rather than three problems, and one
 edit answers all of them.</p>
 ''')
@@ -335,22 +335,22 @@ an edit that the verifier will reject. Chapter 12 has a worked example.</div>
 ''')
 
 page(head("chapter 11, continued", "The five methods",
-          "Each one disturbs a different amount of footage, and costs accordingly.") + '''
+          "Each one disturbs a different amount of footage, and costs accordingly.") + f'''
 <table>
 <tr><th>Method</th><th>What it does</th><th>Right when</th><th>Price</th></tr>
-<tr><td>{ic("m-overlay")}<b>Patch one frame</b><br><span class="mono">overlay</span></td>
+<tr><td>[[ic:m-overlay]]<b>Patch one frame</b><br><span class="mono">overlay</span></td>
     <td>One image edit of one keyframe, held over the span.</td>
     <td>A locked-off shot where nothing moves.</td><td class="mono">0.04 EUR</td></tr>
-<tr><td>{ic("m-track")}<b>Propagate the change</b><br><span class="mono">track</span></td>
+<tr><td>[[ic:m-track]]<b>Propagate the change</b><br><span class="mono">track</span></td>
     <td>The same edit, its lighting divided out and multiplied into every live frame.</td>
     <td>The thing to change holds still in frame while the shot moves.</td><td class="mono">0.04 EUR</td></tr>
-<tr><td>{ic("m-per_frame")}<b>Repaint every frame</b><br><span class="mono">per_frame</span></td>
+<tr><td>[[ic:m-per_frame]]<b>Repaint every frame</b><br><span class="mono">per_frame</span></td>
     <td>A repaint of each frame in the span.</td>
     <td>A target that deforms or is occluded, where one edit cannot be propagated.</td><td class="mono">0.04 EUR per frame</td></tr>
-<tr><td>{ic("m-omni")}<b>Rewrite with Omni</b><br><span class="mono">omni</span></td>
+<tr><td>[[ic:m-omni]]<b>Rewrite with Omni</b><br><span class="mono">omni</span></td>
     <td>Gemini Omni edits the moving footage directly, video to video.</td>
     <td>The element runs through the scene, and the footage is yours.</td><td class="mono">0.10 EUR per second</td></tr>
-<tr><td>{ic("m-bridge")}<b>Regenerate with Veo</b><br><span class="mono">bridge</span></td>
+<tr><td>[[ic:m-bridge]]<b>Regenerate with Veo</b><br><span class="mono">bridge</span></td>
     <td>Both ends of the span are edited, and Veo 3.1 generates the motion between them.</td>
     <td>Genuine 3D motion, where a patch cannot hold.</td><td class="mono">1.88 to 3.68 EUR</td></tr>
 </table>
@@ -358,7 +358,7 @@ page(head("chapter 11, continued", "The five methods",
 <h3>How the automatic choice is made</h3>
 <p>When an alert triggers a fix rather than a person, the planner picks by the observation's
 own dimension, and it is a pure function with no model call: <span class="mono">relettering</span> for
-{ic("d-text_legibility")}on-screen text, <span class="mono">prop_swap</span> for an object,
+[[ic:d-text_legibility]]on-screen text, <span class="mono">prop_swap</span> for an object,
 <span class="mono">revoice</span> for a spoken line. It escalates to Omni when the scope
 classifier says the element runs through the whole scene, or when the shot moves too much
 for a patch to hold.</p>
@@ -432,7 +432,7 @@ Omni, which changes the price. It is logged on the run either way, whatever come
 
 # -------------------------------------------------------------- 14 the guard
 page(head("chapter 14", "When it will not edit",
-          "When a rule is written on a protected characteristic, the honest answer is not an edit.") + '''
+          "When a rule is written on a protected characteristic, the honest answer is not an edit.") + f'''
 <p>Two rules in the corpus carry a protected basis. A finding matching either is marked
 <b>remediation blocked</b> with the verbatim reason <i>rule basis targets a protected
 characteristic; human decision required</i>, and the console shows the statute beside it.</p>
@@ -447,7 +447,7 @@ and it never calls a model. It is a pure function, which is what makes it
 <b>un-promptable</b>: a crafted finding cannot argue its way past it. The refusal is enforced
 a second time at the point of action, before a single frame is touched.</p>
 
-<h3>{ic("i-human")}The three ways out, and they are all a person's</h3>
+<h3>[[ic:i-human]]The three ways out, and they are all a person's</h3>
 <table>
 <tr><th>Choice</th><th>What it means</th></tr>
 <tr><td><b>Approve a manual edit</b></td><td>An editor fixes it in the suite. Take the markers.</td></tr>
@@ -468,7 +468,7 @@ shown together would be doing something no operator asked for, in your name.</di
 
 # ----------------------------------------------------- 15 cutting room
 page(head("chapter 15", "Checking the result",
-          "The original and the localized master, playing in lockstep on the second that changed.") + f'''
+          "The original and the localized master, side by side.") + f'''
 {shot("cutting-fr.png", "One pair per market. Both players open on the changed second.")}
 <p>One edited master per market, written by the remediator and confirmed by the verifier. The
 pairs are stacked by market and each opens on the second that changed rather than at zero, so
@@ -584,11 +584,11 @@ page(head("chapter 20", "What it built in Grafana",
 {shot("grafana-res.png", "The whole surface on one page, read from the definitions the agent provisions from.")}
 <table>
 <tr><th>What</th><th>How much</th></tr>
-<tr><td>{ic("logo-grafana")}Dashboards, built at runtime</td><td class="mono">9 boards, 40 panels</td></tr>
-<tr><td>{ic("logo-mimir")}Metric series to Mimir over OTLP</td><td class="mono">9 series</td></tr>
-<tr><td>{ic("logo-loki")}Log streams to Loki</td><td class="mono">3 kinds</td></tr>
-<tr><td>{ic("i-alert")}Alert rules</td><td class="mono">3</td></tr>
-<tr><td>Write operations, MCP where a tool exists</td><td class="mono">8</td></tr>
+<tr><td>[[ic:logo-grafana]]Dashboards, built at runtime</td><td class="mono">9 boards, 40 panels</td></tr>
+<tr><td>[[ic:logo-mimir]]Metric series to Mimir over OTLP</td><td class="mono">9 series</td></tr>
+<tr><td>[[ic:logo-loki]]Log streams to Loki</td><td class="mono">3 kinds</td></tr>
+<tr><td>[[ic:i-alert]]Alert rules</td><td class="mono">3</td></tr>
+<tr><td>[[ic:i-pipeline]]Write operations, MCP where a tool exists</td><td class="mono">8</td></tr>
 </table>
 <p>The crew provisions its own folder, dashboards and alert rules through the official
 <span class="mono">mcp-grafana</span> server. Where that release has no write tool for an
@@ -655,7 +655,7 @@ gate and signed off by the verifier. Downloadable from the cutting room.</p>
 <h3>Timeline markers</h3>
 <p>Two formats, because the two suites disagree about which they trust: a CSV with the columns
 both of them look for, and CMX3600, the oldest interchange there is and the one Resolve imports most
-reliably. Both carry the frame rate they were written at, read as the rational the probe
+reliably. Both carry the frame rate they were written at, read as the rational number the probe
 reports rather than as a float, because 23.976 written as 24 drifts a frame a second and looks
 perfectly plausible while it does it.</p>
 <table>
@@ -718,7 +718,7 @@ rules:
     severity: 95
     trigger: alcohol is visible or being consumed on screen
     statute: >
-      Loi Evin, Code de la sante publique art. L3323-2: television
+      Loi Evin, Code de la sant&eacute; publique art. L3323-2: television
       advertising for alcoholic beverages is prohibited.
     citation_ref: legifrance.gouv.fr LEGIARTI000006688087</pre>
 
@@ -805,13 +805,13 @@ killed mid-flight by a deploy is still lost, which is the other reason the scrip
 
 # -------------------------------------------------------- 25 troubleshooting
 page(head("chapter 25", "When something goes wrong",
-          "The failures this system actually has, and what each one means.") + '''
+          "The failures this system actually has, and what each one means.") + f'''
 <table>
 <tr><th>What you see</th><th>What it is</th><th>What to do</th></tr>
 <tr><td>A dashboard says <b>No data</b></td><td>The time range is wall clock, but the run's risk series is on the film's clock.</td><td>Pin the range to the run, or open the panel from the console.</td></tr>
-<tr><td>{ic("m-omni")}<b>Omni refused the input</b></td><td>The footage contains recognisable third-party content.</td><td>Nothing was charged, and a retry cannot help. Use a patch method, or your own footage.</td></tr>
-<tr><td>{ic("m-omni")}<b>Omni refused the output</b></td><td>The instruction asked for something it will not render, often about a photorealistic person.</td><td>Rewrite the instruction. The footage was fine; the ask was not.</td></tr>
-<tr><td>{ic("m-bridge")}<b>Veo refused the frames</b></td><td>Its filter read the shot as depicting a public figure.</td><td>Never charged. The footage is the refusal.</td></tr>
+<tr><td>[[ic:m-omni]]<b>Omni refused the input</b></td><td>The footage contains recognisable third-party content.</td><td>Nothing was charged, and a retry cannot help. Use a patch method, or your own footage.</td></tr>
+<tr><td>[[ic:m-omni]]<b>Omni refused the output</b></td><td>The instruction asked for something it will not render, often about a photorealistic person.</td><td>Rewrite the instruction. The footage was fine; the ask was not.</td></tr>
+<tr><td>[[ic:m-bridge]]<b>Veo refused the frames</b></td><td>Its filter read the shot as depicting a public figure.</td><td>Never charged. The footage is the refusal.</td></tr>
 <tr><td>A fix passed and the finding reopened</td><td>The verifier saw the violation survive, or something new break.</td><td>Read the new finding's words. Often the method could not reach it. Chapter 11.</td></tr>
 <tr><td>A fix looks wrong but cleared</td><td>The rule was satisfied and a person still would not ship it.</td><td>Use re-edit and say what is wrong. Chapter 13.</td></tr>
 <tr><td>Everything is slow, then a stage errors</td><td>One instance, one writer thread. Two concurrent multi-market clearances are too much.</td><td>Run them one at a time.</td></tr>
@@ -831,23 +831,23 @@ page(head("chapter 26", "Reference",
 <h3>Console routes</h3>
 <table>
 <tr><th class="mono">Route</th><th>Screen</th><th>Gated</th></tr>
-<tr><td class="mono">/</td><td>Front door</td><td>no</td></tr>
-<tr><td class="mono">/runs</td><td>{ic("n-runs")}Archive</td><td>no</td></tr>
-<tr><td class="mono">/new</td><td>{ic("n-new")}New clearance</td><td>spends</td></tr>
-<tr><td class="mono">/runs/{id}</td><td>Launch board</td><td>no</td></tr>
-<tr><td class="mono">/runs/{id}/mission</td><td>{ic("n-feed")}Mission feed</td><td>no</td></tr>
-<tr><td class="mono">/runs/{id}/frames</td><td>{ic("i-frame")}Frame board</td><td>no</td></tr>
-<tr><td class="mono">/runs/{id}/timeline</td><td>{ic("n-timeline")}Timeline</td><td>no</td></tr>
-<tr><td class="mono">/runs/{id}/markets/{m}</td><td>{ic("n-market")}Market room</td><td>no</td></tr>
-<tr><td class="mono">/runs/{id}/cutting</td><td>{ic("n-cut")}Cutting room</td><td>no</td></tr>
-<tr><td class="mono">/runs/{id}/generated</td><td>Generated content</td><td>no</td></tr>
-<tr><td class="mono">/edits</td><td>My edits</td><td>removal spends</td></tr>
-<tr><td class="mono">/agent</td><td>{ic("i-adjudicator")}Agent mode</td><td>spends</td></tr>
-<tr><td class="mono">/library</td><td>{ic("n-library")}Rule library</td><td>no</td></tr>
-<tr><td class="mono">/search</td><td>Frame search</td><td>no</td></tr>
-<tr><td class="mono">/insight</td><td>{ic("i-analyst")}Intelligence</td><td>no</td></tr>
-<tr><td class="mono">/grafana</td><td>Grafana resources</td><td>no</td></tr>
-<tr><td class="mono">/webhook/alert</td><td>The alert contact point</td><td>keyed</td></tr>
+<tr><td class="mono">/</td><td>[[ic:i-human]]Front door</td><td>no</td></tr>
+<tr><td class="mono">/runs</td><td>[[ic:n-runs]]Archive</td><td>no</td></tr>
+<tr><td class="mono">/new</td><td>[[ic:n-new]]New clearance</td><td>spends</td></tr>
+<tr><td class="mono">/runs/{id}</td><td>[[ic:n-board]]Launch board</td><td>no</td></tr>
+<tr><td class="mono">/runs/{id}/mission</td><td>[[ic:n-feed]]Mission feed</td><td>no</td></tr>
+<tr><td class="mono">/runs/{id}/frames</td><td>[[ic:i-frame]]Frame board</td><td>no</td></tr>
+<tr><td class="mono">/runs/{id}/timeline</td><td>[[ic:n-timeline]]Timeline</td><td>no</td></tr>
+<tr><td class="mono">/runs/{id}/markets/{m}</td><td>[[ic:n-market]]Market room</td><td>no</td></tr>
+<tr><td class="mono">/runs/{id}/cutting</td><td>[[ic:n-cut]]Cutting room</td><td>no</td></tr>
+<tr><td class="mono">/runs/{id}/generated</td><td>[[ic:i-remediator]]Generated content</td><td>no</td></tr>
+<tr><td class="mono">/edits</td><td>[[ic:n-cut]]My edits</td><td>removal spends</td></tr>
+<tr><td class="mono">/agent</td><td>[[ic:i-adjudicator]]Agent mode</td><td>spends</td></tr>
+<tr><td class="mono">/library</td><td>[[ic:n-library]]Rule library</td><td>no</td></tr>
+<tr><td class="mono">/search</td><td>[[ic:i-frame]]Frame search</td><td>no</td></tr>
+<tr><td class="mono">/insight</td><td>[[ic:i-analyst]]Intelligence</td><td>no</td></tr>
+<tr><td class="mono">/grafana</td><td>[[ic:logo-grafana]]Grafana resources</td><td>no</td></tr>
+<tr><td class="mono">/webhook/alert</td><td>[[ic:i-alert]]The alert contact point</td><td>keyed</td></tr>
 </table>
 
 ''')
@@ -857,9 +857,9 @@ page(head("chapter 26, continued", "Reference: the stores",
 <h3>Log streams in Loki</h3>
 <table>
 <tr><th class="mono">kind</th><th>One line is</th><th>Labels</th></tr>
-<tr><td class="mono">{ic("i-analyst")}observation</td><td>one keyframe the analyst described</td><td>app, asset, dimension, flagged</td></tr>
-<tr><td class="mono">{ic("i-legal")}finding</td><td>the join, with the statute in it</td><td>app, asset, market, rule_id</td></tr>
-<tr><td class="mono">{ic("i-cleared")}verdict</td><td>one market's answer</td><td>app, asset, market</td></tr>
+<tr><td class="mono">[[ic:i-analyst]]observation</td><td>one keyframe the analyst described</td><td>app, asset, dimension, flagged</td></tr>
+<tr><td class="mono">[[ic:i-legal]]finding</td><td>the join, with the statute in it</td><td>app, asset, market, rule_id</td></tr>
+<tr><td class="mono">[[ic:i-cleared]]verdict</td><td>one market's answer</td><td>app, asset, market</td></tr>
 </table>
 <div class="panel"><h4>Per market, without a scan</h4>
 Because market and rule id are labels rather than fields, one market's findings are a
@@ -924,6 +924,9 @@ BODY = "\n".join(
        f'<div class="folio"><span>{fl}</span><span>{i}</span></div>')
     + "</section>"
     for i, (cls, body, fl) in enumerate(pages, 1))
+
+BODY = re.sub(r'\[\[ic:([a-z0-9_-]+)\]\]',
+              lambda m: f'<img class="ico" src="{IMG}ico/{m.group(1)}.png">&nbsp;', BODY)
 
 HTML = f'''<!doctype html><html lang="en"><head><meta charset="utf-8">
 <title>The Media Customs, operator manual</title>
