@@ -1,22 +1,22 @@
 [
  {
-  "t": 10.38,
-  "hold": 4.4,
+  "t": 11.0,
+  "hold": 4.2,
   "label": "one tile per market",
   "box": [
    342,
-   360,
+   803,
    1236,
-   712
+   269
   ]
  },
  {
-  "t": 18.12,
+  "t": 14.74,
   "hold": 4.4,
   "label": "live Grafana, built by the agent",
   "box": [
    342,
-   8,
+   317,
    1236,
    446
   ]

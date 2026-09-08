@@ -3331,45 +3331,64 @@ def mission_page(request: Request, run_id: str):
                  last_id=events[-1]["id"] if events else 0, screen="mission")
 
 def edited_scenes(limit: int = 120) -> list[dict]:
-    """Every edit this instance has made, newest first, across all runs.
+    """Every scene this instance has edited, newest first, across all runs.
 
-    One row per change record that kept a before and an after still: the
-    film it belongs to, the market and the rule that asked for it, the
-    seconds it covers, the method that did it, and the two frames. The
-    cutting room answers "what happened to THIS film"; this answers "what
-    has this system actually changed", which is a different question and
-    the one a reader asks after the third run.
+    One row per SCENE, not per change record. Two markets objecting to the
+    same two seconds produce two findings and two changes, and as two cards
+    they read as two different edits of two different shots -- so a scene
+    is one card carrying every market that objected to it and the fix that
+    answered them. Which market's fix produced the frame on the right is
+    named on the card, because where three markets wanted the same span
+    changed, only one of them paid for the render.
 
-    Read from the store and the changes directory, both of which are
-    mirrored, so an edit survives the container that made it.
+    The cutting room answers "what happened to THIS film"; this answers
+    "what has this system actually changed", which is the question a reader
+    asks after the third run.
     """
     db = store()
-    out: list[dict] = []
+    scenes: list[dict] = []
     for run in db.recent_runs(200):
         changes = db.changes(run.id)
         if not changes:
             continue
         directory = run_dir(run)
         by_id = {f.id: f for f in db.findings(run.id)}
+        grouped: dict[tuple, dict] = {}
         for change in changes:
+            finding = by_id.get(change.finding_id)
+            # the span IS the scene's identity: same two seconds, same shot
+            key = ((round(finding.t_start, 1), round(finding.t_end, 1))
+                   if finding else ("chg", change.id))
             before = _still_name(directory, change.before_frame)
             after = _still_name(directory, change.after_frame)
             clip = ((directory / "changes" / f"{change.id}_bridge.mp4").is_file()
                     or (directory / "changes" / f"{change.id}_omni.mp4").is_file())
-            finding = by_id.get(change.finding_id)
-            out.append({
+            scene = grouped.setdefault(key, {
                 "run": run,
                 "asset": Path(run.asset_path).stem or run.asset_path,
-                "change": change,
-                "finding": finding,
-                "market": finding.market if finding else "",
-                "before": before,
-                "after": after,
-                "clip": clip,
-                "kept": bool(before or after),
+                "t_start": finding.t_start if finding else 0.0,
+                "t_end": finding.t_end if finding else 0.0,
+                "markets": [], "rules": [], "changes": [],
+                "before": "", "after": "", "fixed_for": "", "change": None,
+                "clip": False, "method": "",
             })
-    out.sort(key=lambda row: (row["run"].t0 or 0, row["change"].id), reverse=True)
-    return out[:limit]
+            if finding and finding.market and finding.market not in scene["markets"]:
+                scene["markets"].append(finding.market)
+            if finding and finding.rule_id and finding.rule_id not in scene["rules"]:
+                scene["rules"].append(finding.rule_id)
+            scene["changes"].append(change)
+            scene["before"] = scene["before"] or before
+            # The pair on show is the fix that actually rendered: a change
+            # with a clip beats one with only stills, and either beats one
+            # that kept nothing at all.
+            if (bool(clip), bool(after)) > (scene["clip"], bool(scene["after"])) \
+                    or scene["change"] is None:
+                scene.update({"after": after or scene["after"], "clip": clip,
+                              "change": change, "method": change.method,
+                              "fixed_for": finding.market if finding else ""})
+        scenes.extend(grouped.values())
+    scenes.sort(key=lambda s: ((s["run"].t0 or 0), -s["t_start"]), reverse=True)
+    return scenes[:limit]
 
 
 @app.get("/edits", response_class=HTMLResponse)
@@ -3382,18 +3401,19 @@ def my_edits(request: Request):
     it twice.
     """
     rows = edited_scenes()
-    shown = [row for row in rows if row["kept"]]
+    shown = [row for row in rows if row["before"] or row["after"]]
     # "carried over from SA", "carried over from DE" and nine more are one
     # method wearing eleven names, and as eleven chips they were the widest
-    # thing on the page. Counted together.
+    # thing on the page. Counted together, and counted per scene.
     methods: dict[str, int] = {}
     for row in rows:
-        method = row["change"].method
+        method = row["method"] or "unknown"
         if method.startswith("carried over"):
             method = "carried over"
         methods[method] = methods.get(method, 0) + 1
     return _page(request, "edits.html", screen="edits", rows=shown,
                  total=len(rows), unkept=len(rows) - len(shown),
+                 edits=sum(len(row["changes"]) for row in rows),
                  films=len({row["asset"] for row in rows}),
                  methods=sorted(methods.items(), key=lambda kv: -kv[1]))
 

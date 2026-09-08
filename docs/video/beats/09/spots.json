@@ -1,7 +1,7 @@
 [
  {
-  "t": 4.16,
-  "hold": 4.6,
+  "t": 3.24,
+  "hold": 4.0,
   "label": "the frame, the rule, the statute",
   "box": [
    347,
@@ -11,12 +11,12 @@
   ]
  },
  {
-  "t": 12.54,
-  "hold": 3.4,
+  "t": 6.87,
+  "hold": 3.2,
   "label": "certificate and markers",
   "box": [
    1228,
-   510,
+   535,
    181,
    54
   ]

@@ -13,6 +13,19 @@ filled, square hovered) and the finished showcase run supplies the results.
 import os, subprocess, sys, time
 from playwright.sync_api import sync_playwright
 
+HIDE_BORROWED = """() => {
+  const own = ['test_ad', 'trigger_reel_b',
+               'ember_lounge', 'voltage_runway', 'solstice_rooftop'];
+  document.querySelectorAll('.runcard').forEach(c => {
+    if (!own.some(n => c.textContent.includes(n))) c.remove();
+  });
+  document.querySelectorAll('iframe.archlive').forEach(f => {
+    const s = f.closest('section'); (s || f).remove();
+  });
+}"""
+PLAY_BOTH = "el => el.querySelectorAll('video').forEach(v => { v.muted = true; v.play(); })"
+CERT_CHIP = "a.chip[href*='certificate.pdf']"
+FR_PAIR = "[data-pair='FR']"
 _T0 = 0.0
 SPOTS = []        # what this beat pointed at: label, box, and when
 
@@ -26,10 +39,15 @@ def spot(p, label, selector, hold=4.5, pad=10):
         box = None
     if not box or box["width"] < 40 or box["height"] < 20:
         return
+    # an element below the fold has a box, but pointing at it draws off screen
+    if box["y"] > H - 60 or box["y"] + box["height"] < 60:
+        return
     x = max(8, box["x"] - pad)
     y = max(8, box["y"] - pad)
     w = min(W - x - 8, box["width"] + pad * 2)
     h = min(H - y - 8, box["height"] + pad * 2)
+    if w < 40 or h < 20:
+        return
     SPOTS.append({"t": round(time.time() - _T0, 2), "hold": hold,
                   "label": label, "box": [round(x), round(y), round(w), round(h)]})
 
@@ -147,34 +165,28 @@ def main(only=None):
             # also holds borrowed development footage (config.WITHHELD_ASSETS is
             # empty on the deployed revision), and none of that belongs in a
             # submission video.
-            p.evaluate("""() => {
-              const own = ['test_ad', 'trigger_reel_a', 'trigger_reel_b',
-                           'ember_lounge', 'voltage_runway', 'solstice_rooftop'];
-              document.querySelectorAll('.runcard').forEach(c => {
-                if (!own.some(n => c.textContent.includes(n))) c.remove();
-              });
-              // the weekly panel's legend prints every asset name, borrowed ones
-              // included, so it stays out of frame; the per-card lanes stay live
-              document.querySelectorAll('iframe.archlive').forEach(f => {
-                const s = f.closest('section'); (s || f).remove();
-              });
-            }""")
-            p.wait_for_timeout(1600)
+            p.evaluate(HIDE_BORROWED)
+            p.wait_for_timeout(700)
             cards = p.locator(".runcard")
-            for i in range(min(cards.count(), 3)):
+            first = cards.first
+            first.scroll_into_view_if_needed()
+            bb = first.bounding_box()
+            if bb:
+                glide(p, bb["x"] + bb["width"] * 0.28, bb["y"] + bb["height"] * 0.3)
+            p.wait_for_timeout(2200)            # the thumbnail loads on approach
+            spot(p, "what it found, and when", ".runcard .cardviz", hold=4.6)
+            if bb:
+                glide(p, bb["x"] + bb["width"] * 0.72, bb["y"] + bb["height"] * 0.66, steps=18)
+            p.wait_for_timeout(3200)
+            for i in (1, 2):
                 c = cards.nth(i)
                 c.scroll_into_view_if_needed()
-                bb = c.bounding_box()
-                if not bb:
-                    continue
-                glide(p, bb["x"] + bb["width"] * 0.26, bb["y"] + bb["height"] * 0.32)
-                p.wait_for_timeout(2500)      # the thumbnail loads on approach
-                glide(p, bb["x"] + bb["width"] * 0.72, bb["y"] + bb["height"] * 0.68, steps=18)
-                if i == 1:
-                    spot(p, "what it found, and when", ".runcard .cardviz", hold=4.6)
-                p.wait_for_timeout(1600)      # rest on the lanes chart
+                b2 = c.bounding_box()
+                if b2:
+                    glide(p, b2["x"] + b2["width"] * 0.3, b2["y"] + b2["height"] * 0.34)
+                p.wait_for_timeout(2200)
             creep(p, 600, 2.0)
-        beat(pw, 4, "/runs", b3)
+        beat(pw, 4, "/runs", b3, head=3.0)
 
         # 4 the launcher, filled in but never submitted (local instance)
         def b2(p):
@@ -206,19 +218,24 @@ def main(only=None):
 
         # 5 launch board: tiles, then the Grafana panels under them
         def b4(p):
-            p.wait_for_timeout(2200)
+            p.wait_for_timeout(600)
+            creep(p, 620, 1.4)
+            spot(p, "one tile per market", "#tiles", hold=4.2)
             t = p.locator("#tile-FR")
             if t.count():
-                t.scroll_into_view_if_needed(); p.wait_for_timeout(400)
                 bb = t.bounding_box()
-                if bb: glide(p, bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2)
-            spot(p, "one tile per market", "#tiles", hold=4.4)
+                if bb:
+                    glide(p, bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2)
             p.wait_for_timeout(2400)
-            creep(p, 1500, 4.5)
-            spot(p, "live Grafana, built by the agent", "iframe.boardlanes, img.boardlanes", hold=4.4)
+            lanes = p.locator("iframe.boardlanes, img.boardlanes").first
+            if lanes.count():
+                lanes.evaluate("el => el.scrollIntoView({block: 'center'})")
+                p.wait_for_timeout(1100)
+            spot(p, "live Grafana, built by the agent",
+                 "iframe.boardlanes, img.boardlanes", hold=4.4)
             p.wait_for_timeout(2600)
-            creep(p, 1700, 4.5)
-        beat(pw, 7, f"/runs/{RUN}", b4)
+            creep(p, 1900, 5.0)
+        beat(pw, 7, f"/runs/{RUN}", b4, head=5.0)
 
         # 7 timeline grid: hover the squares, never click (a click spends)
         def b6(p):
@@ -232,23 +249,23 @@ def main(only=None):
 
         # 8 market room FR: open a scene, then the takeaway chips
         def b7(p):
-            p.wait_for_timeout(1500)
+            p.wait_for_timeout(500)
             rows = p.locator("tr.scene-row")
             if rows.count():
-                rows.first.scroll_into_view_if_needed()
-                rows.first.click(); p.wait_for_timeout(1400)
-                spot(p, "the frame, the rule, the statute", "tr.frow", hold=4.6)
-                p.wait_for_timeout(2600)
-            creep(p, 1300, 4.5)
-            chip = p.locator('a.chip[href*="certificate.pdf"]')
+                rows.first.click()
+                p.wait_for_timeout(1300)
+                spot(p, "the frame, the rule, the statute", "tr.frow", hold=4.0)
+            p.wait_for_timeout(3000)
+            chip = p.locator(CERT_CHIP)
             if chip.count():
-                chip.first.scroll_into_view_if_needed(); p.wait_for_timeout(300)
+                chip.first.scroll_into_view_if_needed()
+                p.wait_for_timeout(400)
                 bb = chip.first.bounding_box()
-                if bb: glide(p, bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2)
-                spot(p, "certificate and markers", "a.chip[href*='certificate.pdf']",
-                     hold=3.4, pad=14)
-            p.wait_for_timeout(2200)
-        beat(pw, 9, f"/runs/{RUN}/markets/FR", b7)
+                if bb:
+                    glide(p, bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2)
+                spot(p, "certificate and markers", CERT_CHIP, hold=3.2, pad=14)
+            p.wait_for_timeout(2600)
+        beat(pw, 9, f"/runs/{RUN}/markets/FR", b7, head=1.5)
 
         # 10 the fix panel: both columns and the price, the button untouched
         def bfix(p):
@@ -278,18 +295,15 @@ def main(only=None):
 
         # 11 cutting room: original and localized, playing together
         def b9(p):
-            p.wait_for_timeout(1200)
-            fr = p.locator('[data-pair="FR"]')
+            fr = p.locator(FR_PAIR)
             if fr.count():
-                fr.first.scroll_into_view_if_needed()
-                p.wait_for_timeout(1200)
-                fr.first.evaluate("el => el.querySelectorAll('video')"
-                                  ".forEach(v => { v.muted = true; v.play(); })")
-                p.wait_for_timeout(900)
-                spot(p, "the localized master", '[data-pair="FR"] .pane:last-child', hold=4.6)
+                fr.first.evaluate("el => el.scrollIntoView({block: 'center'})")
+                p.wait_for_timeout(600)
+                fr.first.evaluate(PLAY_BOTH)
+                p.wait_for_timeout(1300)
+                spot(p, "the localized master", FR_PAIR + " .pane:last-child", hold=4.2)
             p.wait_for_timeout(12000)
-            creep(p, 260, 1.6)
-        beat(pw, 11, f"/runs/{RUN}/cutting", b9)
+        beat(pw, 11, f"/runs/{RUN}/cutting", b9, head=5.0)
 
         # 11 agent mode: three questions typed in turn, none of them sent
         def b10(p):

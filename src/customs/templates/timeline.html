@@ -55,9 +55,14 @@
     {# The body is Grafana's own: its row labels and time axis are hidden,
        because the two columns around it are those axes. Height is the row
        count times the row height, so it never scrolls. #}
-    <iframe class="mg-live" style="height:{{ matrix | length * 44 }}px"
-            src="{{ embeds.viewer.squares }}"
-            title="Occurrences per scene, live from Grafana" loading="lazy"></iframe>
+    {# Cropped, like the card's. A d-solo panel comes with its own title
+       bar, and thirty-four pixels of Grafana chrome above the first row
+       puts every row out of line with the icon beside it. The wrapper
+       clips it; the frame is pulled up by exactly that much. #}
+    <span class="mgplot" style="height:{{ matrix | length * 44 }}px">
+      <iframe class="mg-live" src="{{ embeds.viewer.squares }}"
+              title="Occurrences per scene, live from Grafana" loading="lazy"></iframe>
+    </span>
     {% else %}
     <div class="mg-cells">
       {% for row in matrix %}

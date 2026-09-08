@@ -12,7 +12,7 @@ OUT = "docs/video"
 NAME = sys.argv[1] if len(sys.argv) > 1 else "demo"
 GAP = 0.2
 NBEATS = 15
-SKIP = {3: 4.0, 14: 30.0}      # a head the beat needed but the film does not
+SKIP = {3: 4.0, 4: 5.0, 7: 5.0, 9: 1.5, 11: 5.0, 14: 30.0}   # heads the beats needed, the film does not
 
 CHIP_IN, CHIP_HOLD = 0.5, 4.0
 
@@ -61,6 +61,8 @@ def layers(n, length):
                 continue
             f = f"{OUT}/ov/spot-{n:02d}-{i}.png"
             x, y, w, h = sp["box"]
+            if w < 40 or h < 20:      # an element that was off screen when read
+                continue
             callout(x, y, w, h, sp["label"]).save(f)
             out.append((f, a, b))
     return out

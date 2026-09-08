@@ -56,9 +56,11 @@
 
   <div class="filmstrip" style="--films:{{ films | length }}" data-tour="filmstrip">
     {% if solo %}
-    <iframe class="fs-panel" src="{{ solo }}60"
-            title="Every commercial at its worst severity, live from Grafana"
-            loading="lazy"></iframe>
+    <span class="fs-plot">
+      <iframe class="fs-panel" src="{{ solo }}60"
+              title="Every commercial at its worst severity, live from Grafana"
+              loading="lazy"></iframe>
+    </span>
     {% else %}{{ noviewer() }}{% endif %}
     <div class="fs-shots">
       {% for f in films %}
@@ -102,8 +104,10 @@
       {% endfor %}
     </div>
     {% if solo %}
-    <iframe class="xpanel" src="{{ solo }}10"
-            title="Findings by dimension, live from Grafana" loading="lazy"></iframe>
+    <span class="xplot">
+      <iframe class="xpanel" src="{{ solo }}10"
+              title="Findings by dimension, live from Grafana" loading="lazy"></iframe>
+    </span>
     {% else %}{{ noviewer() }}{% endif %}
   </div>
   {% else %}
@@ -134,8 +138,10 @@
       {% endfor %}
     </div>
     {% if solo %}
-    <iframe class="xpanel" src="{{ solo }}11"
-            title="Findings by market, live from Grafana" loading="lazy"></iframe>
+    <span class="xplot">
+      <iframe class="xpanel" src="{{ solo }}11"
+              title="Findings by market, live from Grafana" loading="lazy"></iframe>
+    </span>
     {% else %}{{ noviewer() }}{% endif %}
   </div>
   {% endif %}

@@ -2213,7 +2213,11 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
 .editpair figcaption .ic { width: 13px; height: 13px; }
 .editgone { display: grid; place-items: center; aspect-ratio: 16 / 9;
   border: 1px dashed var(--line-2); border-radius: 4px; color: var(--ink-3); }
+.editwho { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.editwho .label { margin-right: 2px; }
+.editwho .pill { text-decoration: none; }
 .editwhy { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink-2); }
+.editwhy .chip { margin-right: 8px; }
 .editrule { margin: 0; font-size: 12px; line-height: 1.5; color: var(--ink-3); }
 .editfoot { display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
   margin-top: auto; }
@@ -2743,7 +2747,14 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
   color: var(--ink-2); height: 44px; }
 .mg-dim .ic { width: 15px; height: 15px; flex: none; }
 .mg-dim span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mg-live { width: 100%; border: 0; display: block; background: transparent; }
+/* Every embedded panel that has to line up with a column of this app's own
+   icons is cropped by the height of a Grafana panel header. Nothing else
+   removes it: d-solo renders the title, and a title bar above the first
+   row is thirty-four pixels of drift between the plot and its axis. */
+.mgplot { position: relative; display: block; overflow: hidden; }
+.mg-live { position: absolute; left: 0; top: -34px; width: 100%;
+  height: calc(100% + 34px); border: 0; display: block;
+  background: transparent; }
 /* the console's own body, when no viewer is deployed */
 .mg-cells { display: grid; grid-template-columns: var(--cols); gap: 2px; }
 .mg-cell { display: grid; place-items: center; height: 40px; border-radius: 3px;
@@ -3376,9 +3387,14 @@ tbody.mkscene[hidden] { display: none; }
   font-size: 9.5px; color: var(--ink-2); white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis;
 }
+.xplot {
+  position: relative; display: block; overflow: hidden;
+  height: var(--panel-h); border: 1px solid var(--line);
+  border-radius: var(--radius); background: var(--panel);
+}
 .xpanel {
-  width: 100%; height: var(--panel-h); border: 1px solid var(--line);
-  border-radius: var(--radius); background: var(--panel); display: block;
+  position: absolute; left: 0; top: -34px; width: 100%;
+  height: calc(100% + 34px); border: 0; display: block;
 }
 /* the whole dashboard, one frame. Tall on purpose: sixteen panels that
    scroll inside their own iframe is two scrollbars arguing. */
@@ -3408,10 +3424,15 @@ tbody.mkscene[hidden] { display: none; }
    cannot draw a still and the strip cannot draw a live query, so they are
    laid out to be read as one instrument. */
 .filmstrip { --films: 1; --strip-h: 210px; margin: 10px 0 6px; }
-.fs-panel {
-  width: 100%; height: var(--strip-h); border: 1px solid var(--line);
+.fs-plot {
+  position: relative; display: block; overflow: hidden;
+  height: var(--strip-h); border: 1px solid var(--line);
   border-bottom: none; border-radius: var(--radius) var(--radius) 0 0;
-  background: var(--panel); display: block;
+  background: var(--panel);
+}
+.fs-panel {
+  position: absolute; left: 0; top: -34px; width: 100%;
+  height: calc(100% + 34px); border: 0; display: block;
 }
 .fs-shots {
   display: grid; grid-template-columns: repeat(var(--films), 1fr); gap: 2px;
@@ -3439,7 +3460,7 @@ tbody.mkscene[hidden] { display: none; }
   color: var(--ink-3); }
 @media (max-width: 900px) {
   .fs-shots { display: none; }
-  .fs-panel { border-bottom: 1px solid var(--line); border-radius: var(--radius); }
+  .fs-plot { border-bottom: 1px solid var(--line); border-radius: var(--radius); }
 }
 
 /* ==========================================================================

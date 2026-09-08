@@ -11,14 +11,17 @@
    frame after side by side and the rule that asked for it named. #}
 <section class="hero" style="padding-bottom:18px">
   <div class="rule-row"><span class="label">My edits</span>
-    <span class="right label mono">{{ rows | length }} of {{ total }} edit{{ '' if total == 1 else 's' }}
+    <span class="right label mono">{{ rows | length }} of {{ total }} scene{{ '' if total == 1 else 's' }}
+      &middot; {{ edits }} edit{{ '' if edits == 1 else 's' }}
       &middot; {{ films }} film{{ '' if films == 1 else 's' }}</span>
   </div>
   <h1 class="pagetitle"><svg class="ic"><use href="#n-cut"/></svg>Every scene this system has changed</h1>
-  <p class="subline">Before and after, across every clearance. Each pair is one
-    finding a market objected to and the edit that answered it, with the method
-    that made it and the price it carried. Nothing here is a mock-up: these are
-    the frames the remediator wrote and the verifier re-observed.</p>
+  <p class="subline">Before and after, across every clearance. One card per
+    scene, not per market: when three jurisdictions object to the same two
+    seconds that is one shot with three objections, and one of them paid for
+    the render. Every market that objected is named on the card, and so is the
+    one the fix on show was made for. Nothing here is a mock-up: these are the
+    frames the remediator wrote and the verifier re-observed.</p>
   {% if methods %}
   <p class="editkeys">
     {% for method, count in methods %}
@@ -37,12 +40,23 @@
       <header class="edithead">
         <a class="editfilm" href="/runs/{{ row.run.id }}/cutting">{{ row.asset }}</a>
         <span class="editmeta">
-          {% if row.market %}<span class="pill s-blocked"><svg class="ic"><use href="#i-blocked"/></svg>{{ row.market }}</span>{% endif %}
-          {% if row.finding %}<span class="rule-id">{{ row.finding.rule_id }}</span>{% endif %}
-          {% if row.finding %}<span class="mono editwhen">{{ row.finding.t_start | timecode }} to {{ row.finding.t_end | timecode }}</span>{% endif %}
-          <span class="chip method">{{ row.change.method }}</span>
+          <span class="mono editwhen">{{ row.t_start | timecode }} to {{ row.t_end | timecode }}</span>
+          <span class="chip method">{{ row.method }}</span>
         </span>
       </header>
+      {# Who objected, and who the fix on show was actually made for. Three
+         markets wanting the same two seconds changed is one scene, and only
+         one of them paid for the render. #}
+      <div class="editwho">
+        <span class="label">objected</span>
+        {% for market in row.markets %}
+        <a class="pill s-blocked" href="/runs/{{ row.run.id }}/markets/{{ market }}"
+           title="{{ market }}'s market room"><svg class="ic"><use href="#i-blocked"/></svg>{{ market }}</a>
+        {% endfor %}
+        {% if not row.markets %}<span class="label">no market on record</span>{% endif %}
+        {% for rule in row.rules[:3] %}<span class="rule-id">{{ rule }}</span>{% endfor %}
+        {% if row.rules | length > 3 %}<span class="label">+{{ row.rules | length - 3 }}</span>{% endif %}
+      </div>
 
       {# Two frames, one row, labelled. An edit whose after-frame was never
          kept still shows its before: half a pair is evidence too, and
@@ -66,20 +80,22 @@
         </figure>
       </div>
 
-      <p class="editwhy">{{ row.change.description }}</p>
-      {% if row.finding %}
-      <p class="editrule">{{ row.finding.rationale }}</p>
+      <p class="editwhy">
+        {% if row.fixed_for %}<span class="chip on">fix made for {{ row.fixed_for }}</span>{% endif %}
+        {{ row.change.description if row.change }}</p>
+      {% if row.changes | length > 1 %}
+      <p class="editrule">{{ row.changes | length }} change records on this scene,
+        one per market that asked for it. The pair above is the one that
+        rendered.</p>
       {% endif %}
       <footer class="editfoot">
-        {% if row.clip %}
+        {% if row.clip and row.change %}
         <a class="chip on" href="/runs/{{ row.run.id }}/changes/{{ row.change.id }}/generated.mp4"
            target="_blank"><svg class="ic"><use href="#n-cut"/></svg>the generated seconds</a>
         {% endif %}
-        {% if row.market %}
-        <a class="chip" href="/runs/{{ row.run.id }}/markets/{{ row.market }}">market room</a>
-        {% endif %}
         <a class="chip" href="/runs/{{ row.run.id }}/cutting">cutting room</a>
-        <span class="runid mono">{{ row.change.id }}</span>
+        <a class="chip" href="/runs/{{ row.run.id }}/timeline">where in the film</a>
+        {% if row.change %}<span class="runid mono">{{ row.change.id }}</span>{% endif %}
       </footer>
     </article>
     {% endfor %}
