@@ -3,13 +3,13 @@
 <div align="center">
 
 [![Live instance](https://img.shields.io/badge/live-customs--app.run.app-4285F4?style=flat-square)](https://customs-app-akap4ao72a-ew.a.run.app)
-[![Tests](https://img.shields.io/badge/tests-622_passing-34A853?style=flat-square)](#tests)
+[![Tests](https://img.shields.io/badge/tests-624_passing-34A853?style=flat-square)](#tests)
 [![Jurisdictions](https://img.shields.io/badge/jurisdictions-98-FBBC05?style=flat-square)](#the-jurisdiction-ladder)
 [![Rules](https://img.shields.io/badge/rules-128_with_citations-EA4335?style=flat-square)](#the-jurisdiction-ladder)
 [![Grafana](https://img.shields.io/badge/Grafana-MCP_at_runtime-F46800?style=flat-square)](#grafana-is-a-participant-not-a-picture)
 [![License](https://img.shields.io/badge/license-Apache_2.0-informational?style=flat-square)](LICENSE)
 
-**[Open the live console →](https://customs-app-akap4ao72a-ew.a.run.app)**
+**[Open the live console →](https://customs-app-akap4ao72a-ew.a.run.app)** &nbsp;·&nbsp; **[Watch the walkthrough →](https://www.youtube.com/watch?v=zvr6GpmULr0)**
 
 Judges, the word at the door is **`DEVPOST`**.
 
@@ -615,10 +615,10 @@ Needs `ffmpeg` on PATH, a Google Cloud project with Vertex AI enabled, and a Gra
 
 ```bash
 .venv/bin/python -m pytest -q
-# 561 passed, 8 deselected
+# 624 passed, 8 deselected
 ```
 
-**561 offline tests across 24 files**, no network, no API keys, no Grafana. The eight deselected ones are live-API probes you opt into explicitly.
+**624 offline tests across 24 files**, no network, no API keys, no Grafana. The eight deselected ones are live-API probes you opt into explicitly.
 
 The suite exists because most of this system's failure modes are silent: a guard that stops refusing, a citation that stops resolving, a craft gate that accepts a master that lost its soundtrack, a green can appearing in a modesty fix because a default leaked across dimensions. Every one of those has a test, and several of them have a test *because it happened*.
 
@@ -658,7 +658,7 @@ src/customs/
 markets/          21 packs → 98 jurisdictions → 128 rules
 grafana/dashboards/  9 dashboards, provisioned as JSON
 grafana-viewer/   stock grafana-oss that is allowed to be framed
-tests/            23 files, 610 tests
+tests/            24 files, 624 tests
 ```
 
 **Built with:** Python · FastAPI · Google Cloud Agent Builder (ADK) · Gemini (vision, text, TTS, image) · Veo 3.1 · Gemini Omni · Grafana Cloud (Mimir, Loki, MCP) · ffmpeg · SQLite · Cloud Run
