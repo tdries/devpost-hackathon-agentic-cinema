@@ -6,7 +6,7 @@ import os, subprocess
 SRC = "docs/samples/test_ad.mp4"
 OUT = "docs/video/beats/01"
 # the shots that carry the landmines the narration names
-CLIPS = [(0.5, 5.5), (7.5, 5.5), (20.0, 5.0), (34.0, 5.5), (49.5, 5.5)]
+CLIPS = [(0.5, 5.5), (15.0, 4.5), (20.0, 4.5), (36.0, 4.5), (44.0, 5.5)]
 
 os.makedirs(OUT, exist_ok=True)
 parts = []

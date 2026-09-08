@@ -184,11 +184,16 @@ def main(only=None):
 
         # 10 cutting room: original and localized, playing together
         def b9(p):
-            p.wait_for_timeout(1500)
-            p.evaluate("document.querySelectorAll('video').forEach(v=>{v.muted=true;v.currentTime=Math.max(0,(v.dataset.t||0));v.play()})")
-            p.wait_for_timeout(9000)
-            creep(p, 1200, 4.0)
-        beat(pw, 10, f"/runs/{RUN}/cutting", b9)
+            p.wait_for_timeout(1200)
+            fr = p.locator('[data-pair="FR"]')
+            if fr.count():
+                fr.first.scroll_into_view_if_needed()
+                p.wait_for_timeout(1200)
+                fr.first.evaluate("el => el.querySelectorAll('video')"
+                                  ".forEach(v => { v.muted = true; v.play(); })")
+            p.wait_for_timeout(12000)
+            creep(p, 260, 1.6)
+        beat(pw, 11, f"/runs/{RUN}/cutting", b9)
 
         # 11 agent mode: three questions typed in turn, none of them sent
         def b10(p):
@@ -203,7 +208,7 @@ def main(only=None):
                 box.first.fill("")
                 box.first.type(q, delay=38)
                 p.wait_for_timeout(1500)
-        beat(pw, 11, "/agent", b10, base=LOCAL)
+        beat(pw, 12, "/agent", b10, base=LOCAL)
 
         # 12 rule library, then frame search
         def b11(p):
@@ -212,18 +217,18 @@ def main(only=None):
             p.goto(LIVE + "/search?q=wine&mode=literal", wait_until="load")
             p.wait_for_timeout(2500)
             creep(p, 900, 2.5)
-        beat(pw, 12, "/library", b11)
+        beat(pw, 13, "/library", b11)
 
         # 13 intelligence board
         # Grafana needs ~30s to paint 17 panels; cut_demo drops that head
-        beat(pw, 13, "/insight", lambda p: (p.wait_for_timeout(32000), creep(p, 2400, 5.0)))
+        beat(pw, 14, "/insight", lambda p: (p.wait_for_timeout(32000), creep(p, 2400, 5.0)))
 
         # 14 the Grafana inventory, then home
         def b13(p):
             p.wait_for_timeout(1500)
             creep(p, 3000, 8.5)
             p.goto(LIVE + "/", wait_until="load"); p.wait_for_timeout(2600)
-        beat(pw, 14, "/grafana", b13)
+        beat(pw, 15, "/grafana", b13)
 
 
 if __name__ == "__main__":

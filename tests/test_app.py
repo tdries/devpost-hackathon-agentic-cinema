@@ -3451,7 +3451,11 @@ def test_agent_mode_opens_guided_and_fits_one_screen(console):
     assert "Start here" in page
 
     css = (Path(app_module.__file__).parent / "static" / "customs.css").read_text()
-    assert ".agentscreen" in css and "calc(100vh - 122px)" in css
+    # the screen is sized to the window, so the ask box is never below the
+    # fold -- and the log has a floor, because it was the thing that gave
+    # way to the hero, the stats row and three lanes of questions
+    assert ".agentscreen" in css and "height: calc(100vh - 96px)" in css
+    assert "min-height: 150px" in css
     assert "height: calc(100vh - 132px)" not in css,         "the number written for a page that no longer exists"
 
     # the two marks, at twice the size they were

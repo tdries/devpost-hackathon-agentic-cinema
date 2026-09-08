@@ -8,7 +8,7 @@ half-second of held frame, so the cut lands on the pause the audio already has.
 import glob, os, subprocess
 
 OUT = "docs/video"
-GAP = 0.4
+GAP = 0.35
 # seconds to drop off the head of a beat that had to wait for something to paint
 SKIP = {13: 30.0}   # the insight panels need that long to paint
 
