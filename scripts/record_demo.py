@@ -28,6 +28,12 @@ CERT_CHIP = "a.chip[href*='certificate.pdf']"
 FR_PAIR = "[data-pair='FR']"
 _T0 = 0.0
 SPOTS = []        # what this beat pointed at: label, box, and when
+HEAD = [0.0]      # where the film should start, when the beat had to warm up first
+
+
+def start_here():
+    """The film starts from this moment; what came before was setup."""
+    HEAD[0] = time.time() - _T0
 
 
 def spot(p, label, selector, hold=4.5, pad=10):
@@ -95,6 +101,7 @@ def beat(pw, n, url, actions, base=None, head=0.0):
     page = ctx.new_page()
     global _T0, SPOTS
     SPOTS = []
+    HEAD[0] = 0.0
     t0 = _T0 = time.time()
     page.goto((base or LIVE) + url, wait_until="load", timeout=60000)
     page.wait_for_timeout(900)
@@ -106,6 +113,9 @@ def beat(pw, n, url, actions, base=None, head=0.0):
     if SPOTS:
         import json
         json.dump(SPOTS, open(f"{OUT}/{n:02d}/spots.json", "w"), indent=1)
+    if HEAD[0]:
+        import json
+        json.dump({"skip": round(HEAD[0], 2)}, open(f"{OUT}/{n:02d}/head.json", "w"))
     print(f"{n:02d}  target {d:5.1f}s  took {time.time() - t0:5.1f}s  {url}")
 
 
@@ -307,18 +317,36 @@ def main(only=None):
 
         # 11 agent mode: three questions typed in turn, none of them sent
         def b10(p):
-            p.wait_for_timeout(1000)
+            p.wait_for_timeout(800)
             box = p.locator("#agent-input")
             if not box.count():
                 return
-            spot(p, "ask in plain sentences", "#agent-ask", hold=4.0, pad=14)
-            for q in ["which markets blocked this ad, and why?",
-                      "show me the frames FR-ALC-01 fired on",
-                      "what should I fix first, and what will it cost?"]:
+            asks = ["why is France blocked, and what would a fix cost?",
+                    "show me the frames FR-ALC-01 fired on",
+                    "what should I fix first, and what will it cost?"]
+            box.first.click()
+            box.first.type(asks[0], delay=34)
+            p.wait_for_timeout(600)
+            p.locator("#agent-ask button, #agent-ask .btn").first.click()
+            # it thinks for around half a minute; none of that is worth filming
+            try:
+                # the answer is in when the evidence pane opens beside it
+                p.wait_for_function(
+                    "() => { const l = document.getElementById('view-label');"
+                    " return l && !/Nothing open yet/.test(l.textContent); }",
+                    timeout=150000)
+            except Exception:
+                pass
+            p.wait_for_timeout(2600)
+            start_here()
+            p.wait_for_timeout(1800)
+            spot(p, "it answers by opening the evidence", ".agent-view", hold=4.0)
+            p.wait_for_timeout(3600)
+            for q in asks[1:]:
                 box.first.click()
                 box.first.fill("")
-                box.first.type(q, delay=38)
-                p.wait_for_timeout(1500)
+                box.first.type(q, delay=32)
+                p.wait_for_timeout(1600)
         beat(pw, 12, "/agent", b10, base=LOCAL)
 
         # 12 rule library, then frame search

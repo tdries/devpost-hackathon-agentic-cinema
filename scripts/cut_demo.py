@@ -32,6 +32,15 @@ def dur(path):
     return float(out)
 
 
+def head_of(n):
+    """What to drop off the front: what the recorder measured, else the table."""
+    f = f"{OUT}/beats/{n:02d}/head.json"
+    if os.path.exists(f):
+        import json
+        return float(json.load(open(f))["skip"])
+    return SKIP.get(n, 0.0)
+
+
 def layers(n, length):
     """Every still this beat lays over the footage, with when it comes and goes."""
     out = []
@@ -62,7 +71,7 @@ def layers(n, length):
             # reads as clutter, and the older box may have scrolled away
             if i + 1 < len(seen):
                 sp["hold"] = min(sp["hold"], max(0.0, seen[i + 1]["t"] - sp["t"] - 0.2))
-            a = sp["t"] - SKIP.get(n, 0.0)
+            a = sp["t"] - head_of(n)
             b = min(a + sp["hold"], length - 0.25)
             if a < 0.15 or b - a < 1.0:
                 continue
@@ -85,7 +94,7 @@ for n in range(1, NBEATS + 1):
     want = dur(f"docs/voiceover/{n:02d}.wav") + GAP
     dst = f"{OUT}/cut/{n:02d}.mp4"
     over = layers(n, want)
-    cmd = ["ffmpeg", "-y", "-v", "error", "-ss", f"{SKIP.get(n, 0):.1f}", "-i", src]
+    cmd = ["ffmpeg", "-y", "-v", "error", "-ss", f"{head_of(n):.1f}", "-i", src]
     for f, _, _ in over:
         if "%02d" in f:
             cmd += ["-loop", "1", "-framerate", str(PULSE_FPS), "-t", f"{want:.2f}", "-i", f]

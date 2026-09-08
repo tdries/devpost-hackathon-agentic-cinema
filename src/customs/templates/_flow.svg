@@ -14,10 +14,8 @@
    The marks are the real ones where a real one exists: Agent Builder on
    the crew, Grafana on its lane, Loki and Mimir on the two stores. The
    models are named in text rather than dressed in a logo nobody shipped
-   here, and Omni and Veo wear the console's own method marks, the same
-   two that label a change record in the cutting room. The Guard carries
-   no model name because it has no model in it, which is the one thing
-   worth noticing about it.
+   here. The Guard carries no model name because it has no model in it,
+   which is the one thing worth noticing about it.
 
    Every element carries data-lit: the steps it belongs to. customs.js sets
    data-step on the <svg> and the stylesheet dims everything that is not
@@ -26,7 +24,7 @@
    group per step, drawn from the product's own icons, showing what that
    step actually looks at. With no JavaScript it is a complete static
    diagram and the panel simply never appears. #}
-<svg class="flowsvg" viewBox="0 0 1240 470" role="img"
+<svg class="flowsvg" viewBox="0 0 1240 548" role="img"
      aria-label="What happens when you upload a commercial: the console
      ingests it, a crew of Agent Builder agents observes and judges it,
      Grafana with Loki and Mimir is written to and wakes the fix loop where
@@ -38,169 +36,169 @@
       <path d="M0 0.6 L9 5 L0 9.4 z" fill="context-stroke"/>
     </marker>
   </defs>
-  <text class="fl-lane" x="8" y="54">YOU</text>
-  <line class="fl-sep" x1="118" y1="108" x2="1230" y2="108"/>
-  <text class="fl-lane" x="8" y="150">CONSOLE</text>
-  <image class="fl-mark" href="/static/logo.png" x="8" y="158" height="26" width="26"/>
-  <line class="fl-sep" x1="118" y1="210" x2="1230" y2="210"/>
-  <text class="fl-lane" x="8" y="260">THE CREW</text>
-  <image class="fl-mark" href="/static/logo-adk.png" x="8" y="268" height="26" width="26"/>
-  <line class="fl-sep" x1="118" y1="320" x2="1230" y2="320"/>
-  <text class="fl-lane" x="8" y="388">GRAFANA CLOUD</text>
-  <image class="fl-mark" href="/static/logo-grafana.svg" x="8" y="396" height="22" width="22"/>
-  <rect x="140" y="38" width="160" height="48" rx="9" class="fl-box fl-you" class="fl-edge" data-lit="1"/>
-  <text class="fl-t" x="220.0" y="59" text-anchor="middle" data-lit="1">master.mp4</text>
-  <text class="fl-s" x="220.0" y="75" text-anchor="middle" data-lit="1">your commercial</text>
-  <rect x="1000" y="38" width="230" height="48" rx="9" class="fl-box fl-you" class="fl-edge" data-lit="8"/>
-  <text class="fl-t" x="1115.0" y="59" text-anchor="middle" data-lit="8">a decision, and a master</text>
-  <text class="fl-s" x="1115.0" y="75" text-anchor="middle" data-lit="8">verdict / certificate / markers</text>
-  <rect x="140" y="134" width="210" height="48" rx="9" class="fl-box fl-panel" class="fl-edge" data-lit="1 2"/>
-  <text class="fl-t" x="245.0" y="155" text-anchor="middle" data-lit="1 2">Ingest</text>
-  <text class="fl-s" x="245.0" y="171" text-anchor="middle" data-lit="1 2">shots, audio, transcript</text>
-  <rect x="1000" y="134" width="230" height="48" rx="9" class="fl-box fl-panel" class="fl-edge" data-lit="8"/>
-  <text class="fl-t" x="1115.0" y="155" text-anchor="middle" data-lit="8">Cutting room</text>
-  <text class="fl-s" x="1115.0" y="171" text-anchor="middle" data-lit="8">original beside the localized cut</text>
-  <rect x="360" y="240" width="140" height="56" rx="9" class="fl-box fl-panel" stroke="#4285F4" data-lit="2 3 4"/>
-  <text class="fl-t" x="430.0" y="261" text-anchor="middle" data-lit="2 3 4">Analyst</text>
-  <text class="fl-s" x="430.0" y="277" text-anchor="middle" data-lit="2 3 4">one pass, no verdicts</text>
-  <text class="fl-model" x="430.0" y="310" text-anchor="middle" data-lit="2 3 4">Gemini</text>
-  <rect x="512" y="240" width="160" height="56" rx="9" class="fl-box fl-panel" stroke="#4285F4" data-lit="4 5"/>
-  <text class="fl-t" x="592.0" y="261" text-anchor="middle" data-lit="4 5">Adjudicators</text>
-  <text class="fl-s" x="592.0" y="277" text-anchor="middle" data-lit="4 5">one per market, parallel</text>
-  <text class="fl-model" x="592.0" y="310" text-anchor="middle" data-lit="4 5">Gemini, grounded search</text>
-  <rect x="684" y="240" width="92" height="56" rx="9" class="fl-box fl-panel" stroke="#EA4335" data-lit="5"/>
-  <text class="fl-t" x="730.0" y="261" text-anchor="middle" data-lit="5">Guard</text>
-  <text class="fl-s" x="730.0" y="277" text-anchor="middle" data-lit="5">refuses some</text>
-  <text class="fl-model" x="730.0" y="310" text-anchor="middle" data-lit="5">no model</text>
-  <rect x="788" y="240" width="112" height="56" rx="9" class="fl-box fl-panel" stroke="#4285F4" data-lit="6"/>
-  <text class="fl-t" x="844.0" y="261" text-anchor="middle" data-lit="6">Publisher</text>
-  <text class="fl-s" x="844.0" y="277" text-anchor="middle" data-lit="6">writes Grafana</text>
-  <text class="fl-model" x="844.0" y="310" text-anchor="middle" data-lit="6">Grafana MCP</text>
-  <rect x="926" y="240" width="116" height="56" rx="9" class="fl-box fl-panel" stroke="#F9AB00" data-lit="7"/>
-  <text class="fl-t" x="984.0" y="261" text-anchor="middle" data-lit="7">Remediator</text>
-  <text class="fl-s" x="984.0" y="277" text-anchor="middle" data-lit="7">Omni / Veo</text>
-  <text class="fl-model" x="984.0" y="310" text-anchor="middle" data-lit="7">Gemini Omni, Veo 3.1</text>
-  <rect x="1062" y="240" width="108" height="56" rx="9" class="fl-box fl-panel" stroke="#34A853" data-lit="8"/>
-  <text class="fl-t" x="1116.0" y="261" text-anchor="middle" data-lit="8">Verifier</text>
-  <text class="fl-s" x="1116.0" y="277" text-anchor="middle" data-lit="8">re-observes</text>
-  <text class="fl-model" x="1116.0" y="310" text-anchor="middle" data-lit="8">Gemini</text>
-  <rect x="360" y="362" width="140" height="52" rx="9" class="fl-box fl-well" class="fl-edge" data-lit="3"/>
-  <image class="fl-logo" href="/static/logo-loki.svg" x="371" y="371" height="15" data-lit="3"/>
-  <text class="fl-t" x="430.0" y="383" text-anchor="middle" data-lit="3">Loki</text>
-  <text class="fl-s" x="430.0" y="399" text-anchor="middle" data-lit="3">every observation</text>
-  <rect x="512" y="362" width="160" height="52" rx="9" class="fl-box fl-well" class="fl-edge" data-lit="5"/>
-  <image class="fl-logo" href="/static/logo-mimir.svg" x="523" y="371" height="15" data-lit="5"/>
-  <text class="fl-t" x="592.0" y="383" text-anchor="middle" data-lit="5">Mimir</text>
-  <text class="fl-s" x="592.0" y="399" text-anchor="middle" data-lit="5">severity per second</text>
-  <rect x="684" y="362" width="216" height="52" rx="9" class="fl-box fl-well" class="fl-edge" data-lit="6"/>
-  <text class="fl-t" x="792.0" y="383" text-anchor="middle" data-lit="6">Dashboards + alert rules</text>
-  <text class="fl-s" x="792.0" y="399" text-anchor="middle" data-lit="6">written over MCP</text>
-  <rect x="926" y="362" width="116" height="52" rx="9" class="fl-box fl-well" stroke="#F9AB00" data-lit="7"/>
-  <text class="fl-t" x="984.0" y="392.0" text-anchor="middle" data-lit="7">Alert fires</text>
-  <rect x="1062" y="362" width="108" height="52" rx="9" class="fl-box fl-well" stroke="#34A853" data-lit="8"/>
-  <text class="fl-t" x="1116.0" y="392.0" text-anchor="middle" data-lit="8">and resolves</text>
-  <path class="fl-arrow" d="M 220 86 L 220 130" fill="none" stroke="#4285F4" stroke-width="1.6" marker-end="url(#fa)" data-lit="1"/>
-  <circle class="fl-badge" cx="220" cy="108" r="10" fill="#4285F4" data-lit="1"/>
-  <text class="fl-n" x="220" y="112" text-anchor="middle" data-lit="1">1</text>
-  <path class="fl-arrow" d="M 350 158 L 356 158 L 356 268 L 358 268" fill="none" stroke="#4285F4" stroke-width="1.6" marker-end="url(#fa)" data-lit="2"/>
-  <circle class="fl-badge" cx="356" cy="210" r="10" fill="#4285F4" data-lit="2"/>
-  <text class="fl-n" x="356" y="214" text-anchor="middle" data-lit="2">2</text>
-  <path class="fl-arrow" d="M 430 316 L 430 360" fill="none" stroke="#4285F4" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#fa)" data-lit="3"/>
-  <circle class="fl-badge" cx="430" cy="336" r="10" fill="#4285F4" data-lit="3"/>
-  <text class="fl-n" x="430" y="340" text-anchor="middle" data-lit="3">3</text>
-  <path class="fl-arrow" d="M 500 268 L 510 268" fill="none" stroke="#4285F4" stroke-width="1.6" marker-end="url(#fa)" data-lit="4"/>
-  <circle class="fl-badge" cx="506" cy="222" r="10" fill="#4285F4" data-lit="4"/>
-  <text class="fl-n" x="506" y="226" text-anchor="middle" data-lit="4">4</text>
-  <path class="fl-arrow" d="M 592 316 L 592 360" fill="none" stroke="#4285F4" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#fa)" data-lit="5"/>
-  <circle class="fl-badge" cx="592" cy="336" r="10" fill="#4285F4" data-lit="5"/>
-  <text class="fl-n" x="592" y="340" text-anchor="middle" data-lit="5">5</text>
-  <path class="fl-arrow" d="M 672 268 L 682 268" fill="none" stroke="#EA4335" stroke-width="1.6" marker-end="url(#fa)" data-lit="5"/>
-  <path class="fl-arrow" d="M 776 268 L 786 268" fill="none" stroke="#4285F4" stroke-width="1.6" marker-end="url(#fa)" data-lit="6"/>
-  <path class="fl-arrow" d="M 844 316 L 844 360" fill="none" stroke="#4285F4" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#fa)" data-lit="6"/>
-  <circle class="fl-badge" cx="844" cy="336" r="10" fill="#4285F4" data-lit="6"/>
-  <text class="fl-n" x="844" y="340" text-anchor="middle" data-lit="6">6</text>
-  <path class="fl-arrow" d="M 984 360 L 984 298" fill="none" stroke="#F9AB00" stroke-width="2.2" marker-end="url(#fa)" data-lit="7"/>
-  <circle class="fl-badge" cx="984" cy="336" r="10" fill="#F9AB00" data-lit="7"/>
-  <text class="fl-n" x="984" y="340" text-anchor="middle" data-lit="7">7</text>
-  <path class="fl-arrow" d="M 1042 268 L 1060 268" fill="none" stroke="#F9AB00" stroke-width="1.6" marker-end="url(#fa)" data-lit="7"/>
-  <path class="fl-arrow" d="M 1116 316 L 1116 360" fill="none" stroke="#34A853" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#fa)" data-lit="8"/>
-  <circle class="fl-badge" cx="1116" cy="336" r="10" fill="#34A853" data-lit="8"/>
-  <text class="fl-n" x="1116" y="340" text-anchor="middle" data-lit="8">8</text>
-  <path class="fl-arrow" d="M 1115 238 L 1115 184" fill="none" stroke="#34A853" stroke-width="1.6" marker-end="url(#fa)" data-lit="8"/>
-  <path class="fl-arrow" d="M 1115 132 L 1115 88" fill="none" stroke="#34A853" stroke-width="1.6" marker-end="url(#fa)" data-lit="8"/>
+  <text class="fl-lane" x="8" y="60">YOU</text>
+  <line class="fl-sep" x1="118" y1="122" x2="1230" y2="122"/>
+  <text class="fl-lane" x="8" y="170">CONSOLE</text>
+  <image class="fl-mark" href="/static/logo.png" x="8" y="178" height="26" width="26"/>
+  <line class="fl-sep" x1="118" y1="244" x2="1230" y2="244"/>
+  <text class="fl-lane" x="8" y="292">THE CREW</text>
+  <image class="fl-mark" href="/static/logo-adk.png" x="8" y="300" height="26" width="26"/>
+  <line class="fl-sep" x1="118" y1="400" x2="1230" y2="400"/>
+  <text class="fl-lane" x="8" y="444">GRAFANA CLOUD</text>
+  <image class="fl-mark" href="/static/logo-grafana.svg" x="8" y="452" height="22" width="22"/>
+  <rect x="140" y="42" width="160" height="48" rx="9" class="fl-box fl-you" class="fl-edge" data-lit="1"/>
+  <text class="fl-t" x="220.0" y="63" text-anchor="middle" data-lit="1">master.mp4</text>
+  <text class="fl-s" x="220.0" y="79" text-anchor="middle" data-lit="1">your commercial</text>
+  <rect x="1000" y="42" width="230" height="48" rx="9" class="fl-box fl-you" class="fl-edge" data-lit="8"/>
+  <text class="fl-t" x="1115.0" y="63" text-anchor="middle" data-lit="8">a decision, and a master</text>
+  <text class="fl-s" x="1115.0" y="79" text-anchor="middle" data-lit="8">verdict / certificate / markers</text>
+  <rect x="140" y="152" width="210" height="48" rx="9" class="fl-box fl-panel" class="fl-edge" data-lit="1 2"/>
+  <text class="fl-t" x="245.0" y="173" text-anchor="middle" data-lit="1 2">Ingest</text>
+  <text class="fl-s" x="245.0" y="189" text-anchor="middle" data-lit="1 2">shots, audio, transcript</text>
+  <rect x="1000" y="152" width="230" height="48" rx="9" class="fl-box fl-panel" class="fl-edge" data-lit="8"/>
+  <text class="fl-t" x="1115.0" y="173" text-anchor="middle" data-lit="8">Cutting room</text>
+  <text class="fl-s" x="1115.0" y="189" text-anchor="middle" data-lit="8">original beside the localized cut</text>
+  <rect x="360" y="268" width="140" height="56" rx="9" class="fl-box fl-panel" stroke="#4285F4" data-lit="2 3 4"/>
+  <text class="fl-t" x="430.0" y="289" text-anchor="middle" data-lit="2 3 4">Analyst</text>
+  <text class="fl-s" x="430.0" y="305" text-anchor="middle" data-lit="2 3 4">one pass, no verdicts</text>
+  <text class="fl-model" x="430.0" y="346" text-anchor="middle" data-lit="2 3 4">Gemini</text>
+  <rect x="512" y="268" width="160" height="56" rx="9" class="fl-box fl-panel" stroke="#4285F4" data-lit="4 5"/>
+  <text class="fl-t" x="592.0" y="289" text-anchor="middle" data-lit="4 5">Adjudicators</text>
+  <text class="fl-s" x="592.0" y="305" text-anchor="middle" data-lit="4 5">one per market, parallel</text>
+  <text class="fl-model" x="592.0" y="346" text-anchor="middle" data-lit="4 5">Gemini, grounded search</text>
+  <rect x="684" y="268" width="92" height="56" rx="9" class="fl-box fl-panel" stroke="#EA4335" data-lit="5"/>
+  <text class="fl-t" x="730.0" y="289" text-anchor="middle" data-lit="5">Guard</text>
+  <text class="fl-s" x="730.0" y="305" text-anchor="middle" data-lit="5">refuses some</text>
+  <text class="fl-model" x="730.0" y="346" text-anchor="middle" data-lit="5">no model</text>
+  <rect x="788" y="268" width="112" height="56" rx="9" class="fl-box fl-panel" stroke="#4285F4" data-lit="6"/>
+  <text class="fl-t" x="844.0" y="289" text-anchor="middle" data-lit="6">Publisher</text>
+  <text class="fl-s" x="844.0" y="305" text-anchor="middle" data-lit="6">writes Grafana</text>
+  <text class="fl-model" x="844.0" y="346" text-anchor="middle" data-lit="6">Grafana MCP</text>
+  <rect x="926" y="268" width="116" height="56" rx="9" class="fl-box fl-panel" stroke="#F9AB00" data-lit="7"/>
+  <text class="fl-t" x="984.0" y="289" text-anchor="middle" data-lit="7">Remediator</text>
+  <text class="fl-s" x="984.0" y="305" text-anchor="middle" data-lit="7">Omni / Veo</text>
+  <text class="fl-model" x="984.0" y="346" text-anchor="middle" data-lit="7">Gemini Omni, Veo 3.1</text>
+  <rect x="1062" y="268" width="108" height="56" rx="9" class="fl-box fl-panel" stroke="#34A853" data-lit="8"/>
+  <text class="fl-t" x="1116.0" y="289" text-anchor="middle" data-lit="8">Verifier</text>
+  <text class="fl-s" x="1116.0" y="305" text-anchor="middle" data-lit="8">re-observes</text>
+  <text class="fl-model" x="1116.0" y="346" text-anchor="middle" data-lit="8">Gemini</text>
+  <rect x="360" y="426" width="140" height="52" rx="9" class="fl-box fl-well" class="fl-edge" data-lit="3"/>
+  <image class="fl-logo" href="/static/logo-loki.svg" x="371" y="435" height="15" data-lit="3"/>
+  <text class="fl-t" x="430.0" y="447" text-anchor="middle" data-lit="3">Loki</text>
+  <text class="fl-s" x="430.0" y="463" text-anchor="middle" data-lit="3">every observation</text>
+  <rect x="512" y="426" width="160" height="52" rx="9" class="fl-box fl-well" class="fl-edge" data-lit="5"/>
+  <image class="fl-logo" href="/static/logo-mimir.svg" x="523" y="435" height="15" data-lit="5"/>
+  <text class="fl-t" x="592.0" y="447" text-anchor="middle" data-lit="5">Mimir</text>
+  <text class="fl-s" x="592.0" y="463" text-anchor="middle" data-lit="5">severity per second</text>
+  <rect x="684" y="426" width="216" height="52" rx="9" class="fl-box fl-well" class="fl-edge" data-lit="6"/>
+  <text class="fl-t" x="792.0" y="447" text-anchor="middle" data-lit="6">Dashboards + alert rules</text>
+  <text class="fl-s" x="792.0" y="463" text-anchor="middle" data-lit="6">written over MCP</text>
+  <rect x="926" y="426" width="116" height="52" rx="9" class="fl-box fl-well" stroke="#F9AB00" data-lit="7"/>
+  <text class="fl-t" x="984.0" y="456.0" text-anchor="middle" data-lit="7">Alert fires</text>
+  <rect x="1062" y="426" width="108" height="52" rx="9" class="fl-box fl-well" stroke="#34A853" data-lit="8"/>
+  <text class="fl-t" x="1116.0" y="456.0" text-anchor="middle" data-lit="8">and resolves</text>
+  <path class="fl-arrow" d="M 220 90 L 220 150" fill="none" stroke="#4285F4" stroke-width="1.6" marker-end="url(#fa)" data-lit="1"/>
+  <circle class="fl-badge" cx="220" cy="120" r="10" fill="#4285F4" data-lit="1"/>
+  <text class="fl-n" x="220" y="124" text-anchor="middle" data-lit="1">1</text>
+  <path class="fl-arrow" d="M 350 176 L 356 176 L 356 296 L 358 296" fill="none" stroke="#4285F4" stroke-width="1.6" marker-end="url(#fa)" data-lit="2"/>
+  <circle class="fl-badge" cx="356" cy="244" r="10" fill="#4285F4" data-lit="2"/>
+  <text class="fl-n" x="356" y="248" text-anchor="middle" data-lit="2">2</text>
+  <path class="fl-arrow" d="M 430 324 L 430 424" fill="none" stroke="#4285F4" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#fa)" data-lit="3"/>
+  <circle class="fl-badge" cx="430" cy="379" r="10" fill="#4285F4" data-lit="3"/>
+  <text class="fl-n" x="430" y="383" text-anchor="middle" data-lit="3">3</text>
+  <path class="fl-arrow" d="M 500 296 L 510 296" fill="none" stroke="#4285F4" stroke-width="1.6" marker-end="url(#fa)" data-lit="4"/>
+  <circle class="fl-badge" cx="506" cy="248" r="10" fill="#4285F4" data-lit="4"/>
+  <text class="fl-n" x="506" y="252" text-anchor="middle" data-lit="4">4</text>
+  <path class="fl-arrow" d="M 592 324 L 592 424" fill="none" stroke="#4285F4" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#fa)" data-lit="5"/>
+  <circle class="fl-badge" cx="592" cy="379" r="10" fill="#4285F4" data-lit="5"/>
+  <text class="fl-n" x="592" y="383" text-anchor="middle" data-lit="5">5</text>
+  <path class="fl-arrow" d="M 672 296 L 682 296" fill="none" stroke="#EA4335" stroke-width="1.6" marker-end="url(#fa)" data-lit="5"/>
+  <path class="fl-arrow" d="M 776 296 L 786 296" fill="none" stroke="#4285F4" stroke-width="1.6" marker-end="url(#fa)" data-lit="6"/>
+  <path class="fl-arrow" d="M 844 324 L 844 424" fill="none" stroke="#4285F4" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#fa)" data-lit="6"/>
+  <circle class="fl-badge" cx="844" cy="379" r="10" fill="#4285F4" data-lit="6"/>
+  <text class="fl-n" x="844" y="383" text-anchor="middle" data-lit="6">6</text>
+  <path class="fl-arrow" d="M 984 424 L 984 326" fill="none" stroke="#F9AB00" stroke-width="2.2" marker-end="url(#fa)" data-lit="7"/>
+  <circle class="fl-badge" cx="984" cy="379" r="10" fill="#F9AB00" data-lit="7"/>
+  <text class="fl-n" x="984" y="383" text-anchor="middle" data-lit="7">7</text>
+  <path class="fl-arrow" d="M 1042 296 L 1060 296" fill="none" stroke="#F9AB00" stroke-width="1.6" marker-end="url(#fa)" data-lit="7"/>
+  <path class="fl-arrow" d="M 1116 324 L 1116 424" fill="none" stroke="#34A853" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#fa)" data-lit="8"/>
+  <circle class="fl-badge" cx="1116" cy="379" r="10" fill="#34A853" data-lit="8"/>
+  <text class="fl-n" x="1116" y="383" text-anchor="middle" data-lit="8">8</text>
+  <path class="fl-arrow" d="M 1115 266 L 1115 202" fill="none" stroke="#34A853" stroke-width="1.6" marker-end="url(#fa)" data-lit="8"/>
+  <path class="fl-arrow" d="M 1115 150 L 1115 92" fill="none" stroke="#34A853" stroke-width="1.6" marker-end="url(#fa)" data-lit="8"/>
   <g class="fl-panel">
-    <rect class="fl-panelbg" x="130" y="228" width="214" height="90" rx="9"/>
+    <rect class="fl-panelbg" x="130" y="256" width="214" height="90" rx="9"/>
   </g>
   <g class="fl-detail" data-step="1">
-    <text class="fl-dh" x="144" y="250">your master</text>
-    <use href="#n-new" x="144" y="260" width="22" height="22"/>
-    <use href="#i-frame" x="174" y="260" width="22" height="22"/>
-    <text class="fl-dc" x="144" y="306">a file, or a YouTube link</text>
+    <text class="fl-dh" x="144" y="278">your master</text>
+    <use href="#n-new" x="144" y="288" width="22" height="22"/>
+    <use href="#i-frame" x="174" y="288" width="22" height="22"/>
+    <text class="fl-dc" x="144" y="334">a file, or a YouTube link</text>
   </g>
   <g class="fl-detail" data-step="2">
-    <text class="fl-dh" x="144" y="250">cut into pieces</text>
-    <use href="#i-ingest" x="144" y="260" width="22" height="22"/>
-    <use href="#i-transcription" x="174" y="260" width="22" height="22"/>
-    <use href="#i-frame" x="204" y="260" width="22" height="22"/>
-    <text class="fl-dc" x="144" y="306">shots, audio, every word</text>
+    <text class="fl-dh" x="144" y="278">cut into pieces</text>
+    <use href="#i-ingest" x="144" y="288" width="22" height="22"/>
+    <use href="#i-transcription" x="174" y="288" width="22" height="22"/>
+    <use href="#i-frame" x="204" y="288" width="22" height="22"/>
+    <text class="fl-dc" x="144" y="334">shots, audio, every word</text>
   </g>
   <g class="fl-detail" data-step="3">
-    <text class="fl-dh" x="144" y="250">what it watches for</text>
-    <use href="#d-alcohol_tobacco_drugs" x="144" y="260" width="22" height="22"/>
-    <use href="#d-modesty_dress_body" x="174" y="260" width="22" height="22"/>
-    <use href="#d-violence_and_weapons" x="204" y="260" width="22" height="22"/>
-    <use href="#d-religious_symbols_practices" x="234" y="260" width="22" height="22"/>
-    <use href="#d-gesture_body_language" x="264" y="260" width="22" height="22"/>
-    <use href="#d-superstition_number_colour" x="294" y="260" width="22" height="22"/>
-    <text class="fl-dc" x="144" y="306">18 categories, all timecoded</text>
+    <text class="fl-dh" x="144" y="278">what it watches for</text>
+    <use href="#d-alcohol_tobacco_drugs" x="144" y="288" width="22" height="22"/>
+    <use href="#d-modesty_dress_body" x="174" y="288" width="22" height="22"/>
+    <use href="#d-violence_and_weapons" x="204" y="288" width="22" height="22"/>
+    <use href="#d-religious_symbols_practices" x="234" y="288" width="22" height="22"/>
+    <use href="#d-gesture_body_language" x="264" y="288" width="22" height="22"/>
+    <use href="#d-superstition_number_colour" x="294" y="288" width="22" height="22"/>
+    <text class="fl-dc" x="144" y="334">18 categories, all timecoded</text>
   </g>
   <g class="fl-detail" data-step="4">
-    <text class="fl-dh" x="144" y="250">who judges it</text>
-    <use href="#c-FR" x="144" y="260" width="22" height="22" fill="none" stroke="#4285F4" stroke-width="2.6"/>
-    <use href="#c-DE" x="174" y="260" width="22" height="22" fill="none" stroke="#4285F4" stroke-width="2.6"/>
-    <use href="#c-AE" x="204" y="260" width="22" height="22" fill="none" stroke="#4285F4" stroke-width="2.6"/>
-    <use href="#c-SA" x="234" y="260" width="22" height="22" fill="none" stroke="#4285F4" stroke-width="2.6"/>
-    <use href="#c-CN" x="264" y="260" width="22" height="22" fill="none" stroke="#4285F4" stroke-width="2.6"/>
-    <use href="#c-JP" x="294" y="260" width="22" height="22" fill="none" stroke="#4285F4" stroke-width="2.6"/>
-    <text class="fl-dc" x="144" y="306">every market, one fact sheet</text>
+    <text class="fl-dh" x="144" y="278">who judges it</text>
+    <use href="#c-FR" x="144" y="288" width="22" height="22" fill="none" stroke="#4285F4" stroke-width="2.6"/>
+    <use href="#c-DE" x="174" y="288" width="22" height="22" fill="none" stroke="#4285F4" stroke-width="2.6"/>
+    <use href="#c-AE" x="204" y="288" width="22" height="22" fill="none" stroke="#4285F4" stroke-width="2.6"/>
+    <use href="#c-SA" x="234" y="288" width="22" height="22" fill="none" stroke="#4285F4" stroke-width="2.6"/>
+    <use href="#c-CN" x="264" y="288" width="22" height="22" fill="none" stroke="#4285F4" stroke-width="2.6"/>
+    <use href="#c-JP" x="294" y="288" width="22" height="22" fill="none" stroke="#4285F4" stroke-width="2.6"/>
+    <text class="fl-dc" x="144" y="334">every market, one fact sheet</text>
   </g>
   <g class="fl-detail" data-step="5">
-    <text class="fl-dh" x="144" y="250">how bad, and when</text>
-    <circle cx="155" cy="271" r="9" fill="#EA4335"/>
-    <circle cx="185" cy="271" r="9" fill="#F9AB00"/>
-    <circle cx="215" cy="271" r="9" fill="#34A853"/>
-    <text class="fl-dc" x="144" y="306">severity, second by second</text>
+    <text class="fl-dh" x="144" y="278">how bad, and when</text>
+    <circle cx="155" cy="299" r="9" fill="#EA4335"/>
+    <circle cx="185" cy="299" r="9" fill="#F9AB00"/>
+    <circle cx="215" cy="299" r="9" fill="#34A853"/>
+    <text class="fl-dc" x="144" y="334">severity, second by second</text>
   </g>
   <g class="fl-detail" data-step="6">
-    <text class="fl-dh" x="144" y="250">it builds its own panels</text>
-    <image href="/static/logo-loki.svg" x="144" y="260" height="20"/>
-    <image href="/static/logo-mimir.svg" x="190" y="260" height="20"/>
-    <text class="fl-dc" x="144" y="306">dashboards, annotations, alerts</text>
+    <text class="fl-dh" x="144" y="278">it builds its own panels</text>
+    <image href="/static/logo-loki.svg" x="144" y="288" height="20"/>
+    <image href="/static/logo-mimir.svg" x="190" y="288" height="20"/>
+    <text class="fl-dc" x="144" y="334">dashboards, annotations, alerts</text>
   </g>
   <g class="fl-detail" data-step="7">
-    <text class="fl-dh" x="144" y="250">the chart starts the work</text>
-    <use href="#i-alert" x="144" y="260" width="22" height="22"/>
-    <use href="#i-remediator" x="174" y="260" width="22" height="22"/>
-    <use href="#m-omni" x="204" y="260" width="22" height="22"/>
-    <use href="#m-bridge" x="234" y="260" width="22" height="22"/>
-    <text class="fl-dc" x="144" y="306">a webhook wakes the remediator</text>
+    <text class="fl-dh" x="144" y="278">the chart starts the work</text>
+    <use href="#i-alert" x="144" y="288" width="22" height="22"/>
+    <use href="#i-remediator" x="174" y="288" width="22" height="22"/>
+    <use href="#m-omni" x="204" y="288" width="22" height="22"/>
+    <use href="#m-bridge" x="234" y="288" width="22" height="22"/>
+    <text class="fl-dc" x="144" y="334">a webhook wakes the remediator</text>
   </g>
   <g class="fl-detail" data-step="8">
-    <text class="fl-dh" x="144" y="250">signed off, or not</text>
-    <use href="#i-verifier" x="144" y="260" width="22" height="22"/>
-    <use href="#i-cleared" x="174" y="260" width="22" height="22"/>
-    <use href="#i-legal" x="204" y="260" width="22" height="22"/>
-    <use href="#n-cut" x="234" y="260" width="22" height="22"/>
-    <text class="fl-dc" x="144" y="306">re-observed, certified, re-cut</text>
+    <text class="fl-dh" x="144" y="278">signed off, or not</text>
+    <use href="#i-verifier" x="144" y="288" width="22" height="22"/>
+    <use href="#i-cleared" x="174" y="288" width="22" height="22"/>
+    <use href="#i-legal" x="204" y="288" width="22" height="22"/>
+    <use href="#n-cut" x="234" y="288" width="22" height="22"/>
+    <text class="fl-dc" x="144" y="334">re-observed, certified, re-cut</text>
   </g>
   <g class="fl-key">
-    <line x1="140" y1="450" x2="176" y2="450" stroke="#4285F4" stroke-width="1.6"/>
-    <text class="fl-k" x="184" y="454">the work</text>
-    <line x1="268" y1="450" x2="304" y2="450" stroke="#4285F4" stroke-width="1.6" stroke-dasharray="5 4"/>
-    <text class="fl-k" x="312" y="454">what it writes to Grafana</text>
-    <line x1="510" y1="450" x2="546" y2="450" stroke="#F9AB00" stroke-width="2.2"/>
-    <text class="fl-k" x="554" y="454">Grafana starting the work</text>
-    <line x1="752" y1="450" x2="788" y2="450" stroke="#34A853" stroke-width="1.6"/>
-    <text class="fl-k" x="796" y="454">what comes back to you</text>
+    <line x1="140" y1="526" x2="176" y2="526" stroke="#4285F4" stroke-width="1.6"/>
+    <text class="fl-k" x="184" y="530">the work</text>
+    <line x1="268" y1="526" x2="304" y2="526" stroke="#4285F4" stroke-width="1.6" stroke-dasharray="5 4"/>
+    <text class="fl-k" x="312" y="530">what it writes to Grafana</text>
+    <line x1="510" y1="526" x2="546" y2="526" stroke="#F9AB00" stroke-width="2.2"/>
+    <text class="fl-k" x="554" y="530">Grafana starting the work</text>
+    <line x1="752" y1="526" x2="788" y2="526" stroke="#34A853" stroke-width="1.6"/>
+    <text class="fl-k" x="796" y="530">what comes back to you</text>
   </g>
 </svg>

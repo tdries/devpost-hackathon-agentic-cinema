@@ -2243,7 +2243,7 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
    are all SVG text, so they scale with the drawing; the numbered steps are
    real HTML underneath it, which is what a reader on a phone gets and what
    a screen reader reads. */
-.flow { margin: 22px 0 40px; }
+.flow { margin: 26px 0 44px; }
 .flow-scroll { overflow-x: auto; }
 .flowsvg { width: 100%; min-width: 900px; height: auto; display: block; }
 .fl-lane { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em;
