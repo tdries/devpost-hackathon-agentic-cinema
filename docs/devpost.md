@@ -102,7 +102,7 @@ python, fastapi, google-cloud-agent-builder, google-adk, vertex-ai, gemini, gemi
 
 - GitHub repo: https://github.com/tdries/devpost-hackathon-agentic-cinema
 - Live instance: https://customs-app-akap4ao72a-ew.a.run.app -- **nothing is gated for reading**. The archive, every run, every finding with its statute and citation, the rule library, frame search, the intelligence board and the Grafana inventory are all open: click "I'm a Devpost judge" and you are in. The pinned "Start here" run shows the whole loop end to end. The word DEVPOST is only needed to SPEND: starting a clearance, judging more markets or running a fix calls models on a real card, and the judge door lifts the visitor's EUR 1.00 a day cap on that
-- Demo video: https://youtu.be/YOUTUBE_VIDEO_ID (record and replace)
+- Demo video: https://www.youtube.com/watch?v=zvr6GpmULr0 -- also embedded on the live instance's front page, under the three fix clips
 
 ## Track
 
