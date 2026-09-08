@@ -50,6 +50,17 @@
     <span class="mono">{{ gone }}</span> is gone: its record, its frames and
     anything a model rendered for it.</p>
   {% endif %}
+  {% if again %}
+  <p class="subline" style="margin:0 0 14px"><span class="chip on">running</span>
+    <span class="mono">{{ again }}</span> is being done again with your
+    reason as the instruction. The mission feed narrates it, and this card
+    changes when the verifier has ruled.</p>
+  {% endif %}
+  {% if why %}
+  <p class="subline" style="margin:0 0 14px"><span class="chip policy">not started</span>
+    A re-edit needs a reason: it is what the model is told, and the only
+    record of why the first one was rejected.</p>
+  {% endif %}
   {% if wrong %}
   <p class="subline" style="margin:0 0 14px"><span class="chip policy">not removed</span>
     That is not the word for <span class="mono">{{ wrong }}</span>.</p>
@@ -129,6 +140,29 @@
         <span class="editplay label" aria-hidden="true">hover to play both</span>
         {% endif %}
       </div>
+
+      {# Not happy with the after? Say why, and it goes again.
+         The verifier can only ask its own question -- does the rule still
+         fire -- and a fix can pass that and still be wrong to a person: the
+         Omni rewrite that took a tobacco plug out of a hand and left the
+         character holding something rifle-shaped cleared its rule. So the
+         reason a human gives IS the instruction for the redo, and it is
+         written into the run's log either way. #}
+      {% if row.change %}
+      <details class="reedit">
+        <summary class="chip">re-edit this</summary>
+        <form method="post" action="/edits/{{ row.run.id }}/{{ row.change.id }}/reedit">
+          <label class="label" for="why-{{ row.change.id }}">What is wrong with it?</label>
+          <textarea class="urlin" id="why-{{ row.change.id }}" name="reason" rows="2"
+                    placeholder="e.g. he should not have a gun in his hands afterwards"></textarea>
+          <p class="label">Your words are handed to the model as the
+            instruction, and logged on the run whatever comes back. A patch
+            is redone with Omni, because words only reach a model that is
+            given the span.</p>
+          <button class="btn go" type="submit">Do it again</button>
+        </form>
+      </details>
+      {% endif %}
 
       <p class="editwhy">
         {% if row.fixed_for %}<span class="chip on">fix made for {{ row.fixed_for }}</span>{% endif %}

@@ -1421,6 +1421,56 @@
     pick(button.dataset.editKind === "audio" ? "audio" : "video");
   });
 
+  /* Removing an edit deletes a database row, two stills and a rendered
+     clip, and the reply only comes back once all of that is on disk. Long
+     enough that the card sitting there reads as a button that did nothing.
+
+     So the card goes the moment the form is sent, and the deletion carries
+     on behind it. If the server refuses -- the wrong word, or a change that
+     is already gone -- the card comes back with the reason on it, which is
+     the only honest way to do this optimistically: never pretend a refusal
+     was a success. Without fetch the form posts as it always did. */
+  grid.addEventListener("submit", function (event) {
+    var form = event.target;
+    if (!form || !form.action || form.action.indexOf("/delete") < 0) { return; }
+    var card = form.closest ? form.closest(".editcard") : null;
+    if (!card || !window.fetch || !window.FormData) { return; }
+    event.preventDefault();
+
+    var body = new FormData(form);
+    var refusal = form.querySelector(".editrefused");
+    if (refusal) { refusal.remove(); }
+    card.setAttribute("data-going", "");
+    /* out of the layout once the collapse has played, not before, or the
+       cards below it jump before the eye has followed this one */
+    var hide = window.setTimeout(function () { card.hidden = true; }, 320);
+
+    fetch(form.action, { method: "POST", body: body, redirect: "follow" })
+      .then(function (res) {
+        if (!res.ok || (res.url && res.url.indexOf("wrong=") >= 0)) {
+          throw new Error("refused");
+        }
+        card.remove();
+        var count = document.querySelector("[data-edit-kind='" +
+          (card.dataset.kind === "audio" ? "audio" : "video") + "'] b");
+        if (count) {
+          var left = parseInt(count.textContent, 10);
+          if (!isNaN(left) && left > 0) { count.textContent = String(left - 1); }
+        }
+      })
+      .catch(function () {
+        window.clearTimeout(hide);
+        card.hidden = false;
+        card.removeAttribute("data-going");
+        var note = document.createElement("p");
+        note.className = "label editrefused";
+        note.textContent = "That is not the word. Nothing was removed.";
+        form.appendChild(note);
+        var pw = form.querySelector("input[type=password]");
+        if (pw) { pw.value = ""; pw.focus(); }
+      });
+  });
+
   Array.prototype.forEach.call(grid.querySelectorAll("[data-pairplay]"),
     function (pair) {
       if (pair.classList.contains("editpair-snd")) { return; }

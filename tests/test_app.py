@@ -1673,6 +1673,52 @@ def test_the_operator_can_say_what_a_generative_fix_should_do(console, monkeypat
     assert handed.get("replacement") == said, handed
 
 
+def test_a_fix_can_be_sent_back_with_a_reason(console, monkeypatch):
+    """The verifier can only ask its own question: does the rule still
+    fire? A fix can pass that and still be wrong to a person -- the Omni
+    rewrite that took a tobacco plug out of a character's hand and left him
+    holding something rifle-shaped over his shoulder cleared EU-TOB-01 and
+    was not a fix anybody would ship.
+
+    So the reason a human gives is both the record of why they rejected it
+    and the instruction for the redo. A patch is redone with Omni, because
+    words only reach a model that is handed the span.
+    """
+    from customs.schema import ChangeRecord
+
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    finding = next(f for f in store.findings(run.id)
+                   if not f.remediation_blocked and f.remediable)
+    store.add_change(ChangeRecord(
+        id="chg_ba0001", run_id=run.id, finding_id=finding.id,
+        method="prop_swap", description="swapped the prop",
+        before_frame="", after_frame=""))
+
+    handed = {}
+    monkeypatch.setattr(app_module, "remediate_and_verify",
+                        lambda *a, **kw: handed.update(kw))
+
+    # a reason is not optional: it is what the model is told
+    thin = client.post(f"/edits/{run.id}/chg_ba0001/reedit",
+                       data={"reason": "no"}, follow_redirects=False)
+    assert thin.status_code == 303 and "why=" in thin.headers["location"]
+    assert not handed
+
+    said = "he should not have a gun in his hands afterwards"
+    again = client.post(f"/edits/{run.id}/chg_ba0001/reedit",
+                        data={"reason": said}, follow_redirects=False)
+    assert again.status_code == 303 and "again=" in again.headers["location"]
+    assert handed.get("replacement") == said
+    assert handed.get("method") == "omni", "a patch is redone generatively"
+    # reopened, because a person has just said it is not fixed
+    assert next(f for f in store.findings(run.id)
+                if f.id == finding.id).status == "remediating"
+    # and the reason is on the record whatever the model comes back with
+    feed = client.get(f"/runs/{run.id}/mission").text
+    assert said in feed and "re-edit asked on chg_ba0001" in feed
+
+
 def test_an_edit_can_be_removed_and_the_word_is_asked_for(console):
     """The one control in this console that destroys evidence.
 

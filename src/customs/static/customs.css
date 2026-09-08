@@ -2269,7 +2269,34 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
 
 .editmethod { display: inline-flex; align-items: center; gap: 6px; }
 .editmethod .ic { width: 14px; height: 14px; }
+/* asking for it again: the reason is the instruction, so it gets room */
+.reedit { margin-top: 2px; }
+.reedit > summary { cursor: pointer; list-style: none; display: inline-flex; }
+.reedit > summary::-webkit-details-marker { display: none; }
+.reedit[open] > summary { color: var(--signal); border-color: var(--signal); }
+.reedit form { display: grid; gap: 8px; margin-top: 10px; padding: 12px;
+  border: 1px solid var(--line-2); border-radius: var(--radius);
+  background: var(--well); }
+.reedit textarea.urlin { width: 100%; font-size: 13px; line-height: 1.45;
+  font-family: inherit; resize: vertical; }
+.reedit .btn { justify-self: start; }
+
 /* removing an edit: folded away, because it destroys the only copy */
+/* A card on its way out: it collapses where it stands, so the eye follows
+   the removal instead of the list jumping. customs.js takes it out of the
+   layout once this has played, and puts it back if the server refuses. */
+.editcard[data-going] {
+  opacity: 0.25;
+  transform: scale(0.985);
+  filter: grayscale(1);
+  pointer-events: none;
+  transition: opacity 0.28s ease, transform 0.28s ease, filter 0.28s ease;
+}
+.editrefused { color: var(--blocked); margin-top: 8px; }
+@media (prefers-reduced-motion: reduce) {
+  .editcard[data-going] { transition: none; }
+}
+
 .editkill { margin-left: 8px; }
 .editkill > summary { cursor: pointer; list-style: none; }
 .editkill > summary::-webkit-details-marker { display: none; }

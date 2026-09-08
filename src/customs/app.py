@@ -3598,7 +3598,8 @@ def edited_scenes(limit: int = 120) -> list[dict]:
 
 
 @app.get("/edits", response_class=HTMLResponse)
-def my_edits(request: Request, gone: str = "", wrong: str = ""):
+def my_edits(request: Request, gone: str = "", wrong: str = "",
+             again: str = "", why: str = ""):
     """Every scene this instance has edited, before beside after.
 
     A cross-run cutting room. Each run has one of its own, which is the
@@ -3623,7 +3624,8 @@ def my_edits(request: Request, gone: str = "", wrong: str = ""):
             method = "carried over"
         methods[method] = methods.get(method, 0) + 1
     return _page(request, "edits.html", screen="edits", rows=shown,
-                 gone=gone, wrong=wrong, label=remediate.method_label,
+                 gone=gone, wrong=wrong, again=again, why=why,
+                 label=remediate.method_label,
                  total=len(rows), unkept=len(rows) - len(shown),
                  edits=sum(len(row["changes"]) for row in rows),
                  films=len({row["asset"] for row in rows}),
@@ -3683,6 +3685,80 @@ def delete_edit(request: Request, run_id: str, change_id: str,
     _SCENES_CACHE.clear()
     _CARD_CACHE.clear()
     return RedirectResponse(f"/edits?gone={quote(change_id)}", status_code=303)
+
+
+@app.post("/edits/{run_id}/{change_id}/reedit")
+def reedit(request: Request, run_id: str, change_id: str,
+           background: BackgroundTasks, reason: str = Form("")):
+    """Say what is wrong with a fix, and have it done again.
+
+    The verifier can only ask its own question: does the rule still fire?
+    A fix can pass that and still be wrong to a person -- the Omni rewrite
+    that took a tobacco plug out of a character's hand and left him
+    holding something rifle-shaped over his shoulder cleared EU-TOB-01 and
+    was not a fix anybody would ship.
+
+    So: the operator's reason IS the instruction. It is written into the
+    run's event log first, because the reason a human rejected a machine's
+    work is a record worth keeping whatever happens next, and then handed
+    to the model as the addition to its prompt. The method is the one that
+    made the change, unless that was a patch technique, in which case the
+    redo escalates to Omni: asking the thing that produced the object in
+    the hand to please not do that again, by the same means, is optimism.
+
+    A finding the verifier had resolved is reopened. That is the honest
+    state: a person has just said it is not fixed.
+    """
+    door = _needs_word(request, "/edits")
+    if door is not None:
+        return door
+    run = _run_or_404(run_id)
+    if not re.fullmatch(r"chg_[0-9a-f]{6,32}", change_id):
+        raise HTTPException(status_code=404, detail="no such change")
+    said = " ".join((reason or "").split())
+    if len(said) < 8:
+        return RedirectResponse(f"/edits?why={quote(change_id)}", status_code=303)
+    db = store()
+    change = next((c for c in db.changes(run.id) if c.id == change_id), None)
+    if change is None:
+        raise HTTPException(status_code=404, detail="no such change")
+    finding = next((f for f in db.findings(run.id)
+                    if f.id == change.finding_id), None)
+    if finding is None:
+        raise HTTPException(status_code=404, detail="that change has no finding")
+    if finding.remediation_blocked or not finding.remediable:
+        raise HTTPException(
+            status_code=409,
+            detail=finding.blocked_reason or "this finding is not auto-remediable")
+    if _role(request) != "judge":
+        spent = _visitor_spent(request)
+        if spent >= VISITOR_DAILY_EUR:
+            raise HTTPException(
+                status_code=429,
+                detail=(f"You have used your {VISITOR_DAILY_EUR:.2f} EUR of "
+                        f"generation for today ({spent:.2f} EUR)."))
+    span = max(0.0, finding.t_end - finding.t_start)
+    # The method that made it, unless that was a patch: a redo of a patch
+    # goes generative, because the words only reach a model that is given
+    # the span.
+    again = change.method if change.method in ("omni", "bridge") else "omni"
+    ok, why = costs.available(again, span, db.spent_today())
+    if not ok and again != "bridge":
+        again = "bridge"
+        ok, why = costs.available(again, span, db.spent_today())
+    if not ok:
+        raise HTTPException(status_code=409, detail=why)
+
+    db.emit(run.id, "operator",
+            f're-edit asked on {change_id} ({finding.rule_id}, '
+            f'{finding.market}): "{said}" -> {again}')
+    db.emit(run.id, "operator", persist.snapshot(settings.db_path))
+    db.update_finding_status(finding.id, "remediating", run.id)
+    background.add_task(remediate_and_verify, run.id, finding.id,
+                        finding.market, method=again, replacement=said)
+    _SCENES_CACHE.clear()
+    _CARD_CACHE.clear()
+    return RedirectResponse(f"/edits?again={quote(change_id)}", status_code=303)
 
 
 @app.get("/runs/{run_id}/generated", response_class=HTMLResponse)
