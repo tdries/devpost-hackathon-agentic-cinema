@@ -2090,13 +2090,13 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
    the first screen; the sentence is short enough to sit on one line at a
    size that still reads as the headline, and the box shrinks with it. */
 .landhero-title {
-  margin: 0 0 14px; font-size: clamp(22px, 2.35vw, 34px); line-height: 1.15;
-  letter-spacing: -0.02em; font-weight: 700; color: var(--ink);
+  margin: 0 0 8px; font-size: clamp(32px, 4.4vw, 58px); line-height: 1.04;
+  letter-spacing: -0.03em; font-weight: 700; color: var(--ink);
 }
-/* the name on its own line, and the promise under it in the same breath */
-.lht-name { display: block; font-family: var(--mono); font-weight: 600;
-  font-size: 0.62em; letter-spacing: .06em; color: var(--ink-3);
-  margin-bottom: 6px; }
+/* what it is for, under the name and in the reader's second breath */
+.landhero-sub { margin: 0 0 16px; max-width: 44ch;
+  font-size: clamp(17px, 1.9vw, 25px); line-height: 1.24;
+  letter-spacing: -0.01em; color: var(--ink-2); }
 /* Wide enough for the whole sentence: it stays on one line and the column
    widens to hold it rather than the sentence breaking to fit the column. */
 @media (min-width: 900px) { .landhero-title { white-space: nowrap; } }
@@ -3028,8 +3028,18 @@ span.cardlanes.drawn { overflow: hidden; }
 span.cardlanes.drawn svg { width: 100%; height: 100%; display: block; }
 .lane-dot { transition: r .12s ease; }
 span.cardlanes.drawn .lane-dot:hover { r: 7px; cursor: pointer; }
-.cardviz[data-viz="live"] .cardlanes.drawn,
-.cardviz[data-viz="drawn"] .cardlanes.live { display: none; }
+/* Which chart is in the box, and what stands in while the live one is
+   still coming. One Grafana boots at a time, on approach, so on a long
+   archive the panels arrive over several seconds -- and the slot they
+   arrive into used to be blank. The card's own drawing holds it instead,
+   and hands over the moment the iframe has painted. The drawing carries
+   its own icon gutter, so the HTML icon column steps aside while it is
+   the one on show, and no card ever wears two. */
+.cardviz[data-viz="live"].booted .cardlanes.drawn,
+.cardviz[data-viz="drawn"] .cardlanes.live,
+.cardviz[data-viz="live"]:not(.booted) .cardlanes.live { display: none; }
+.cardviz[data-viz="live"]:not(.booted) .cardgrid-keys { display: none; }
+.cardviz[data-viz="live"]:not(.booted) .cardgrid { grid-template-columns: 1fr; }
 /* The drawing carries its own labels in its own gutter, so the shared icon
    column beside it was a second copy of the same six marks. Only the live
    panel needs borrowed labels: Grafana cannot draw a taxonomy glyph. */

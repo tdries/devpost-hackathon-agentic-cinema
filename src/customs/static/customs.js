@@ -169,12 +169,19 @@
       var frame = pending.shift();
       if (!frame || frame.dataset.src === undefined) { boot(); return; }
       booting = true;
+      /* The card shows its own drawing until this frame has actually
+         painted, so a reader scrolling the archive never meets an empty
+         white box where a chart belongs. */
+      frame.addEventListener("load", function () {
+        var card = frame.closest(".cardviz");
+        if (card) { card.classList.add("booted"); }
+      }, { once: true });
       frame.src = frame.dataset.src;
       delete frame.dataset.src;
       /* One Grafana at a time, and a beat between them: the tenant is on
          read limits and a panel that trips one renders its own error text
          inside an iframe this page cannot style. */
-      window.setTimeout(function () { booting = false; boot(); }, 700);
+      window.setTimeout(function () { booting = false; boot(); }, 300);
     };
 
     var wake = function (card) {

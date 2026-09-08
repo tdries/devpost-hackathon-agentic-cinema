@@ -1,0 +1,24 @@
+[
+ {
+  "t": 4.16,
+  "hold": 4.6,
+  "label": "the frame, the rule, the statute",
+  "box": [
+   347,
+   870,
+   1226,
+   191
+  ]
+ },
+ {
+  "t": 12.54,
+  "hold": 3.4,
+  "label": "certificate and markers",
+  "box": [
+   1228,
+   510,
+   181,
+   54
+  ]
+ }
+]

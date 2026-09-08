@@ -14,6 +14,25 @@ import os, subprocess, sys, time
 from playwright.sync_api import sync_playwright
 
 _T0 = 0.0
+SPOTS = []        # what this beat pointed at: label, box, and when
+
+
+def spot(p, label, selector, hold=4.5, pad=10):
+    """Record where a thing is on screen right now, and for how long to point."""
+    try:
+        el = p.locator(selector).first
+        box = el.bounding_box()
+    except Exception:
+        box = None
+    if not box or box["width"] < 40 or box["height"] < 20:
+        return
+    x = max(8, box["x"] - pad)
+    y = max(8, box["y"] - pad)
+    w = min(W - x - 8, box["width"] + pad * 2)
+    h = min(H - y - 8, box["height"] + pad * 2)
+    SPOTS.append({"t": round(time.time() - _T0, 2), "hold": hold,
+                  "label": label, "box": [round(x), round(y), round(w), round(h)]})
+
 FLOW_HEAD = 4.0   # what cut_demo drops off the front of the flow beat
 ONLY = {int(x) for x in os.environ.get("ONLY_BEATS", "").split(",") if x.strip()}
 LIVE = os.environ.get("CUSTOMS_URL", "https://customs-app-akap4ao72a-ew.a.run.app")
@@ -56,7 +75,8 @@ def beat(pw, n, url, actions, base=None, head=0.0):
         ctx.add_cookies([{"name": "customs-role", "value": "judge",
                           "url": LOCAL}])
     page = ctx.new_page()
-    global _T0
+    global _T0, SPOTS
+    SPOTS = []
     t0 = _T0 = time.time()
     page.goto((base or LIVE) + url, wait_until="load", timeout=60000)
     page.wait_for_timeout(900)
@@ -65,6 +85,9 @@ def beat(pw, n, url, actions, base=None, head=0.0):
     if left > 0:
         page.wait_for_timeout(int(left * 1000))
     ctx.close()
+    if SPOTS:
+        import json
+        json.dump(SPOTS, open(f"{OUT}/{n:02d}/spots.json", "w"), indent=1)
     print(f"{n:02d}  target {d:5.1f}s  took {time.time() - t0:5.1f}s  {url}")
 
 
@@ -147,6 +170,8 @@ def main(only=None):
                 glide(p, bb["x"] + bb["width"] * 0.26, bb["y"] + bb["height"] * 0.32)
                 p.wait_for_timeout(2500)      # the thumbnail loads on approach
                 glide(p, bb["x"] + bb["width"] * 0.72, bb["y"] + bb["height"] * 0.68, steps=18)
+                if i == 1:
+                    spot(p, "what it found, and when", ".runcard .cardviz", hold=4.6)
                 p.wait_for_timeout(1600)      # rest on the lanes chart
             creep(p, 600, 2.0)
         beat(pw, 4, "/runs", b3)
@@ -187,14 +212,19 @@ def main(only=None):
                 t.scroll_into_view_if_needed(); p.wait_for_timeout(400)
                 bb = t.bounding_box()
                 if bb: glide(p, bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2)
-            p.wait_for_timeout(2200)
-            creep(p, 3200, 11.0)
+            spot(p, "one tile per market", "#tiles", hold=4.4)
+            p.wait_for_timeout(2400)
+            creep(p, 1500, 4.5)
+            spot(p, "live Grafana, built by the agent", "iframe.boardlanes, img.boardlanes", hold=4.4)
+            p.wait_for_timeout(2600)
+            creep(p, 1700, 4.5)
         beat(pw, 7, f"/runs/{RUN}", b4)
 
         # 7 timeline grid: hover the squares, never click (a click spends)
         def b6(p):
             p.wait_for_timeout(2000)
             creep(p, 500, 1.2)
+            spot(p, "a live Grafana panel", "iframe.mg-live", hold=5.2)
             for dx in (0, 180, 360):
                 glide(p, 760 + dx, 620); p.wait_for_timeout(1100)
             creep(p, 500, 1.5)
@@ -206,13 +236,17 @@ def main(only=None):
             rows = p.locator("tr.scene-row")
             if rows.count():
                 rows.first.scroll_into_view_if_needed()
-                rows.first.click(); p.wait_for_timeout(2600)
+                rows.first.click(); p.wait_for_timeout(1400)
+                spot(p, "the frame, the rule, the statute", "tr.frow", hold=4.6)
+                p.wait_for_timeout(2600)
             creep(p, 1300, 4.5)
             chip = p.locator('a.chip[href*="certificate.pdf"]')
             if chip.count():
                 chip.first.scroll_into_view_if_needed(); p.wait_for_timeout(300)
                 bb = chip.first.bounding_box()
                 if bb: glide(p, bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2)
+                spot(p, "certificate and markers", "a.chip[href*='certificate.pdf']",
+                     hold=3.4, pad=14)
             p.wait_for_timeout(2200)
         beat(pw, 9, f"/runs/{RUN}/markets/FR", b7)
 
@@ -230,7 +264,10 @@ def main(only=None):
             p.wait_for_timeout(1600)
             # put the panel's own heading at the top of the frame, not at the fold
             fx.first.evaluate("el => el.scrollIntoView({block: 'start'})")
-            p.wait_for_timeout(2000)
+            p.wait_for_timeout(1200)
+            spot(p, "what should change", ".fp-cols .fp-col:first-child", hold=4.4)
+            p.wait_for_timeout(2400)
+            spot(p, "how to do it, each priced", ".fp-cols .fp-col:last-child", hold=6.5)
             # read down what should change, then down the methods and their prices
             for x, y in ((520, 430), (520, 520), (1240, 430), (1240, 560),
                          (1240, 690), (1240, 820)):
@@ -248,6 +285,8 @@ def main(only=None):
                 p.wait_for_timeout(1200)
                 fr.first.evaluate("el => el.querySelectorAll('video')"
                                   ".forEach(v => { v.muted = true; v.play(); })")
+                p.wait_for_timeout(900)
+                spot(p, "the localized master", '[data-pair="FR"] .pane:last-child', hold=4.6)
             p.wait_for_timeout(12000)
             creep(p, 260, 1.6)
         beat(pw, 11, f"/runs/{RUN}/cutting", b9)
@@ -258,6 +297,7 @@ def main(only=None):
             box = p.locator("#agent-input")
             if not box.count():
                 return
+            spot(p, "ask in plain sentences", "#agent-ask", hold=4.0, pad=14)
             for q in ["which markets blocked this ad, and why?",
                       "show me the frames FR-ALC-01 fired on",
                       "what should I fix first, and what will it cost?"]:
