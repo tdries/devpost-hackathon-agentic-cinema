@@ -175,10 +175,13 @@ html[data-theme="studio"] .lc-current { color: #8a6d00; }
 .tab {
   font-family: var(--mono);
   font-size: 10.5px;
-  letter-spacing: 0.18em;
+  /* Seven tabs. At 0.18em of tracking and 14px either side the row wrapped
+     the moment My edits joined it, and a nav on two lines reads as two
+     navs. */
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ink-3);
-  padding: 14px 14px 13px;
+  padding: 14px 11px 13px;
   border-bottom: 2px solid transparent;
 }
 .tab:hover { color: var(--ink-2); }

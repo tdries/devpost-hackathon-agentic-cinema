@@ -5,13 +5,13 @@
    of the mode switch in the topbar, not a fourth screen of this one. #}
 <nav class="runnav">
   <div class="wrap screens">
-    <a class="tab {% if screen == 'home' %}on{% endif %}" href="/new"><svg class="ic"><use href="#n-new"/></svg>New clearance run</a>
+    <a class="tab {% if screen == 'home' %}on{% endif %}" href="/new"><svg class="ic"><use href="#n-new"/></svg>New run</a>
     <a class="tab {% if screen in ('runs', 'board', 'mission', 'frames', 'timeline', 'market', 'cutting', 'generated') %}on{% endif %}" href="/runs"><svg class="ic"><use href="#n-runs"/></svg>Recent runs</a>
     {# What the system has actually changed, across every run. The cutting
        room answers that for one film; this answers it for the instance. #}
     <a class="tab {% if screen == 'edits' %}on{% endif %}" href="/edits"><svg class="ic"><use href="#n-cut"/></svg>My edits</a>
     <a class="tab {% if screen == 'library' %}on{% endif %}" href="/library"><svg class="ic"><use href="#n-library"/></svg>Library</a>
-    <a class="tab {% if screen == 'search' %}on{% endif %}" href="/search"><svg class="ic"><use href="#i-analyst"/></svg>Frame search</a>
+    <a class="tab {% if screen == 'search' %}on{% endif %}" href="/search"><svg class="ic"><use href="#i-analyst"/></svg>Frames</a>
     <a class="tab {% if screen == 'insight' %}on{% endif %}" href="/insight"><svg class="ic"><use href="#i-analyst"/></svg>Intelligence</a>
     <a class="tab {% if screen == 'grafana' %}on{% endif %}" href="/grafana"><svg class="ic"><use href="#i-publisher"/></svg>Grafana</a>
   </div>

@@ -3383,9 +3383,15 @@ def my_edits(request: Request):
     """
     rows = edited_scenes()
     shown = [row for row in rows if row["kept"]]
+    # "carried over from SA", "carried over from DE" and nine more are one
+    # method wearing eleven names, and as eleven chips they were the widest
+    # thing on the page. Counted together.
     methods: dict[str, int] = {}
     for row in rows:
-        methods[row["change"].method] = methods.get(row["change"].method, 0) + 1
+        method = row["change"].method
+        if method.startswith("carried over"):
+            method = "carried over"
+        methods[method] = methods.get(method, 0) + 1
     return _page(request, "edits.html", screen="edits", rows=shown,
                  total=len(rows), unkept=len(rows) - len(shown),
                  films=len({row["asset"] for row in rows}),
