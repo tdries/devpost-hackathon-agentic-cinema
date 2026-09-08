@@ -948,6 +948,12 @@ def _kinds_found(findings) -> list[str]:
 # ponytail: hardcoded id, becomes a computed best-run when the archive churns
 SHOWCASE_RUN = "run_959b162a0f25"
 
+# The walkthrough the front page embeds, under the three fix clips. Its id
+# rather than a URL, because the page builds three of them: the thumbnail,
+# the iframe the first click writes, and the link out.
+WALKTHROUGH_VIDEO = "zvr6GpmULr0"
+WALKTHROUGH_START = 10
+
 
 def _showcase(db) -> str:
     """The showcase run's id, or "" when this store cannot show it.
@@ -1879,6 +1885,7 @@ def landing(request: Request):
     # likely to be hit.
     return _page(request, "landing.html", screen="landing",
                  roles=ROLES,
+                 video_id=WALKTHROUGH_VIDEO, video_start=WALKTHROUGH_START,
                  packs_total=len(market_packs()),
                  tools_total=len(agentmode.TOOL_NAMES),
                  dims_total=len(packs.taxonomy()))

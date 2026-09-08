@@ -135,6 +135,32 @@
     {% endfor %}
   </div>
   </div>
+
+  {# The walkthrough, under the three fixes it is about.
+
+     A facade rather than an iframe: YouTube's embed loads about a megabyte
+     of player and its cookies before anybody presses anything, on the page
+     most likely to be opened and closed. This is the thumbnail off
+     img.youtube.com and a button; the iframe is written in on the first
+     click, with autoplay, so the press that asks for the video is the
+     press that plays it. #}
+  <div class="landvid">
+    <div class="rule-row"><span class="label">The whole thing, in a few minutes</span>
+      <span class="right label">
+        <a class="cite" href="https://www.youtube.com/watch?v={{ video_id }}"
+           target="_blank" rel="noreferrer">watch it on YouTube</a>
+      </span>
+    </div>
+    <button class="vidface" type="button" data-video="{{ video_id }}"
+            data-start="{{ video_start }}" aria-label="Play the walkthrough">
+      <img src="https://img.youtube.com/vi/{{ video_id }}/maxresdefault.jpg"
+           alt="" loading="lazy" width="1280" height="720">
+      <span class="vidplay" aria-hidden="true">
+        <svg class="ic"><use href="#n-cut"/></svg>
+        <span class="mono">play the walkthrough</span>
+      </span>
+    </button>
+  </div>
 </section>
 
 <section class="landwhy">

@@ -247,11 +247,12 @@ env_pairs=(
     "LOKI_PUSH_URL=${DEPLOY_LOKI_PUSH_URL}"
     "LOKI_USER=${DEPLOY_LOKI_USER}"
 )
-# The word that removes an edit. Passed through from the environment (.env
-# is not in the repo) rather than written here, because a password in a
-# public repository is not a password. Unset, the delete falls back to the
-# judge word -- see config.Settings.load.
-if [[ -n "${EDITS_PASSWORD:-}" ]]; then env_pairs+=("EDITS_PASSWORD=${EDITS_PASSWORD}"); fi
+# The word that removes an edit, read out of .env (which is not in the
+# repo: a password in a public repository is not a password) or out of the
+# environment. Unset, the delete falls back to the judge word -- see
+# config.Settings.load.
+EDITS_WORD="${EDITS_PASSWORD:-$(sed -n 's/^EDITS_PASSWORD=//p' "$ENV_FILE" | head -1)}"
+if [[ -n "$EDITS_WORD" ]]; then env_pairs+=("EDITS_PASSWORD=${EDITS_WORD}"); fi
 if [[ -n "$DEPLOY_GEMINI_MODEL_VISION" ]]; then env_pairs+=("GEMINI_MODEL_VISION=${DEPLOY_GEMINI_MODEL_VISION}"); fi
 if [[ -n "$DEPLOY_GEMINI_MODEL_TEXT" ]]; then env_pairs+=("GEMINI_MODEL_TEXT=${DEPLOY_GEMINI_MODEL_TEXT}"); fi
 if [[ -n "$DEPLOY_IMAGEN_MODEL" ]]; then env_pairs+=("IMAGEN_MODEL=${DEPLOY_IMAGEN_MODEL}"); fi
@@ -292,6 +293,16 @@ gcloud builds submit \
 # ships code and leaves the wiring exactly as the last full deploy set it,
 # rather than reaching for variables that were never bound.
 deploy_args=()
+if [ "$FAST" = "1" ]; then
+    # Fast deploys inherit the previous revision's configuration for
+    # everything they do not name -- except that anything set outside a
+    # deploy does not survive one. The word that deletes evidence is worth
+    # naming explicitly rather than trusting to inheritance.
+    FAST_WORD="${EDITS_PASSWORD:-$(sed -n 's/^EDITS_PASSWORD=//p' "$ENV_FILE" | head -1)}"
+    if [[ -n "$FAST_WORD" ]]; then
+        deploy_args=(--update-env-vars "EDITS_PASSWORD=${FAST_WORD}")
+    fi
+fi
 if [ "$FAST" != "1" ]; then
     deploy_args=(
         --set-env-vars "^;^${joined}"

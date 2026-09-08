@@ -2269,6 +2269,30 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
 
 .editmethod { display: inline-flex; align-items: center; gap: 6px; }
 .editmethod .ic { width: 14px; height: 14px; }
+/* ---------- the walkthrough, under the three fixes ----------
+   A facade: the thumbnail and a button, with the iframe written in on the
+   first click. YouTube's embed pulls about a megabyte of player and its
+   cookies before anybody presses anything, on the page most likely to be
+   opened and closed again. */
+.landvid { margin-top: 34px; }
+.vidface { position: relative; display: block; width: 100%; padding: 0;
+  margin-top: 12px; border: 1px solid var(--line); border-radius: 12px;
+  overflow: hidden; background: var(--well); cursor: pointer;
+  aspect-ratio: 16 / 9; }
+.vidface img { width: 100%; height: 100%; object-fit: cover; display: block;
+  transition: transform .3s ease, filter .3s ease; }
+.vidface:hover img { transform: scale(1.012); filter: brightness(.94); }
+.vidplay { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  display: inline-flex; align-items: center; gap: 10px; padding: 13px 22px;
+  border-radius: 999px; background: var(--panel); color: var(--ink);
+  box-shadow: 0 10px 30px rgba(9, 12, 20, .28); }
+.vidplay .ic { width: 20px; height: 20px; }
+.vidplay .mono { font-size: 12.5px; letter-spacing: .1em;
+  text-transform: uppercase; }
+.vidface:focus-visible { outline: 2px solid var(--g-blue); outline-offset: 3px; }
+.landvid iframe { width: 100%; aspect-ratio: 16 / 9; border: 0;
+  border-radius: 12px; display: block; margin-top: 12px; }
+
 /* asking for it again: the reason is the instruction, so it gets room */
 .reedit { margin-top: 2px; }
 .reedit > summary { cursor: pointer; list-style: none; display: inline-flex; }

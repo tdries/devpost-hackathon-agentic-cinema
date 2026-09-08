@@ -154,7 +154,12 @@
      Grafana each is what kept a real browser off this page for thirty
      seconds. */
   (function () {
-    var KEY = "customs-cardviz";
+    /* The key is versioned. Drawn was the default for one deploy, and
+       every reader who loaded the archive in that window has "drawn"
+       remembered in their browser -- so flipping the default back to live
+       changed nothing for exactly the people who had already been here.
+       A new key ignores the old answer once, and remembers the new one. */
+    var KEY = "customs-cardviz2";
     var cards = document.querySelectorAll(".cardviz");
     if (!cards.length) { return; }
 
@@ -1491,6 +1496,29 @@
         });
       });
     });
+})();
+
+/* The walkthrough on the front page: the thumbnail is a button, and the
+   iframe is written in when it is pressed. Nothing of YouTube's is loaded
+   before that -- no player, no cookies -- on the page most likely to be
+   opened and closed again. Autoplay on the injected frame, because the
+   press that asked for the video should be the press that plays it. */
+(function () {
+  var face = document.querySelector(".vidface");
+  if (!face) { return; }
+  face.addEventListener("click", function () {
+    var id = face.dataset.video;
+    var start = parseInt(face.dataset.start, 10) || 0;
+    if (!/^[\w-]{6,20}$/.test(id || "")) { return; }
+    var frame = document.createElement("iframe");
+    frame.src = "https://www.youtube-nocookie.com/embed/" + id
+      + "?autoplay=1&rel=0&modestbranding=1" + (start ? "&start=" + start : "");
+    frame.title = "The Media Customs walkthrough";
+    frame.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; "
+      + "gyroscope; picture-in-picture; web-share";
+    frame.setAttribute("allowfullscreen", "");
+    face.replaceWith(frame);
+  });
 })();
 
 /* ---------- one framed panel at a time ----------
