@@ -40,6 +40,18 @@ import pytest
 
 
 @pytest.fixture(autouse=True)
+def _omni_is_available(monkeypatch):
+    """Omni's availability is a global set by a background probe on boot.
+
+    A test that asks what the picker offers must not depend on whether a
+    network call finished, or on whether this machine has credentials at
+    all. The probe still runs; its answer just cannot leak between tests.
+    """
+    from customs import costs
+    monkeypatch.setattr(costs, "_omni_gone", "")
+
+
+@pytest.fixture(autouse=True)
 def _no_optional_integrations(monkeypatch):
     from customs import app as app_module
 

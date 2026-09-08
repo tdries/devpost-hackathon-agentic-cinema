@@ -290,6 +290,15 @@ class OmniQuota(RuntimeError):
 
 _OMNI_GONE = ("404", "not_found", "not found", "was not found",
               "is not supported", "unsupported model", "does not exist")
+# Checked FIRST, because these say nothing about the model. A machine with
+# no credentials fails with "could not automatically determine credentials",
+# which contains "not found"-ish wording often enough to be read as "this
+# model is gone" -- and then the picker greys Omni out for the life of the
+# process over an auth problem. Seen for real on a CI runner, where every
+# test that expects Omni to be offered failed.
+_OMNI_INCONCLUSIVE = ("credential", "default credentials", "unauthenticated",
+                      "permission denied", "could not automatically determine",
+                      "api key", "access token", "was not able to find")
 
 
 def probe_omni() -> tuple[bool, str]:
@@ -318,6 +327,9 @@ def probe_omni() -> tuple[bool, str]:
         client().models.get(model=model)
     except Exception as exc:  # noqa: BLE001 -- the classification IS the point
         said = str(exc).lower()
+        if any(marker in said for marker in _OMNI_INCONCLUSIVE):
+            # cannot ask, so cannot answer: leave the method as it was
+            return True, ""
         if any(marker in said for marker in _OMNI_GONE):
             reason = (f"Omni's model ({model}) no longer answers on this "
                       f"project, so this method cannot run. Set OMNI_MODEL "
