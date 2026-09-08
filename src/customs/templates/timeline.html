@@ -60,7 +60,7 @@
        puts every row out of line with the icon beside it. The wrapper
        clips it; the frame is pulled up by exactly that much. #}
     <span class="mgplot" style="height:{{ matrix | length * 44 }}px">
-      <iframe class="mg-live" src="{{ embeds.viewer.squares }}"
+      <iframe class="mg-live" data-src="{{ embeds.viewer.squares }}"
               title="Occurrences per scene, live from Grafana" loading="lazy"></iframe>
     </span>
     {% else %}

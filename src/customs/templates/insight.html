@@ -57,7 +57,7 @@
   <div class="filmstrip" style="--films:{{ films | length }}" data-tour="filmstrip">
     {% if solo %}
     <span class="fs-plot">
-      <iframe class="fs-panel" src="{{ solo }}60"
+      <iframe class="fs-panel" data-src="{{ solo }}60"
               title="Every commercial at its worst severity, live from Grafana"
               loading="lazy"></iframe>
     </span>
@@ -105,7 +105,7 @@
     </div>
     {% if solo %}
     <span class="xplot">
-      <iframe class="xpanel" src="{{ solo }}10"
+      <iframe class="xpanel" data-src="{{ solo }}10"
               title="Findings by dimension, live from Grafana" loading="lazy"></iframe>
     </span>
     {% else %}{{ noviewer() }}{% endif %}
@@ -139,7 +139,7 @@
     </div>
     {% if solo %}
     <span class="xplot">
-      <iframe class="xpanel" src="{{ solo }}11"
+      <iframe class="xpanel" data-src="{{ solo }}11"
               title="Findings by market, live from Grafana" loading="lazy"></iframe>
     </span>
     {% else %}{{ noviewer() }}{% endif %}
@@ -160,7 +160,7 @@
     objections per day by class, triggered against cleared, the rules that
     fire everywhere, and the raw finding stream underneath it all.</p>
   {% if board %}
-  <iframe class="xboard" src="{{ board }}"
+  <iframe class="xboard" data-src="{{ board }}"
           title="Customs: Intelligence, live from Grafana" loading="lazy"></iframe>
   {% else %}{{ noviewer() }}{% endif %}
   <p class="subline gsmall" style="color:var(--ink-3)">

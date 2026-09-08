@@ -1375,6 +1375,60 @@
     });
   })();
 
+/* ---------- one framed panel at a time ----------
+   Grafana is a single small instance and a page that asks it for four
+   panels at once gets 5xx back for some of them: "the server encountered
+   an error, try again in 30 seconds", rendered inside the iframe where it
+   looks like a chart with no data. The archive's cards have always been
+   queued for this reason; every other framed panel is queued the same way
+   now -- inert markup until it is approached, then one every 300ms, and
+   the wrapper is marked `booted` when the frame has actually painted so a
+   placeholder can step aside.
+
+   With JavaScript off these frames stay empty, which is the same trade the
+   cards already make: thirty Grafanas booting at once is a page nobody can
+   load. */
+(function () {
+  var frames = document.querySelectorAll("iframe[data-src]:not(.cardlanes)");
+  if (!frames.length) { return; }
+  var queue = [];
+  var busy = false;
+
+  var boot = function () {
+    if (busy || !queue.length) { return; }
+    var frame = queue.shift();
+    if (!frame || frame.dataset.src === undefined) { boot(); return; }
+    busy = true;
+    frame.addEventListener("load", function () {
+      var box = frame.parentElement;
+      if (box) { box.classList.add("booted"); }
+    }, { once: true });
+    frame.src = frame.dataset.src;
+    delete frame.dataset.src;
+    window.setTimeout(function () { busy = false; boot(); }, 300);
+  };
+
+  var wake = function (frame) {
+    if (frame.dataset.src === undefined) { return; }
+    if (queue.indexOf(frame) === -1) { queue.push(frame); }
+    boot();
+  };
+
+  if (window.IntersectionObserver) {
+    var watcher = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          wake(entry.target);
+          watcher.unobserve(entry.target);
+        }
+      });
+    }, { rootMargin: "400px" });
+    Array.prototype.forEach.call(frames, function (f) { watcher.observe(f); });
+  } else {
+    Array.prototype.forEach.call(frames, wake);
+  }
+})();
+
 /* The tab rows scroll sideways on a phone, so the tab you are ON has to be
    brought into view: otherwise a run screen opens showing LAUNCH BOARD
    while you are in the cutting room, and the row looks like it is lying. */

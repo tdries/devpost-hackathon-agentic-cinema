@@ -108,8 +108,9 @@ gcloud run deploy "$SERVICE" \
     --allow-unauthenticated \
     --service-account "$RUNTIME_SA" \
     --port 8080 \
-    --memory 1Gi \
-    --min-instances 0 --max-instances 1 \
+    --memory 1Gi --cpu 1 --cpu-boost \
+    --concurrency 40 \
+    --min-instances 1 --max-instances 1 \
     --set-env-vars "$ENV_VARS" \
     --set-secrets "VIEWER_TOKEN=grafana-viewer-token:latest" \
     --quiet
