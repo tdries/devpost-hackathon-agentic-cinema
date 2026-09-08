@@ -159,8 +159,15 @@
 
   {# What actually happens, in one picture: who does what, what gets
      written to Grafana, and the one arrow that goes the other way. #}
-  <figure class="flow">
+  <figure class="flow" id="flow">
     <div class="flow-scroll">{% include "_flow.svg" %}</div>
+    {# It plays itself once when it comes into view, and this replays it.
+       Not autoplay on a loop: a diagram that will not hold still is a
+       diagram nobody can read. #}
+    <div class="flow-play">
+      <button type="button" class="tbtn" id="flow-play">play the flow</button>
+      <span class="flow-now mono" id="flow-now"></span>
+    </div>
     <figcaption class="flow-steps">
       <ol>
         <li><b>1</b> You hand it a master, or a YouTube link.</li>

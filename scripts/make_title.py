@@ -36,4 +36,18 @@ for i, c in enumerate([(66, 133, 244), (234, 67, 53), (251, 188, 5), (52, 168, 8
                 fill=c + (235,))
 
 card.save("docs/video/title.png")
-print("title card written")
+
+# the closing card: the same mark, over a heavier scrim, with the line that ends it
+end = Image.new("RGBA", (W, H), (8, 12, 16, 236))
+d2 = ImageDraw.Draw(end)
+end.alpha_composite(logo, ((W - lw) // 2, H // 2 - 300))
+tw2 = d2.textlength(title, font=name)
+d2.text(((W - tw2) / 2, H // 2 + 20), title, font=name, fill=(255, 255, 255, 250))
+closing = "Gemini  ·  Google Cloud Agent Builder  ·  Grafana"
+cw = d2.textlength(closing, font=sub)
+d2.text(((W - cw) / 2, H // 2 + 170), closing, font=sub, fill=(226, 232, 236, 215))
+for i, c in enumerate([(66, 133, 244), (234, 67, 53), (251, 188, 5), (52, 168, 83)]):
+    d2.rectangle([x0 + i * bar_w // 4, y0, x0 + (i + 1) * bar_w // 4 - 6, y0 + 5],
+                 fill=c + (240,))
+end.save("docs/video/endcard.png")
+print("title and end cards written")

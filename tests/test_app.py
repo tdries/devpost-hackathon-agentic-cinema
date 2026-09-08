@@ -2067,6 +2067,11 @@ def test_the_front_door_says_what_this_is_before_what_it_does(console):
     assert "every geography and culture" in body
     assert "What happens when you upload a video" in body
     assert 'class="flowsvg"' in body, "the flow picture, not just prose"
+    # and it plays: eight moves, each with the elements it lights and a
+    # panel of the product's own icons saying what that move looks at
+    assert body.count('class="fl-detail" data-step="') == 8
+    assert 'id="flow-play"' in body
+    assert body.count('data-lit="') > 20
     assert "Grafana is a participant" in body
 
     # counted, not asserted -- a stale number here is a lie to a judge.

@@ -182,7 +182,30 @@ def main(only=None):
             p.wait_for_timeout(2200)
         beat(pw, 9, f"/runs/{RUN}/markets/FR", b7)
 
-        # 10 cutting room: original and localized, playing together
+        # 10 the fix panel: both columns and the price, the button untouched
+        def bfix(p):
+            p.wait_for_timeout(1100)
+            rows = p.locator("tr.scene-row")
+            if rows.count():
+                rows.first.click(); p.wait_for_timeout(1400)
+            fx = p.locator("details.fixer")
+            if not fx.count():
+                return
+            fx.first.scroll_into_view_if_needed()
+            fx.first.locator("summary").click()
+            p.wait_for_timeout(1600)
+            # put the panel's own heading at the top of the frame, not at the fold
+            fx.first.evaluate("el => el.scrollIntoView({block: 'start'})")
+            p.wait_for_timeout(2000)
+            # read down what should change, then down the methods and their prices
+            for x, y in ((520, 430), (520, 520), (1240, 430), (1240, 560),
+                         (1240, 690), (1240, 820)):
+                glide(p, x, y, steps=14)
+                p.wait_for_timeout(1500)
+            creep(p, 300, 1.4)
+        beat(pw, 10, f"/runs/{RUN}/markets/FR", bfix)
+
+        # 11 cutting room: original and localized, playing together
         def b9(p):
             p.wait_for_timeout(1200)
             fr = p.locator('[data-pair="FR"]')

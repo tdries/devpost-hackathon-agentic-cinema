@@ -1369,6 +1369,88 @@
   })();
 
 /* ==========================================================================
+   THE FLOW PICTURE, PLAYED
+   The front page's diagram walks itself through its eight moves: this sets
+   data-step on the <svg> and the stylesheet does the rest -- everything not
+   part of the step goes quiet, the arrow carrying it gets a heartbeat, and
+   the detail panel on the left shows what that step is actually looking at.
+   It plays once when it scrolls into view, because a diagram that will not
+   hold still is a diagram nobody can read, and the button replays it.
+   ========================================================================== */
+
+(function () {
+  var figure = document.getElementById("flow");
+  if (!figure) { return; }
+  var svg = figure.querySelector(".flowsvg");
+  var button = document.getElementById("flow-play");
+  var now = document.getElementById("flow-now");
+  var items = Array.prototype.slice.call(figure.querySelectorAll(".flow-steps li"));
+  var LAST = 8;
+  var DWELL = 1700;
+  var timer = null;
+
+  var light = function (n) {
+    if (!n) {
+      svg.removeAttribute("data-step");
+      figure.removeAttribute("data-step");
+      items.forEach(function (li) { li.classList.remove("on"); });
+      if (now) { now.textContent = ""; }
+      if (button) { button.textContent = "play the flow"; }
+      return;
+    }
+    svg.setAttribute("data-step", n);
+    figure.setAttribute("data-step", n);
+    items.forEach(function (li, i) { li.classList.toggle("on", i === n - 1); });
+    if (now) { now.textContent = "step " + n + " of " + LAST; }
+  };
+
+  var stop = function () {
+    if (timer) { window.clearTimeout(timer); timer = null; }
+    light(0);
+  };
+
+  var play = function (from) {
+    if (timer) { window.clearTimeout(timer); }
+    var n = from || 1;
+    if (button) { button.textContent = "stop"; }
+    var tick = function () {
+      light(n);
+      if (n >= LAST) {
+        /* it ends on the whole picture again, which is the state a reader
+           wants to be left in */
+        timer = window.setTimeout(stop, DWELL + 600);
+        return;
+      }
+      n += 1;
+      timer = window.setTimeout(tick, DWELL);
+    };
+    tick();
+  };
+
+  if (button) {
+    button.addEventListener("click", function () {
+      if (timer) { stop(); } else { play(1); }
+    });
+  }
+
+  /* once, on approach, and never again on this page view */
+  if (window.IntersectionObserver &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    var seen = false;
+    var watcher = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting && !seen) {
+          seen = true;
+          watcher.disconnect();
+          window.setTimeout(function () { play(1); }, 400);
+        }
+      });
+    }, { threshold: 0.45 });
+    watcher.observe(figure);
+  }
+})();
+
+/* ==========================================================================
    THE TOUR
    Two engines. The deck is a carousel on /tour: arrows, dots, swipe, keys
    and an autoplay that advances on its own until you touch something. The

@@ -23,7 +23,7 @@ beats = [l.split("|")[5].strip() for l in rows]
 say = {"Loi Evin": "Loo-ah Evan", "Legifrance": "Lejee-france", "The Media Customs": "The Media Customs",
        "MCP": "M C P", "Veo": "Vay-oh", "Mimir": "Mee-meer"}
 kk = Kokoro(model, voices)
-gap = np.zeros(int(0.35 * 24000), dtype=np.float32)
+gap = np.zeros(int(0.2 * 24000), dtype=np.float32)
 full, total = [], 0.0
 for i, text in enumerate(beats, 1):
     for k, v in say.items():
@@ -36,4 +36,4 @@ for i, text in enumerate(beats, 1):
     print(f"{i:02d}  {d:5.1f}s  {text[:60]}")
     full += [audio, gap]
 sf.write("docs/voiceover/demo-voiceover.wav", np.concatenate(full[:-1]), sr)
-print(f"total speech {total:.1f}s, with gaps {total + 0.35 * (len(beats) - 1):.1f}s")
+print(f"total speech {total:.1f}s, with gaps {total + 0.2 * (len(beats) - 1):.1f}s")

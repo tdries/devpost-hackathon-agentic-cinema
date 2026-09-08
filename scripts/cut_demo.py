@@ -8,9 +8,9 @@ half-second of held frame, so the cut lands on the pause the audio already has.
 import glob, os, subprocess
 
 OUT = "docs/video"
-GAP = 0.35
+GAP = 0.2
 # seconds to drop off the head of a beat that had to wait for something to paint
-SKIP = {13: 30.0}   # the insight panels need that long to paint
+SKIP = {14: 30.0}   # the insight panels need that long to paint
 
 
 def dur(path):
@@ -28,7 +28,7 @@ def dur(path):
 
 os.makedirs(f"{OUT}/cut", exist_ok=True)
 parts = []
-for n in range(1, 15):
+for n in range(1, 16):
     src = sorted(glob.glob(f"{OUT}/beats/{n:02d}/*.webm") + glob.glob(f"{OUT}/beats/{n:02d}/*.mp4"))[0]
     want = dur(f"docs/voiceover/{n:02d}.wav") + GAP
     dst = f"{OUT}/cut/{n:02d}.mp4"
@@ -40,6 +40,19 @@ for n in range(1, 15):
     have = dur(dst)
     print(f"{n:02d}  want {want:5.1f}s  got {have:5.1f}s  {'SHORT' if have < want - 0.3 else ''}")
     parts.append(dst)
+
+# the mark returns over the last beat, fading up as the narration ends
+last, tail = parts[-1], f"{OUT}/cut/{len(parts):02d}e.mp4"
+hold = max(0.0, dur(last) - 4.6)
+# -loop on the still: without it the one frame keeps its t=0 alpha and the fade never happens
+subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", last,
+                "-loop", "1", "-t", f"{dur(last):.2f}", "-i", f"{OUT}/endcard.png",
+                "-filter_complex",
+                f"[1:v]format=rgba,fade=t=in:st={hold:.2f}:d=1.0:alpha=1[t];"
+                f"[0:v][t]overlay=0:0:enable='gte(t,{hold:.2f})'",
+                "-c:v", "libx264", "-preset", "medium", "-crf", "20",
+                "-pix_fmt", "yuv420p", tail], check=True)
+parts[-1] = tail
 
 with open(f"{OUT}/cut/list.txt", "w") as f:
     for p in parts:
