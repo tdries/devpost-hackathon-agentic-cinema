@@ -158,10 +158,11 @@
     var cards = document.querySelectorAll(".cardviz");
     if (!cards.length) { return; }
 
-    /* Drawn by default: the console's own chart is drawn to the same grid
-       as the icon column beside it, and Grafana's panel is not. */
-    var mode = "drawn";
-    try { mode = window.localStorage.getItem(KEY) || "drawn"; } catch (e) { mode = "drawn"; }
+    /* Live by default: Grafana's own panel of the same answer. The
+       console's drawing holds the slot until the frame paints, and is
+       where a reader lands who clicks across. */
+    var mode = "live";
+    try { mode = window.localStorage.getItem(KEY) || "live"; } catch (e) { mode = "live"; }
 
     var pending = [];
     var booting = false;

@@ -17,13 +17,12 @@
        with it. The choice is remembered for every card at once, because
        nobody wants to make it thirty-five times. #}
     <span class="vizswap" role="group" aria-label="Chart source" data-tour="card-viz">
-      {# Drawn first, on the owner's instruction. The console's own chart is
-         the one that lines up with the icon column beside it -- it is drawn
-         to that grid -- and Grafana's panel arrives with a title bar and
-         its own idea of row heights. The live one is a click away and says
-         the same thing. #}
-      <button type="button" data-viz-pick="live">live</button>
-      <button type="button" class="on" data-viz-pick="drawn">drawn</button>
+      {# Live first: it is Grafana's own panel of the same answer, and this
+         project's claim is that the charts are Grafana's. The console's
+         drawing is a click away, holds the slot until the frame paints,
+         and is what a card falls back to where no viewer is deployed. #}
+      <button type="button" class="on" data-viz-pick="live">live</button>
+      <button type="button" data-viz-pick="drawn">drawn</button>
     </span>
     {% endif %}
     {# The way in, at the top of the card. It sat at the bottom for a
@@ -78,7 +77,7 @@
          The icon column is always CARD_LANES tall, and the live panel is
          pinned to exactly the dimensions with an icon beside them
          (var-dim), so the rows line up one for one instead of by luck. #}
-      <span class="cardviz" data-viz="drawn">
+      <span class="cardviz" data-viz="{{ 'live' if item.live_lanes else 'drawn' }}">
         <span class="cardgrid" style="--rows:{{ item.dims | length or 1 }}">
           <span class="cardgrid-keys">
             {% for row in item.dims %}
