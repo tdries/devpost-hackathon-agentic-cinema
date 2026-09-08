@@ -71,6 +71,7 @@ import logging
 import re
 import secrets
 import shutil
+import hashlib
 import threading
 import time
 import uuid
@@ -1898,7 +1899,7 @@ def landing(request: Request):
 # budget is real money on a real card, and a link posted somewhere public
 # should not be able to spend it: a visitor gets one euro of generation a
 # day, counted over the runs they started.
-VISITOR_DAILY_EUR = 1.0
+VISITOR_DAILY_EUR = 10.0
 
 
 def _visitor_spent(request: Request) -> float:
@@ -2906,13 +2907,13 @@ def _card_panel(run, theme: str, lanes: list[dict]) -> str:
     url = (embeds(run, theme).get("viewer") or {}).get("squares", "")
     if not url:
         return ""
-    # Every card offers both charts, so a run with nothing observed pins
-    # the panel to the six rows it draws beside anyway: Grafana then says
-    # it has no data for them, which is the truth about that run, rather
-    # than the card silently having one chart where its neighbours have
-    # two.
-    seen = [row["dimension"] for row in lanes if row["seen"]]
-    dims = seen or [row["dimension"] for row in lanes]
+    # EVERY row the card draws, not just the ones with observations behind
+    # them. Pinning the panel to the seen dimensions only is what put five
+    # rows beside six icons: the greyed icon had nothing to line up with and
+    # everything below the gap pointed at the wrong category. The unseen
+    # ones have a kind="watched" line apiece, so the panel has a row to draw
+    # for them and it comes out empty, which is the truth.
+    dims = [row["dimension"] for row in lanes]
     return f"{url}&var-dim={quote('|'.join(dims))}"
 
 
@@ -3018,9 +3019,67 @@ def _run_rows(runs, by_asset: dict[str, list], offset: int = 0,
             for i, run in enumerate(runs, start=offset)]
 
 
+
+# ------------------------------------------------------------- archive sorting
+#
+# Newest first is the right default -- the archive is mostly "what did I just
+# do" -- but it is the wrong question for "which film is giving us the most
+# trouble" or "what have we actually re-rendered". Each of these reads a
+# number the card already shows, so the order and the card never disagree.
+SORTS: dict[str, dict] = {
+    "newest":     {"label": "newest first",        "key": "recency", "reverse": True},
+    "oldest":     {"label": "oldest first",        "key": "recency", "reverse": False},
+    "open-most":  {"label": "most open findings",  "key": "open",    "reverse": True},
+    "open-least": {"label": "fewest open findings", "key": "open",   "reverse": False},
+    "edits-most": {"label": "most rendered edits", "key": "edits",   "reverse": True},
+    "edits-least": {"label": "fewest rendered edits", "key": "edits", "reverse": False},
+    "scenes-most": {"label": "most scenes",        "key": "scenes",  "reverse": True},
+    "scenes-least": {"label": "fewest scenes",     "key": "scenes",  "reverse": False},
+}
+DEFAULT_SORT = "newest"
+
+
+def sort_metrics(run) -> dict:
+    """The three counts the archive can be ordered by, for one run.
+
+    Counted from this run's own rows rather than from Loki: the archive
+    draws a page of cards and cannot afford a query each, which is the same
+    reason the lane charts are their own lazily-fetched URLs.
+    """
+    db = store()
+    try:
+        findings = db.findings(run.id)
+        open_now = sum(1 for f in findings if f.status == "open")
+        # A change record is only written once an edit produced frames the
+        # verifier then ruled on, so counting records counts rendered edits:
+        # a refused Omni and a fix the craft gate discarded never get here.
+        edits = sum(1 for c in db.changes(run.id) if c.after_frame)
+        scenes = len({o.shot_id for o in db.observations(run.id) if o.shot_id})
+    except Exception:  # noqa: BLE001 -- an unsortable run still belongs on the page
+        return {"open": 0, "edits": 0, "scenes": 0}
+    return {"open": open_now, "edits": edits, "scenes": scenes}
+
+
+def sort_rows(rows: list[dict], order: str) -> list[dict]:
+    """Order the archive. `rows` arrives newest first, which is the default.
+
+    "Newest" is the store's own order rather than a timestamp, because a run
+    record does not carry one -- recent_runs returns them newest first and
+    that is what the page has always meant by new. So the two date orders
+    are that order and its reverse, and the counted orders fall back to it
+    to break a tie, which keeps them stable between reloads.
+    """
+    spec = SORTS.get(order) or SORTS[DEFAULT_SORT]
+    if spec["key"] == "recency":
+        return rows if spec["reverse"] else list(reversed(rows))
+    counted = [(i, r, sort_metrics(r["run"])) for i, r in enumerate(rows)]
+    counted.sort(key=lambda t: (t[2][spec["key"]], -t[0]), reverse=spec["reverse"])
+    return [r for _, r, _ in counted]
+
+
 @app.get("/runs", response_class=HTMLResponse)
 def all_runs(request: Request, all: int = 0, offset: int = 0,
-             fragment: int = 0):
+             fragment: int = 0, sort: str = DEFAULT_SORT):
     """The archive: every film this store holds, newest first, nine at a time.
 
     Each card carries a poster, a lane chart and, for the first few, a live
@@ -3058,7 +3117,8 @@ def all_runs(request: Request, all: int = 0, offset: int = 0,
     # dated links under it, so nothing is hidden and nothing is repeated.
     by_asset = _by_film(runs)
     newest = [older[0] for older in by_asset.values()]
-    rows = _run_rows(newest, by_asset, theme=gtheme(request))
+    order = sort if sort in SORTS else DEFAULT_SORT
+    rows = sort_rows(_run_rows(newest, by_asset, theme=gtheme(request)), order)
     # One live panel, not thirty-five. Every card carries its own charts as
     # SVG for a reason -- building them inline once took this page past a two
     # minute timeout -- and an iframe per card would be thirty-five Grafana
@@ -3084,6 +3144,7 @@ def all_runs(request: Request, all: int = 0, offset: int = 0,
                      showcase=_showcase(store()))
     shown = films if all else min(PAGE_SIZE, films)
     return _page(request, "runs.html", rows=rows[:shown], screen="runs",
+                 sorts=SORTS, sort=order, all=bool(all),
                  scoped=scoped, shown=shown, films=films, more=shown < films,
                  runs_total=len(runs),
                  showcase=_showcase(store()), live_history=live_history,
@@ -4411,7 +4472,7 @@ def run_preview(run_id: str):
 
 
 @app.get("/runs/{run_id}/spark.svg")
-def run_spark(run_id: str):
+def run_spark(request: Request, run_id: str):
     """This run's severity profile, drawn from Grafana's own numbers.
 
     The card cannot hold an iframe -- Grafana Cloud answers with
@@ -4427,9 +4488,10 @@ def run_spark(run_id: str):
     run = _run_or_404(run_id)
     if run.t0 is None:
         raise HTTPException(status_code=404, detail="this run has no mapped clock")
-    cached = run_dir(run) / "spark.svg"
-    fresh = cached.is_file() and (time.time() - cached.stat().st_mtime) < 300
-    if not fresh:
+    version = chart_version(run)
+    cached = run_dir(run) / "charts" / f"spark_{version}.svg"
+
+    def draw():
         duration = asset_duration(run) or MAX_DURATION_S
         asset = Path(run.asset_path).stem or run.asset_path
         try:
@@ -4442,16 +4504,12 @@ def run_spark(run_id: str):
             log.warning("spark failed for %s: %s", run.id, exc)
             series = []
         points = series[0]["points"] if series else []
-        svg = spark.sparkline(points, width=280, height=44)
-        if not svg:
-            raise HTTPException(status_code=404, detail="no series for this run")
-        cached.parent.mkdir(parents=True, exist_ok=True)
-        cached.write_text(svg)
-    return Response(content=cached.read_text(), media_type="image/svg+xml",
-                    headers={"Cache-Control": "public, max-age=300"})
+        return spark.sparkline(points, width=280, height=44)
+
+    return _chart_response(request, cached, version, draw)
 
 @app.get("/runs/{run_id}/markets/{market}/spark.svg")
-def market_spark(run_id: str, market: str):
+def market_spark(request: Request, run_id: str, market: str):
     """One market's severity profile across the film, from Mimir.
 
     The same split as the run card: Grafana owns the series, the tile
@@ -4464,9 +4522,10 @@ def market_spark(run_id: str, market: str):
     if run.t0 is None:
         raise HTTPException(status_code=404, detail="this run has no mapped clock")
     safe = re.sub(r"[^A-Za-z0-9_-]", "", market)
-    cached = run_dir(run) / "sparks" / f"{safe}.svg"
-    fresh = cached.is_file() and (time.time() - cached.stat().st_mtime) < 300
-    if not fresh:
+    version = chart_version(run)
+    cached = run_dir(run) / "charts" / f"spark_{safe}_{version}.svg"
+
+    def draw():
         duration = asset_duration(run) or MAX_DURATION_S
         asset = Path(run.asset_path).stem or run.asset_path
         try:
@@ -4488,18 +4547,97 @@ def market_spark(run_id: str, market: str):
             value, label = str(peak), "PEAK SEVERITY"
         else:
             value, label = str(len(hits)), "FINDINGS"
-        svg = spark.statcard(points, value=value, label=label,
-                             colour=state_mod.colour_for_severity(peak),
-                             width=260, height=76)
-        if not svg:
-            raise HTTPException(status_code=404, detail="no series for this market")
-        cached.parent.mkdir(parents=True, exist_ok=True)
-        cached.write_text(svg)
-    return Response(content=cached.read_text(), media_type="image/svg+xml",
-                    headers={"Cache-Control": "public, max-age=300"})
+        return spark.statcard(points, value=value, label=label,
+                              colour=state_mod.colour_for_severity(peak),
+                              width=260, height=76)
+
+    return _chart_response(request, cached, version, draw)
+
+
+# ---------------------------------------------------------------- chart cache
+#
+# The charts were cached on a TIMER: ten minutes for the lanes, five for a
+# spark. That expires every chart on a page at the same moment, so the next
+# visit to the archive fires thirty-eight Loki and Mimir queries at once,
+# holds a worker on each, and Cloud Run -- one instance, by design -- turns
+# everything else away with "rate exceeded". The container's disk is also
+# RAM, so every restart emptied the cache and the next page paid for all of
+# it again.
+#
+# A timer was the wrong question. These charts are a drawing of the run's
+# own rows, so they change when the run changes and never otherwise. The
+# cache key is now a fingerprint of exactly that, which means a finished run
+# is drawn once and never again, and a LIVE run redraws the moment a finding
+# lands instead of when a five minute timer happens to lapse. Nothing is
+# stale, nothing is thrown away early.
+_CHART_LOCKS: dict[str, threading.Lock] = {}
+_CHART_LOCKS_GUARD = threading.Lock()
+
+
+def chart_version(run) -> str:
+    """What this run's charts are a picture of, as a short string.
+
+    Cheap on purpose: three counts and a sum, all from SQLite, because a
+    page of cards asks for this once per chart. It has to move whenever the
+    picture would: a finding arriving, a severity dropping because a fix
+    verified, a market judged late, the run finishing.
+    """
+    try:
+        db = store()
+        # Every finding's identity, status and severity, because all three
+        # move the picture. Counting them was not enough: a fix verifying
+        # flips one status from open to resolved without changing how many
+        # there are, and that is precisely the moment a lane should redraw.
+        findings = sorted((f.id, f.status, int(f.severity), f.market)
+                          for f in db.findings(run.id))
+        payload = f"{run.status}|{run.t0}|{len(db.changes(run.id))}|{findings}"
+    except Exception:  # noqa: BLE001 -- a fingerprint is an optimisation
+        return "x"
+    return hashlib.sha1(payload.encode()).hexdigest()[:12]
+
+
+def _chart_lock(key: str) -> threading.Lock:
+    """One lock per chart, so a cold container draws each chart once.
+
+    Without it, thirty-eight simultaneous misses are thirty-eight identical
+    Grafana round trips, which is the stampede this whole change is about.
+    """
+    with _CHART_LOCKS_GUARD:
+        return _CHART_LOCKS.setdefault(key, threading.Lock())
+
+
+def _chart_response(request: Request, path: Path, version: str, draw,
+                    media_type: str = "image/svg+xml"):
+    """Serve a versioned chart: from disk, from the browser, or drawn once.
+
+    The ETag is the version, so a browser that already has this exact
+    picture gets 304 and no work happens at all -- which is what turns a
+    reload of the archive from thirty-eight queries into thirty-eight
+    empty answers.
+    """
+    etag = f'W/"{version}"'
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers={"ETag": etag})
+    if not path.is_file():
+        with _chart_lock(str(path)):
+            if not path.is_file():          # another thread may have drawn it
+                body = draw()
+                if not body:
+                    raise HTTPException(status_code=404,
+                                        detail="nothing to draw for this run")
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(body) if isinstance(body, str) else path.write_bytes(body)
+    data = path.read_bytes()
+    return Response(content=data, media_type=media_type, headers={
+        "ETag": etag,
+        # the picture at this version can never change, so let the browser
+        # keep it; a new version is a new URL-and-ETag pair anyway
+        "Cache-Control": "public, max-age=86400",
+    })
+
 
 @app.get("/runs/{run_id}/lanes.svg")
-def run_lanes(run_id: str, full: int = 0):
+def run_lanes(request: Request, run_id: str, full: int = 0):
     """This run's problem lanes, as its own image.
 
     Built here rather than inline in the archive: each chart is a Loki
@@ -4509,16 +4647,11 @@ def run_lanes(run_id: str, full: int = 0):
     costs a chart instead of the archive.
     """
     run = _run_or_404(run_id)
-    cached = run_dir(run) / ("lanes_full.svg" if full else "lanes.svg")
-    fresh = cached.is_file() and (time.time() - cached.stat().st_mtime) < 600
-    if not fresh:
-        svg = problem_lanes(run, compact=not full)
-        if not svg:
-            raise HTTPException(status_code=404, detail="nothing observed in this run")
-        cached.parent.mkdir(parents=True, exist_ok=True)
-        cached.write_text(svg)
-    return Response(content=cached.read_text(), media_type="image/svg+xml",
-                    headers={"Cache-Control": "public, max-age=600"})
+    version = chart_version(run)
+    kind = "lanes_full" if full else "lanes"
+    cached = run_dir(run) / "charts" / f"{kind}_{version}.svg"
+    return _chart_response(request, cached, version,
+                           lambda: problem_lanes(run, compact=not full))
 
 @app.get("/runs/{run_id}/lanes.png")
 def run_lanes_grafana(request: Request, run_id: str, theme: str = ""):

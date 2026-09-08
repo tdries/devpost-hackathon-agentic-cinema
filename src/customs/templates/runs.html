@@ -36,6 +36,19 @@
     <button type="button" class="tbtn" data-set-runs="cards">Cards</button>
     <button type="button" class="tbtn" data-set-runs="list">List</button>
   </span>
+  {# A plain form, so the order survives a reload, a bookmark and a browser
+     with no JavaScript: the choice is in the URL rather than in a variable
+     this page happens to be holding. #}
+  <form class="right runsort" method="get" action="/runs">
+    {% if all %}<input type="hidden" name="all" value="1">{% endif %}
+    <label class="label" for="runsort">Sort</label>
+    <select class="urlin" id="runsort" name="sort" onchange="this.form.submit()">
+      {% for key, spec in sorts.items() %}
+      <option value="{{ key }}"{{ ' selected' if key == sort else '' }}>{{ spec.label }}</option>
+      {% endfor %}
+    </select>
+    <noscript><button class="btn" type="submit">Sort</button></noscript>
+  </form>
 </div>
 
 <section style="border-top:none;padding-top:0">

@@ -460,7 +460,12 @@
       button.disabled = true;
       var was = button.innerHTML;
       button.textContent = "Loading...";
-      fetch("/runs?fragment=1&offset=" + next)
+      fetch("/runs?fragment=1&offset=" + next +
+            /* page two must be in the same order as page one */
+            (new URLSearchParams(window.location.search).get("sort")
+              ? "&sort=" + encodeURIComponent(
+                  new URLSearchParams(window.location.search).get("sort"))
+              : ""))
         .then(function (r) { return r.text(); })
         .then(function (html) {
           var slot = document.createElement("div");

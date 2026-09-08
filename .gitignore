@@ -28,3 +28,6 @@ bin/
 uv.lock
 docs/design/launch-control-styles.html
 docs/design/icons/customs-iconography.html
+
+# pytest coverage artefact
+.coverage

@@ -705,6 +705,56 @@ def push_observation(run: RunRecord, obs, findings: list[Finding] | None = None)
     _loki_push([stream])
 
 
+_WATCHED_LABEL_KIND = "watched"
+
+
+def push_watched(run: RunRecord, observations) -> int:
+    """One line per taxonomy dimension this run watched for and never saw.
+
+    The grid panel draws a row per dimension it finds lines for, so a
+    category with nothing in it simply had no row -- while the console drew
+    its greyed icon beside the panel anyway. Six icons, five rows, and every
+    row below the gap pointing at the wrong icon.
+
+    These carry their own `kind` rather than joining the observation stream:
+    frame search, the caption index and every {kind="observation"} panel
+    read that stream expecting a real sentence from the analyst, and a
+    dozen empty lines per run would be a lie told to all of them. The grid
+    asks for both kinds; nothing else has to know.
+    """
+    seen = {o.dimension for o in (observations or [])
+            if o.dimension and o.dimension != "none"}
+    try:
+        missing = [d for d in sorted(packs.taxonomy()) if d not in seen]
+        if not missing:
+            return 0
+        ts_ns = str(int(_mapped_unix_seconds(run, 0.0) * 1_000_000_000))
+    except Exception:  # noqa: BLE001 -- a row that does not line up is not
+        # worth failing a clearance for. Same contract as every other push
+        # here: best effort, and the run is what matters.
+        return 0
+    streams = []
+    for dimension in missing:
+        body = {"run_id": run.id, "dimension": dimension, "seen": False,
+                "max_severity": 0, "findings": 0,
+                "statement": "watched for, not seen in this run"}
+        streams.append({
+            "stream": {
+                "app": "customs",
+                "kind": _WATCHED_LABEL_KIND,
+                "asset": _asset_label(run),
+                "dimension": dimension,
+                "flagged": "no",
+            },
+            "values": [[ts_ns, json.dumps(body)]],
+        })
+    try:
+        _loki_push(streams)
+    except Exception:  # noqa: BLE001 -- see above
+        return 0
+    return len(streams)
+
+
 def push_observations(run: RunRecord, observations, findings: list[Finding]) -> int:
     """Every observation of a run, in one request rather than N.
 

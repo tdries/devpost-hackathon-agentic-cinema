@@ -578,6 +578,9 @@ def _push_run_telemetry(store: Store, state: _RunState, emit) -> dict:
 
     observations = store.observations(state.run_id)
     pushed = telemetry.push_observations(run, observations, findings)
+    # and one line per category watched for and never seen, so the grid
+    # panel draws a row beside every icon the console puts next to it
+    telemetry.push_watched(run, observations)
     emit_obs = f"push_observations -> {pushed} observation(s) to Loki"
     # ...and into the caption index, so the search does not have to read
     # them again later. A failure here costs a slow search, never a run.

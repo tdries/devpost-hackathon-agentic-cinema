@@ -2194,6 +2194,101 @@ def test_the_lane_chart_says_when_each_kind_of_problem_happens(console):
     assert 'href="#d-' in svg.text, "each lane is labelled with its taxonomy icon"
 
 
+def test_the_archive_can_be_ordered_eight_ways_and_says_which(console):
+    """Newest first answers "what did I just do". It is the wrong question
+    for "which film is giving us the most trouble", so the archive can be
+    ordered by what its own cards already show: open findings, rendered
+    edits, scenes, and both directions of each.
+
+    The order lives in the URL rather than in a variable this page happens
+    to be holding, so it survives a reload, a bookmark and a load-more.
+    """
+    client, store, _launched, _jobs = console
+    for _ in range(3):
+        _judged_run(store)
+
+    page = client.get("/runs").text
+    assert 'id="runsort"' in page, "the picker is on the page"
+    for key, spec in app_module.SORTS.items():
+        assert spec["label"] in page, f"{key} is offered"
+
+    rows = [{"run": run} for run in store.recent_runs(50)]
+    assert len(rows) > 1, "this fixture made several runs"
+
+    # the two date orders are the store's own order and its reverse
+    newest = [r["run"].id for r in app_module.sort_rows(rows, "newest")]
+    oldest = [r["run"].id for r in app_module.sort_rows(rows, "oldest")]
+    assert newest == [r["run"].id for r in rows]
+    assert oldest == list(reversed(newest))
+
+    # every counted order really is ordered by that count, and is stable
+    for order, key, reverse in (("open-most", "open", True),
+                                ("open-least", "open", False),
+                                ("edits-most", "edits", True),
+                                ("edits-least", "edits", False),
+                                ("scenes-most", "scenes", True),
+                                ("scenes-least", "scenes", False)):
+        listed = app_module.sort_rows(rows, order)
+        assert {r["run"].id for r in listed} == set(newest), f"{order} drops a run"
+        counts = [app_module.sort_metrics(r["run"])[key] for r in listed]
+        assert counts == sorted(counts, reverse=reverse), f"{order} is not ordered"
+        again = [r["run"].id for r in app_module.sort_rows(rows, order)]
+        assert again == [r["run"].id for r in listed], f"{order} is not stable"
+
+    # an order nobody offers falls back to the default rather than erroring
+    assert client.get("/runs?sort=sideways").status_code == 200
+    assert ([r["run"].id for r in app_module.sort_rows(rows, "sideways")]
+            == newest)
+
+
+def test_a_chart_is_drawn_once_per_version_and_answered_304_after(
+        console, monkeypatch):
+    """Charts are cached on what they are a picture of, not on a timer.
+
+    The timer was the bug: ten minutes for the lanes, five for a spark, so
+    every chart on a page expired together and the next visit fired one
+    Loki query per card at once. On a single instance -- which is the whole
+    persistence design -- that is what returned "rate exceeded" for thirty
+    eight thumbnails at a time.
+
+    Versioning fixes both ends: a finished run is drawn once and then never
+    again, and a LIVE run redraws the moment a finding lands rather than
+    when a timer happens to lapse.
+    """
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+
+    drawn = []
+    real = app_module.problem_lanes
+    monkeypatch.setattr(app_module, "problem_lanes",
+                        lambda r, compact=True: (drawn.append(r.id)
+                                                 or real(r, compact=compact)))
+
+    first = client.get(f"/runs/{run.id}/lanes.svg")
+    assert first.status_code == 200
+    assert len(drawn) == 1, "the first ask draws it"
+    etag = first.headers["ETag"]
+
+    # a second reader gets the same picture without it being drawn again
+    again = client.get(f"/runs/{run.id}/lanes.svg")
+    assert again.status_code == 200 and again.content == first.content
+    assert len(drawn) == 1, "a cache hit must not redraw"
+
+    # and a browser that already holds it is told so, with no body at all
+    fresh = client.get(f"/runs/{run.id}/lanes.svg",
+                       headers={"If-None-Match": etag})
+    assert fresh.status_code == 304 and not fresh.content
+    assert len(drawn) == 1, "304 must not redraw either"
+
+    # the run changes, so the picture must: a new severity is a new version
+    findings = store.findings(run.id)
+    assert findings, "this fixture judged something"
+    store.update_finding_status(findings[0].id, "resolved")
+    after = client.get(f"/runs/{run.id}/lanes.svg")
+    assert after.status_code == 200
+    assert after.headers["ETag"] != etag, "a changed run is a changed chart"
+
+
 def test_the_lane_chart_is_a_grafana_panel_served_as_an_image(console):
     """Once the hover requirement was dropped, this could become a real
     Grafana panel: a state timeline in grafana/dashboards/lanes.json,
@@ -4447,12 +4542,15 @@ def test_a_card_shows_the_same_six_lanes_whatever_the_run_found(console, monkeyp
     assert 'class="ic unseen"' in page
     assert "watched for, not seen" in page
 
-    # the panel is told which rows it may draw, and it is exactly those
+    # The panel is told which rows it may draw, and it is EVERY icon the card
+    # puts beside it. Pinning it to the seen dimensions only drew five rows
+    # next to six icons, and every row under the gap lined up with the wrong
+    # category. The unseen ones carry a kind="watched" line apiece, so the
+    # row exists and comes out empty.
     frame = re.search(r'<iframe class="cardlanes live"[^>]*>', page).group(0)
-    for dimension in seen:
-        assert dimension in frame
-    for dimension in unseen:
-        assert dimension not in frame.split("var-dim=", 1)[1]
+    pinned = frame.split("var-dim=", 1)[1]
+    for dimension in seen + unseen:
+        assert dimension in pinned, f"{dimension} has an icon but no row"
 
 
 def test_a_running_run_rings_its_thumbnail_not_the_whole_card(console):

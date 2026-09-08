@@ -344,7 +344,7 @@ gcloud run deploy "$SERVICE" \
                   # answers the overflow with 429 because this
                   # service cannot scale out (SQLite on a FUSE
                   # mount: one writer). #` \
-    --memory 4Gi --cpu 2 --no-cpu-throttling \
+    --memory 8Gi --cpu 2 --no-cpu-throttling \
     --timeout 900 \
     ${deploy_args[@]+"${deploy_args[@]}"} \
     --quiet

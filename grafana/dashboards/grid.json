@@ -70,7 +70,7 @@
       },
       "targets": [
         {
-          "expr": "max by (dimension) (max_over_time({app=\"customs\", kind=\"observation\", asset=\"$asset\", dimension=~\"$dim\"} | json | run_id=\"$run\" | unwrap max_severity [$__interval]))",
+          "expr": "max by (dimension) (max_over_time({app=\"customs\", kind=~\"observation|watched\", asset=\"$asset\", dimension=~\"$dim\"} | json | run_id=\"$run\" | unwrap max_severity [$__interval]))",
           "queryType": "range",
           "refId": "A",
           "legendFormat": "{{dimension}}",

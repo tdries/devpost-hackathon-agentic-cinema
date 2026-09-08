@@ -294,6 +294,7 @@ def judge_more(store: Store, run: RunRecord, markets: list[str],
         # the new market's verdicts change which observations are flagged,
         # so the observation lines are refreshed too
         telemetry.push_observations(run, store.observations(run.id), everything)
+        telemetry.push_watched(run, store.observations(run.id))
         for market, status in clearances.items():
             telemetry.push_status(run, market, status, everything)
         for finding in fresh:

@@ -2321,6 +2321,11 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
   .editcard[data-going] { transition: none; }
 }
 
+/* The archive's order picker: a select that looks like the rest of the row
+   rather than like a form dropped into it. */
+.runsort { display: flex; align-items: center; gap: 8px; margin-left: 14px; }
+.runsort select { padding: 3px 8px; font-size: 12px; width: auto; }
+
 .editkill { margin-left: 8px; }
 .editkill > summary { cursor: pointer; list-style: none; }
 .editkill > summary::-webkit-details-marker { display: none; }
