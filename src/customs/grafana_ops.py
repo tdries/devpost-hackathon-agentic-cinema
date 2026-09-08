@@ -128,6 +128,22 @@ class Transport:
     note: str = ""
 
 
+# How the server is launched. stdio, so it is a child process on a pipe with
+# no listening socket: the missing-inbound-auth half of the 2026 kill chain
+# (fixed in 1.1.0 with bearer tokens) has nothing to reach here, and neither
+# do the Host/Origin allowlists that only apply to the HTTP and SSE
+# transports.
+#
+# -disable-api takes away `grafana_api_request`, which is the tool
+# CVE-2026-19516 (CVSS 9.1) lives in: a caller who reaches the server can
+# point that tool anywhere and control the method, headers and body, which
+# in a container means the cloud metadata endpoint. This app never calls it
+# -- the six tools it does call are named in _OPERATIONS below, and agent
+# mode's model is given this project's own eleven functions rather than raw
+# MCP tools -- so switching the category off costs nothing and removes the
+# tool rather than trusting that nobody asks for it.
+MCP_ARGS = ("-t", "stdio", "-disable-api")
+
 # Per-operation transport record. `mcp_tool=None` means mcp-grafana 1.1.0 has no
 # write tool for this operation at all, so it can never flip to MCP no matter
 # what a future inventory contains. `grafana_api_request` is technically a
@@ -491,7 +507,7 @@ class GrafanaOps:
             self.mcp_tools = self._inventory(mcp)
         else:
             binary = Path(mcp_binary) if mcp_binary else _default_mcp_binary()
-            self.mcp = _McpStdio(binary, env={
+            self.mcp = _McpStdio(binary, args=MCP_ARGS, env={
                 "GRAFANA_URL": settings.grafana_url,
                 "GRAFANA_SERVICE_ACCOUNT_TOKEN": settings.grafana_sa_token,
             }, timeout=timeout)

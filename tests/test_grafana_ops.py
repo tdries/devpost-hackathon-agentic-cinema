@@ -1093,3 +1093,30 @@ def test_query_history_live_reads_findings_back():
         assert all(r["finding"] and r["finding"]["rule_id"] == "FR-ALC-01" for r in rows)
     finally:
         ops.close()
+
+
+def test_the_mcp_server_is_a_pipe_with_the_api_tool_switched_off():
+    """Two things about how mcp-grafana is launched, both security answers.
+
+    stdio: the server is a child process on a pipe, so it has no listening
+    socket. The 2026 kill chain's first half -- a session id whose format
+    was checked but whose bearer was never established, letting anyone who
+    could reach the server spend the service-account token stored in it --
+    needs something to reach. There is nothing to reach, and the Host and
+    Origin allowlists that 1.1.0 added apply only to the HTTP and SSE
+    transports.
+
+    -disable-api: that takes away `grafana_api_request`, which is where
+    CVE-2026-19516 (CVSS 9.1) lives -- a caller who does reach the server
+    can point that tool at any destination and control the method, headers
+    and body, which inside a container means the cloud metadata endpoint.
+    This app never calls it, and agent mode hands its model this project's
+    own functions rather than raw MCP tools, so the category is off: the
+    tool is absent rather than merely unasked for.
+    """
+    from customs.grafana_ops import MCP_ARGS
+
+    assert MCP_ARGS[:2] == ("-t", "stdio"), MCP_ARGS
+    assert "-disable-api" in MCP_ARGS, MCP_ARGS
+    for exposing in ("-t sse", "sse", "streamable-http", "-address"):
+        assert exposing not in MCP_ARGS, exposing

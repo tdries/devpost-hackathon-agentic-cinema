@@ -32,15 +32,23 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# mcp-grafana v1.1.0, linux/amd64 -- the same version as the darwin/arm64
+# mcp-grafana v1.3.0, linux/amd64 -- the same version as the darwin/arm64
 # binary developers run locally (bin/mcp-grafana, gitignored; see
 # grafana_ops.py's module docstring for the live tool inventory that version
 # was taken against). The mac binary is never copied into this image; it is
 # the wrong OS/arch and would not run here. GrafanaOps' binary resolution
 # falls back to /usr/local/bin/mcp-grafana whenever the repo-relative dev
 # path (bin/mcp-grafana) is absent, which inside this image it always is.
+# Why the pin moves: CVE-2026-19516 (CVSS 9.1) is an SSRF in this server's
+# own HTTP tool, chained with a missing inbound auth boundary. Neither
+# reaches this deployment -- the server runs as `-t stdio`, a child process
+# on a pipe with no listening socket, so there is nothing to reach, and the
+# tools this app calls are six named ones, none of them the HTTP fetch --
+# but running the newest release costs nothing and the first half of that
+# chain was fixed in 1.1.0 precisely because "nobody can reach it" is an
+# assumption about deployment rather than a property of the binary.
 RUN curl -fsSL \
-        https://github.com/grafana/mcp-grafana/releases/download/v1.1.0/mcp-grafana_Linux_x86_64.tar.gz \
+        https://github.com/grafana/mcp-grafana/releases/download/v1.3.0/mcp-grafana_Linux_x86_64.tar.gz \
         | tar -xz -C /usr/local/bin mcp-grafana \
     && chmod +x /usr/local/bin/mcp-grafana
 
