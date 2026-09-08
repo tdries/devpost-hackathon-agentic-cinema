@@ -245,3 +245,43 @@ def test_recent_runs_lists_the_newest_first_and_includes_a_run_never_started(tmp
     assert listed[0].t0 is None
     assert listed[0].markets == ["SA", "US"]
     assert len(store.recent_runs(limit=1)) == 1
+
+
+def test_every_read_is_safe_from_two_threads_at_once(tmp_path):
+    """One SQLite connection, ten readers, no InterfaceError.
+
+    This store hands one connection to every request thread, which is fine
+    only because every method that touches it takes the lock. Two of them
+    did not -- events_since and spent_today_on -- and the moment the
+    archive was warmed in a background thread while a reader was on it,
+    SQLite answered "bad parameter or other API misuse" and the page was a
+    500. That is a public link falling over under its second visitor, so it
+    is worth a test that would have caught it.
+    """
+    import threading
+
+    store = Store(str(tmp_path / "c.db"))
+    run = store.create_run(asset_path="/x/a.mp4", markets=["FR"])
+    store.add_findings([_finding(run_id=run.id)])
+    for i in range(40):
+        store.emit(run.id, "analyst", f"line {i}")
+
+    boom = []
+
+    def hammer():
+        try:
+            for _ in range(60):
+                store.events_since(run.id, 0)
+                store.findings(run.id)
+                store.spent_today_on([run.id])
+                store.stamp()
+                store.recent_runs(10)
+        except Exception as exc:            # noqa: BLE001 -- that is the test
+            boom.append(exc)
+
+    threads = [threading.Thread(target=hammer) for _ in range(10)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert not boom, boom[:2]

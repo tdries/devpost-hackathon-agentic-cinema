@@ -195,6 +195,7 @@ class Store:
             (run_id,)).fetchone()
         return float(row[0] or 0.0)
 
+    @_locked
     def spent_today_on(self, run_ids, now: float | None = None) -> float:
         """What today's generation cost, counting only these runs.
 
@@ -539,6 +540,7 @@ class Store:
     # against, which is now a run that no longer exists, and that is the
     # honest record of what happened.
 
+    @_locked
     def events_since(self, run_id: str, after_id: int) -> list[tuple]:
         return self._conn.execute(
             "SELECT id, ts, agent, message FROM events "
