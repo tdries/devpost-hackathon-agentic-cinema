@@ -2233,6 +2233,40 @@ def test_a_forged_role_cookie_buys_nothing(console):
         app_module.settings = saved
 
 
+def test_a_chart_keeps_only_its_newest_version_on_disk(console, monkeypatch):
+    """Versioned charts were a leak: a run mid-remediation changes version
+    on every finding a fix touches, each change wrote a new set of SVGs,
+    and nothing removed the old set -- on the RAM filesystem, mirrored to
+    the bucket. Now a new version retires the ones before it, and only
+    its own siblings: a market spark is not the run spark.
+    """
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    monkeypatch.setattr(app_module, "problem_lanes",
+                        lambda r, compact=True: '<svg xmlns="http://www.w3.org/2000/svg"/>')
+
+    charts = app_module.run_dir(run) / "charts"
+    first = client.get(f"/runs/{run.id}/lanes.svg")
+    assert first.status_code == 200
+    assert len(list(charts.glob("lanes_*.svg"))) == 1
+
+    # the run changes, so the chart does; the old file must go
+    findings = store.findings(run.id)
+    store.update_finding_status(findings[0].id, "resolved")
+    second = client.get(f"/runs/{run.id}/lanes.svg")
+    assert second.headers["ETag"] != first.headers["ETag"]
+    lanes = list(charts.glob("lanes_*.svg"))
+    assert len(lanes) == 1, f"old versions left behind: {[p.name for p in lanes]}"
+
+    # a bystander with a similar name is not a sibling and is left alone
+    bystander = charts / "lanes_full_000000000000.svg"
+    bystander.write_text("<svg/>")
+    store.update_finding_status(findings[0].id, "open")
+    client.get(f"/runs/{run.id}/lanes.svg")
+    assert bystander.exists(), "lanes_full is a different chart, not an old lanes"
+    assert len(list(charts.glob("lanes_[0-9a-f]*.svg"))) == 2  # one lanes, one lanes_full
+
+
 def test_the_archive_can_be_ordered_eight_ways_and_says_which(console):
     """Newest first answers "what did I just do". It is the wrong question
     for "which film is giving us the most trouble", so the archive can be

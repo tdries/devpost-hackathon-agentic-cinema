@@ -4735,6 +4735,34 @@ def _chart_lock(key: str) -> threading.Lock:
         return _CHART_LOCKS.setdefault(key, threading.Lock())
 
 
+def _retire_older_versions(path: Path) -> None:
+    """Drop every earlier version of this chart, now that a newer one exists.
+
+    A run changes its version on every finding a fix touches, and a run
+    mid-remediation touches many. Each change wrote a fresh set of charts
+    and nothing removed the last set, so a busy run grew a generation of
+    SVGs per status flip -- on the container's RAM filesystem, which is
+    what was killing the instance this afternoon, and mirrored into the
+    bucket for good. Versioning fixed the stampede and quietly opened a
+    leak; this closes it.
+
+    A sibling is the same stem followed by exactly one 12-hex version, so
+    `spark_<v>.svg` never mistakes `spark_AE-MBC4_<v>.svg` for itself.
+    """
+    stem, _, _ = path.stem.rpartition("_")
+    if not stem:
+        return
+    older = re.compile(rf"^{re.escape(stem)}_[0-9a-f]{{12}}{re.escape(path.suffix)}$")
+    for sibling in path.parent.iterdir():
+        if sibling != path and older.match(sibling.name):
+            try:
+                sibling.unlink()
+            except OSError:
+                continue
+            with _CHART_LOCKS_GUARD:
+                _CHART_LOCKS.pop(str(sibling), None)   # and its lock goes with it
+
+
 def _chart_response(request: Request, path: Path, version: str, draw,
                     media_type: str = "image/svg+xml"):
     """Serve a versioned chart: from disk, from the browser, or drawn once.
@@ -4756,6 +4784,7 @@ def _chart_response(request: Request, path: Path, version: str, draw,
                                         detail="nothing to draw for this run")
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_text(body) if isinstance(body, str) else path.write_bytes(body)
+                _retire_older_versions(path)
     data = path.read_bytes()
     return Response(content=data, media_type=media_type, headers={
         "ETag": etag,
