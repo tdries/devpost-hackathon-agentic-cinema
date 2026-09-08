@@ -2260,6 +2260,25 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
 .editwho { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .editwho .label { margin-right: 2px; }
 .editdim { width: 19px; height: 19px; }
+/* the operator's own words for a generative fix */
+.fix-say { margin: 10px 0 0; }
+.fix-say > summary { cursor: pointer; }
+.fix-say textarea.urlin { width: 100%; margin-top: 8px; font-size: 13px;
+  line-height: 1.45; resize: vertical; font-family: inherit; }
+.fix-say > .label { margin-top: 6px; display: block; }
+
+.editmethod { display: inline-flex; align-items: center; gap: 6px; }
+.editmethod .ic { width: 14px; height: 14px; }
+/* removing an edit: folded away, because it destroys the only copy */
+.editkill { margin-left: 8px; }
+.editkill > summary { cursor: pointer; list-style: none; }
+.editkill > summary::-webkit-details-marker { display: none; }
+.editkill[open] > summary { color: var(--blocked); border-color: var(--blocked); }
+.editkill form { display: grid; gap: 8px; margin-top: 10px; padding: 12px;
+  border: 1px solid var(--line-2); border-radius: var(--radius);
+  background: var(--well); max-width: 320px; }
+.editkill .urlin { font-size: 13px; padding: 8px 10px; }
+.editkill .btn { justify-self: start; }
 .editwho .pill { text-decoration: none; }
 .editwhy { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink-2); }
 .editwhy .chip { margin-right: 8px; }

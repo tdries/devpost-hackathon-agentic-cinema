@@ -58,6 +58,12 @@ class Settings:
     webhook_token: str
     judge_password: str
     visitor_password: str
+    # The word that deletes an edit. Its own setting rather than the judge
+    # word, so the thing that removes evidence can be rotated without
+    # locking judges out -- and it defaults to the judge word rather than
+    # to something guessable, because the default of a destructive control
+    # should not be a convenience.
+    edits_password: str
 
     @classmethod
     def load(cls, env_file: Path | str | None = ".env") -> "Settings":
@@ -112,6 +118,7 @@ class Settings:
             webhook_token=g("WEBHOOK_TOKEN", ""),
             judge_password=g("JUDGE_PASSWORD", "DEVPOST"),
             visitor_password=g("VISITOR_PASSWORD", "VISITOR"),
+            edits_password=g("EDITS_PASSWORD", g("JUDGE_PASSWORD", "DEVPOST")),
         )
 
 settings = Settings.load()

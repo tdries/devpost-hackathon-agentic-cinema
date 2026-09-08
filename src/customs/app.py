@@ -3561,7 +3561,7 @@ def edited_scenes(limit: int = 120) -> list[dict]:
 
 
 @app.get("/edits", response_class=HTMLResponse)
-def my_edits(request: Request):
+def my_edits(request: Request, gone: str = "", wrong: str = ""):
     """Every scene this instance has edited, before beside after.
 
     A cross-run cutting room. Each run has one of its own, which is the
@@ -3586,12 +3586,60 @@ def my_edits(request: Request):
             method = "carried over"
         methods[method] = methods.get(method, 0) + 1
     return _page(request, "edits.html", screen="edits", rows=shown,
+                 gone=gone, wrong=wrong, label=remediate.method_label,
                  total=len(rows), unkept=len(rows) - len(shown),
                  edits=sum(len(row["changes"]) for row in rows),
                  films=len({row["asset"] for row in rows}),
                  picture=sum(1 for row in shown if row["kind"] == "video"),
                  sound=sum(1 for row in shown if row["kind"] == "audio"),
                  methods=sorted(methods.items(), key=lambda kv: -kv[1]))
+
+
+@app.post("/edits/{run_id}/{change_id}/delete")
+def delete_edit(request: Request, run_id: str, change_id: str,
+                password: str = Form("")):
+    """Remove one edit: its record, its stills, its clips and its cuts.
+
+    Behind a word, because this is the one control in the console that
+    destroys evidence. Everything else that "deletes" here hides instead;
+    this does not, and it cannot be undone from the interface -- the frames
+    and the generated seconds are the only copy.
+
+    Why it exists: a fix that came back wrong is still a change record with
+    two frames and a clip, and it shows up on My edits beside the ones that
+    worked. An operator cleaning up a demo needs to be able to take the bad
+    examples out, and doing that by hand in SQLite over a FUSE mount is
+    worse than a button with a password on it.
+
+    Removed everywhere at once, because there is one record: the scene
+    leaves My edits, the change leaves the cutting room, the generated
+    screen and the mission feed, and the run's own numbers stop counting
+    it.
+    """
+    run = _run_or_404(run_id)
+    if not re.fullmatch(r"chg_[0-9a-f]{6,32}", change_id):
+        raise HTTPException(status_code=404, detail="no such change")
+    if password.strip() != settings.edits_password:
+        return RedirectResponse(f"/edits?wrong={quote(change_id)}",
+                                status_code=303)
+    gone = store().delete_change(run.id, change_id)
+    if not gone:
+        raise HTTPException(status_code=404, detail="no such change")
+    # and the files it wrote, which are named after it
+    folder = run_dir(run) / "changes"
+    removed = 0
+    if folder.is_dir():
+        for path in folder.glob(f"{change_id}_*"):
+            try:
+                path.unlink()
+                removed += 1
+            except OSError as exc:
+                log.warning("could not unlink %s: %s", path.name, exc)
+    store().emit(run.id, "operator",
+                 f"edit deleted: {change_id} and {removed} file(s)")
+    _SCENES_CACHE.clear()
+    _CARD_CACHE.clear()
+    return RedirectResponse(f"/edits?gone={quote(change_id)}", status_code=303)
 
 
 @app.get("/runs/{run_id}/generated", response_class=HTMLResponse)

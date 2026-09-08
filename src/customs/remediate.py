@@ -124,6 +124,30 @@ def _pace_image_call() -> None:
 # and the day's budget allowed it.
 METHODS = ("relettering", "prop_swap", "revoice", "per_frame", "omni", "bridge")
 
+# What a change record's method is called on screen. The picker in the
+# market room names TECHNIQUES (patch one frame, propagate the change,
+# repaint every frame); a change record keeps the semantic method that was
+# asked for. Both are worth showing: the reader of an edit wants to know
+# whether a model re-rendered the span or a still was patched over it,
+# because that is exactly the difference between the fixes that hold and
+# the fixes the verifier sends back.
+METHOD_LABELS = {
+    "omni": "Rewrite with Omni",
+    "bridge": "Regenerate with Veo",
+    "per_frame": "Repaint every frame",
+    "prop_swap": "Swap the prop, patched",
+    "reframe": "Reframe the shot",
+    "relettering": "Re-letter the text",
+    "revoice": "Re-voice the line",
+}
+
+
+def method_label(method: str) -> str:
+    """The words for a recorded method, including the carried-over ones."""
+    if method.startswith("carried over"):
+        return "Carried over: " + method[len("carried over from "):]
+    return METHOD_LABELS.get(method, method.replace("_", " "))
+
 # --- the mapping table (task-14 contract) ---
 #
 # dimension                      method       why

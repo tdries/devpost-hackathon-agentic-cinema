@@ -306,6 +306,23 @@
              explicit Veo picks once became two centre crops. The click
              now explains itself instead. #}
           <p class="fix-why fix-refused" role="alert" hidden></p>
+          {# Say it yourself.
+             Every method above carries a default instruction written from
+             the rule and the observation, which is what makes a fix
+             reproducible -- and it is also why a prop swap can hand back a
+             cigarette redrawn as a dark stick in the same mouth. The two
+             generative methods take the span itself, so an operator who
+             can see what went wrong can say what they want instead: this
+             text is added to the instruction the model is given. Empty is
+             the default behaviour, unchanged. #}
+          <details class="fix-say">
+            <summary class="label">Say what should happen (Omni and Veo)</summary>
+            <textarea class="urlin" name="replacement" rows="2"
+                      placeholder="e.g. remove the cigarette completely and rebuild the lip line, nothing held in the mouth"></textarea>
+            <p class="label">Added to the model's own instruction. Ignored by
+              the patch methods, which edit a frame rather than re-render the
+              span.</p>
+          </details>
           <div class="fix-foot">
             <span class="label">Generation budget {{ '%.2f'|format(budget_left) }} of {{ '%.2f'|format(budget_total) }} EUR left today</span>
             <button class="btn go" type="submit">Run the fix</button>

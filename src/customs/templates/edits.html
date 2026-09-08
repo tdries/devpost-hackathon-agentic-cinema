@@ -45,6 +45,15 @@
 </section>
 
 <section style="border-top:none;padding-top:0">
+  {% if gone %}
+  <p class="subline" style="margin:0 0 14px"><span class="chip on">removed</span>
+    <span class="mono">{{ gone }}</span> is gone: its record, its frames and
+    anything a model rendered for it.</p>
+  {% endif %}
+  {% if wrong %}
+  <p class="subline" style="margin:0 0 14px"><span class="chip policy">not removed</span>
+    That is not the word for <span class="mono">{{ wrong }}</span>.</p>
+  {% endif %}
   {% if rows %}
   <div class="editgrid">
     {% for row in rows %}
@@ -53,7 +62,12 @@
         <a class="editfilm" href="/runs/{{ row.run.id }}/cutting">{{ row.asset }}</a>
         <span class="editmeta">
           <span class="mono editwhen">{{ row.t_start | timecode }} to {{ row.t_end | timecode }}</span>
-          <span class="chip method">{{ row.method }}</span>
+          {# The fix type in words, not just its key. Whether a model
+             re-rendered the span or a still was patched over it is the
+             difference between the fixes that hold and the fixes the
+             verifier sends back, so it is the loudest thing on the row. #}
+          <span class="chip method editmethod" title="{{ row.method }}">
+            <svg class="ic"><use href="#i-remediator"/></svg>{{ label(row.method) }}</span>
         </span>
       </header>
       {# Who objected, and who the fix on show was actually made for. Three
@@ -132,6 +146,21 @@
         <a class="chip" href="/runs/{{ row.run.id }}/cutting">cutting room</a>
         <a class="chip" href="/runs/{{ row.run.id }}/timeline">where in the film</a>
         {% if row.change %}<span class="runid mono">{{ row.change.id }}</span>{% endif %}
+        {# The one control in this console that destroys evidence, so it
+           asks for a word and says what it takes: the record, the frames
+           and the generated seconds are the only copy of them. #}
+        {% if row.change %}
+        <details class="editkill">
+          <summary class="chip">remove</summary>
+          <form method="post" action="/edits/{{ row.run.id }}/{{ row.change.id }}/delete">
+            <p class="label">This deletes the record, both frames and any
+              generated clip. It cannot be undone.</p>
+            <input class="urlin" type="password" name="password"
+                   placeholder="the word" autocomplete="off">
+            <button class="btn" type="submit">Remove this edit</button>
+          </form>
+        </details>
+        {% endif %}
       </footer>
     </article>
     {% endfor %}

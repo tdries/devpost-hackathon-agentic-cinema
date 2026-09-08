@@ -1640,6 +1640,92 @@ def test_my_edits_groups_a_scene_rather_than_a_market(console):
     assert nav.index('href="/edits"') < nav.index('href="/library"')
 
 
+def test_the_operator_can_say_what_a_generative_fix_should_do(console, monkeypatch):
+    """Every method carries a default instruction written from the rule and
+    the observation, which is what makes a fix reproducible -- and it is
+    also how a prop swap handed back a cigarette redrawn as a dark stick in
+    the same mouth. The two generative methods take the span itself, so an
+    operator who can see what went wrong can say what they want instead.
+
+    The field was already plumbed all the way to the model prompt; it had
+    no way in from the screen.
+    """
+    client, store, _launched, jobs = console
+    run = _judged_run(store)
+    finding = next(f for f in store.findings(run.id)
+                   if f.status == "open" and not f.remediation_blocked)
+
+    page = client.get(f"/runs/{run.id}/markets/{finding.market}").text
+    assert 'name="replacement"' in page, "a way to say it"
+    assert "Omni and Veo" in page
+
+    # what the remediator is actually handed, at the seam
+    handed = {}
+    monkeypatch.setattr(app_module, "remediate_and_verify",
+                        lambda *a, **kw: handed.update(kw))
+
+    said = "remove the cigarette completely and rebuild the lip line"
+    posted = client.post(f"/runs/{run.id}/findings/{finding.id}/remediate",
+                         data={"method": "omni", "replacement": said},
+                         follow_redirects=False)
+    assert posted.status_code in (200, 303), posted.text[:200]
+    assert handed.get("method") == "omni"
+    assert handed.get("replacement") == said, handed
+
+
+def test_an_edit_can_be_removed_and_the_word_is_asked_for(console):
+    """The one control in this console that destroys evidence.
+
+    Everything else that "deletes" here hides instead. This does not: the
+    record, the two frames and any generated clip are the only copy, so it
+    asks for a word first and says what it takes. It exists because a fix
+    that came back wrong is still a change record sitting on My edits
+    beside the ones that worked, and cleaning that up by hand in SQLite
+    over a FUSE mount is worse than a button with a password on it.
+    """
+    from customs.config import settings
+    from customs.schema import ChangeRecord
+
+    client, store, _launched, _jobs = console
+    run = _judged_run(store)
+    finding = store.findings(run.id)[0]
+    folder = Path(app_module.run_dir(run)) / "changes"
+    folder.mkdir(parents=True, exist_ok=True)
+    for name in ("chg_bad001_before.png", "chg_bad001_after.png",
+                 "chg_bad001_omni.mp4"):
+        (folder / name).write_bytes(b"x")
+    store.add_change(ChangeRecord(
+        id="chg_bad001", run_id=run.id, finding_id=finding.id, method="prop_swap",
+        description="swapped the prop and the rule fired again",
+        before_frame=str(folder / "chg_bad001_before.png"),
+        after_frame=str(folder / "chg_bad001_after.png")))
+    assert "chg_bad001" in client.get("/edits").text
+
+    # the wrong word changes nothing at all
+    said = client.post(f"/edits/{run.id}/chg_bad001/delete",
+                       data={"password": "please"}, follow_redirects=False)
+    assert said.status_code == 303 and "wrong=" in said.headers["location"]
+    assert store.changes(run.id), "still there"
+    assert (folder / "chg_bad001_omni.mp4").is_file()
+
+    gone = client.post(f"/edits/{run.id}/chg_bad001/delete",
+                       data={"password": settings.edits_password},
+                       follow_redirects=False)
+    assert gone.status_code == 303 and "gone=" in gone.headers["location"]
+    assert [c.id for c in store.changes(run.id)] == []
+    for name in ("chg_bad001_before.png", "chg_bad001_after.png",
+                 "chg_bad001_omni.mp4"):
+        assert not (folder / name).exists(), name
+
+    # and it is gone from every screen that showed it, not just this one
+    assert "chg_bad001" not in client.get("/edits").text
+    assert "chg_bad001" not in client.get(f"/runs/{run.id}/cutting").text
+    assert "chg_bad001" not in client.get(f"/runs/{run.id}/generated").text
+    # the deletion is on the record, where every other decision is
+    feed = client.get(f"/runs/{run.id}/mission").text
+    assert "edit deleted: chg_bad001" in feed
+
+
 def test_an_edit_plays_its_own_seconds_from_both_masters(console, tmp_path):
     """/edits compares an edit by playing the span it names, twice: as
     delivered and as it came back. Both clips are cut here, on demand, from

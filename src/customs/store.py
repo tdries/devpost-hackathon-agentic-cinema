@@ -464,6 +464,21 @@ class Store:
         self._conn.commit()
 
     @_locked
+    def delete_change(self, run_id: str, change_id: str) -> bool:
+        """Forget one edit. True when a row actually went.
+
+        Only the record: the files beside it are the caller's to unlink,
+        because the caller knows which of them it wrote. Scoped by run as
+        well as id so a change can only be deleted through the run that
+        owns it.
+        """
+        cur = self._conn.execute(
+            "DELETE FROM changes WHERE id = ? AND run_id = ?",
+            (change_id, run_id))
+        self._conn.commit()
+        return cur.rowcount > 0
+
+    @_locked
     def stamp(self) -> tuple[int, ...]:
         """A cheap fingerprint of everything a page might be showing.
 
