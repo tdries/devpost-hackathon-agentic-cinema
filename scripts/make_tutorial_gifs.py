@@ -132,7 +132,12 @@ def stage(html: str, base: str, *, open_details=False, detail_view=False,
             parts.append('<div class="ag-msg ag-agent">'
                          '<svg class="ic"><use href="#i-adjudicator"/></svg>'
                          f'<div class="ag-body">{said}</div></div>')
-        head, anchor, tail = html.partition('<div class="agent-suggest')
+        # The starters are a folded <details> now and were a <div> before;
+        # the injection lands just before whichever one this build has.
+        marker = ('<details class="agent-suggest'
+                  if '<details class="agent-suggest' in html
+                  else '<div class="agent-suggest')
+        head, anchor, tail = html.partition(marker)
         head = head.rstrip()
         assert head.endswith("</div>"), "the agent log did not close where expected"
         html = (head[:-len("</div>")] + "".join(parts) + "</div>"
@@ -258,9 +263,14 @@ def assemble(frames: list[Path], dest: Path, delay: float = 1.9) -> Path:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="https://customs-app-akap4ao72a-ew.a.run.app")
-    ap.add_argument("--run", default="run_804f7b687c72")
+    # The showcase run, which is the one app.SHOWCASE_RUN pins and the one
+    # the README's stills use. The two ids that used to be here were
+    # whatever was interesting the week they were written, and both have
+    # since been deleted -- so every gif in the set 404'd at the first
+    # fetch instead of being merely stale.
+    ap.add_argument("--run", default="run_959b162a0f25")
     ap.add_argument("--market", default="FR")
-    ap.add_argument("--fixed", default="run_c61fa291681f",
+    ap.add_argument("--fixed", default="run_959b162a0f25",
                     help="a run that already has a localized master")
     ap.add_argument("--cookie", default="customs-role=judge")
     ap.add_argument("--only", help="one gif by name")

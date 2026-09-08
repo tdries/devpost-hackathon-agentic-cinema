@@ -60,6 +60,7 @@ Every frame below is the running console, shot from the deployed instance rather
 | ![Frames and findings](docs/media/tut-2-frames.gif) | **Every frame, as the analyst saw it.** One neutral timecoded sentence each, verdicts forbidden. A finding is that observation joined to one market's rule and a live citation. |
 | ![The fix picker](docs/media/tut-3-fix.gif) | **Five ways to fix it, priced in euro before you press.** What should change, and how much of the footage to disturb. The two generative methods will also take your own words, added to the instruction the model is given. The localized master lands beside the original in the cutting room. |
 | ![A click in Grafana](docs/media/tut-4-grafana.gif) | **A click on a Grafana panel starts a generative fix.** The grid is the crew's own dashboard; clicking a square resolves the scene under it and starts a priced edit on that span. |
+| ![Agent mode answering](docs/media/tut-5-agent.gif) | **Or ask for the whole console in sentences.** Every screen above is one of this agent's eleven tools, so what it tells you is what you would have found by clicking -- and it opens that thing beside its answer. The turn in this recording is a real one, posted to the deployed service. |
 
 ---
 

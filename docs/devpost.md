@@ -20,11 +20,11 @@ The Grafana angle came from noticing that a clearance run is basically telemetry
 
 ### What it does
 
-You upload the spot, or paste a YouTube link, and tick the markets. Then you watch it go through.
+You upload the spot and tick the markets. Then you watch it go through.
 
 The crew watches the film once and writes down what's in it, in plain terms: a woman raises a glass of red wine, a man in shorts, a flag on the wall, text that says "clinically proven". No opinions at this stage. Then one adjudicator per market picks up that list and checks it against that market's rules. I've built 21 rule packs covering 98 jurisdictions, from a global baseline down through the EU, sixteen countries and eighty individual broadcasters. Every rule points at a real law or broadcaster code, and every finding comes back with a live link to it, found through Google Search at the moment of judging. Market tiles go from pending to cleared, at risk or blocked as the verdicts come in.
 
-Behind that, the crew builds its own Grafana dashboards for the run: risk per market along the timecode, every finding as an annotation, and alert rules. When Grafana fires an alert on a blocking finding, it calls back into the app and a remediator has a go at the shot. There are five ways to fix a span, from a cheap one-frame patch up to Gemini Omni rewriting the whole shot as video, or Veo 3.1 generating new motion between two edited frames. Then a verifier runs the same analysis again on the new footage. If the problem is gone and nothing new broke, the metric drops and Grafana closes its own alert.
+Behind that, the crew builds its own Grafana dashboards for the run: risk per market along the timecode, every finding as an annotation, and alert rules. When Grafana fires an alert on a blocking finding, it calls back into the app and a remediator has a go at the shot. There are five ways to fix a span, from a cheap one-frame patch up to Gemini Omni rewriting the whole shot as video, or Veo 3.1 generating new motion between two edited frames -- and for those two you can type what you want to happen, which is added to the instruction the model gets. Then a verifier runs the same analysis again on the new footage. If the problem is gone and nothing new broke, the metric drops and Grafana closes its own alert.
 
 What you get out is what a clearance desk would actually hand over: a decision per market with the evidence, a localised master, a clearance certificate as a PDF with every finding and statute on it, and marker files (CSV and CMX3600 EDL) so an editor can drop the findings straight onto their timeline in Resolve or Premiere, colour-coded, with the reason in the note.
 
