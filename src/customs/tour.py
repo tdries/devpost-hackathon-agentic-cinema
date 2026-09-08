@@ -89,12 +89,19 @@ WALK = [
      "body": "Nine dashboards, three alert rules and every metric the crew "
              "writes, read from the definitions it provisions from. One of "
              "those rules exists to tell the fix loop to stop."},
+    {"path": "/agent", "at": "agent-ask|agent",
+     "title": "Or say it in sentences",
+     "body": "The same console, with an agent in front of it. Every screen "
+             "you have just walked is one of its tools, so what it tells "
+             "you is what you would have found by clicking, and it opens "
+             "that thing beside its answer."},
 ]
 
 
 def slides(*, packs: int, dimensions: int, rules: int, pairings: int,
            dashboards: int, panels: int, series: int, alert_rules: int,
-           runs: int, findings: int, budget: float, stops: int) -> list[dict]:
+           runs: int, findings: int, budget: float, stops: int,
+           tools: int) -> list[dict]:
     """The carousel, with this instance's own numbers in it.
 
     `kind` drives the layout: splash is the cover, value sells, walkthrough
@@ -107,11 +114,11 @@ def slides(*, packs: int, dimensions: int, rules: int, pairings: int,
          "title": "The Media Customs",
          "lede": "One asset. Every market. Before it ships.",
          "body": "An AI crew watches your commercial once, then judges it "
-                 "in parallel against every market you ship to -- the law "
-                 "and the cultural ground it has to land on: gesture, "
-                 "modesty, religious symbols, superstition, humour, "
-                 "politics. It builds its own Grafana instrument panel as "
-                 "it goes, and re-renders the shots that fail.",
+                 "in parallel against every market you ship to, on both "
+                 "counts: the law, and the cultural ground it has to land "
+                 "on. Gesture, modesty, religious symbols, superstition, "
+                 "humour, politics. It builds its own Grafana instrument "
+                 "panel as it goes, and re-renders the shots that fail.",
          "stat": f"{packs} jurisdictions  ·  {rules} rules  ·  "
                  f"{dimensions} things watched for"},
 
@@ -222,6 +229,20 @@ def slides(*, packs: int, dimensions: int, rules: int, pairings: int,
                  "own alert. A third rule watches the day's budget and "
                  "tells that loop to stop before it spends the card.",
          "stat": "one rule to start the work, one to stop it"},
+
+        {"id": "agent", "kind": "walkthrough", "art": "agent",
+         "eyebrow": "How it works  ·  6",
+         "title": "Or ask for the whole console in sentences",
+         "lede": "Agent mode is not a chatbot bolted on the side.",
+         "body": "The same functions the screens call are this agent's "
+                 "tools, so it cannot answer out of its own summary of a "
+                 "summary: it reads the store the market room reads, and "
+                 "it obeys the same refusals: the Guard still blocks a "
+                 "protected-basis fix, and the budget still governs Veo. Ask a "
+                 "question nobody wrote a screen for and it writes the "
+                 "LogQL, builds the dashboard, and opens what it found "
+                 "beside its answer.",
+         "stat": f"{tools} tools, and every one of them is the product"},
 
         {"id": "takeaway", "kind": "value", "art": "takeaway",
          "eyebrow": "What you take away",

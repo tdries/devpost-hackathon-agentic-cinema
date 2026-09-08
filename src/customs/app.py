@@ -1790,6 +1790,7 @@ def landing(request: Request):
     return _page(request, "landing.html", screen="landing",
                  roles=ROLES,
                  packs_total=len(market_packs()),
+                 tools_total=len(agentmode.TOOL_NAMES),
                  dims_total=len(packs.taxonomy()))
 
 
@@ -1853,7 +1854,7 @@ def _tour_context() -> dict:
         dashboards=inventory["dashboards"], panels=inventory["panels"],
         series=inventory["series"], alert_rules=len(grafana_ops.ALERT_RULES),
         runs=len(runs), findings=findings, budget=costs.DAILY_BUDGET_EUR,
-        stops=len(stops))
+        stops=len(stops), tools=len(agentmode.TOOL_NAMES))
     return {"slides": slides, "stops": stops, "run_id": run_id}
 
 
@@ -1870,6 +1871,7 @@ def tour_deck(request: Request):
     return _page(request, "tour.html", screen="tour",
                  slides=context["slides"], stops=context["stops"],
                  run_id=context["run_id"],
+                 tool_names=agentmode.TOOL_NAMES,
                  dims_all=sorted(packs.taxonomy()))
 
 

@@ -73,7 +73,7 @@
 </section>
 
 <div class="agent" data-run="{{ run_id }}">
-  <div class="agent-side">
+  <div class="agent-side" data-tour="agent">
     <div class="agent-head">
       <span class="label"><svg class="ic"><use href="#i-publisher"/></svg>Agent</span>
       <span class="label">{{ '%.2f'|format(budget_left) }} EUR budget left</span>
@@ -138,7 +138,7 @@
       <span id="agent-drop-text">Drop a commercial here, or choose a file</span>
     </label>
 
-    <form class="agent-ask" id="agent-ask">
+    <form class="agent-ask" id="agent-ask" data-tour="agent-ask">
       <input type="hidden" name="run" value="{{ run_id }}">
       <input class="urlin" type="text" name="message" id="agent-input"
              placeholder="Ask the console anything" autocomplete="off">

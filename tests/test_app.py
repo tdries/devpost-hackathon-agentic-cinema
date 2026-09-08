@@ -2066,7 +2066,8 @@ def test_the_front_door_says_what_this_is_before_what_it_does(console):
     assert client.get("/").status_code == 200
 
     # the pitch
-    assert "One asset." in body and "Every market." in body
+    assert "The Media Customs" in body
+    assert "every geography and culture" in body
     assert "Observe once, judge many" in body
     assert "Grafana is a participant" in body
 
@@ -3675,6 +3676,36 @@ def test_a_withheld_stem_disappears_from_every_read_path(console, monkeypatch):
     assert config.withheld_matcher() == ""
     assert "asset!~" not in logql("cigar")
     assert client.get(f"/runs/{withheld.id}").status_code == 200
+
+
+def test_both_explainers_say_the_console_can_be_asked(console):
+    """The front page and the tour explained the crew, the ladder, the
+    guard, the fix loop and Grafana, and never mentioned that the whole
+    thing can be asked for in sentences -- which is the half of the product
+    the hackathon is about.
+
+    Both screens say it now, and both count the tools from agentmode
+    rather than from a sentence somebody typed, so a tool added or removed
+    cannot leave a claim behind.
+    """
+    from customs import agentmode
+
+    client, _store, _launched, _jobs = console
+    tools = len(agentmode.TOOL_NAMES)
+
+    front = client.get("/").text
+    assert "agent mode" in front.lower()
+    assert f"{tools} tools" in front
+    assert 'href="/agent"' in front
+
+    deck = client.get("/tour").text
+    assert "Agent mode is not a chatbot bolted on the side." in deck
+    assert f"{tools} tools" in deck
+    # and the walk visits the live agent screen
+    stops = client.get("/tour/walk.json").json()["stops"]
+    assert any(stop["path"] == "/agent" for stop in stops)
+    agent = client.get("/agent").text
+    assert 'data-tour="agent-ask"' in agent
 
 
 def test_the_page_that_prints_every_query_never_prints_a_withheld_title(console,

@@ -17,14 +17,17 @@
 
   <div class="landhero-front">
     <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-    <span class="landhero-kicker mono">The Media Customs</span>
     <span class="hero-with">
       <img class="hero-adk" src="/static/logo-adk.png?v={{ static_v }}" alt="Google Cloud Agent Builder" width="32" height="32">
       <i class="brand-bar" aria-hidden="true"></i>
       <img class="hero-grafana" src="/static/powered-by-grafana.png?v={{ static_v }}"
            alt="Powered by Grafana" width="114" height="26">
     </span>
-    <h1 class="landhero-title">One asset. Every market. Before it ships.</h1>
+    {# The name, then what it is for. "One asset. Every market. Before it
+       ships." is a good tagline for people who already know what ad
+       clearance is; a stranger reads it as three fragments. #}
+    <h1 class="landhero-title"><span class="lht-name">The Media Customs</span>
+      Start localizing your video content for every geography and culture</h1>
     {# No count in the lede: the number is real and it is on the screens,
        but it dates the sentence and invites the reader to audit arithmetic
        instead of understanding the product. And the law is only half the
@@ -198,6 +201,44 @@
         the failing span, priced in euro before you press.</span>
     </div>
   </div>
+</section>
+
+<section class="landagent">
+  <div class="rule-row"><span class="label">Two ways in: click it, or ask it</span>
+    <span class="right label">agent mode</span>
+  </div>
+  <p class="subline" style="max-width:88ch">Everything above is a screen you
+    can click. It is also a tool the agent in front of it can call, and those
+    are the same functions, not a second implementation: an agent that answers
+    &ldquo;what is blocked in France&rdquo; out of its own summary of a summary
+    is a demo, and this one answers it by reading the store the market room
+    reads. Ask for something nobody wrote a screen for and it writes the LogQL,
+    builds the dashboard and hands you the URL.</p>
+  <div class="landagent-grid">
+    <div class="landagent-cell">
+      <span class="lg-n mono">1</span>
+      <b>It drives the product</b>
+      <span>Start a clearance, add markets, price a fix, open a frame, search
+        the corpus, compose a chart. {{ tools_total }} tools, every one of them
+        a thing this console already does.</span>
+    </div>
+    <div class="landagent-cell">
+      <span class="lg-n mono">2</span>
+      <b>It answers with the evidence open</b>
+      <span>The reply is on the left and what it looked at is on the right:
+        the actual board, room, frame or panel, not a description of one.</span>
+    </div>
+    <div class="landagent-cell">
+      <span class="lg-n mono">3</span>
+      <b>It obeys the same refusals</b>
+      <span>The Guard still blocks a protected-basis fix, scope still refuses
+        a patch it cannot support, and the day's budget still governs Veo. No
+        sentence talks its way past a rule.</span>
+    </div>
+  </div>
+  <p style="margin-top:16px">
+    <a class="btn go" href="/agent"><svg class="ic"><use href="#i-adjudicator"/></svg>Open agent mode</a>
+  </p>
 </section>
 
 <section class="landgraf">

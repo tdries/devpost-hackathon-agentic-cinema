@@ -167,6 +167,21 @@
         <span class="ta-lstep ta-lend"><svg class="ic"><use href="#i-cleared"/></svg>alert resolves itself</span>
       </div>
 
+      {% elif slide.art == 'agent' %}
+      {# The agent's own shape: a sentence in, a tool chosen, and the thing
+         it opened. The tool names are read from agentmode, so this panel
+         cannot claim a tool the agent does not have. #}
+      <div class="ta-agent">
+        <span class="ta-said">&ldquo;What is blocked in France, and what would it cost to fix it?&rdquo;</span>
+        <span class="ta-atools">
+          {% for name in tool_names %}<code class="ah-tool">{{ name }}</code>{% endfor %}
+        </span>
+        <span class="ta-aout">
+          <svg class="ic"><use href="#i-adjudicator"/></svg>
+          <i>reads the same store the market room reads, then opens it beside the answer</i>
+        </span>
+      </div>
+
       {% elif slide.art == 'takeaway' %}
       <div class="ta-take">
         <span class="ta-tcard"><svg class="ic"><use href="#i-legal"/></svg><b>certificate.pdf</b><i>every finding, its statute and its citation</i></span>
