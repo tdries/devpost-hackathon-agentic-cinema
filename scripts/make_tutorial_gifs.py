@@ -20,10 +20,12 @@ ffmpeg does the assembly with palettegen, which is what keeps a
 screenshot's greys from banding into mud.
 """
 import argparse
+import json
 import re
 import shutil
 import subprocess
 import sys
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -54,8 +56,28 @@ def fetch(base: str, path: str, cookie: str) -> str:
     return urllib.request.urlopen(req, timeout=90).read().decode()
 
 
+def agent_turn(base: str, cookie: str, message: str, run: str = "") -> dict:
+    """One real turn with the deployed agent, for the GIF to show.
+
+    Not a mock-up of a conversation: the sentence is posted to /agent/ask
+    on the live service, and the words, the tool calls and the view in the
+    frames below are whatever came back. It costs one text turn, which is
+    the price of not staging a screenshot of a product answering itself.
+    """
+    body = urllib.parse.urlencode({"message": message, "session": "gif",
+                                   "run": run}).encode()
+    req = urllib.request.Request(base.rstrip("/") + "/agent/ask", data=body,
+                                 headers={"Cookie": cookie})
+    turn = json.loads(urllib.request.urlopen(req, timeout=420).read())
+    if turn.get("error"):
+        raise SystemExit(f"the agent refused the turn: {turn['error']}")
+    return turn
+
+
 def stage(html: str, base: str, *, open_details=False, detail_view=False,
-          open_scenes=False, eager=False, panel_png_for="", hide=()) -> str:
+          open_scenes=False, eager=False, panel_png_for="", hide=(),
+          asked="", turn=None, view_png: Path | None = None,
+          calls_only=False) -> str:
     """Make one still show what a click would have shown."""
     html = html.replace("<head>", f'<head><base href="{base.rstrip("/")}/">', 1)
     if panel_png_for:
@@ -83,6 +105,52 @@ def stage(html: str, base: str, *, open_details=False, detail_view=False,
         html = html.replace('<tbody class="mkscene">', '<tbody class="mkscene" data-open>')
     if detail_view:
         html = html.replace('class="panel as-list"', 'class="panel"')
+    if asked or turn:
+        # The same bubbles customs.js appends for a turn, so the still is
+        # the page as a browser would have drawn it rather than a mock-up
+        # of it: .ag-msg.ag-you for the sentence, .ag-msg.ag-agent for the
+        # reply, and the server's own reply_html so rule ids and market
+        # codes wear their chips.
+        parts = []
+        if asked:
+            parts.append('<div class="ag-msg ag-you">'
+                         '<svg class="ic"><use href="#i-human"/></svg>'
+                         f'<div class="ag-body"><p>{asked}</p></div></div>')
+        if turn and calls_only:
+            steps = "".join(f'<li class="on">{c}</li>'
+                            for c in (turn.get("calls") or [])[:5])
+            parts.append('<div class="ag-msg ag-agent">'
+                         '<svg class="ic"><use href="#i-pending"/></svg>'
+                         '<div class="ag-body"><div class="ag-phases">'
+                         '<div class="ag-bar"><i></i></div>'
+                         f'<ol class="ag-steps">{steps}</ol>'
+                         '</div></div></div>')
+        elif turn:
+            said = turn.get("reply_html") or (
+                "".join(f"<p>{line}</p>" for line in
+                        (turn.get("reply") or "").split("\n") if line.strip()))
+            parts.append('<div class="ag-msg ag-agent">'
+                         '<svg class="ic"><use href="#i-adjudicator"/></svg>'
+                         f'<div class="ag-body">{said}</div></div>')
+        head, anchor, tail = html.partition('<div class="agent-suggest')
+        head = head.rstrip()
+        assert head.endswith("</div>"), "the agent log did not close where expected"
+        html = (head[:-len("</div>")] + "".join(parts) + "</div>"
+                + anchor + tail)
+    if view_png is not None:
+        # What the agent opened, on the right, as its own render rather
+        # than an iframe: this app serves its pages with frame-ancestors
+        # naming itself, and a file:// still cannot frame them.
+        label = (turn or {}).get("view_label") or "what it opened"
+        html = html.replace(
+            '<div class="agent-canvas" id="agent-canvas">',
+            '<div class="agent-canvas" id="agent-canvas">'
+            f'<img src="file://{view_png}" alt="{label}" '
+            'style="width:100%;display:block">'
+            '<style>#agent-canvas .empty{display:none}</style>', 1)
+        html = re.sub(r'(<span class="label" id="view-label">).*?(</span>)',
+                      r'\1<svg class="ic"><use href="#n-board"/></svg>'
+                      + label + r'\2', html, count=1, flags=re.S)
     for selector in hide:
         html = html.replace(selector, selector + ' style="display:none"')
     return html
@@ -271,6 +339,31 @@ def main() -> int:
                           detail_view=True, open_scenes=True),
               "3 · ...and a priced generative fix starts on that scene", scroll=560),
     ]
+
+    # The agent, which is the half of the product the explainer screens
+    # never showed. Three frames: the sentence, the tools it chose, and
+    # the answer with what it opened beside it. The turn is real -- posted
+    # to the live /agent/ask -- so nothing here is a product answering
+    # itself in a mock-up.
+    def agent_frames():
+        asked = "What is blocked in France, and what would it cost to fix?"
+        turn = agent_turn(base, cookie, asked, run)
+        view = turn.get("view") or f"/runs/{run}"
+        png = shot("", tmp / "t5_view.png", tmp, 900,
+                   url=base.rstrip("/") + view)
+        return [
+            frame("t5a", page("/agent"),
+                  "1 · Ask the console in plain words",
+                  point=(300, 812)),
+            frame("t5b", page("/agent", asked=asked, turn=turn,
+                              calls_only=True),
+                  "2 · It picks its own tools, and says which"),
+            frame("t5c", page("/agent", asked=asked, turn=turn,
+                              view_png=png),
+                  "3 · The answer, with the page it read beside it"),
+        ]
+
+    gifs["tut-5-agent"] = agent_frames
 
     OUT.mkdir(parents=True, exist_ok=True)
     made = []
