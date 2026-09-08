@@ -1,0 +1,110 @@
+{
+ "01-landing.png": [
+  1400,
+  950
+ ],
+ "ad-before.png": [
+  1920,
+  1080
+ ],
+ "09-intelligence.png": [
+  1400,
+  900
+ ],
+ "veo.png": [
+  357,
+  395
+ ],
+ "launcher.png": [
+  1920,
+  1080
+ ],
+ "archive.png": [
+  1920,
+  1080
+ ],
+ "cutting-fr.png": [
+  1239,
+  1080
+ ],
+ "problem-shot.png": [
+  1920,
+  1080
+ ],
+ "10-library.png": [
+  1400,
+  900
+ ],
+ "fixpanel.png": [
+  1232,
+  1080
+ ],
+ "grafana-res.png": [
+  1920,
+  1080
+ ],
+ "search.png": [
+  1920,
+  1080
+ ],
+ "grafana.png": [
+  212,
+  220
+ ],
+ "ad-after.png": [
+  1920,
+  1080
+ ],
+ "agent-answer.png": [
+  1920,
+  1080
+ ],
+ "logo.png": [
+  486,
+  245
+ ],
+ "store-loki-findings.png": [
+  1400,
+  560
+ ],
+ "timeline.png": [
+  1920,
+  1080
+ ],
+ "omni.png": [
+  358,
+  361
+ ],
+ "05-mission-feed.png": [
+  1400,
+  900
+ ],
+ "06-frame-board.png": [
+  1400,
+  950
+ ],
+ "03-launch-board.png": [
+  1400,
+  880
+ ],
+ "store-loki-observations.png": [
+  1400,
+  620
+ ],
+ "google.png": [
+  311,
+  92
+ ],
+ "adk.png": [
+  512,
+  512
+ ],
+ "flow.png": [
+  1920,
+  930
+ ],
+ "07-market-room.png": [
+  1400,
+  900
+ ]
+}

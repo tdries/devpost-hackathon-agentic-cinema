@@ -1561,13 +1561,13 @@ def test_my_edits_groups_a_scene_rather_than_a_market(console):
     first = span[0]
     changes = Path(app_module.run_dir(run)) / "changes"
     changes.mkdir(parents=True, exist_ok=True)
-    for name in ("chg_e1_before.png", "chg_e1_after.png"):
+    for name in ("chg_ee0001_before.png", "chg_ee0001_after.png"):
         (changes / name).write_bytes(b"\x89PNG\r\n\x1a\n")
     store.add_change(ChangeRecord(
         id="chg_ee0001", run_id=run.id, finding_id=first.id, method="omni",
         description="repainted the label",
-        before_frame=str(changes / "chg_e1_before.png"),
-        after_frame=str(changes / "chg_e1_after.png")))
+        before_frame=str(changes / "chg_ee0001_before.png"),
+        after_frame=str(changes / "chg_ee0001_after.png")))
     # a second market asking for the same seconds is the same scene
     other = next((f for f in findings
                   if f.t_start == first.t_start and f.market != first.market), None)
@@ -1580,8 +1580,8 @@ def test_my_edits_groups_a_scene_rather_than_a_market(console):
 
     body = client.get("/edits").text
     assert body.count('class="editcard"') == 1, "one scene, one card"
-    assert f"/runs/{run.id}/stills/chg_e1_before.png" in body
-    assert f"/runs/{run.id}/stills/chg_e1_after.png" in body
+    assert f"/runs/{run.id}/stills/chg_ee0001_before.png" in body
+    assert f"/runs/{run.id}/stills/chg_ee0001_after.png" in body
     assert "repainted the label" in body
     assert f"fix made for {first.market}" in body
     assert first.rule_id in body and first.market in body
@@ -1592,13 +1592,13 @@ def test_my_edits_groups_a_scene_rather_than_a_market(console):
     # and a change on a different span is a different scene
     late = next((f for f in findings if f.t_start != first.t_start), None)
     if late is not None:
-        for name in ("chg_e3_before.png", "chg_e3_after.png"):
+        for name in ("chg_ee0003_before.png", "chg_ee0003_after.png"):
             (changes / name).write_bytes(b"\x89PNG\r\n\x1a\n")
         store.add_change(ChangeRecord(
             id="chg_ee0003", run_id=run.id, finding_id=late.id, method="patch",
             description="painted out the pack",
-            before_frame=str(changes / "chg_e3_before.png"),
-            after_frame=str(changes / "chg_e3_after.png")))
+            before_frame=str(changes / "chg_ee0003_before.png"),
+            after_frame=str(changes / "chg_ee0003_after.png")))
         assert client.get("/edits").text.count('class="editcard"') == 2
 
     # The pair is the SPAN, played, with the kept still as its poster: two
@@ -1609,9 +1609,9 @@ def test_my_edits_groups_a_scene_rather_than_a_market(console):
     # rendering a player that 404s inside itself.
     body = client.get("/edits").text
     assert f"/runs/{run.id}/changes/chg_ee0001/span.mp4?side=before" in body
-    assert f'poster="/runs/{run.id}/stills/chg_e1_before.png"' in body
+    assert f'poster="/runs/{run.id}/stills/chg_ee0001_before.png?w=520"' in body
     assert f"/runs/{run.id}/changes/chg_ee0001/span.mp4?side=after" not in body
-    assert f'/runs/{run.id}/stills/chg_e1_after.png' in body
+    assert f'/runs/{run.id}/stills/chg_ee0001_after.png' in body
     assert "frame only" in body
     assert 'data-kind="video"' in body
 
@@ -1620,8 +1620,8 @@ def test_my_edits_groups_a_scene_rather_than_a_market(console):
     store.add_change(ChangeRecord(
         id="chg_ee0009", run_id=run.id, finding_id=first.id, method="revoice",
         description="re-spoke the claim",
-        before_frame=str(changes / "chg_e1_before.png"),
-        after_frame=str(changes / "chg_e1_after.png")))
+        before_frame=str(changes / "chg_ee0001_before.png"),
+        after_frame=str(changes / "chg_ee0001_after.png")))
     sound = client.get("/edits").text
     assert 'data-kind="audio"' in sound
     assert "sound=1" in sound and "controls" in sound

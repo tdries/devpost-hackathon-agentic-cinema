@@ -73,7 +73,7 @@
              the remediation edited and what Veo was anchored on. Same
              mechanism as the frame board, and the same reason. #}
           <div class="fb-shot" data-box-for="{{ item.box_for }}" data-run="{{ run.id }}">
-            {% if item.before %}<img src="/runs/{{ run.id }}/stills/{{ item.before }}" alt="frame before the edit" loading="lazy">{% else %}<p class="subline">still not on disk</p>{% endif %}
+            {% if item.before %}<img src="/runs/{{ run.id }}/stills/{{ item.before }}?w=520" alt="frame before the edit" loading="lazy">{% else %}<p class="subline">still not on disk</p>{% endif %}
             <svg class="fb-box" viewBox="0 0 1000 1000" preserveAspectRatio="none" hidden aria-hidden="true"></svg>
           </div>
           {% if item.box_for %}
@@ -85,7 +85,7 @@
         </div>
         <div class="frame">
           <span class="label">After</span>
-          {% if item.after %}<img src="/runs/{{ run.id }}/stills/{{ item.after }}" alt="frame after the edit" loading="lazy">{% else %}<p class="subline">still not on disk</p>{% endif %}
+          {% if item.after %}<img src="/runs/{{ run.id }}/stills/{{ item.after }}?w=520" alt="frame after the edit" loading="lazy">{% else %}<p class="subline">still not on disk</p>{% endif %}
         </div>
       </div>
       {% endif %}

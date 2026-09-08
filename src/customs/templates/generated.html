@@ -38,8 +38,8 @@
           {% for a in item.anchors %}
           <div class="frame">
             <span class="label">{{ 'first frame' if a.tag == 'head' else 'last frame' }}</span>
-            <a href="/runs/{{ run.id }}/stills/{{ a.file }}" target="_blank">
-              <img src="/runs/{{ run.id }}/stills/{{ a.file }}" alt="Veo anchor frame, {{ a.tag }}" loading="lazy">
+            <a href="/runs/{{ run.id }}/stills/{{ a.file }}?w=520" target="_blank">
+              <img src="/runs/{{ run.id }}/stills/{{ a.file }}?w=520" alt="Veo anchor frame, {{ a.tag }}" loading="lazy">
             </a>
           </div>
           {% endfor %}
@@ -63,11 +63,11 @@
       <div class="change-body">
         <div class="frame">
           <span class="label">Before</span>
-          {% if item.before %}<img src="/runs/{{ run.id }}/stills/{{ item.before }}" alt="frame before the edit" loading="lazy">{% else %}<p class="subline">still not on disk</p>{% endif %}
+          {% if item.before %}<img src="/runs/{{ run.id }}/stills/{{ item.before }}?w=520" alt="frame before the edit" loading="lazy">{% else %}<p class="subline">still not on disk</p>{% endif %}
         </div>
         <div class="frame">
           <span class="label">After</span>
-          {% if item.after %}<img src="/runs/{{ run.id }}/stills/{{ item.after }}" alt="frame after the edit" loading="lazy">{% else %}<p class="subline">still not on disk</p>{% endif %}
+          {% if item.after %}<img src="/runs/{{ run.id }}/stills/{{ item.after }}?w=520" alt="frame after the edit" loading="lazy">{% else %}<p class="subline">still not on disk</p>{% endif %}
         </div>
       </div>
       {% endif %}

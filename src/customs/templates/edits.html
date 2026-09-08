@@ -88,7 +88,7 @@
           {% if can %}
           <video class="editclip" preload="none" playsinline
                  {% if snd %}controls{% else %}muted loop{% endif %}
-                 {% if still %}poster="/runs/{{ row.run.id }}/stills/{{ still }}"{% endif %}
+                 {% if still %}poster="/runs/{{ row.run.id }}/stills/{{ still }}?w=520"{% endif %}
                  src="/runs/{{ row.run.id }}/changes/{{ row.change.id }}/span.mp4?side={{ side }}&amp;sound={{ snd }}"
                  aria-label="the span {{ side }} the edit"></video>
           {% elif still %}
@@ -96,7 +96,7 @@
              still evidence, and saying which half is a picture is better
              than an empty box #}
           <a href="/runs/{{ row.run.id }}/stills/{{ still }}" target="_blank">
-            <img src="/runs/{{ row.run.id }}/stills/{{ still }}"
+            <img src="/runs/{{ row.run.id }}/stills/{{ still }}?w=520"
                  alt="the frame {{ side }} the edit" loading="lazy">
           </a>
           {% else %}

@@ -1309,8 +1309,12 @@ def change_span(run_id: str, change_id: str, side: str = "before",
     cached = changes / (f"{change_id}_{side}_span"
                         + ("_snd" if sound else "") + ".mp4")
     try:
-        made = media.span_clip(source, cached, finding.t_start, finding.t_end,
-                               keep_audio=bool(sound))
+        if cached.is_file() and cached.stat().st_size:
+            made = cached
+        else:
+            with _CUTTING:
+                made = media.span_clip(source, cached, finding.t_start,
+                                       finding.t_end, keep_audio=bool(sound))
     except Exception as exc:  # noqa: BLE001 -- a still poster is the fallback
         log.warning("span clip failed for %s %s: %s", change_id, side, exc)
         raise HTTPException(status_code=404, detail="could not cut that span") from exc
@@ -2910,6 +2914,50 @@ def card_lanes(run, states: dict) -> list[dict]:
             + [{"dimension": d, "seen": False} for d in spare])
 
 
+# The archive and My edits both walk every run in the store: market
+# states, findings, observations, a disk check per change. That is a
+# hundred SQLite queries and a lot of Python for one page, and ten readers
+# asking at once on a single instance is that ten times over -- which is
+# how the service came to answer 429 to everybody.
+#
+# So the expensive part of a FINISHED run is remembered, keyed on the
+# store's own fingerprint (Store.stamp: four counts and the last event id),
+# so a cached row is only ever served while nothing has been written. The
+# half-minute is a safety net on top of that, not the guarantee. A run
+# still in flight is never cached at all, because its whole point is that
+# it changes while you watch.
+_CARD_TTL = 30.0
+_CARD_CACHE: dict[str, tuple[float, dict]] = {}
+_SCENES_TTL = 30.0
+_SCENES_CACHE: dict[str, tuple[float, list]] = {}
+
+
+def _card_row(run, theme: str) -> dict:
+    """One archive card's expensive half, cached while the run is done."""
+    states = market_states(run)
+    busy = (run.status in ("created", "running")
+            or any(v["working"] for v in states.values()))
+    # The viewer's URL is part of the key: without it a row built while no
+    # viewer was configured is served back to a page that has one, and the
+    # card silently loses its live panel.
+    key = (f"{settings.db_path}:{run.id}:{run.status}:{theme}:"
+           f"{bool(settings.grafana_viewer_url)}:{store().stamp()}")
+    now = time.time()
+    if not busy:
+        hit = _CARD_CACHE.get(key)
+        if hit and now - hit[0] < _CARD_TTL:
+            return hit[1]
+    lanes = card_lanes(run, states)
+    row = {"run": run, "states": states, "groups": pill_groups(run, states),
+           "busy": busy, "live_lanes": _card_panel(run, theme, lanes),
+           "dims": lanes, "gauge": clearance_gauge(states)}
+    if not busy:
+        _CARD_CACHE[key] = (now, row)
+        if len(_CARD_CACHE) > 400:
+            _CARD_CACHE.clear()
+    return row
+
+
 def _run_rows(runs, by_asset: dict[str, list], offset: int = 0,
               theme: str = "light") -> list[dict]:
     """One row per film, ready for the card template.
@@ -2918,26 +2966,8 @@ def _run_rows(runs, by_asset: dict[str, list], offset: int = 0,
     the live-panel cap has to stay global, or every page of a load-more
     would boot another six Grafanas.
     """
-    return [{"run": run, "older": by_asset.get(asset_key(run), [run])[1:],
-             "states": (st := market_states(run)),
-             "groups": pill_groups(run, st),
-             "busy": run.status in ("created", "running")
-                     or any(v["working"] for v in st.values()),
-             # Both charts, on every card, and the reader picks. The live
-             # panel is the one Grafana draws and the drawn one is the
-             # console's own SVG; they answer the same question and only
-             # one is ever in the document at a time.
-             #
-             # Every card carries the live URL now, where before only the
-             # first did. What made that unaffordable was not the panel, it
-             # was thirty-nine of them booting at once because a lazy
-             # iframe loads the moment it is anywhere near the viewport.
-             # The URL is handed to the page as data and customs.js
-             # activates one at a time, on approach, so the cost is what is
-             # actually being looked at.
-             "live_lanes": _card_panel(run, theme, lanes := card_lanes(run, st)),
-             "dims": lanes,
-             "gauge": clearance_gauge(st)}
+    return [dict(_card_row(run, theme),
+                 older=by_asset.get(asset_key(run), [run])[1:])
             for i, run in enumerate(runs, start=offset)]
 
 
@@ -3422,6 +3452,13 @@ def mission_page(request: Request, run_id: str):
 # the audio side can be listened to instead of looked at.
 AUDIO_METHODS = ("revoice",)
 
+# One instance, two CPUs, and a cut is an ffmpeg encode. Twenty readers
+# hovering twenty cards used to mean twenty encodes racing each other and
+# every other request queueing behind them. Two at a time, the rest wait
+# their turn -- a cut is about two seconds, so the wait is bounded and the
+# page stays answerable.
+_CUTTING = threading.BoundedSemaphore(2)
+
 
 def edited_scenes(limit: int = 120) -> list[dict]:
     """Every scene this instance has edited, newest first, across all runs.
@@ -3439,6 +3476,19 @@ def edited_scenes(limit: int = 120) -> list[dict]:
     asks after the third run.
     """
     db = store()
+    # Same bargain as the archive's cards: this walks every run's changes,
+    # findings and two disk checks per change, and ten readers asking at
+    # once is that ten times over. Half a minute of staleness on a page
+    # about edits that already happened is a fair trade for a page that
+    # answers.
+    # The store's path is part of the key as well as its fingerprint: two
+    # different stores can hold the same number of everything, and the
+    # suite proved it by serving one test's scenes to another.
+    key = f"{settings.db_path}:{db.stamp()}"
+    hit = _SCENES_CACHE.get(key)
+    now = time.time()
+    if hit and now - hit[0] < _SCENES_TTL:
+        return hit[1][:limit]
     scenes: list[dict] = []
     for run in db.recent_runs(200):
         changes = db.changes(run.id)
@@ -3497,6 +3547,8 @@ def edited_scenes(limit: int = 120) -> list[dict]:
                               "fixed_for": finding.market if finding else ""})
         scenes.extend(grouped.values())
     scenes.sort(key=lambda s: ((s["run"].t0 or 0), -s["t_start"]), reverse=True)
+    _SCENES_CACHE.clear()          # one store state at a time is enough
+    _SCENES_CACHE[key] = (now, scenes)
     return scenes[:limit]
 
 
@@ -4359,10 +4411,26 @@ def evidence_box(run_id: str, observation_id: str):
     return {"box": box, "cached": False}
 
 @app.get("/runs/{run_id}/stills/{filename:path}")
-def still(run_id: str, filename: str):
-    """A before/after still from runs/{run_id}/changes/, and nothing else."""
+def still(run_id: str, filename: str, w: int = 0):
+    """A before/after still from runs/{run_id}/changes/, and nothing else.
+
+    `w` serves it at the size it is actually drawn. These are
+    full-resolution PNGs, over a megabyte each, and /edits shows a hundred
+    and thirty of them as video posters -- which a browser fetches eagerly,
+    because a poster has no lazy mode. That page alone was asking a
+    single-instance service for a hundred megabytes of images at once,
+    which is what made it answer 429 to everybody else.
+    """
     run = _run_or_404(run_id)
     path = _within(run_dir(run) / "changes", filename)
     if path is None or path.suffix.lower() != ".png" or not path.is_file():
         raise HTTPException(status_code=404, detail="no such still")
-    return FileResponse(path, media_type="image/png")
+    headers = {"Cache-Control": "public, max-age=86400"}
+    if w and 32 <= w <= 1600:
+        thumb = path.with_name(f"{path.stem}_w{int(w)}.jpg")
+        try:
+            small = media.thumbnail(path, int(w), thumb)
+            return FileResponse(small, media_type="image/jpeg", headers=headers)
+        except Exception as exc:  # noqa: BLE001 -- the full frame still works
+            log.warning("thumbnail failed for %s: %s", path.name, exc)
+    return FileResponse(path, media_type="image/png", headers=headers)

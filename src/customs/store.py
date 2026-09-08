@@ -464,6 +464,26 @@ class Store:
         self._conn.commit()
 
     @_locked
+    def stamp(self) -> tuple[int, ...]:
+        """A cheap fingerprint of everything a page might be showing.
+
+        Four counts and the last event id, which is microseconds of SQLite
+        and changes the moment anything is written: a run created, a finding
+        judged, a change recorded, a stage narrated, a status moved. The
+        console's expensive cross-run pages key their caches on this, so a
+        cached page is only ever served while the store behind it has not
+        moved -- which is what a time-to-live alone cannot promise.
+        """
+        row = self._conn.execute(
+            "SELECT (SELECT COUNT(*) FROM runs), "
+            "       (SELECT COUNT(*) FROM findings), "
+            "       (SELECT COUNT(*) FROM changes), "
+            "       (SELECT COUNT(*) FROM observations), "
+            "       (SELECT COALESCE(MAX(id), 0) FROM events)"
+        ).fetchone()
+        return tuple(int(v) for v in row)
+
+    @_locked
     def changes(self, run_id: str) -> list[ChangeRecord]:
         rows = self._conn.execute(
             "SELECT data FROM changes WHERE run_id = ? ORDER BY rowid",
