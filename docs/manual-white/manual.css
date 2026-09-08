@@ -1,0 +1,133 @@
+/* The Media Customs, operator manual. A4 portrait, white, print first.
+   One rule that matters: every .page is a fixed 297mm and the footer is
+   absolute inside it. Mixing min-height with an absolute footer is what
+   makes the last line of a page land on top of the folio. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap");
+
+:root {
+  --ink: #17222c;
+  --ink-2: #445a66;
+  --ink-3: #7d9199;
+  --hair: #dbe4e9;
+  --panel: #f5f8fa;
+  --blue: #4285f4;
+  --red: #ea4335;
+  --yellow: #fbbc05;
+  --green: #34a853;
+  --orange: #f46800;
+}
+
+* { box-sizing: border-box; }
+@page { size: A4 portrait; margin: 0; }
+
+html, body { margin: 0; padding: 0; background: #fff; }
+body {
+  font-family: Inter, "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink);
+  font-size: 10.2pt;
+  line-height: 1.55;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+.page {
+  position: relative;
+  width: 210mm;
+  height: 297mm;
+  padding: 18mm 18mm 17mm 18mm;
+  page-break-after: always;
+  overflow: hidden;
+  background: #fff;
+}
+.page:last-child { page-break-after: auto; }
+
+.folio {
+  position: absolute;
+  left: 18mm; right: 18mm; bottom: 11mm;
+  display: flex; justify-content: space-between;
+  font-size: 7.6pt; color: var(--ink-3);
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+
+h1, h2, h3, h4 { font-family: Poppins, Inter, sans-serif; margin: 0; }
+h2 { font-size: 20pt; line-height: 1.15; letter-spacing: -0.01em; }
+h3 { font-size: 12.5pt; margin: 7mm 0 2mm; }
+h4 { font-size: 10.2pt; margin: 5mm 0 1.5mm; }
+p { margin: 0 0 3.2mm; }
+ul, ol { margin: 0 0 3.5mm; padding-left: 5mm; }
+li { margin-bottom: 1.4mm; }
+b, strong { font-weight: 600; }
+code, .mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.8pt; }
+code { background: var(--panel); padding: 0.4mm 1.1mm; border-radius: 1mm; }
+
+.eyebrow {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+  font-size: 8pt; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-3); margin-bottom: 2mm;
+}
+.lede { font-size: 11.4pt; line-height: 1.5; color: var(--ink-2); margin: 3mm 0 6mm; }
+
+.rule { height: 1px; background: var(--hair); margin: 5mm 0; }
+.brandbar { display: flex; gap: 2mm; margin: 4mm 0 0; }
+.brandbar i { display: block; width: 14mm; height: 1.4mm; border-radius: 1mm; }
+.brandbar i:nth-child(1) { background: var(--blue); }
+.brandbar i:nth-child(2) { background: var(--red); }
+.brandbar i:nth-child(3) { background: var(--yellow); }
+.brandbar i:nth-child(4) { background: var(--green); }
+
+table { width: 100%; border-collapse: collapse; margin: 0 0 4mm; font-size: 9.2pt; }
+th, td { text-align: left; padding: 1.9mm 2.4mm; border-bottom: 1px solid var(--hair); vertical-align: top; }
+th { font-size: 7.8pt; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+td.mono, th.mono { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.4pt; }
+
+.panel { background: var(--panel); border: 1px solid var(--hair); border-radius: 2mm; padding: 4mm 4.5mm; margin: 0 0 4mm; }
+.panel h4 { margin-top: 0; }
+.note { border-left: 2px solid var(--blue); background: #f4f8ff; }
+.warn { border-left: 2px solid var(--orange); background: #fff7f0; }
+.stop { border-left: 2px solid var(--red); background: #fff4f3; }
+
+pre {
+  background: var(--panel); border: 1px solid var(--hair); border-radius: 2mm;
+  padding: 3.5mm 4mm; margin: 0 0 4mm; overflow: hidden;
+  font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.4pt; line-height: 1.5;
+}
+
+/* An inline mark, set on the text baseline so it reads as part of the sentence
+   rather than as a bullet stuck to the left of it. Sized in ex so it tracks the
+   type around it: the same tag in a table cell and in a heading both look right. */
+.ico {
+  height: 2.05ex;
+  width: auto;
+  vertical-align: -0.35ex;
+  margin-right: 1.1mm;
+}
+h3 .ico, h4 .ico { height: 2.3ex; vertical-align: -0.4ex; }
+td .ico { margin-right: 0.9mm; }
+.dimgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.4mm 4mm; margin-bottom: 4mm; }
+.dimgrid span { display: flex; align-items: center; font-size: 9.4pt; padding: 1.1mm 0;
+  border-bottom: 1px solid var(--hair); }
+.dimgrid .ico { height: 2.6ex; vertical-align: middle; margin-right: 1.8mm; }
+
+.shot { width: 100%; border: 1px solid var(--hair); border-radius: 1.5mm; display: block; margin: 0 0 2mm; }
+.cap { font-size: 8.2pt; color: var(--ink-3); margin: 0 0 4mm; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+.three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4mm; }
+
+/* cover and closing, full bleed white with the mark large */
+.cover, .closing { padding: 0; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+.cover .mark, .closing .mark { width: 46mm; margin-bottom: 8mm; }
+.cover h1 { font-size: 30pt; letter-spacing: 0.16em; margin-bottom: 4mm; }
+.cover .sub { font-size: 12pt; color: var(--ink-2); margin-bottom: 2mm; }
+.cover .meta { position: absolute; bottom: 20mm; left: 0; right: 0; font-size: 8.6pt; color: var(--ink-3); }
+.cover .marks { display: flex; gap: 9mm; align-items: center; justify-content: center; margin-top: 10mm; }
+.cover .marks img { height: 9mm; }
+
+.toc { display: grid; grid-template-columns: 1fr; gap: 0; }
+.toc a { display: flex; align-items: baseline; gap: 3mm; text-decoration: none;
+  color: var(--ink); padding: 1.35mm 0; border-bottom: 1px solid var(--hair);
+  font-size: 9.4pt; line-height: 1.3; }
+.toc .n { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.6pt; color: var(--ink-3); width: 8mm; }
+.toc .t { font-weight: 600; }
+.toc .d { color: var(--ink-3); font-size: 9pt; flex: 1;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toc .p { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 8.6pt; color: var(--ink-3); }
