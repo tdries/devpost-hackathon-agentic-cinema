@@ -3371,10 +3371,15 @@ tbody.mkscene[hidden] { display: none; }
   align-items: stretch; margin: 10px 0 6px;
 }
 .xkeys {
-  display: grid; grid-auto-rows: calc(var(--panel-h) / var(--rows));
+  /* Matched to the plot INSIDE the frame, not to the frame. A barchart
+     keeps 22px above its first bar and 28px below the last for its value
+     axis, so a column of icons spaced across the whole box drifts a row
+     out by the bottom of a fifteen-row axis. Measured against the panel,
+     the same way the 34px title crop was. */
+  display: grid;
+  grid-auto-rows: calc((var(--panel-h) - 50px) / var(--rows));
   align-items: center;
-  /* the plot keeps a small inset of its own; this matches it from outside */
-  padding: 6px 0;
+  padding: 22px 0 28px;
 }
 .xkey { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .xkey .ic {

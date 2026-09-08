@@ -6,15 +6,17 @@ Each beat is trimmed to the length of docs/voiceover/NN.wav plus a held moment.
 A chip naming the screen fades in at the top of every beat; callouts point at
 whatever the narration is talking about at that moment.
 """
-import glob, os, subprocess, sys
+import glob, math, os, subprocess, sys
 
 OUT = "docs/video"
 NAME = sys.argv[1] if len(sys.argv) > 1 else "demo"
 GAP = 0.2
 NBEATS = 15
+PULSE = 14         # frames in one breath of a callout, played at PULSE_FPS
+PULSE_FPS = 14
 SKIP = {3: 4.0, 4: 5.0, 7: 5.0, 9: 1.5, 11: 5.0, 14: 30.0}   # heads the beats needed, the film does not
 
-CHIP_IN, CHIP_HOLD = 0.5, 4.0
+CHIP_IN = 0.5      # the chip comes in, then stays for the scene
 
 
 def dur(path):
@@ -46,7 +48,7 @@ def layers(n, length):
         return out
     chip = f"{OUT}/ov/chip-{n:02d}.png"
     if os.path.exists(chip) and length > CHIP_IN + 2:
-        out.append((chip, CHIP_IN, min(CHIP_IN + CHIP_HOLD, length - 0.3)))
+        out.append((chip, CHIP_IN, length - 0.05))
     # callouts are drawn where the recorder actually found the element, at the
     # moment it was there: a guessed rectangle points at the wrong thing.
     spots = f"{OUT}/beats/{n:02d}/spots.json"
@@ -54,17 +56,25 @@ def layers(n, length):
         import json
         sys.path.insert(0, "scripts")
         from make_overlays import callout
-        for i, sp in enumerate(json.load(open(spots))):
+        seen = json.load(open(spots))
+        for i, sp in enumerate(seen):
+            # a pointer never outlives the next one: two rectangles at once
+            # reads as clutter, and the older box may have scrolled away
+            if i + 1 < len(seen):
+                sp["hold"] = min(sp["hold"], max(0.0, seen[i + 1]["t"] - sp["t"] - 0.2))
             a = sp["t"] - SKIP.get(n, 0.0)
             b = min(a + sp["hold"], length - 0.25)
             if a < 0.15 or b - a < 1.0:
                 continue
-            f = f"{OUT}/ov/spot-{n:02d}-{i}.png"
             x, y, w, h = sp["box"]
             if w < 40 or h < 20:      # an element that was off screen when read
                 continue
-            callout(x, y, w, h, sp["label"]).save(f)
-            out.append((f, a, b))
+            # PULSE frames, played on a loop: the halo breathes rather than sits
+            for k in range(PULSE):
+                g = 0.5 - 0.5 * math.cos(2 * math.pi * k / PULSE)
+                callout(x, y, w, h, sp["label"], glow=g).save(
+                    f"{OUT}/ov/spot-{n:02d}-{i}-{k:02d}.png")
+            out.append((f"{OUT}/ov/spot-{n:02d}-{i}-%02d.png", a, b))
     return out
 
 
@@ -77,7 +87,10 @@ for n in range(1, NBEATS + 1):
     over = layers(n, want)
     cmd = ["ffmpeg", "-y", "-v", "error", "-ss", f"{SKIP.get(n, 0):.1f}", "-i", src]
     for f, _, _ in over:
-        cmd += ["-loop", "1", "-t", f"{want:.2f}", "-i", f]
+        if "%02d" in f:
+            cmd += ["-loop", "1", "-framerate", str(PULSE_FPS), "-t", f"{want:.2f}", "-i", f]
+        else:
+            cmd += ["-loop", "1", "-t", f"{want:.2f}", "-i", f]
     chain = ("[0:v]fps=30,scale=1920:1080:force_original_aspect_ratio=decrease,"
              "pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1[v0];")
     for i, (_, a, b) in enumerate(over, 1):

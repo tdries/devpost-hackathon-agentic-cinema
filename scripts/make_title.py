@@ -11,11 +11,28 @@ SUB = ImageFont.truetype(FONT, 30, index=0)
 CAP = ImageFont.truetype(FONT, 21, index=2)
 TITLE = "T H E   M E D I A   C U S T O M S"
 BRAND = [(66, 133, 244), (234, 67, 53), (251, 188, 5), (52, 168, 83)]
-MARKS = [("adk.png", "Agent Builder"), ("omni.png", "Gemini Omni"),
-         ("veo.png", "Veo 3.1"), ("grafana.png", "Grafana")]
+MARKS = [("google.png", "Google Cloud"), ("adk.png", "Agent Builder"),
+         ("omni.png", "Gemini Omni"), ("veo.png", "Veo 3.1"),
+         ("grafana.png", "Grafana")]
 
 
-def marks_row(card, d, y, height=88, gap=132):
+def google_wordmark(height=88):
+    """The wordmark, drawn letter by letter in the four brand colours."""
+    f = ImageFont.truetype(FONT, int(height * 1.05), index=5)   # Medium, closest to the wordmark
+    letters = list(zip("Google", [BRAND[0], BRAND[1], BRAND[2], BRAND[0],
+                                  BRAND[3], BRAND[1]]))
+    probe = ImageDraw.Draw(Image.new("RGBA", (10, 10)))
+    w = int(sum(probe.textlength(c, font=f) for c, _ in letters)) + 12
+    im = Image.new("RGBA", (w, int(height * 1.7)), (0, 0, 0, 0))
+    d = ImageDraw.Draw(im)
+    x = 4
+    for c, colour in letters:
+        d.text((x, 0), c, font=f, fill=colour + (255,))
+        x += probe.textlength(c, font=f)
+    return im.crop(im.getbbox())
+
+
+def marks_row(card, d, y, height=84, gap=96):
     """The four marks this is built on, evenly spaced, each captioned."""
     loaded = []
     for f, label in MARKS:
@@ -56,6 +73,8 @@ def base(scrim):
     d.text(((W - tw) / 2, H // 2 - 70), TITLE, font=NAME, fill=(255, 255, 255, 246))
     return card, d
 
+
+google_wordmark().save("docs/video/marks/google.png")
 
 # the opening: a scrim that leaves the footage readable at the edges
 card, d = base(lambda y: int(150 + 85 * min(1.0, (min(y, H - y) / (H / 2)) * 1.6)))

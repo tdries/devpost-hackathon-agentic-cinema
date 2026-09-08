@@ -57,27 +57,34 @@ def rounded(d, box, r, outline, width):
 def chip(title, path):
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
-    ft = ImageFont.truetype(MONO, 27)
-    fp = ImageFont.truetype(FONT, 22, index=0)
+    ft = ImageFont.truetype(MONO, 35)
+    fp = ImageFont.truetype(FONT, 29, index=7)
     tw = max(d.textlength(title, font=ft), d.textlength(path, font=fp))
-    bw, bh = int(tw) + 78, 108
-    x, y = 96, H - bh - 84
-    d.rounded_rectangle([x, y, x + bw, y + bh], radius=14, fill=INK + (235,))
+    bw, bh = int(tw) + 100, 140
+    x, y = 96, H - bh - 78
+    d.rounded_rectangle([x, y, x + bw, y + bh], radius=18, fill=INK + (232,))
     for i, c in enumerate(BRAND):          # the four colours, as a rule down the left
-        top = y + 16 + i * ((bh - 32) // 4)
-        d.rectangle([x + 14, top, x + 19, top + (bh - 32) // 4 - 5], fill=c + (255,))
-    d.text((x + 40, y + 24), title, font=ft, fill=(255, 255, 255, 246))
-    d.text((x + 40, y + 64), path, font=fp, fill=(176, 190, 197, 230))
+        top = y + 20 + i * ((bh - 40) // 4)
+        d.rectangle([x + 18, top, x + 25, top + (bh - 40) // 4 - 6], fill=c + (255,))
+    d.text((x + 52, y + 30), title, font=ft, fill=(255, 255, 255, 246))
+    d.text((x + 52, y + 82), path, font=fp, fill=(176, 190, 197, 232))
     im.save(f"{OUT}/chip-{title.split()[0].lower()}-{abs(hash(path)) % 9999}.png")
     return im
 
 
-def callout(x, y, w, h, label):
+def callout(x, y, w, h, label, glow=1.0):
+    """One frame of a pointer. `glow` 0..1 breathes the halo and the stroke."""
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     box = [x, y, x + w, y + h]
-    rounded(d, [v + o for v, o in zip(box, (-3, -3, 3, 3))], 16, (255, 255, 255, 120), 7)
-    rounded(d, box, 13, (26, 115, 232, 250), 4)
+    # three rings of halo, widest and faintest outside, all riding on `glow`
+    for i, (spread, base) in enumerate(((13, 46), (9, 74), (5, 104))):
+        a = int(base * (0.25 + 0.75 * glow))
+        rounded(d, [v + o for v, o in zip(box, (-spread, -spread, spread, spread))],
+                16 + spread, (120, 176, 255, a), 9 - i * 2)
+    rounded(d, [v + o for v, o in zip(box, (-3, -3, 3, 3))], 16,
+            (255, 255, 255, int(70 + 90 * glow)), 7)
+    rounded(d, box, 13, (26, 115, 232, int(200 + 55 * glow)), 4)
     tick = 34                               # corner ticks, one per brand colour
     for (cx, cy, dx, dy), c in zip([(x, y, 1, 1), (x + w, y, -1, 1),
                                     (x, y + h, 1, -1), (x + w, y + h, -1, -1)], BRAND):

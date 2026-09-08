@@ -174,7 +174,7 @@ def main(only=None):
             if bb:
                 glide(p, bb["x"] + bb["width"] * 0.28, bb["y"] + bb["height"] * 0.3)
             p.wait_for_timeout(2200)            # the thumbnail loads on approach
-            spot(p, "what it found, and when", ".runcard .cardviz", hold=4.6)
+            spot(p, "what it found, and when", ".runcard .cardviz", hold=3.0)
             if bb:
                 glide(p, bb["x"] + bb["width"] * 0.72, bb["y"] + bb["height"] * 0.66, steps=18)
             p.wait_for_timeout(3200)
@@ -220,7 +220,7 @@ def main(only=None):
         def b4(p):
             p.wait_for_timeout(600)
             creep(p, 620, 1.4)
-            spot(p, "one tile per market", "#tiles", hold=4.2)
+            spot(p, "one tile per market", "#tiles", hold=2.4)
             t = p.locator("#tile-FR")
             if t.count():
                 bb = t.bounding_box()
@@ -232,7 +232,7 @@ def main(only=None):
                 lanes.evaluate("el => el.scrollIntoView({block: 'center'})")
                 p.wait_for_timeout(1100)
             spot(p, "live Grafana, built by the agent",
-                 "iframe.boardlanes, img.boardlanes", hold=4.4)
+                 "iframe.boardlanes, img.boardlanes", hold=2.6)
             p.wait_for_timeout(2600)
             creep(p, 1900, 5.0)
         beat(pw, 7, f"/runs/{RUN}", b4, head=5.0)
@@ -254,7 +254,7 @@ def main(only=None):
             if rows.count():
                 rows.first.click()
                 p.wait_for_timeout(1300)
-                spot(p, "the frame, the rule, the statute", "tr.frow", hold=4.0)
+                spot(p, "the frame, the rule, the statute", "tr.frow", hold=2.8)
             p.wait_for_timeout(3000)
             chip = p.locator(CERT_CHIP)
             if chip.count():
