@@ -39,7 +39,7 @@ WALK = [
      "body": "One card per film. The pinned one is the run that shows the "
              "whole loop end to end, which is where the tour is going."},
     {"path": "/runs", "at": "card-viz|archive-list",
-     "title": "Two charts, your choice",
+     "title": "Every card charts its own film, twice",
      "body": "Grafana draws the live panel; this console draws the same "
              "answer as SVG. The icons down the side are the axis Grafana "
              "cannot draw, one per category, six on every card."},
@@ -64,7 +64,7 @@ WALK = [
              "citation, as a PDF. The markers are the same spans as "
              "timecodes for Resolve or Premiere, coloured by severity."},
     {"path": "/runs/{run}/markets/{market}", "at": "finding|market",
-     "title": "A finding is a join",
+     "title": "One objection, and the three things it is made of",
      "body": "One observation the analyst recorded, one market's rule, and "
              "a citation retrieved at judging time. Never a model's "
              "opinion on its own."},
@@ -112,7 +112,8 @@ def slides(*, packs: int, dimensions: int, rules: int, pairings: int,
         {"id": "splash", "kind": "splash", "art": "logo",
          "eyebrow": "Agentic Cinema  ·  Grafana Labs track",
          "title": "The Media Customs",
-         "lede": "One asset. Every market. Before it ships.",
+         "lede": "Localize your video for every geography and culture, "
+                 "before it ships.",
          "body": "An AI crew watches your commercial once, then judges it "
                  "in parallel against every market you ship to, on both "
                  "counts: the law, and the cultural ground it has to land "
@@ -124,8 +125,10 @@ def slides(*, packs: int, dimensions: int, rules: int, pairings: int,
 
         {"id": "problem", "kind": "value", "art": "world",
          "eyebrow": "The problem",
-         "title": "A commercial does not have one verdict",
-         "lede": f"It has {packs}.",
+         "title": "Launching a video around the world runs into law "
+                  "and culture",
+         "lede": "The same thirty seconds is legal in one country and "
+                 "unairable in the next.",
          "body": "The same thirty seconds is legal in one country, "
                  "unairable in the next, and fine everywhere except on one "
                  "broadcaster. Today that answer arrives as a fortnight of "
@@ -136,8 +139,9 @@ def slides(*, packs: int, dimensions: int, rules: int, pairings: int,
 
         {"id": "observe", "kind": "walkthrough", "art": "observe",
          "eyebrow": "How it works  ·  1",
-         "title": "Observe once, judge many",
-         "lede": "The analyst is forbidden from having an opinion.",
+         "title": "The film is watched once, then judged market by market",
+         "lede": "One AI pass writes down what is on screen. No verdicts, "
+                 "on purpose.",
          "body": "One multimodal pass per shot writes neutral, timecoded "
                  "observations under a fixed taxonomy: what is on screen, "
                  "what is said, who is present, what is flashing. No "
@@ -148,9 +152,10 @@ def slides(*, packs: int, dimensions: int, rules: int, pairings: int,
 
         {"id": "ladder", "kind": "walkthrough", "art": "ladder",
          "eyebrow": "How it works  ·  2",
-         "title": "The ladder, not a list",
-         "lede": "A broadcaster inherits its country, its continent and "
-                 "the global baseline.",
+         "title": "A channel is judged on its own rules, its country's "
+                  "and its continent's",
+         "lede": "Rules are inherited, so nobody writes the same rule "
+                 "twice.",
          "body": "Drop a YAML file in, declare its parent, and write only "
                  "what your jurisdiction says differently. A Flemish "
                  "channel is judged against rules nobody wrote in one "
@@ -160,8 +165,10 @@ def slides(*, packs: int, dimensions: int, rules: int, pairings: int,
 
         {"id": "join", "kind": "walkthrough", "art": "join",
          "eyebrow": "How it works  ·  3",
-         "title": "A finding is a join",
-         "lede": "Observation  ×  market rule  ×  citation.",
+         "title": "Every objection names a real rule and quotes the law "
+                  "behind it",
+         "lede": "One observation, one market's rule, one citation "
+                 "retrieved while judging.",
          "body": "Never a model saying something looks risky. A finding "
                  "exists because the analyst recorded a fact, a named rule "
                  "in a real rulebook covers that fact, and a grounded "
@@ -171,8 +178,10 @@ def slides(*, packs: int, dimensions: int, rules: int, pairings: int,
 
         {"id": "guard", "kind": "proof", "art": "guard",
          "eyebrow": "What it will not do",
-         "title": "Some things are not the machine's to fix",
-         "lede": "The Guard is un-promptable.",
+         "title": "It will not edit your ad to get around a rule about "
+                  "who is in it",
+         "lede": "The Guard is a rule layer with no model in it, so it "
+                 "cannot be talked round.",
          "body": "Where a rule is written on a protected characteristic, "
                  "this system refuses to edit the footage to satisfy it. It "
                  "names the problem, cites the regulation and hands it to a "
@@ -208,8 +217,9 @@ def slides(*, packs: int, dimensions: int, rules: int, pairings: int,
 
         {"id": "grafana", "kind": "walkthrough", "art": "grafana",
          "eyebrow": "How it works  ·  5",
-         "title": "Grafana is upstream of the work",
-         "lede": "Not a report produced afterwards.",
+         "title": "The charts are not a report at the end, they start "
+                  "the work",
+         "lede": "The crew builds its own Grafana while it works.",
          "body": "The Publisher agent builds its own instrument panel "
                  "through the official Grafana MCP server: dashboards, an "
                  "annotation per finding, and the alert rules that will "
@@ -246,8 +256,10 @@ def slides(*, packs: int, dimensions: int, rules: int, pairings: int,
 
         {"id": "takeaway", "kind": "value", "art": "takeaway",
          "eyebrow": "What you take away",
-         "title": "A decision, and the version that can air",
-         "lede": "Both are files, not screens.",
+         "title": "You leave with a signed-off decision and a cut that "
+                  "can air",
+         "lede": "Files, not screens: a PDF, a marker list and the master "
+                 "itself.",
          "body": "The clearance certificate is every finding for one "
                  "market with its statute, its live citation, the fix that "
                  "was applied and the verifier's own words, as a PDF. The "
@@ -258,7 +270,8 @@ def slides(*, packs: int, dimensions: int, rules: int, pairings: int,
 
         {"id": "intelligence", "kind": "value", "art": "intelligence",
          "eyebrow": "Across every run",
-         "title": "What every clearance adds up to",
+         "title": "Thirty clearances show what your creative keeps "
+                  "getting wrong",
          "lede": "One run tells you whether one commercial ships.",
          "body": "Thirty tell you what your creative keeps doing wrong, "
                  "which jurisdictions are actually hard, and which rule "

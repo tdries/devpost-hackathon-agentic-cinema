@@ -15,7 +15,7 @@ model = os.environ.get("KOKORO_MODEL", f"{HOME}/.jarvis/models/kokoro-v1.0.onnx"
 voices = os.environ.get("KOKORO_VOICES", f"{HOME}/.jarvis/models/voices-v1.0.bin")
 voice, speed = (sys.argv[1:2] or ["af_heart"])[0], float((sys.argv[2:3] or ["1.0"])[0])
 # ponytail: slower where the point lands (evidence, the guard, the close), quicker on the explaining
-PACE = {1: 1.04, 2: 1.04, 3: 1.04, 4: 1.08, 5: 1.06, 6: 1.06, 7: 1.02, 8: 0.98, 9: 1.04, 10: 1.04, 11: 1.08, 12: 1.06, 13: 1.0}
+PACE = {1: 1.02, 2: 1.04, 3: 1.04, 4: 1.06, 5: 1.06, 6: 1.06, 7: 1.02, 8: 1.04, 9: 1.02, 10: 1.02, 11: 1.02, 12: 1.06, 13: 1.04, 14: 1.02}
 rows = [l for l in open("docs/demo-video-script.md") if re.match(r"\| \d+ \|", l)]
 beats = [l.split("|")[5].strip() for l in rows]
 
@@ -23,7 +23,7 @@ beats = [l.split("|")[5].strip() for l in rows]
 say = {"Loi Evin": "Loo-ah Evan", "Legifrance": "Lejee-france", "The Media Customs": "The Media Customs",
        "MCP": "M C P", "Veo": "Vay-oh", "Mimir": "Mee-meer"}
 kk = Kokoro(model, voices)
-gap = np.zeros(int(0.5 * 24000), dtype=np.float32)
+gap = np.zeros(int(0.4 * 24000), dtype=np.float32)
 full, total = [], 0.0
 for i, text in enumerate(beats, 1):
     for k, v in say.items():
@@ -36,4 +36,4 @@ for i, text in enumerate(beats, 1):
     print(f"{i:02d}  {d:5.1f}s  {text[:60]}")
     full += [audio, gap]
 sf.write("docs/voiceover/demo-voiceover.wav", np.concatenate(full[:-1]), sr)
-print(f"total speech {total:.1f}s, with gaps {total + 0.5 * (len(beats) - 1):.1f}s")
+print(f"total speech {total:.1f}s, with gaps {total + 0.4 * (len(beats) - 1):.1f}s")

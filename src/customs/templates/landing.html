@@ -149,11 +149,40 @@
 </section>
 
 <section class="landhow">
-  <div class="rule-row"><span class="label">Observe once, judge many</span></div>
+  <div class="rule-row"><span class="label">What happens when you upload a video</span>
+    <span class="right label">observe once, judge many</span>
+  </div>
   <p class="subline" style="max-width:80ch">The architectural decision everything else
     follows from. One multimodal analyst watches the film a single time and writes down
     what it sees: neutral, timecoded, no verdicts. Then one adjudicator per
     jurisdiction judges that same fact sheet against its own rulebook, in parallel.</p>
+
+  {# What actually happens, in one picture: who does what, what gets
+     written to Grafana, and the one arrow that goes the other way. #}
+  <figure class="flow">
+    <div class="flow-scroll">{% include "_flow.svg" %}</div>
+    <figcaption class="flow-steps">
+      <ol>
+        <li><b>1</b> You hand it a master, or a YouTube link.</li>
+        <li><b>2</b> Ingest cuts it into shots and pulls the audio and a transcript.</li>
+        <li><b>3</b> The analyst watches it once and writes timecoded, neutral
+          observations. They go to Loki as they are made.</li>
+        <li><b>4</b> That one fact sheet goes to every market at once. An
+          adjudicator per jurisdiction judges it against its own rulebook and
+          grounds its citation against a live source.</li>
+        <li><b>5</b> Each finding pushes a severity metric to Mimir on the
+          film's own clock, and an annotation onto the run's dashboard.</li>
+        <li><b>6</b> The publisher agent builds the dashboards and the alert
+          rules itself, through the Grafana MCP server.</li>
+        <li><b>7</b> A blocking finding trips its alert rule, and the webhook
+          wakes the remediator. This is the arrow that makes Grafana a
+          participant: the fix starts because a chart said so.</li>
+        <li><b>8</b> The verifier re-observes the new footage with the same
+          instrument. The metric drops, Grafana resolves its own alert, and
+          the localized master and the certificate are yours.</li>
+      </ol>
+    </figcaption>
+  </figure>
 
   <div class="landsteps">
     <div class="landstep">

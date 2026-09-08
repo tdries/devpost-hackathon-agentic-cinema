@@ -1963,32 +1963,29 @@ def test_the_lane_chart_is_a_grafana_panel_served_as_an_image(console):
     assert panel["targets"][0]["interval"] == "4s"
 
 
-def test_recent_runs_opens_on_a_banner_made_of_the_products_own_icons(client):
-    """The archive is the page people land on, and it opened on a bare
-    headline. The banner is the one place in the console allowed to be a
-    picture of itself -- and it earns that by being built from the same
-    glyphs everything else is labelled with, so it reads as THIS
-    product's front page and could not be any other product's.
+def test_the_archive_opens_on_the_runs_themselves(console):
+    """It opened on a banner: a swarm of the product's own icons, the big
+    wordmark, and a headline reading "All runs, newest first." above a list
+    that is self-evidently a list of runs, newest first.
+
+    It earned its place while the archive was the first thing a stranger
+    saw. The front page does that job now, and the banner had become a
+    screen of decoration between a reader and the thirty-six clearances
+    they came for. Gone, with the counts it carried moved onto the row that
+    heads the cards.
     """
-    import re, pathlib
-    test_client, _, _run, _ = client
-    body = test_client.get("/runs").text
+    client, store, _launched, _jobs = console
+    _judged_run(store)
+    body = client.get("/runs").text
 
-    assert 'class="runhero"' in body
-    assert body.count('class="swarm-row"') == 3, "three rows drifting at different speeds"
-    # every symbol the product owns should be in there, not a chosen few
-    sprite = pathlib.Path("src/customs/templates/base.html").read_text()
-    owned = set(re.findall(r'id="([idn]-[a-z_0-9]+)"', sprite))
-    used = set(re.findall(r'<use href="#([idn]-[a-z_0-9]+)"/>', body))
-    assert len(used & owned) >= 40, f"only {len(used & owned)} of {len(owned)} icons used"
-    # and nothing referenced that does not exist, which would render blank
-    assert used <= owned, f"banner asks for icons that are not in the sprite: {used - owned}"
+    assert "runhero" not in body
+    assert "All runs, newest first" not in body
+    assert "market packs" in body, "the counts survive, on the campaign row"
+    assert 'class="runcard"' in body
 
-    assert 'class="bars"' in body, "the four brand colours anchor it"
-    assert "runhero-stats" in body
-
-    css = test_client.get("/static/customs.css").text
-    assert "prefers-reduced-motion" in css, "the drift must be stoppable"
+    # and the stylesheet does not keep dressing a thing that is not there
+    css = client.get("/static/customs.css").text
+    assert "runhero" not in css
 
 
 def test_every_dashboard_is_painted_from_the_one_palette():
@@ -2068,7 +2065,8 @@ def test_the_front_door_says_what_this_is_before_what_it_does(console):
     # the pitch
     assert "The Media Customs" in body
     assert "every geography and culture" in body
-    assert "Observe once, judge many" in body
+    assert "What happens when you upload a video" in body
+    assert 'class="flowsvg"' in body, "the flow picture, not just prose"
     assert "Grafana is a participant" in body
 
     # counted, not asserted -- a stale number here is a lie to a judge.
@@ -2221,7 +2219,7 @@ def test_a_judge_gets_the_archive_and_a_visitor_gets_a_clean_slate(console):
     assert fresh.text.count('class="runrow"') == 0
     assert "Nothing cleared yet" in fresh.text
     assert 'href="/new"' in fresh.text, "and a way to start one"
-    assert "Your runs" in fresh.text
+    assert "Your clearances" in fresh.text
 
     # and a run they start does show up
     response = _upload(client)

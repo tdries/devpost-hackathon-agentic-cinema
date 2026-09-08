@@ -3,36 +3,6 @@
 {% block nav %}{% include "_topnav.html" %}{% endblock %}
 {% block main %}
 
-<section class="runhero">
-  <div class="swarm" aria-hidden="true">
-    <span class="swarm-row"><svg class="ic"><use href="#d-alcohol_tobacco_drugs"/></svg><svg class="ic"><use href="#n-new"/></svg><svg class="ic"><use href="#d-gesture_body_language"/></svg><svg class="ic"><use href="#i-pending"/></svg><svg class="ic"><use href="#d-sexual_orientation_gender_id"/></svg><svg class="ic"><use href="#n-timeline"/></svg><svg class="ic"><use href="#d-health_claims_pharma"/></svg><svg class="ic"><use href="#i-policy"/></svg><svg class="ic"><use href="#d-language_profanity_idiom"/></svg><svg class="ic"><use href="#n-market"/></svg><svg class="ic"><use href="#d-photosensitivity_sensory"/></svg><svg class="ic"><use href="#d-comparative_claims"/></svg><svg class="ic"><use href="#i-alert"/></svg><svg class="ic"><use href="#i-transcription"/></svg><svg class="ic"><use href="#i-guard"/></svg><svg class="ic"><use href="#i-verifier"/></svg></span>
-    <span class="swarm-row"><svg class="ic"><use href="#i-cleared"/></svg><svg class="ic"><use href="#d-modesty_dress_body"/></svg><svg class="ic"><use href="#n-board"/></svg><svg class="ic"><use href="#d-gender_portrayal"/></svg><svg class="ic"><use href="#i-error"/></svg><svg class="ic"><use href="#d-national_symbols_politics"/></svg><svg class="ic"><use href="#n-cut"/></svg><svg class="ic"><use href="#d-violence_and_weapons"/></svg><svg class="ic"><use href="#i-offence"/></svg><svg class="ic"><use href="#d-superstition_number_colour"/></svg><svg class="ic"><use href="#d-text_legibility"/></svg><svg class="ic"><use href="#i-frame"/></svg><svg class="ic"><use href="#i-pipeline"/></svg><svg class="ic"><use href="#i-analyst"/></svg><svg class="ic"><use href="#i-publisher"/></svg><svg class="ic"><use href="#i-noted"/></svg></span>
-    <span class="swarm-row"><svg class="ic"><use href="#d-religious_symbols_practices"/></svg><svg class="ic"><use href="#i-blocked"/></svg><svg class="ic"><use href="#d-food_and_animals"/></svg><svg class="ic"><use href="#n-feed"/></svg><svg class="ic"><use href="#d-children_and_minors"/></svg><svg class="ic"><use href="#i-legal"/></svg><svg class="ic"><use href="#d-gambling_and_finance"/></svg><svg class="ic"><use href="#n-library"/></svg><svg class="ic"><use href="#d-humour_irony_satire"/></svg><svg class="ic"><use href="#i-sourced"/></svg><svg class="ic"><use href="#i-unsourced"/></svg><svg class="ic"><use href="#i-human"/></svg><svg class="ic"><use href="#i-ingest"/></svg><svg class="ic"><use href="#i-adjudicator"/></svg><svg class="ic"><use href="#i-remediator"/></svg></span>
-  </div>
-  {# The mark, large, on the right. The swarm drifts behind it and the
-     radial mask hollows the left third, so the wordmark sits in the busy
-     side and the reading sits in the quiet one. #}
-  <div class="runhero-mark" aria-hidden="true">
-    <img src="/static/logo.png?v={{ static_v }}" alt="">
-    <span class="runhero-word">THE MEDIA<br>CUSTOMS</span>
-    <span class="hero-with">
-      <img class="hero-adk" src="/static/logo-adk.png?v={{ static_v }}" alt="" width="32" height="32">
-      <i class="brand-bar" aria-hidden="true"></i>
-      <img class="hero-grafana" src="/static/powered-by-grafana.png?v={{ static_v }}"
-           alt="Powered by Grafana" width="114" height="26">
-    </span>
-  </div>
-  <div class="runhero-front">
-    <span class="bars" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-    <h1 class="headline">{% if scoped %}Your runs, newest first.{% else %}All runs, newest first.{% endif %}</h1>
-    <p class="subline">{% if scoped %}The clearances you have started in this browser. Open one for
-      its board, its timeline and its cutting room.{% else %}Every clearance this instance has
-      performed. Open one for its board, its timeline and its cutting room.{% endif %}</p>
-    <span class="runhero-stats mono">{{ runs_total }} run{{ '' if runs_total == 1 else 's' }}
-      {% if runs_total != films %}of {{ films }} film{{ '' if films == 1 else 's' }}{% endif %}
-      &middot; {{ packs_total }} market packs &middot; {{ dims_total }} things watched for</span>
-  </div>
-</section>
 
 {% if live_history %}
 <section style="border-top:none;padding-top:0">
@@ -51,8 +21,17 @@
 </section>
 {% endif %}
 
-<div class="rule-row" style="margin:22px 0 14px" data-tour="archive">
-  <span class="label">Campaign history</span>
+{# The hero that used to open this page is gone: a swarm of icons and a
+   headline saying "All runs, newest first." above a list that is
+   self-evidently a list of runs, newest first. The one fact it carried
+   that is worth having rides on this row instead. #}
+<div class="rule-row" style="margin:8px 0 14px" data-tour="archive">
+  {# Whose runs these are was the one thing the banner's headline said
+     that the list cannot: a visitor sees only their own. #}
+  <span class="label">{% if scoped %}Your clearances{% else %}Campaign history{% endif %}</span>
+  <span class="right label mono">{{ runs_total }} run{{ '' if runs_total == 1 else 's' }}
+    {% if runs_total != films %}of {{ films }} film{{ '' if films == 1 else 's' }}{% endif %}
+    &middot; {{ packs_total }} market packs &middot; {{ dims_total }} things watched for</span>
   <span class="right view-switch" role="group" aria-label="Runs view">
     <button type="button" class="tbtn" data-set-runs="cards">Cards</button>
     <button type="button" class="tbtn" data-set-runs="list">List</button>

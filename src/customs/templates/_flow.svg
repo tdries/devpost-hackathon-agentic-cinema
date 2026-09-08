@@ -1,0 +1,111 @@
+{# The flow, from the moment a master lands. Hand-drawn SVG rather than a
+   picture of a diagram: it scales, it reads in both themes because every
+   colour is either one of the product's four hues or a theme token, and
+   nothing in it can go stale without somebody editing this file.
+
+   Four lanes, because the interesting thing about this system is WHO does
+   what: you hand it a file, the console breaks it up, the crew judges it,
+   and Grafana is written to and then starts work of its own. The numbers
+   are explained in the list under the picture, so the drawing stays a
+   drawing and the words stay selectable text. #}
+<svg class="flowsvg" viewBox="0 0 1240 452" role="img"
+     aria-label="What happens when you upload a commercial: the console
+     ingests it, the crew observes and judges it, Grafana is written to and
+     wakes the fix loop, and you get a verdict, a certificate and a
+     localized master.">
+  <defs>
+    <marker id="fa" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7"
+            markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0.6 L9 5 L0 9.4 z" fill="context-stroke"/>
+    </marker>
+  </defs>
+  <text class="fl-lane" x="8" y="66">YOU</text>
+  <line class="fl-sep" x1="118" y1="108" x2="1230" y2="108"/>
+  <text class="fl-lane" x="8" y="162">CONSOLE</text>
+  <line class="fl-sep" x1="118" y1="210" x2="1230" y2="210"/>
+  <text class="fl-lane" x="8" y="272">THE CREW</text>
+  <line class="fl-sep" x1="118" y1="320" x2="1230" y2="320"/>
+  <text class="fl-lane" x="8" y="390">GRAFANA CLOUD</text>
+  <rect x="140" y="38" width="160" height="48" rx="9" class="fl-box fl-you" class="fl-edge"/>
+  <text class="fl-t" x="220.0" y="59" text-anchor="middle">master.mp4</text>
+  <text class="fl-s" x="220.0" y="75" text-anchor="middle">your commercial</text>
+  <rect x="1000" y="38" width="230" height="48" rx="9" class="fl-box fl-you" class="fl-edge"/>
+  <text class="fl-t" x="1115.0" y="59" text-anchor="middle">a decision, and a master</text>
+  <text class="fl-s" x="1115.0" y="75" text-anchor="middle">verdict / certificate / markers</text>
+  <rect x="140" y="134" width="210" height="48" rx="9" class="fl-box fl-panel" class="fl-edge"/>
+  <text class="fl-t" x="245.0" y="155" text-anchor="middle">Ingest</text>
+  <text class="fl-s" x="245.0" y="171" text-anchor="middle">shots, audio, transcript</text>
+  <rect x="1000" y="134" width="230" height="48" rx="9" class="fl-box fl-panel" class="fl-edge"/>
+  <text class="fl-t" x="1115.0" y="155" text-anchor="middle">Cutting room</text>
+  <text class="fl-s" x="1115.0" y="171" text-anchor="middle">original beside the localized cut</text>
+  <rect x="370" y="240" width="122" height="56" rx="9" class="fl-box fl-panel" stroke="#4285F4"/>
+  <text class="fl-t" x="431.0" y="261" text-anchor="middle">Analyst</text>
+  <text class="fl-s" x="431.0" y="277" text-anchor="middle">one pass, no verdicts</text>
+  <rect x="512" y="240" width="150" height="56" rx="9" class="fl-box fl-panel" stroke="#4285F4"/>
+  <text class="fl-t" x="587.0" y="261" text-anchor="middle">Adjudicators</text>
+  <text class="fl-s" x="587.0" y="277" text-anchor="middle">one per market, parallel</text>
+  <rect x="682" y="240" width="96" height="56" rx="9" class="fl-box fl-panel" stroke="#EA4335"/>
+  <text class="fl-t" x="730.0" y="261" text-anchor="middle">Guard</text>
+  <text class="fl-s" x="730.0" y="277" text-anchor="middle">refuses some</text>
+  <rect x="798" y="240" width="108" height="56" rx="9" class="fl-box fl-panel" stroke="#4285F4"/>
+  <text class="fl-t" x="852.0" y="261" text-anchor="middle">Publisher</text>
+  <text class="fl-s" x="852.0" y="277" text-anchor="middle">writes Grafana</text>
+  <rect x="926" y="240" width="116" height="56" rx="9" class="fl-box fl-panel" stroke="#F9AB00"/>
+  <text class="fl-t" x="984.0" y="261" text-anchor="middle">Remediator</text>
+  <text class="fl-s" x="984.0" y="277" text-anchor="middle">Omni / Veo</text>
+  <rect x="1062" y="240" width="108" height="56" rx="9" class="fl-box fl-panel" stroke="#34A853"/>
+  <text class="fl-t" x="1116.0" y="261" text-anchor="middle">Verifier</text>
+  <text class="fl-s" x="1116.0" y="277" text-anchor="middle">re-observes</text>
+  <rect x="370" y="352" width="122" height="52" rx="9" class="fl-box fl-well" class="fl-edge"/>
+  <text class="fl-t" x="431.0" y="373" text-anchor="middle">Loki</text>
+  <text class="fl-s" x="431.0" y="389" text-anchor="middle">every observation</text>
+  <rect x="512" y="352" width="150" height="52" rx="9" class="fl-box fl-well" class="fl-edge"/>
+  <text class="fl-t" x="587.0" y="373" text-anchor="middle">Mimir</text>
+  <text class="fl-s" x="587.0" y="389" text-anchor="middle">severity on the film's clock</text>
+  <rect x="682" y="352" width="224" height="52" rx="9" class="fl-box fl-well" class="fl-edge"/>
+  <text class="fl-t" x="794.0" y="373" text-anchor="middle">Dashboards + alert rules</text>
+  <text class="fl-s" x="794.0" y="389" text-anchor="middle">written over MCP</text>
+  <rect x="926" y="352" width="116" height="52" rx="9" class="fl-box fl-well" stroke="#F9AB00"/>
+  <text class="fl-t" x="984.0" y="382.0" text-anchor="middle">Alert fires</text>
+  <rect x="1062" y="352" width="108" height="52" rx="9" class="fl-box fl-well" stroke="#34A853"/>
+  <text class="fl-t" x="1116.0" y="382.0" text-anchor="middle">and resolves</text>
+  <path d="M 220 86 L 220 130" fill="none" stroke="#4285F4" stroke-width="1.6" marker-end="url(#fa)"/>
+  <circle cx="220" cy="108" r="10" fill="#4285F4"/>
+  <text class="fl-n" x="220" y="112" text-anchor="middle">1</text>
+  <path d="M 350 158 L 360 158 L 360 268 L 368 268" fill="none" stroke="#4285F4" stroke-width="1.6" marker-end="url(#fa)"/>
+  <circle cx="360" cy="210" r="10" fill="#4285F4"/>
+  <text class="fl-n" x="360" y="214" text-anchor="middle">2</text>
+  <path d="M 431 296 L 431 350" fill="none" stroke="#4285F4" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#fa)"/>
+  <circle cx="431" cy="323" r="10" fill="#4285F4"/>
+  <text class="fl-n" x="431" y="327" text-anchor="middle">3</text>
+  <path d="M 492 268 L 510 268" fill="none" stroke="#4285F4" stroke-width="1.6" marker-end="url(#fa)"/>
+  <circle cx="502" cy="222" r="10" fill="#4285F4"/>
+  <text class="fl-n" x="502" y="226" text-anchor="middle">4</text>
+  <path d="M 587 296 L 587 350" fill="none" stroke="#4285F4" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#fa)"/>
+  <circle cx="587" cy="323" r="10" fill="#4285F4"/>
+  <text class="fl-n" x="587" y="327" text-anchor="middle">5</text>
+  <path d="M 662 268 L 680 268" fill="none" stroke="#EA4335" stroke-width="1.6" marker-end="url(#fa)"/>
+  <path d="M 778 268 L 796 268" fill="none" stroke="#4285F4" stroke-width="1.6" marker-end="url(#fa)"/>
+  <path d="M 852 296 L 852 350" fill="none" stroke="#4285F4" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#fa)"/>
+  <circle cx="852" cy="323" r="10" fill="#4285F4"/>
+  <text class="fl-n" x="852" y="327" text-anchor="middle">6</text>
+  <path d="M 984 350 L 984 320 L 984 298" fill="none" stroke="#F9AB00" stroke-width="2.2" marker-end="url(#fa)"/>
+  <circle cx="984" cy="323" r="10" fill="#F9AB00"/>
+  <text class="fl-n" x="984" y="327" text-anchor="middle">7</text>
+  <path d="M 1042 268 L 1060 268" fill="none" stroke="#F9AB00" stroke-width="1.6" marker-end="url(#fa)"/>
+  <path d="M 1116 296 L 1116 350" fill="none" stroke="#34A853" stroke-width="1.6" stroke-dasharray="5 4" marker-end="url(#fa)"/>
+  <circle cx="1116" cy="323" r="10" fill="#34A853"/>
+  <text class="fl-n" x="1116" y="327" text-anchor="middle">8</text>
+  <path d="M 1115 238 L 1115 184" fill="none" stroke="#34A853" stroke-width="1.6" marker-end="url(#fa)"/>
+  <path d="M 1115 132 L 1115 88" fill="none" stroke="#34A853" stroke-width="1.6" marker-end="url(#fa)"/>
+  <g class="fl-key">
+    <line x1="140" y1="432" x2="176" y2="432" stroke="#4285F4" stroke-width="1.6"/>
+    <text class="fl-k" x="184" y="436">the work</text>
+    <line x1="268" y1="432" x2="304" y2="432" stroke="#4285F4" stroke-width="1.6" stroke-dasharray="5 4"/>
+    <text class="fl-k" x="312" y="436">what it writes to Grafana</text>
+    <line x1="510" y1="432" x2="546" y2="432" stroke="#F9AB00" stroke-width="2.2"/>
+    <text class="fl-k" x="554" y="436">Grafana starting the work</text>
+    <line x1="752" y1="432" x2="788" y2="432" stroke="#34A853" stroke-width="1.6"/>
+    <text class="fl-k" x="796" y="436">what comes back to you</text>
+  </g>
+</svg>

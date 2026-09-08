@@ -1923,24 +1923,6 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
 
    The rows drift at different speeds and directions, which is what stops
    47 icons reading as wallpaper. */
-.runhero {
-  position: relative; overflow: hidden; border-radius: 14px;
-  border: 1px solid var(--line); background: var(--ground-2);
-  padding: 46px 40px 42px; margin: 4px 0 0; isolation: isolate;
-}
-.runhero .swarm {
-  position: absolute; inset: -18px -60px; display: flex;
-  flex-direction: column; justify-content: center; gap: 26px; z-index: 0;
-  /* faded at the edges and hollowed in the middle, so the headline has
-     air without a slab of flat colour behind it */
-  -webkit-mask-image:
-    radial-gradient(58% 78% at 26% 50%, transparent 24%, #000 78%),
-    linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
-  mask-image:
-    radial-gradient(58% 78% at 26% 50%, transparent 24%, #000 78%),
-    linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
-  -webkit-mask-composite: source-in; mask-composite: intersect;
-}
 .swarm-row {
   display: flex; gap: 30px; align-items: center; white-space: nowrap;
   /* A texture, not a picture. At .5 the drifting glyphs read as content
@@ -1957,62 +1939,7 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
 @keyframes drift-r { from { transform: translateX(-33%); } to { transform: translateX(0); } }
 @media (prefers-reduced-motion: reduce) { .swarm-row { animation: none; } }
 
-.runhero-front { position: relative; z-index: 1; max-width: 62ch; }
-.runhero-front .headline { margin: 14px 0 10px; }
-/* "All runs, newest first." wrapped at the clamp's larger sizes, because
-   the hero's own column is capped at 62ch -- narrower than the sentence
-   needs once the font is past ~40px. One line, like the front page's. */
-@media (min-width: 640px) { .runhero-front .headline { white-space: nowrap; } }
-.runhero-front .subline { margin: 0; }
-.runhero .bars { display: flex; gap: 7px; }
-.runhero .bars i { width: 46px; height: 6px; border-radius: 3px; display: block; }
-.runhero .bars i:nth-child(1) { background: #4285F4; }
-.runhero .bars i:nth-child(2) { background: #EA4335; }
-.runhero .bars i:nth-child(3) { background: #FBBC05; }
-.runhero .bars i:nth-child(4) { background: #34A853; }
-.runhero-stats {
-  display: inline-block; margin-top: 18px; font-size: 11px;
-  letter-spacing: .16em; text-transform: uppercase; color: var(--ink-3);
-}
-@media (max-width: 720px) {
-  .runhero { padding: 30px 22px 28px; }
-  .swarm-row .ic { width: 42px; height: 42px; }
-  .runhero .swarm { gap: 18px; }
-}
-
-/* The mark, big, on the right of the archive banner.
-
-   The swarm's radial mask already hollows the LEFT third for the
-   headline, which leaves the right side busy -- exactly where a large
-   mark wants to sit, because it has enough weight to own that noise
-   rather than be lost in it. */
-.runhero { display: flex; align-items: center; gap: 40px; }
-.runhero-front { flex: 1 1 auto; }
-.runhero-mark {
-  position: relative; z-index: 1; flex: 0 0 auto; order: 2;
-  display: flex; align-items: center; gap: 20px; padding-right: 8px;
-}
-.runhero-mark img {
-  width: 132px; height: auto; display: block;
-  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, .16));
-}
-.runhero-word {
-  font-family: var(--mono); font-size: 30px; line-height: 1.12;
-  letter-spacing: .17em; font-weight: 700; color: var(--ink);
-  white-space: nowrap;
-}
-@media (max-width: 1080px) {
-  .runhero-mark img { width: 96px; }
-  .runhero-word { font-size: 22px; }
-}
-@media (max-width: 860px) {
-  .runhero { display: block; }
-  .runhero-mark {
-    justify-content: flex-start; margin-bottom: 20px; padding-right: 0;
-  }
-  .runhero-mark img { width: 62px; }
-  .runhero-word { font-size: 19px; }
-}
+@media (max-width: 720px) { .swarm-row .ic { width: 42px; height: 42px; } }
 
 /* The same lane chart, card sized. Six lanes, no ruler, smaller dots:
    in a card the SHAPE is the point -- one bad moment or trouble all the
@@ -2251,6 +2178,33 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
 }
 .landgraf-cell b { font-size: 14.5px; color: var(--ink); }
 .landgraf-cell span:last-child { font-size: 12.8px; line-height: 1.55; color: var(--ink-3); }
+
+/* ---------- the flow picture on the front page ----------
+   Four lanes and eight moves. The lane names, the box labels and the key
+   are all SVG text, so they scale with the drawing; the numbered steps are
+   real HTML underneath it, which is what a reader on a phone gets and what
+   a screen reader reads. */
+.flow { margin: 22px 0 6px; }
+.flow-scroll { overflow-x: auto; }
+.flowsvg { width: 100%; min-width: 900px; height: auto; display: block; }
+.fl-lane { font-family: var(--mono); font-size: 10.5px; letter-spacing: .1em;
+  fill: var(--ink-3); }
+.fl-sep { stroke: var(--line); stroke-width: 1; }
+.fl-box { fill: var(--panel); stroke-width: 1.3; }
+.fl-box.fl-well { fill: var(--well); }
+.fl-box.fl-you { fill: var(--ground-2); }
+.fl-edge { stroke: var(--line-2); }
+.fl-t { font-size: 13px; font-weight: 600; fill: var(--ink); }
+.fl-s { font-family: var(--mono); font-size: 10px; fill: var(--ink-3); }
+.fl-n { font-family: var(--mono); font-size: 11px; font-weight: 700; fill: #fff; }
+.fl-k { font-family: var(--mono); font-size: 10px; letter-spacing: .06em;
+  fill: var(--ink-3); }
+.flow-steps { margin-top: 14px; }
+.flow-steps ol { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 26px;
+  margin: 0; padding: 0; list-style: none; max-width: 108ch; }
+.flow-steps li { font-size: 12.8px; line-height: 1.5; color: var(--ink-3); }
+.flow-steps b { font-family: var(--mono); color: var(--signal); margin-right: 6px; }
+@media (max-width: 900px) { .flow-steps ol { grid-template-columns: 1fr; } }
 
 /* agent mode on the front page: the same three cells the Grafana section
    uses, in the agent's own hue, because "click it or ask it" is a claim
@@ -3096,9 +3050,6 @@ span.cardlanes.drawn .lane-dot:hover { r: 7px; cursor: pointer; }
 .brand-grafana { display: block; height: 22px; width: auto; opacity: 0.9; }
 .brand-with:hover .brand-grafana { opacity: 1; }
 .hero-with { margin: 0 0 14px; }
-/* Scoped, because .runhero-mark sizes its own img for the big logo and
-   would otherwise blow the robot up to the same size. */
-.runhero-mark .hero-adk, .hero-adk { display: block; height: 32px !important; width: 32px !important; }
 .hero-grafana { display: block; height: 26px; width: auto; opacity: 0.92; }
 .hero-with .brand-bar { height: 22px; }
 @media (max-width: 900px) { .brand-with { display: none; } }
@@ -3156,7 +3107,6 @@ span.cardlanes.drawn .lane-dot:hover { r: 7px; cursor: pointer; }
   font-size: clamp(17px, 1.9vw, 21px); font-weight: 600; letter-spacing: -0.01em;
   margin: 2px 0 8px; }
 .pagetitle .ic { width: 19px; height: 19px; flex: none; }
-.runhero-h1 { font-size: clamp(24px, 3vw, 34px); }
 
 /* the agent's tool list, folded: checkable, not shouted */
 .ah-tools > summary { cursor: pointer; list-style: none; }
@@ -3399,7 +3349,9 @@ tbody.mkscene[hidden] { display: none; }
 @keyframes ts-in { from { opacity: 0; transform: translateY(14px); } }
 .ts-words { max-width: 62ch; }
 .ts-eyebrow { display: block; color: var(--g-blue); margin-bottom: 14px; }
-.ts-title { font-size: clamp(32px, 4.8vw, 62px); line-height: 1.02;
+/* Down from 62px: the titles say what happens now instead of being three
+   clever words, and a plain sentence at 62px is a wall. */
+.ts-title { font-size: clamp(27px, 3.5vw, 44px); line-height: 1.08;
   letter-spacing: -0.025em; margin: 0 0 16px; }
 .ts-lede { font-size: clamp(17px, 1.8vw, 24px); line-height: 1.32;
   margin: 0 0 16px; color: var(--ink); }
