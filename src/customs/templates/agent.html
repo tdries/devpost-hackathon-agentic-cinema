@@ -26,12 +26,12 @@
     <h1 class="pagetitle"><svg class="ic"><use href="#i-adjudicator"/></svg>Agent mode</h1>
     <p class="agenthero-lede">Ask in sentences. It answers by opening the evidence beside you,
       and prices any fix before it runs.</p>
+    {# The three numbers that used to head this screen -- tools, runs
+       readable, EUR left today -- are gone. Two of them were already on
+       the panel below (the budget in the agent's own header) and the third
+       is the count on the fold beside it, so they cost the chat window
+       thirty-five pixels to say nothing new. #}
     <div class="agenthero-stats">
-      <span class="ah-stat"><b>{{ tools | length }}</b> tools</span>
-      <span class="ah-stat"><b>{{ runs | length }}</b> runs readable</span>
-      <span class="ah-stat"><b>{{ '%.2f'|format(budget_left) }}</b> EUR left today</span>
-      {# The tools it actually holds, folded away: available to anyone who
-         wants to check the claim, silent for everyone else. #}
       <details class="ah-tools">
         <summary class="label">its {{ tools | length }} tools</summary>
         <span class="ah-toolrow">{% for t in tools %}<code class="ah-tool">{{ t }}</code>{% endfor %}</span>

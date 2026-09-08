@@ -1387,7 +1387,9 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
    pointers appeared above them the ask box fell below the fold. */
 .agentscreen {
   display: flex; flex-direction: column; gap: 0;
-  height: calc(100vh - 122px); min-height: 540px;
+  /* The conversation is the screen. It was sharing a viewport with a hero,
+     three pointers and a stats row, and what gave way was the log. */
+  height: calc(100vh - 96px); min-height: 620px;
 }
 .agent {
   /* The conversation column carries three numbered lanes of pre-filled
@@ -1407,7 +1409,8 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
 }
 .agent-head .label { display: inline-flex; align-items: center; gap: 8px; }
 
-.agent-log { flex: 1; overflow-y: auto; padding: 14px; display: grid; gap: 12px; align-content: start; }
+.agent-log { flex: 1; min-height: 150px; overflow-y: auto; padding: 14px;
+  display: grid; gap: 12px; align-content: start; }
 /* Before the first turn there is nothing to scroll, and a log that claims
    the leftover height put a hand's width of blank panel between the
    greeting and the buttons under it. Until a conversation exists, the log
@@ -1435,8 +1438,8 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
 
 .agent-suggest { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 14px 12px; }
 .sugg {
-  display: inline-flex; align-items: center; gap: 7px;
-  font-size: 11.5px; padding: 6px 10px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11px; padding: 5px 9px; cursor: pointer;
   border: 1px solid var(--line-2); border-radius: 999px;
   background: var(--well); color: var(--ink-2);
 }
@@ -3058,7 +3061,7 @@ span.cardlanes.drawn .lane-dot:hover { r: 7px; cursor: pointer; }
    It used to open onto two grey panes and a blinking cursor, which tells a
    first-time visitor nothing. Same hero device as the landing and archive,
    then three numbered pointers, then the two panes. */
-.agenthero { position: relative; overflow: hidden; padding: 12px 0 10px;
+.agenthero { position: relative; overflow: hidden; padding: 10px 0 6px;
   border-bottom: 1px solid var(--line); flex: none; }
 .agenthero .swarm { position: absolute; inset: 0; display: grid; gap: 26px;
   align-content: center; opacity: 0.05; pointer-events: none;
@@ -3074,8 +3077,8 @@ span.cardlanes.drawn .lane-dot:hover { r: 7px; cursor: pointer; }
 .agenthero-stats { display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
   margin-bottom: 0; }
 .ah-with { margin-left: auto; }
-.ah-adk { display: block; height: 50px; width: 50px; }
-.ah-grafana { display: block; height: 40px; width: auto; opacity: 0.9; }
+.ah-adk { display: block; height: 36px; width: 36px; }
+.ah-grafana { display: block; height: 28px; width: auto; opacity: 0.9; }
 .ah-with { display: inline-flex; align-items: center; gap: 12px; }
 .ah-with .brand-bar { height: 30px; }
 .ah-stat { font-size: 12.5px; color: var(--ink-2); }
@@ -3087,7 +3090,7 @@ span.cardlanes.drawn .lane-dot:hover { r: 7px; cursor: pointer; }
   background: var(--panel); }
 
 .agentsteps { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 14px; padding: 10px 0 2px; flex: none; }
+  gap: 14px; padding: 4px 0 0; flex: none; }
 .ast { display: flex; gap: 12px; align-items: flex-start; }
 .ast-n { flex: none; width: 24px; height: 24px; border-radius: 50%;
   display: grid; place-items: center; font-size: 12px;
@@ -3187,10 +3190,10 @@ tbody.mkscene[hidden] { display: none; }
    flat row read as a word cloud and nothing said which to press first.
    After the first turn customs.js replaces it with what to ask next, and
    that rail is flat on purpose: by then the conversation is the order. */
-.agent-suggest.guided { display: grid; gap: 7px; }
+.agent-suggest.guided { display: grid; gap: 5px; }
 .sugg-lane {
-  display: grid; gap: 6px;
-  padding: 7px 9px; border: 1px solid var(--line); border-radius: var(--radius);
+  display: grid; gap: 4px;
+  padding: 5px 8px; border: 1px solid var(--line); border-radius: var(--radius);
   background: var(--well);
 }
 .sugg-head { display: flex; align-items: center; gap: 6px; }
