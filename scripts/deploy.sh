@@ -247,6 +247,11 @@ env_pairs=(
     "LOKI_PUSH_URL=${DEPLOY_LOKI_PUSH_URL}"
     "LOKI_USER=${DEPLOY_LOKI_USER}"
 )
+# The word that removes an edit. Passed through from the environment (.env
+# is not in the repo) rather than written here, because a password in a
+# public repository is not a password. Unset, the delete falls back to the
+# judge word -- see config.Settings.load.
+if [[ -n "${EDITS_PASSWORD:-}" ]]; then env_pairs+=("EDITS_PASSWORD=${EDITS_PASSWORD}"); fi
 if [[ -n "$DEPLOY_GEMINI_MODEL_VISION" ]]; then env_pairs+=("GEMINI_MODEL_VISION=${DEPLOY_GEMINI_MODEL_VISION}"); fi
 if [[ -n "$DEPLOY_GEMINI_MODEL_TEXT" ]]; then env_pairs+=("GEMINI_MODEL_TEXT=${DEPLOY_GEMINI_MODEL_TEXT}"); fi
 if [[ -n "$DEPLOY_IMAGEN_MODEL" ]]; then env_pairs+=("IMAGEN_MODEL=${DEPLOY_IMAGEN_MODEL}"); fi

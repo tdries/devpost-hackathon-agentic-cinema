@@ -1349,7 +1349,14 @@
     var nextMoves = function (moves) {
       if (!suggest || !moves || !moves.length) { return; }
       suggest.innerHTML = "";
-      var label = document.createElement("span");
+      /* The starters are a folded accordion until the first turn; what
+         replaces them is a flat rail about the answer on screen, so it
+         opens and keeps a summary -- a <details> with neither is a rail
+         nobody can see. */
+      var isFold = suggest.tagName === "DETAILS";
+      if (isFold) { suggest.open = true; }
+      suggest.classList.remove("guided");
+      var label = document.createElement(isFold ? "summary" : "span");
       label.className = "sugg-label label";
       label.textContent = "What next";
       suggest.appendChild(label);

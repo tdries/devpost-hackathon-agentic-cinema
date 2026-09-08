@@ -3697,7 +3697,11 @@ def test_agent_mode_opens_guided_and_fits_one_screen(console):
     page = client.get("/agent").text
 
     assert page.count('class="sugg-lane"') == 3, "where I stand, why, what to do"
-    assert "Start here" in page
+    # folded by default, because three lanes of questions is what you want
+    # when you do not know what to ask and not what you scroll past when
+    # you do
+    assert "Get me started here" in page
+    assert "<details class=\"agent-suggest" in page
 
     css = (Path(app_module.__file__).parent / "static" / "customs.css").read_text()
     # the screen is sized to the window, so the ask box is never below the

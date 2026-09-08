@@ -3404,6 +3404,13 @@ tbody.mkscene[hidden] { display: none; }
    After the first turn customs.js replaces it with what to ask next, and
    that rail is flat on purpose: by then the conversation is the order. */
 .agent-suggest.guided { display: grid; gap: 5px; }
+/* the starters, folded: three numbered lanes are what you want when you do
+   not know what to ask and not what you want to scroll past when you do */
+details.agent-suggest > summary { cursor: pointer; display: block;
+  padding: 4px 0 2px; }
+details.agent-suggest > summary::marker,
+details.agent-suggest > summary::-webkit-details-marker { color: var(--ink-3); }
+details.agent-suggest[open] > summary { margin-bottom: 4px; }
 .sugg-lane {
   display: grid; gap: 4px;
   padding: 5px 8px; border: 1px solid var(--line); border-radius: var(--radius);

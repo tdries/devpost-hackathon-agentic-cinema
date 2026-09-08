@@ -94,8 +94,13 @@
        one that spends money sat beside the one that just reads a status.
        customs.js replaces this whole block after the first turn with what
        to ask next, derived from what the turn actually did. #}
-    <div class="agent-suggest guided" id="agent-suggest">
-      <span class="sugg-label label">Start here, or type your own</span>
+    {# Folded away by default. Three numbered lanes of pre-filled questions
+       is the right thing to find when you do not know what to ask, and the
+       wrong thing to have to scroll past every time you do -- and it was
+       taking a third of the conversation column. Open is one click, and
+       nothing about the lanes changed inside. #}
+    <details class="agent-suggest guided" id="agent-suggest">
+      <summary class="sugg-label label">Get me started here</summary>
       <div class="sugg-lane">
         <span class="sugg-head">
           <span class="sugg-step mono">1</span>
@@ -127,7 +132,7 @@
         <button type="button" class="sugg" data-say="Clear this asset for more markets too."><svg class="ic"><use href="#n-market"/></svg>Add markets</button>
         </span>
       </div>
-    </div>
+    </details>
 
     {# Upload where the conversation is. The point of agent mode is not
        having to go and find the form: hand it a file and it starts the
