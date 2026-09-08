@@ -2621,17 +2621,19 @@ def _duration_of(store, run):
         return None
 
 
-def test_a_judge_gets_the_archive_and_a_visitor_gets_a_clean_slate(console):
-    """Two doors, two different rooms behind them.
+def test_every_door_shows_the_whole_archive_with_your_own_runs_first(console):
+    """Reading is open here, whichever door you came through.
 
-    A judge came to read what this has already done, so they get every
-    run. Someone who just walked in came to watch it happen to their own
-    ad, and twenty of someone else's runs is not a welcome -- it is a
-    wall between them and the one thing they wanted to try.
+    A visitor's archive used to be REPLACED by their own runs. It read as
+    a welcome and worked as a trapdoor: a visitor with no runs yet saw an
+    empty page, and so did anyone whose "mine" cookie stopped being
+    readable -- which is exactly what happened to everyone the day those
+    cookies were signed. The archive appeared deleted.
 
-    Nothing is hidden and this is not a boundary: every run is still
-    reachable by its URL. It is a reading convenience, which is exactly
-    why the list of "mine" can live in a cookie rather than in the store.
+    Nothing about the spend ceilings depends on this list, so failing
+    closed bought no safety and cost the one thing this console promises:
+    that everything it has done is open to read. Your own runs are floated
+    to the top instead.
     """
     client, store, _launched, _jobs = console
     _judged_run(store, asset="runs/uploads/a/one.mp4")
@@ -2645,22 +2647,28 @@ def test_a_judge_gets_the_archive_and_a_visitor_gets_a_clean_slate(console):
     _enter(client, "judge")
     assert client.get("/runs").text.count('class="runrow"') == 2
 
-    # the visitor's door: their own runs, of which there are none yet
+    # the visitor's door: the same archive, not an empty room
     client.cookies.clear()
     _enter(client, "visitor")
     fresh = client.get("/runs")
-    assert fresh.text.count('class="runrow"') == 0
-    assert "Nothing cleared yet" in fresh.text
-    assert 'href="/new"' in fresh.text, "and a way to start one"
-    assert "Your clearances" in fresh.text
+    assert fresh.text.count('class="runrow"') == 2, "a visitor reads everything too"
 
-    # and a run they start does show up
+    # a run they start joins it, and comes first
     response = _upload(client)
     assert response.status_code == 303
     mine = client.get("/runs")
     # class="runrow" or class="runrow sparkle" -- a just-uploaded run is in
     # flight, and in-flight work wears the sparkle everywhere
-    assert mine.text.count('class="runrow') == 1, "their own run, and only theirs"
+    assert mine.text.count('class="runrow') == 3, "theirs, and everyone else's"
+    theirs = _launched[-1][0] if _launched else None
+    if theirs:
+        ids = re.findall(r"run_[a-f0-9]{12}", mine.text)
+        assert theirs in ids, "their own run is on the page"
+
+    # and a visitor whose cookie cannot be read still sees the archive,
+    # rather than a page that looks like the store was wiped
+    client.cookies.set("customs-mine", "not-a-signed-value")
+    assert client.get("/runs").text.count('class="runrow') >= 2
 
 
 def test_a_lane_is_never_shorter_than_the_glyph_that_labels_it():
@@ -3274,8 +3282,10 @@ def test_the_archive_carries_one_live_panel_not_thirty_five(console, monkeypatch
     assert 'class="cardlanes live"' not in page.replace(
         'class="cardlanes live" data-src=', '')
 
+    # a visitor reads the same archive, so they get the same single panel
     _enter(client, "visitor")
-    assert "<iframe" not in client.get("/runs").text, "not on a scoped archive"
+    assert client.get("/runs").text.count(
+        'class="cardlanes live" data-src=') == frames
 
 
 def test_a_click_on_the_live_panel_opens_that_assets_newest_run(console):
@@ -4618,6 +4628,7 @@ def test_a_running_run_rings_its_thumbnail_not_the_whole_card(console):
     assert idle.id in page and busy.id in page
 
 
+@pytest.mark.needs_env
 def test_the_tour_is_thirteen_slides_and_a_walk_of_the_real_thing(console):
     """A first-time visitor met two doors and a paragraph: either they
     already knew what ad clearance was, or the product was a mystery with

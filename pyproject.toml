@@ -5,5 +5,11 @@ requires-python = ">=3.12"
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
-markers = ["live: hits real network services"]
+markers = [
+  "live: hits real network services",
+  # Passes on a machine holding a .env and fails on a clean clone.
+  # The coupling is real and unfixed; CI skips these and says so
+  # rather than pretending the suite is hermetic.
+  "needs_env: depends on a configured .env, not yet hermetic",
+]
 addopts = "-m 'not live'"

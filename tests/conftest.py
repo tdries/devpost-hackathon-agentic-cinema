@@ -20,6 +20,21 @@ os.environ.setdefault("JUDGE_PASSWORD", "test-judge-word")
 os.environ.setdefault("VISITOR_PASSWORD", "test-visitor-word")
 os.environ.setdefault("EDITS_PASSWORD", "test-edits-word")
 os.environ.setdefault("SESSION_SECRET", "test-session-secret")
+# Endpoints so the push paths are exercised rather than skipped. Nothing
+# reaches them: the tests stub telemetry._post and assert on what it was
+# handed. Set here so a checkout with no .env behaves exactly like a
+# developer's machine, which is what CI is.
+os.environ.setdefault("LOKI_PUSH_URL", "https://loki.invalid/loki/api/v1/push")
+os.environ.setdefault("OTLP_URL", "https://otlp.invalid")
+# The rest of the shape a configured instance has. Values, not credentials:
+# the suite stubs every transport, and what these buy is that a checkout
+# with no .env takes the same code paths as a developer's machine. Without
+# them three tests passed locally and failed on a clean clone, which is the
+# difference CI exists to catch.
+os.environ.setdefault("GRAFANA_URL", "https://grafana.invalid")
+os.environ.setdefault("GRAFANA_STACK_ID", "000000")
+os.environ.setdefault("LOKI_USER", "000000")
+os.environ.setdefault("GOOGLE_CLOUD_PROJECT", "test-project")
 
 import pytest
 

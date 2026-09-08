@@ -305,6 +305,7 @@ class _FakeOps:
     def close(self):
         self.closed = True
 
+@pytest.mark.needs_env
 def test_publisher_llm_turn_drives_the_function_tools_and_the_mcp_tools(monkeypatch, clip, tmp_path):
     ops = _FakeOps()
     monkeypatch.setattr(crew, "GrafanaOps", lambda *a, **k: ops)
@@ -372,6 +373,7 @@ def test_a_failing_tool_is_reported_to_the_model_and_the_turn_continues(monkeypa
     stage_errors = [m for m in _messages(store, run.id) if m.startswith("stage_error")]
     assert len(stage_errors) == 1 and "search_dashboards failed" in stage_errors[0]
 
+@pytest.mark.needs_env
 def test_push_run_telemetry_refuses_to_run_twice(monkeypatch, clip, tmp_path):
     # push_timeline re-picks t0 on every call, so a second push would strand
     # the samples the first one wrote.

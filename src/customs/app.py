@@ -3203,9 +3203,21 @@ def all_runs(request: Request, all: int = 0, offset: int = 0,
     # bookmarked this page -- sees everything, which is the old behaviour.
     runs = store().recent_runs(500)
     mine = _mine(request)
-    scoped = _role(request) == "visitor"
-    if scoped:
-        runs = [r for r in runs if r.id in set(mine)]
+    # Reading is open here, always: the archive, every finding and every
+    # statute are the point of the thing. A visitor's own runs are floated
+    # to the top of it rather than being the whole of it.
+    #
+    # This used to REPLACE the archive with the visitor's own runs, which
+    # made a visitor with no runs yet -- or one whose cookie stopped being
+    # readable, as happened the day the cookies were signed -- open the page
+    # and find the entire archive apparently deleted. Nothing about the
+    # spend ceilings depends on this list, so failing closed bought no
+    # safety and cost the one thing the console promises.
+    scoped = False
+    if _role(request) == "visitor" and mine:
+        first = set(mine)
+        runs = ([r for r in runs if r.id in first]
+                + [r for r in runs if r.id not in first])
     # One card per FILM, not per run. Clearing the same master three times
     # in an afternoon -- which is what happens while a market pack is being
     # written -- filled the archive with three identical thumbnails, three

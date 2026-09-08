@@ -238,6 +238,8 @@ def _otlp_push(metrics: dict[str, list[dict]]) -> None:
     entire run's customs_risk samples into a single push, and lets
     push_status combine customs_market_status + customs_blocking into one
     call too."""
+    if not settings.otlp_url:
+        return          # see _loki_push: unconfigured is a no-op, not an error
     url = settings.otlp_url.rstrip("/") + "/v1/metrics"
     payload = {
         "resourceMetrics": [{
@@ -260,6 +262,12 @@ def _otlp_push(metrics: dict[str, list[dict]]) -> None:
     _check(resp)
 
 def _loki_push(streams: list[dict]) -> None:
+    # An unconfigured instance sends nothing, rather than POSTing to "".
+    # Telemetry is best effort everywhere else in this module; the transport
+    # was the one place that turned a missing setting into an exception, so
+    # a checkout with no .env could not run the suite at all.
+    if not settings.loki_push_url:
+        return
     resp = _post_retrying(
         settings.loki_push_url,
         json_body={"streams": streams},
