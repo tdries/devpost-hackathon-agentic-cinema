@@ -71,7 +71,9 @@ import logging
 import re
 import secrets
 import shutil
+import base64
 import hashlib
+import hmac
 import threading
 import time
 import uuid
@@ -1830,12 +1832,41 @@ ROLE_COOKIE = "customs-role"
 MINE_MAX = 40
 
 
+# The role cookie is SIGNED. It used to be the bare word, which meant the
+# door was decoration: `curl -b customs-role=judge` walked past it without
+# the password, and the judge role is what lifts the spend ceiling. Anyone
+# who read the public repo, or opened devtools once, could spend from the
+# day's generation budget on a real card.
+#
+# HMAC over the value with a server-side secret, stdlib only. Not a session
+# store: there is nothing to keep server-side, and one instance means one
+# process. What it buys is exactly one thing -- the client can no longer
+# write its own privileges.
+def _sign(value: str) -> str:
+    mac = hmac.new(settings.session_secret.encode(), value.encode(),
+                   hashlib.sha256).digest()
+    return base64.urlsafe_b64encode(mac).decode().rstrip("=")[:27]
+
+
+def _seal(value: str) -> str:
+    """The cookie's contents: what it says, and proof this server said it."""
+    return f"{value}.{_sign(value)}"
+
+
+def _unseal(raw: str) -> str:
+    """What the cookie says, or "" if this server did not write it."""
+    value, _, signature = (raw or "").rpartition(".")
+    if not value or not signature:
+        return ""
+    return value if hmac.compare_digest(signature, _sign(value)) else ""
+
+
 def _role(request: Request) -> str:
-    return request.cookies.get(ROLE_COOKIE, "")
+    return _unseal(request.cookies.get(ROLE_COOKIE, ""))
 
 
 def _mine(request: Request) -> list[str]:
-    raw = request.cookies.get(MINE_COOKIE, "")
+    raw = _unseal(request.cookies.get(MINE_COOKIE, ""))
     return [r for r in (x.strip() for x in raw.split(",")) if r]
 
 
@@ -1900,6 +1931,40 @@ def landing(request: Request):
 # should not be able to spend it: a visitor gets one euro of generation a
 # day, counted over the runs they started.
 VISITOR_DAILY_EUR = 10.0
+
+# An agent turn calls a model with ten tools attached and was, until now,
+# the one spending route with no ceiling of any kind: neither the visitor's
+# nor the instance's. A loop against /agent/ask was unmetered Gemini spend
+# on a real card.
+#
+# Turns are charged into the same ledger as generation, against a session id
+# rather than against a run, because a turn belongs to nobody's run. The
+# price is an estimate of a tool-calling turn and is deliberately not free:
+# what matters is that the meter runs at all.
+AGENT_TURN_EUR = 0.02
+AGENT_DAILY_EUR = 10.0
+SID_COOKIE = "customs-sid"
+
+
+def _session_id(request: Request) -> str:
+    """This browser's own id, signed, minted on first use.
+
+    The visitor ceiling used to be summed over the run ids in a cookie the
+    client writes, so clearing that cookie reset the meter to zero. A
+    signed id cannot be edited into somebody else's, and while it can still
+    be thrown away by clearing cookies, the instance ceiling behind it is
+    what actually protects the card.
+    """
+    existing = _unseal(request.cookies.get(SID_COOKIE, ""))
+    return existing or secrets.token_urlsafe(9)
+
+
+def _agent_ledger(sid: str) -> str:
+    return f"agent:{sid}"
+
+
+def _agent_spent(sid: str) -> float:
+    return store().spent_today_on([_agent_ledger(sid)])
 
 
 def _visitor_spent(request: Request) -> float:
@@ -2008,7 +2073,7 @@ def enter_form(request: Request, role: str, wrong: int = 0,
     if role == "visitor":
         target = _safe_next(next_) or "/new"
         response = RedirectResponse(target, status_code=303)
-        response.set_cookie("customs-role", role, max_age=60 * 60 * 24 * 30,
+        response.set_cookie("customs-role", _seal(role), max_age=60 * 60 * 24 * 30,
                             samesite="lax", httponly=False)
         return response
     # What the word is actually for, on both doors. The judge blurb used to
@@ -2019,7 +2084,7 @@ def enter_form(request: Request, role: str, wrong: int = 0,
     if role == "visitor":
         target = _safe_next(next_) or "/new"
         response = RedirectResponse(target, status_code=303)
-        response.set_cookie("customs-role", role, max_age=60 * 60 * 24 * 30,
+        response.set_cookie("customs-role", _seal(role), max_age=60 * 60 * 24 * 30,
                             samesite="lax", httponly=False)
         return response
     return _page(request, "enter.html", role=role, wrong=bool(wrong),
@@ -2054,18 +2119,22 @@ def enter(role: str, password: str = Form(""),
     # daily generation cap -- is what bounds a stranger now.
     if role == "visitor":
         response = RedirectResponse(back or "/new", status_code=303)
-        response.set_cookie("customs-role", role, max_age=60 * 60 * 24 * 30,
+        response.set_cookie("customs-role", _seal(role), max_age=60 * 60 * 24 * 30,
                             samesite="lax", httponly=False)
         return response
     want = settings.judge_password
-    if password.strip() != want:
+    # An unset password must mean the door is SHUT, not that any word opens
+    # it. Comparing "" to "" is a match, so without this an instance with no
+    # JUDGE_PASSWORD would hand the judge role, and the spend ceiling with
+    # it, to an empty form.
+    if not want or not secrets.compare_digest(password.strip(), want):
         again = f"/enter/{role}?wrong=1"
         if back:
             again += f"&next={quote(back, safe='/')}"
         return RedirectResponse(again, status_code=303)
     target = back or ("/runs" if role == "judge" else "/new")
     response = RedirectResponse(target, status_code=303)
-    response.set_cookie("customs-role", role, max_age=60 * 60 * 24 * 30,
+    response.set_cookie("customs-role", _seal(role), max_age=60 * 60 * 24 * 30,
                         samesite="lax", httponly=False)
     return response
 
@@ -2207,7 +2276,7 @@ async def create_run(request: Request,
     # Newest first, capped: a cookie is not a database and forty run ids
     # is already more archive than anyone builds in a sitting.
     remembered = [run.id] + [r for r in _mine(request) if r != run.id]
-    response.set_cookie(MINE_COOKIE, ",".join(remembered[:MINE_MAX]),
+    response.set_cookie(MINE_COOKIE, _seal(",".join(remembered[:MINE_MAX])),
                         max_age=60 * 60 * 24 * 30, samesite="lax")
     return response
 
@@ -2549,7 +2618,8 @@ def agent_mode(request: Request, run: str = ""):
 
 
 @app.post("/agent/ask")
-async def agent_ask(request: Request, message: str = Form(...),
+async def agent_ask(request: Request, response: Response,
+                    message: str = Form(...),
                     session: str = Form("default"), run: str = Form("")):
     """One turn with the console's agent.
 
@@ -2568,6 +2638,32 @@ async def agent_ask(request: Request, message: str = Form(...),
             "Come in through a door first: the agent costs money per turn. "
             "Open /enter/visitor, which asks for nothing, and try again.",
             "view": "", "view_label": "", "view_external": False, "calls": []})
+
+    # Two ceilings, both of which this route used to have none of. The
+    # instance one is what protects the card: it is the only bound a
+    # visitor cannot reset by clearing a cookie.
+    sid = _session_id(request)
+
+    def _remember(res):
+        """Hand the session id back, so tomorrow's cap knows today's turns."""
+        res.set_cookie(SID_COOKIE, _seal(sid), max_age=60 * 60 * 24 * 30,
+                       samesite="lax", httponly=True)
+        return res
+
+    def refused(why: str):
+        return _remember(JSONResponse(status_code=429, content={
+            "reply": "", "reply_html": "", "error": why, "view": "",
+            "view_label": "", "view_external": False, "calls": []}))
+
+    if store().spent_today() + AGENT_TURN_EUR > costs.DAILY_BUDGET_EUR:
+        return refused("Today's generation budget is spent, and an agent turn "
+                       "costs money like everything else here. It resets at "
+                       "midnight UTC.")
+    if _role(request) != "judge" and _agent_spent(sid) >= AGENT_DAILY_EUR:
+        return refused(f"You have used your {AGENT_DAILY_EUR:.2f} EUR of agent "
+                       f"time today. It resets at midnight UTC.")
+    store().record_spend("agent", AGENT_TURN_EUR, _agent_ledger(sid), "")
+
     text = (message or "").strip()
     if not text:
         raise HTTPException(status_code=400, detail="say something")
@@ -2582,6 +2678,7 @@ async def agent_ask(request: Request, message: str = Form(...),
     # so anything consuming this API is unaffected.
     known = market_packs()
     rules = {r.id: r.klass for pack in known.values() for r in pack.rules}
+    _remember(response)
     return {
         "reply": turn.reply or ("" if not turn.error else ""),
         "reply_html": replyfmt.render(turn.reply or "", markets=set(known), rules=rules),
@@ -3226,6 +3323,16 @@ def launch_remediate(request: Request, run: str, background: BackgroundTasks,
         raise HTTPException(status_code=404,
                             detail="no open, remediable finding at that coordinate")
     span = max(0.0, target.t_end - target.t_start)
+    # The same ceiling every other spending route applies. This one is a GET,
+    # so it was also the one path a link on another site could walk a
+    # visitor's cookie into a paid render.
+    if _role(request) != "judge":
+        spent = _visitor_spent(request)
+        if spent >= VISITOR_DAILY_EUR:
+            raise HTTPException(
+                status_code=429,
+                detail=(f"You have used your {VISITOR_DAILY_EUR:.2f} EUR of "
+                        f"generation for today ({spent:.2f} EUR)."))
     ok, why = costs.available(method, span, db.spent_today())
     if not ok:
         raise HTTPException(status_code=409, detail=why)
@@ -3729,7 +3836,8 @@ def delete_edit(request: Request, run_id: str, change_id: str,
     run = _run_or_404(run_id)
     if not re.fullmatch(r"chg_[0-9a-f]{6,32}", change_id):
         raise HTTPException(status_code=404, detail="no such change")
-    if password.strip() != settings.edits_password:
+    want = settings.edits_password
+    if not want or not secrets.compare_digest(password.strip(), want):
         return RedirectResponse(f"/edits?wrong={quote(change_id)}",
                                 status_code=303)
     gone = store().delete_change(run.id, change_id)
@@ -4176,6 +4284,9 @@ def remediate_now(request: Request, run_id: str, finding_id: str,
     # running away; this stops one visitor spending everyone else's.
     # Everyone who is not the judge is held to it, so an unrecognised word
     # in the role cookie buys no more than the visitor door does.
+    # What the operator typed becomes part of a generation prompt, so it is
+    # bounded like any other model input rather than trusted to be short.
+    replacement = (replacement or "")[:280]
     if _role(request) != "judge":
         spent = _visitor_spent(request)
         if spent >= VISITOR_DAILY_EUR:
@@ -4429,6 +4540,12 @@ def run_poster(run_id: str, at: float = 1.0):
     still say what it was a picture of.
     """
     run = _run_or_404(run_id)
+    # Snapped to a quarter second, and bounded by the longest film this
+    # console accepts. Unclamped, every distinct float was its own cache
+    # file and its own ffmpeg: ?at=1.0001, 1.0002, ... is an unauthenticated
+    # way to fill the container's disk -- which is RAM here -- and pin the
+    # CPU of the one instance.
+    at = round(min(max(at, 0.0), MAX_DURATION_S) * 4) / 4
     # at=1.0 keeps the original filename, so every poster already on disk
     # (and in the archive's browser caches) stays valid.
     stem = "poster" if abs(at - 1.0) < 1e-6 else f"poster_{at:g}"

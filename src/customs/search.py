@@ -42,10 +42,23 @@ from customs.config import settings
 # for free: "bunn|rabbit|hare" is a legitimate and useful thing to ask,
 # which is the whole point of not making this a menu.
 _MAX_PATTERN = 200
-# (x+)+  (x*)*  (x+)*  (x{2,}){3}  and friends: a repeat applied to a group
-# that already repeats. Crude on purpose -- it refuses a few harmless
-# patterns and nothing hostile gets past it.
-_NESTED_QUANTIFIER = re.compile(r"\([^)]*[+*}][^)]*\)\s*[+*{]")
+# A repeat applied to ANY group, not just to one that already repeats.
+#
+# The old rule only caught a quantifier inside the group -- (x+)+ and
+# friends -- and said "nothing hostile gets past it". Plenty did:
+# `(?:.|..)+run_id` has no inner quantifier at all, and its two branches
+# overlap, so the engine tries every way of splitting the string. Measured
+# on a 47-character caption: still running after eight seconds, on an
+# unauthenticated GET, against an instance there is only one of.
+#
+# Catastrophic backtracking needs a group that can match the same text more
+# than one way, repeated. Rather than keep guessing which groups those are,
+# refuse the repeat. It costs "(bunny|rabbit)+", which nobody types, and it
+# leaves every ordinary search -- words, alternations, prefixes -- untouched.
+_QUANTIFIED_GROUP = re.compile(r"\)\s*(?:[+*]|\{\s*\d)")
+# and the seatbelt: no single pattern may spend longer than this across the
+# whole result set, however innocent it looked going in.
+_MATCH_BUDGET_S = 2.0
 _log = logging.getLogger(__name__)
 
 
@@ -65,10 +78,10 @@ def _compile(text: str) -> re.Pattern | None:
     # 3.5 seconds on 26 characters and doubles with each one after that,
     # on an unauthenticated GET, against an instance there is only one of.
     # Loki's own filter is RE2 and immune; this stage is not.
-    if _NESTED_QUANTIFIER.search(pattern):
+    if _QUANTIFIED_GROUP.search(pattern):
         raise SearchError(
-            "that pattern nests one repeat inside another, which can take "
-            "hours to match. Write it without the inner repeat.")
+            "that pattern repeats a whole group, which can take hours to "
+            "match. Write it without the + or * after the bracket.")
     # A leading word boundary, because "hare" found SHARE and "bunn" has to
     # keep finding bunnies: anchoring the start and not the end is what
     # makes a prefix search work and a substring accident stop. A pattern

@@ -2194,6 +2194,45 @@ def test_the_lane_chart_says_when_each_kind_of_problem_happens(console):
     assert 'href="#d-' in svg.text, "each lane is labelled with its taxonomy icon"
 
 
+def test_a_forged_role_cookie_buys_nothing(console):
+    """The door used to be decoration.
+
+    `_role` returned the cookie's raw text, so `curl -b customs-role=judge`
+    walked past the password and, because the judge role lifts the spend
+    ceiling, could run Veo and Omni on a real card. Signing the cookie is
+    what makes the door a door: the client can no longer write its own
+    privileges.
+    """
+    client, store, _launched, _jobs = console
+    client.cookies.clear()
+
+    # the shape a stranger would try, having read the public repo
+    for forged in ("judge", "visitor", "judge.", "judge.deadbeef"):
+        client.cookies.set("customs-role", forged)
+        assert app_module._unseal(forged) == "", f"{forged!r} was accepted"
+        assert client.get("/new", follow_redirects=False).status_code == 303
+        assert client.get("/agent", follow_redirects=False).status_code == 303
+
+    # and the word still works, which is the point of having one
+    client.cookies.clear()
+    _enter(client, "judge")
+    assert client.get("/new", follow_redirects=False).status_code == 200
+
+    # an unset password shuts the door rather than opening it to ""
+    import dataclasses
+    from customs.config import settings as live
+    shut = dataclasses.replace(live, judge_password="")
+    saved = app_module.settings
+    try:
+        app_module.settings = shut
+        client.cookies.clear()
+        refused = client.post("/enter/judge", data={"password": ""},
+                              follow_redirects=False)
+        assert "customs-role" not in refused.cookies, "empty word opened the door"
+    finally:
+        app_module.settings = saved
+
+
 def test_the_archive_can_be_ordered_eight_ways_and_says_which(console):
     """Newest first answers "what did I just do". It is the wrong question
     for "which film is giving us the most trouble", so the archive can be
@@ -2496,19 +2535,19 @@ def test_both_doors_open_and_remember_which_one_you_chose(console):
     opened = client.get("/enter/visitor?next=/new", follow_redirects=False)
     assert opened.status_code == 303
     assert opened.headers["location"] == "/new"
-    assert opened.cookies["customs-role"] == "visitor"
+    assert app_module._unseal(opened.cookies["customs-role"]) == "visitor"
     # the judge door still asks, because passing it lifts that ceiling
     assert "Reading needs no password" in client.get("/enter/judge").text
 
     judge = _enter(client, "judge")
     assert judge.status_code == 303
     assert judge.headers["location"] == "/runs"
-    assert judge.cookies["customs-role"] == "judge"
+    assert app_module._unseal(judge.cookies["customs-role"]) == "judge"
 
     visitor = _enter(client, "visitor")
     assert visitor.status_code == 303
     assert visitor.headers["location"] == "/new"
-    assert visitor.cookies["customs-role"] == "visitor"
+    assert app_module._unseal(visitor.cookies["customs-role"]) == "visitor"
 
     # and a door nobody built is a 404, not a silent redirect somewhere
     assert client.get("/enter/admin", follow_redirects=False).status_code == 404
@@ -3574,7 +3613,7 @@ def test_a_click_on_a_grafana_panel_meets_the_door_and_then_lands(console):
     opened = client.get(door, follow_redirects=False)
     assert opened.status_code == 303
     assert opened.headers["location"] == click
-    assert opened.cookies["customs-role"] == "visitor"
+    assert app_module._unseal(opened.cookies["customs-role"]) == "visitor"
     assert jobs == [], "the door itself launches nothing"
 
     client.get(click, follow_redirects=False)
@@ -3616,7 +3655,9 @@ def test_a_visitor_has_their_own_daily_ceiling(console):
     client, store, _launched, _jobs = console
     run = _judged_run(store)
     _enter(client, "visitor")
-    client.cookies.set("customs-mine", run.id)
+    # the mine cookie is signed too: writing it unsigned is exactly what let
+    # a visitor reset their own spend meter by editing a cookie
+    client.cookies.set("customs-mine", app_module._seal(run.id))
 
     fid = "fnd_FR_FR-ALC-01_obs_shot_0_000"
     store.record_spend("bridge", app_module.VISITOR_DAILY_EUR + 0.01, run.id, fid)
@@ -3631,7 +3672,7 @@ def test_a_visitor_has_their_own_daily_ceiling(console):
     # a cookie is a string anyone can type, so the ceiling is written as
     # "not the judge" rather than "is the visitor": a made-up role is held
     # to the narrower rule, not handed the wider one
-    client.cookies.set("customs-role", "producer")
+    client.cookies.set("customs-role", app_module._seal("producer"))
     made_up = client.post(f"/runs/{run.id}/findings/{fid}/remediate",
                           data={"method": "overlay"}, follow_redirects=False)
     assert made_up.status_code == 429
@@ -4401,7 +4442,7 @@ def test_the_guards_refusal_ends_in_a_decision_somebody_made(console):
     def decide(outcome, reason=""):
         return client.post(f"/runs/{run.id}/findings/{blocked.id}/decision",
                            data={"outcome": outcome, "reason": reason},
-                           cookies={"customs-role": "judge"},
+                           cookies={"customs-role": app_module._seal("judge")},
                            follow_redirects=False)
 
     # a waiver without a reason is refused: the reason is the only record

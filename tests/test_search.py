@@ -421,7 +421,7 @@ def test_a_pattern_that_could_run_for_hours_is_refused():
     for evil in ("(a+)+$", "(a*)*b", "(ab+)+c", "(x{2,}){3}"):
         with pytest.raises(search.SearchError) as caught:
             search.frames(FakeOps([]), evil, mode="literal")
-        assert "nests one repeat" in str(caught.value), evil
+        assert "repeats a whole group" in str(caught.value), evil
 
     for fine in ("bunn|rabbit|hare", "short.{0,30}skirt", "a lit cigarette"):
         assert search._compile(fine) is not None, fine

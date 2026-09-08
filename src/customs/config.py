@@ -1,3 +1,4 @@
+import secrets
 import os
 import re
 from dataclasses import dataclass
@@ -57,6 +58,7 @@ class Settings:
     grafana_viewer_url: str
     webhook_token: str
     judge_password: str
+    session_secret: str
     visitor_password: str
     # The word that deletes an edit. Its own setting rather than the judge
     # word, so the thing that removes evidence can be rotated without
@@ -116,9 +118,17 @@ class Settings:
             # refuses anything else. Empty means open, which is what the
             # offline tests and a laptop run want; deploy.sh always sets it.
             webhook_token=g("WEBHOOK_TOKEN", ""),
-            judge_password=g("JUDGE_PASSWORD", "DEVPOST"),
-            visitor_password=g("VISITOR_PASSWORD", "VISITOR"),
-            edits_password=g("EDITS_PASSWORD", g("JUDGE_PASSWORD", "DEVPOST")),
+            # Signs the role cookie. Random per process when unset, which
+            # is right for a laptop (cookies die with the server) and wrong
+            # for production, where deploy.sh mints one into Secret Manager.
+            session_secret=g("SESSION_SECRET", "") or secrets.token_urlsafe(32),
+            # No published default. The old one ("DEVPOST") is in a public
+            # repo, and it is the word that lifts the spend ceiling: an
+            # unset password now means the door stays shut rather than
+            # standing open with a known key.
+            judge_password=g("JUDGE_PASSWORD", ""),
+            visitor_password=g("VISITOR_PASSWORD", ""),
+            edits_password=g("EDITS_PASSWORD", g("JUDGE_PASSWORD", "")),
         )
 
 settings = Settings.load()

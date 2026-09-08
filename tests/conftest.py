@@ -10,6 +10,16 @@ So the optional integrations are OFF by default here, and a test that wants
 one says so (see test_the_board_frames_live_grafana_when_the_viewer_is_deployed).
 """
 import dataclasses
+import os
+
+# The doors now fail closed: an unset password means the door stays shut
+# rather than opening to a word published in this repo. So the suite has to
+# say what its own words are, exactly as a deployment does, before anything
+# imports customs.config and freezes the settings.
+os.environ.setdefault("JUDGE_PASSWORD", "test-judge-word")
+os.environ.setdefault("VISITOR_PASSWORD", "test-visitor-word")
+os.environ.setdefault("EDITS_PASSWORD", "test-edits-word")
+os.environ.setdefault("SESSION_SECRET", "test-session-secret")
 
 import pytest
 

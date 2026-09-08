@@ -138,6 +138,8 @@ gcloud services enable \
     IFS= read -r DEPLOY_TTS_MODEL
     IFS= read -r DEPLOY_GRAFANA_VIEWER_URL
     IFS= read -r DEPLOY_WEBHOOK_TOKEN
+    IFS= read -r DEPLOY_JUDGE_PASSWORD
+    IFS= read -r DEPLOY_SESSION_SECRET
 } < <(PYTHONPATH="$ROOT/src" "$PY" - "$ENV_FILE" <<'PYEOF'
 import sys
 from customs.config import Settings
@@ -146,7 +148,8 @@ s = Settings.load(sys.argv[1])
 for value in (s.grafana_url, s.grafana_stack_id, s.grafana_sa_token,
               s.grafana_cloud_token, s.otlp_url, s.loki_push_url, s.loki_user,
               s.model_vision, s.model_text, s.model_image, s.model_video,
-              s.model_tts, s.grafana_viewer_url, s.webhook_token):
+              s.model_tts, s.grafana_viewer_url, s.webhook_token,
+              s.judge_password, s.session_secret):
     print(value)
 PYEOF
 )
@@ -155,7 +158,9 @@ for pair in "GRAFANA_URL:$DEPLOY_GRAFANA_URL" "GRAFANA_STACK_ID:$DEPLOY_GRAFANA_
             "GRAFANA_SA_TOKEN:$DEPLOY_GRAFANA_SA_TOKEN" "GRAFANA_CLOUD_TOKEN:$DEPLOY_GRAFANA_CLOUD_TOKEN" \
             "OTLP_URL:$DEPLOY_OTLP_URL" "LOKI_PUSH_URL:$DEPLOY_LOKI_PUSH_URL" \
             "LOKI_USER:$DEPLOY_LOKI_USER" \
-            "WEBHOOK_TOKEN:$DEPLOY_WEBHOOK_TOKEN"; do
+            "WEBHOOK_TOKEN:$DEPLOY_WEBHOOK_TOKEN" \
+            "JUDGE_PASSWORD:$DEPLOY_JUDGE_PASSWORD" \
+            "SESSION_SECRET:$DEPLOY_SESSION_SECRET"; do
     name="${pair%%:*}"
     val="${pair#*:}"
     if [[ -z "$val" ]]; then
@@ -267,6 +272,8 @@ if [[ -n "$DEPLOY_GRAFANA_VIEWER_URL" ]]; then env_pairs+=("GRAFANA_VIEWER_URL=$
 # container had no token to check it against is exactly the failure this
 # pairing prevents.
 env_pairs+=("WEBHOOK_TOKEN=${DEPLOY_WEBHOOK_TOKEN}")
+env_pairs+=("JUDGE_PASSWORD=${DEPLOY_JUDGE_PASSWORD}")
+env_pairs+=("SESSION_SECRET=${DEPLOY_SESSION_SECRET}")
 if [[ ${#YT_COOKIES_ENV[@]} -gt 0 ]]; then env_pairs+=("${YT_COOKIES_ENV[@]}"); fi
 
 joined="$(IFS=';'; echo "${env_pairs[*]}")"
