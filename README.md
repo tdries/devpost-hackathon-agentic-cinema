@@ -3,7 +3,7 @@
 <div align="center">
 
 [![Live instance](https://img.shields.io/badge/live-customs--app.run.app-4285F4?style=flat-square)](https://customs-app-akap4ao72a-ew.a.run.app)
-[![Tests](https://img.shields.io/badge/tests-561_passing-34A853?style=flat-square)](#tests)
+[![Tests](https://img.shields.io/badge/tests-622_passing-34A853?style=flat-square)](#tests)
 [![Jurisdictions](https://img.shields.io/badge/jurisdictions-98-FBBC05?style=flat-square)](#the-jurisdiction-ladder)
 [![Rules](https://img.shields.io/badge/rules-128_with_citations-EA4335?style=flat-square)](#the-jurisdiction-ladder)
 [![Grafana](https://img.shields.io/badge/Grafana-MCP_at_runtime-F46800?style=flat-square)](#grafana-is-a-participant-not-a-picture)
@@ -58,7 +58,7 @@ Every frame below is the running console, shot from the deployed instance rather
 |---|---|
 | ![Upload and processing](docs/media/tut-1-upload.gif) | **Hand it a master.** Pick your markets, and the crew narrates itself stage by stage while it works: shots, transcript, observations, then one adjudicator per market in parallel. |
 | ![Frames and findings](docs/media/tut-2-frames.gif) | **Every frame, as the analyst saw it.** One neutral timecoded sentence each, verdicts forbidden. A finding is that observation joined to one market's rule and a live citation. |
-| ![The fix picker](docs/media/tut-3-fix.gif) | **Five ways to fix it, priced in euro before you press.** What should change, and how much of the footage to disturb. The localized master lands beside the original in the cutting room. |
+| ![The fix picker](docs/media/tut-3-fix.gif) | **Five ways to fix it, priced in euro before you press.** What should change, and how much of the footage to disturb. The two generative methods will also take your own words, added to the instruction the model is given. The localized master lands beside the original in the cutting room. |
 | ![A click in Grafana](docs/media/tut-4-grafana.gif) | **A click on a Grafana panel starts a generative fix.** The grid is the crew's own dashboard; clicking a square resolves the scene under it and starts a priced edit on that span. |
 
 ---
@@ -77,7 +77,7 @@ This is the instrument.
 
 ## What it does
 
-Hand it a commercial (a file, or a YouTube link) and a market list, then watch it clear customs in real time.
+Hand it a commercial and a market list, then watch it clear customs in real time.
 
 <div align="center">
 
@@ -92,7 +92,7 @@ The output is two things: **a decision** (can this air here, and on what evidenc
 | **Jurisdictions** | 21 market packs resolving to a global baseline, the EU, 16 countries and 80 broadcasters, 1,063 market-rule pairings once inheritance resolves |
 | **Rules** | every one naming a real statute, broadcaster code or cultural norm, with a live citation |
 | **Dimensions** | one fixed taxonomy the analyst emits and every rule is written against |
-| **Repair methods** | from a €0.04 single-frame patch to a €3.68 Veo-generated bridge, priced in euro before you press |
+| **Repair methods** | from a €0.04 single-frame patch to a €3.68 Veo-generated bridge, priced in euro before you press, and the generative two take an instruction of your own |
 | **Agents** | a Google Cloud Agent Builder (ADK) `SequentialAgent` named `customs_crew`, with the adjudicators fanned out in parallel |
 | **The refusal** | when a rule targets a protected characteristic, a rule-layer Guard refuses to auto-edit and hands it to a human |
 
@@ -345,17 +345,23 @@ The full inventory of what this system keeps in Grafana (9 dashboards, 40 panels
 
 ## The console
 
-Eleven screens, each one a way of asking the same question at a different distance.
+Fourteen screens, each one a way of asking the same question at a different distance -- and a guided tour, for anyone who would rather be shown.
+
+### <img src="docs/media/icons/i-frame.svg" width="22"> The tour
+
+A first-time reader met two doors and a paragraph. There is a third door now: fourteen slides that say what the thing is, and then a walk across the live console -- twelve stops, each one dimming a real screen and spotlighting the thing worth looking at. Every number on a slide is read from the instance at render time, and nothing in the walk is a screenshot.
+
+<img src="docs/media/12-tour.png" alt="The tour" width="100%">
 
 ### <img src="docs/media/icons/n-new.svg" width="22"> The front door
 
-Hand it a file or a YouTube link, pick the markets, and watch it clear customs live.
+Hand it a file, pick the markets, and watch it clear customs live. No password: the visitor door asks for nothing, and what bounds a stranger is the generation cap behind it.
 
 <img src="docs/media/01-landing.png" alt="The front door" width="100%">
 
 ### <img src="docs/media/icons/n-runs.svg" width="22"> Archive
 
-Every clearance this instance has performed. Hover a card and the whole film plays as a five-second timelapse; the squares beneath it are live Grafana.
+Every clearance this instance has performed. Hover a card and the whole film plays as a five-second timelapse. The squares beneath it are the console's own drawing by default, with a switch on every card to Grafana's live panel of the same answer -- and in the drawn one, hovering a dot plays that second of the film, because the card's clip is the whole film in five seconds and the chart knows the mapping.
 
 <img src="docs/media/02-archive.png" alt="Archive" width="100%">
 
@@ -401,9 +407,25 @@ The original and the localized master, playing in lockstep on the second that ch
 
 <img src="docs/media/08-cutting-room.png" alt="Cutting room" width="100%">
 
+### <img src="docs/media/icons/i-remediator.svg" width="22"> Generated content
+
+What the models actually made for one run, next door to the cutting room rather than behind a tab on the event log: every change record with the stills a patch wrote, the seconds Gemini Omni or Veo rendered, and for a bridge the two anchor frames it was handed. Those two frames are the entire brief, which makes them the only way to tell whether it invented something or was given it.
+
+<img src="docs/media/11b-generated.png" alt="Generated content" width="100%">
+
+### <img src="docs/media/icons/n-cut.svg" width="22"> My edits
+
+The cross-run cutting room, and the answer to a different question: not "what happened to this film" but **what has this system actually changed**. One card per scene, before beside after, played rather than photographed -- each side is the span the finding names, cut from a master on the server and cached, with the kept still as its poster. Hovering runs both clips together.
+
+One card per scene and not per market, because three jurisdictions objecting to the same two seconds is one shot with three objections and only one of them paid for the render: every market that objected is named on the card, and so is the one the fix on show was made for. A revoice is a sound edit rather than a picture edit -- as a still it looks like a frame that did not change -- so those live on the other side of a picture/sound toggle, with their soundtrack and real controls.
+
+Every card names its fix type in words, because whether a model re-rendered the span or a still was patched over it is exactly the difference between the fixes that hold and the fixes the verifier sends back. And an edit can be removed: the one control in this console that destroys evidence, so it asks for a word first, says what it takes, and takes it everywhere at once.
+
+<img src="docs/media/11-my-edits.png" alt="My edits" width="100%">
+
 ### <img src="docs/media/icons/i-adjudicator.svg" width="22"> Agent mode
 
-A second ADK surface: one `LlmAgent` with ten tools. Ask in sentences; it answers by opening the evidence beside you and pricing any fix before it runs.
+A second ADK surface: one `LlmAgent` with eleven tools. Ask in sentences; it answers by opening the evidence beside you and pricing any fix before it runs.
 
 <img src="docs/media/09-agent-mode.png" alt="Agent mode" width="100%">
 

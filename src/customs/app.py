@@ -2454,6 +2454,7 @@ def delete_run(request: Request, run_id: str):
                                if persist.state_dir() else None)):
         if target is not None:
             shutil.rmtree(target, ignore_errors=True)
+    persist.snapshot(settings.db_path)
     log.info("deleted run %s", run.id)
     return RedirectResponse("/runs", status_code=303)
 
@@ -3673,6 +3674,12 @@ def delete_edit(request: Request, run_id: str, change_id: str,
                 log.warning("could not unlink %s: %s", path.name, exc)
     store().emit(run.id, "operator",
                  f"edit deleted: {change_id} and {removed} file(s)")
+    # Straight to the mirror. The store lives on the container's own disk
+    # (FUSE has no file locking, so SQLite cannot live on the bucket) and
+    # only the pipeline and the remediator used to snapshot it -- so a
+    # deletion made between two runs was erased by the next deploy, which
+    # is exactly what happened to the first forty-eight of them.
+    store().emit(run.id, "operator", persist.snapshot(settings.db_path))
     _SCENES_CACHE.clear()
     _CARD_CACHE.clear()
     return RedirectResponse(f"/edits?gone={quote(change_id)}", status_code=303)
@@ -3809,6 +3816,10 @@ def finding_decision(request: Request, run_id: str, finding_id: str,
                               adjudicate.clearance(after), after)
     except Exception as exc:  # noqa: BLE001 -- the decision stands regardless
         log.warning("decision telemetry failed for %s: %s", finding.id, exc)
+    # A human overruling the machine is the last record that should
+    # evaporate on a deploy, and until now it would have: only the pipeline
+    # and the remediator ever snapshotted the store to the mirror.
+    db.emit(run.id, "guard", persist.snapshot(settings.db_path))
     return RedirectResponse(f"/runs/{run.id}/markets/{finding.market}",
                             status_code=303)
 

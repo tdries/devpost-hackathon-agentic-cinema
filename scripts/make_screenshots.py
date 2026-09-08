@@ -112,6 +112,18 @@ def main() -> int:
                   6000, {}),
         "library": ("/library", OUT / "10-library.png", (SHOT_W, 900), 950,
                     6000, {}),
+        # My edits: the cross-run cutting room. Shot live, because each
+        # pair is a <video> whose poster comes off this service and whose
+        # span is cut on demand -- a file:// copy shows two grey boxes.
+        "edits": ("/edits", OUT / "11-my-edits.png", (SHOT_W, 900), 1250,
+                  90000, {"live": True, "crop_to": 240}),
+        # What the models made, next door to the cutting room
+        "generated": (f"/runs/{run}/generated", OUT / "11b-generated.png",
+                      (SHOT_W, 900), 1100, 8000, {"crop_to": 200}),
+        # The tour's front, which is what a stranger meets if they take the
+        # third door. Slide one, because the deck is server-rendered and a
+        # still of slide one is the deck's own cover.
+        "tour": ("/tour", OUT / "12-tour.png", (SHOT_W, 900), 950, 6000, {}),
         # The intelligence board is the one page a staged copy cannot show
         # (its panels are iframes the viewer refuses to a file:// origin)
         # and the one that needs real time: booting a Grafana and answering
