@@ -1,0 +1,674 @@
+[
+ {
+  "run": "run_6d490151b6be",
+  "asset": "trigger_reel_b.mp4",
+  "change": "chg_cf5ea9806d7b",
+  "method": "prop_swap",
+  "finding": "fnd_SA_SA-REL-01_obs_shot_2_001",
+  "rule": "SA-REL-01",
+  "market": "SA",
+  "span": [
+   8.041,
+   12.041
+  ],
+  "description": "swapped the non-compliant prop for a Saudi Arabia-appropriate one"
+ },
+ {
+  "run": "run_6d490151b6be",
+  "asset": "trigger_reel_b.mp4",
+  "change": "chg_d86869b979f9",
+  "method": "prop_swap",
+  "finding": "fnd_CN_CN-GAM-01_obs_shot_0_000",
+  "rule": "CN-GAM-01",
+  "market": "CN",
+  "span": [
+   0.0,
+   4.041
+  ],
+  "description": "swapped the non-compliant prop for a China-appropriate one"
+ },
+ {
+  "run": "run_edd9356048af",
+  "asset": "trigger_reel_a.mp4",
+  "change": "chg_0a001b081094",
+  "method": "prop_swap",
+  "finding": "fnd_FR_FR-ALC-01_obs_shot_3_000",
+  "rule": "FR-ALC-01",
+  "market": "FR",
+  "span": [
+   9.708,
+   10.708
+  ],
+  "description": "swapped the non-compliant prop for a France-appropriate one"
+ },
+ {
+  "run": "run_edd9356048af",
+  "asset": "trigger_reel_a.mp4",
+  "change": "chg_fc45893eb722",
+  "method": "prop_swap",
+  "finding": "fnd_SA_SA-ALC-01_obs_shot_3_000",
+  "rule": "SA-ALC-01",
+  "market": "SA",
+  "span": [
+   9.708,
+   10.708
+  ],
+  "description": "swapped the non-compliant prop for a Saudi Arabia-appropriate one"
+ },
+ {
+  "run": "run_959b162a0f25",
+  "asset": "test_ad.mp4",
+  "change": "chg_04eef5948c0d",
+  "method": "prop_swap",
+  "finding": "fnd_AE_AE-MOD-01_obs_shot_8_002",
+  "rule": "AE-MOD-01",
+  "market": "AE",
+  "span": [
+   35.083,
+   42.083
+  ],
+  "description": "swapped the non-compliant prop for a United Arab Emirates-appropriate one"
+ },
+ {
+  "run": "run_959b162a0f25",
+  "asset": "test_ad.mp4",
+  "change": "chg_8cd56ad782c1",
+  "method": "prop_swap",
+  "finding": "fnd_FR_FR-ALC-01_obs_shot_0_000",
+  "rule": "FR-ALC-01",
+  "market": "FR",
+  "span": [
+   0.0,
+   7.0
+  ],
+  "description": "swapped the non-compliant prop for a France-appropriate one"
+ },
+ {
+  "run": "run_959b162a0f25",
+  "asset": "test_ad.mp4",
+  "change": "chg_1515197fa474",
+  "method": "prop_swap",
+  "finding": "fnd_FR_FR-ALC-01_obs_shot_3_000",
+  "rule": "FR-ALC-01",
+  "market": "FR",
+  "span": [
+   21.042,
+   28.042
+  ],
+  "description": "swapped the non-compliant prop for a France-appropriate one"
+ },
+ {
+  "run": "run_959b162a0f25",
+  "asset": "test_ad.mp4",
+  "change": "chg_96563639b0dd",
+  "method": "prop_swap",
+  "finding": "fnd_FR_FR-ALC-01_obs_shot_4_000",
+  "rule": "FR-ALC-01",
+  "market": "FR",
+  "span": [
+   28.042,
+   30.75
+  ],
+  "description": "swapped the non-compliant prop for a France-appropriate one"
+ },
+ {
+  "run": "run_959b162a0f25",
+  "asset": "test_ad.mp4",
+  "change": "chg_821df2bd3a37",
+  "method": "prop_swap",
+  "finding": "fnd_FR_FR-ALC-01_obs_shot_9_000",
+  "rule": "FR-ALC-01",
+  "market": "FR",
+  "span": [
+   42.083,
+   49.125
+  ],
+  "description": "swapped the non-compliant prop for a France-appropriate one"
+ },
+ {
+  "run": "run_959b162a0f25",
+  "asset": "test_ad.mp4",
+  "change": "chg_cc2e3e045310",
+  "method": "prop_swap",
+  "finding": "fnd_AE_AE-MOD-01_obs_shot_8_002",
+  "rule": "AE-MOD-01",
+  "market": "AE",
+  "span": [
+   35.083,
+   42.083
+  ],
+  "description": "swapped the non-compliant prop for a United Arab Emirates-appropriate one"
+ },
+ {
+  "run": "run_5299053b6a62",
+  "asset": "test_ad.mp4",
+  "change": "chg_7935aad72d97",
+  "method": "prop_swap",
+  "finding": "fnd_FR_FR-ALC-01_obs_shot_9_000",
+  "rule": "FR-ALC-01",
+  "market": "FR",
+  "span": [
+   42.083,
+   49.125
+  ],
+  "description": "swapped the non-compliant prop for a France-appropriate one"
+ },
+ {
+  "run": "run_5299053b6a62",
+  "asset": "test_ad.mp4",
+  "change": "chg_18ad1f770b2a",
+  "method": "prop_swap",
+  "finding": "fnd_AE_AE-ALC-01_obs_shot_9_000",
+  "rule": "AE-ALC-01",
+  "market": "AE",
+  "span": [
+   42.083,
+   49.125
+  ],
+  "description": "swapped the non-compliant prop for a United Arab Emirates-appropriate one"
+ },
+ {
+  "run": "run_5299053b6a62",
+  "asset": "test_ad.mp4",
+  "change": "chg_81aaee9ec4fc",
+  "method": "prop_swap",
+  "finding": "fnd_AE_AE-MOD-01_obs_shot_8_000",
+  "rule": "AE-MOD-01",
+  "market": "AE",
+  "span": [
+   35.083,
+   42.083
+  ],
+  "description": "swapped the non-compliant prop for a United Arab Emirates-appropriate one"
+ },
+ {
+  "run": "run_5299053b6a62",
+  "asset": "test_ad.mp4",
+  "change": "chg_e5f2be415c1d",
+  "method": "prop_swap",
+  "finding": "fnd_SA_SA-MOD-01_obs_shot_8_000",
+  "rule": "SA-MOD-01",
+  "market": "SA",
+  "span": [
+   35.083,
+   42.083
+  ],
+  "description": "swapped the non-compliant prop for a Saudi Arabia-appropriate one"
+ },
+ {
+  "run": "run_5299053b6a62",
+  "asset": "test_ad.mp4",
+  "change": "chg_09bc2eefb74c",
+  "method": "prop_swap",
+  "finding": "fnd_SA_SA-ALC-01_obs_shot_9_000",
+  "rule": "SA-ALC-01",
+  "market": "SA",
+  "span": [
+   42.083,
+   49.125
+  ],
+  "description": "swapped the non-compliant prop for a Saudi Arabia-appropriate one"
+ },
+ {
+  "run": "run_5299053b6a62",
+  "asset": "test_ad.mp4",
+  "change": "chg_b66a740a1919",
+  "method": "prop_swap",
+  "finding": "fnd_SA_SA-MOD-01_obs_shot_8_000",
+  "rule": "SA-MOD-01",
+  "market": "SA",
+  "span": [
+   35.083,
+   42.083
+  ],
+  "description": "swapped the non-compliant prop for a Saudi Arabia-appropriate one"
+ },
+ {
+  "run": "run_5299053b6a62",
+  "asset": "test_ad.mp4",
+  "change": "chg_276acc30857d",
+  "method": "prop_swap",
+  "finding": "fnd_SA_SA-ALC-01_obs_shot_7_001",
+  "rule": "SA-ALC-01",
+  "market": "SA",
+  "span": [
+   31.917,
+   35.083
+  ],
+  "description": "swapped the non-compliant prop for a Saudi Arabia-appropriate one"
+ },
+ {
+  "run": "run_5299053b6a62",
+  "asset": "test_ad.mp4",
+  "change": "chg_541cfcf45953",
+  "method": "prop_swap",
+  "finding": "fnd_FR_FR-ALC-01_obs_shot_9_000",
+  "rule": "FR-ALC-01",
+  "market": "FR",
+  "span": [
+   42.083,
+   49.125
+  ],
+  "description": "swapped the non-compliant prop for a France-appropriate one"
+ },
+ {
+  "run": "run_5299053b6a62",
+  "asset": "test_ad.mp4",
+  "change": "chg_6f77659f5f64",
+  "method": "prop_swap",
+  "finding": "fnd_AE_AE-ALC-01_obs_shot_9_000",
+  "rule": "AE-ALC-01",
+  "market": "AE",
+  "span": [
+   42.083,
+   49.125
+  ],
+  "description": "swapped the non-compliant prop for a United Arab Emirates-appropriate one"
+ },
+ {
+  "run": "run_5299053b6a62",
+  "asset": "test_ad.mp4",
+  "change": "chg_2162ee28a045",
+  "method": "prop_swap",
+  "finding": "fnd_AE_AE-MOD-01_obs_shot_8_000",
+  "rule": "AE-MOD-01",
+  "market": "AE",
+  "span": [
+   35.083,
+   42.083
+  ],
+  "description": "swapped the non-compliant prop for a United Arab Emirates-appropriate one"
+ },
+ {
+  "run": "run_3ea5230a429f",
+  "asset": "test.mp4",
+  "change": "chg_a7c091283014",
+  "method": "prop_swap",
+  "finding": "fnd_AE-DUBAITV_AE-ALC-01_obs_shot_0_001",
+  "rule": "AE-ALC-01",
+  "market": "AE-DUBAITV",
+  "span": [
+   0.0,
+   7.441
+  ],
+  "description": "swapped the non-compliant prop for a Dubai TV-appropriate one"
+ },
+ {
+  "run": "run_3ea5230a429f",
+  "asset": "test.mp4",
+  "change": "chg_84594efb04e0",
+  "method": "prop_swap",
+  "finding": "fnd_AE_AE-ALC-01_obs_shot_9_002_v01011e",
+  "rule": "AE-ALC-01",
+  "market": "AE",
+  "span": [
+   32.132,
+   32.799
+  ],
+  "description": "swapped the non-compliant prop for a United Arab Emirates-appropriate one"
+ },
+ {
+  "run": "run_3ea5230a429f",
+  "asset": "test.mp4",
+  "change": "chg_076a03e0dc1f",
+  "method": "prop_swap",
+  "finding": "fnd_AE_AE-ALC-01_obs_shot_9_002_v01011e",
+  "rule": "AE-ALC-01",
+  "market": "AE",
+  "span": [
+   32.132,
+   32.799
+  ],
+  "description": "swapped the non-compliant prop for a United Arab Emirates-appropriate one"
+ },
+ {
+  "run": "run_3ea5230a429f",
+  "asset": "test.mp4",
+  "change": "chg_75eb4c33d5e3",
+  "method": "prop_swap",
+  "finding": "fnd_AE-DUBAITV_AE-ALC-01_obs_shot_0_001",
+  "rule": "AE-ALC-01",
+  "market": "AE-DUBAITV",
+  "span": [
+   0.0,
+   7.441
+  ],
+  "description": "swapped the non-compliant prop for a Dubai TV-appropriate one"
+ },
+ {
+  "run": "run_92c8c61c2148",
+  "asset": "BOND_JAMES_BOND.mp4",
+  "change": "chg_ffc69c1e921d",
+  "method": "prop_swap",
+  "finding": "fnd_EU_EU-TOB-01_obs_shot_2_001",
+  "rule": "EU-TOB-01",
+  "market": "EU",
+  "span": [
+   7.96,
+   12.2
+  ],
+  "description": "swapped the non-compliant prop for a European Union-appropriate one"
+ },
+ {
+  "run": "run_d0a139b9dae5",
+  "asset": "voltage_runway.mp4",
+  "change": "chg_199a1f980620",
+  "method": "prop_swap",
+  "finding": "fnd_SA_SA-MOD-01_obs_shot_0_000",
+  "rule": "SA-MOD-01",
+  "market": "SA",
+  "span": [
+   0.0,
+   4.01
+  ],
+  "description": "swapped the non-compliant prop for a Saudi Arabia-appropriate one"
+ },
+ {
+  "run": "run_6bba23a5764d",
+  "asset": "solstice_rooftop.mp4",
+  "change": "chg_df4f4155166f",
+  "method": "prop_swap",
+  "finding": "fnd_FR_FR-ALC-01_obs_shot_0_001",
+  "rule": "FR-ALC-01",
+  "market": "FR",
+  "span": [
+   0.0,
+   4.01
+  ],
+  "description": "swapped the non-compliant prop for a France-appropriate one"
+ },
+ {
+  "run": "run_d230ae545492",
+  "asset": "Cigars_in_cartoons_-_part_2_of_3.mp4",
+  "change": "chg_ea16cafe3650",
+  "method": "prop_swap",
+  "finding": "fnd_EU_EU-TOB-01_obs_shot_16_002",
+  "rule": "EU-TOB-01",
+  "market": "EU",
+  "span": [
+   57.925,
+   65.799
+  ],
+  "description": "swapped the non-compliant prop for a European Union-appropriate one"
+ },
+ {
+  "run": "run_b2021b183715",
+  "asset": "Cigars_in_cartoons_-_part_1_of_3.mp4",
+  "change": "chg_4d721195d178",
+  "method": "prop_swap",
+  "finding": "fnd_BE_EU-TOB-01_obs_shot_41_001",
+  "rule": "EU-TOB-01",
+  "market": "BE",
+  "span": [
+   67.834,
+   69.435667
+  ],
+  "description": "swapped the non-compliant prop for a Belgium-appropriate one"
+ },
+ {
+  "run": "run_b2021b183715",
+  "asset": "Cigars_in_cartoons_-_part_1_of_3.mp4",
+  "change": "chg_96f086fdf626",
+  "method": "prop_swap",
+  "finding": "fnd_BE_EU-TOB-01_obs_shot_41_001",
+  "rule": "EU-TOB-01",
+  "market": "BE",
+  "span": [
+   67.834,
+   69.435667
+  ],
+  "description": "swapped the non-compliant prop for a Belgium-appropriate one"
+ },
+ {
+  "run": "run_b2021b183715",
+  "asset": "Cigars_in_cartoons_-_part_1_of_3.mp4",
+  "change": "chg_add954fdee44",
+  "method": "prop_swap",
+  "finding": "fnd_CA-QC_CA-QC-TOB-01_obs_shot_41_001",
+  "rule": "CA-QC-TOB-01",
+  "market": "CA-QC",
+  "span": [
+   67.834,
+   69.435667
+  ],
+  "description": "swapped the non-compliant prop for a Canada (Quebec)-appropriate one"
+ },
+ {
+  "run": "run_8b76dc2db0cb",
+  "asset": "On_the_trail_of_COCO_MADEMOISELLE.mp4",
+  "change": "chg_ac6c4ef7adf1",
+  "method": "reframe",
+  "finding": "fnd_ID_ID-MOD-01_obs_shot_1_002",
+  "rule": "ID-MOD-01",
+  "market": "ID",
+  "span": [
+   4.44,
+   12.0
+  ],
+  "description": "centre crop for the span, excluding the outer edge of the frame without regenerating any pixels"
+ },
+ {
+  "run": "run_8b76dc2db0cb",
+  "asset": "On_the_trail_of_COCO_MADEMOISELLE.mp4",
+  "change": "chg_de65c2b5df8b",
+  "method": "reframe",
+  "finding": "fnd_AE_AE-MOD-01_obs_shot_0_001",
+  "rule": "AE-MOD-01",
+  "market": "AE",
+  "span": [
+   0.0,
+   4.44
+  ],
+  "description": "centre crop for the span, excluding the outer edge of the frame without regenerating any pixels"
+ },
+ {
+  "run": "run_8b76dc2db0cb",
+  "asset": "On_the_trail_of_COCO_MADEMOISELLE.mp4",
+  "change": "chg_4c120d8d3d6f",
+  "method": "reframe",
+  "finding": "fnd_AE_AE-MOD-01_obs_shot_0_001",
+  "rule": "AE-MOD-01",
+  "market": "AE",
+  "span": [
+   0.0,
+   4.44
+  ],
+  "description": "centre crop for the span, excluding the outer edge of the frame without regenerating any pixels"
+ },
+ {
+  "run": "run_8b76dc2db0cb",
+  "asset": "On_the_trail_of_COCO_MADEMOISELLE.mp4",
+  "change": "chg_b375b7a5d53c",
+  "method": "reframe",
+  "finding": "fnd_AE_AE-MOD-01_obs_shot_1_002",
+  "rule": "AE-MOD-01",
+  "market": "AE",
+  "span": [
+   4.44,
+   12.0
+  ],
+  "description": "centre crop for the span, excluding the outer edge of the frame without regenerating any pixels"
+ },
+ {
+  "run": "run_c61fa291681f",
+  "asset": "On_the_trail_of_COCO_MADEMOISELLE.mp4",
+  "change": "chg_d2927e9f93b2",
+  "method": "reframe",
+  "finding": "fnd_SA_SA-MOD-01_obs_shot_1_002",
+  "rule": "SA-MOD-01",
+  "market": "SA",
+  "span": [
+   4.44,
+   12.0
+  ],
+  "description": "centre crop for the span, excluding the outer edge of the frame without regenerating any pixels"
+ },
+ {
+  "run": "run_c61fa291681f",
+  "asset": "On_the_trail_of_COCO_MADEMOISELLE.mp4",
+  "change": "chg_b166e13c9177",
+  "method": "reframe",
+  "finding": "fnd_AE_AE-MOD-01_obs_shot_1_002",
+  "rule": "AE-MOD-01",
+  "market": "AE",
+  "span": [
+   4.44,
+   12.0
+  ],
+  "description": "centre crop for the span, excluding the outer edge of the frame without regenerating any pixels"
+ },
+ {
+  "run": "run_0dc3aa64fab0",
+  "asset": "1984_Apple_s_Macintosh_Commercial_HD_.mp4",
+  "change": "chg_670a31393991",
+  "method": "prop_swap",
+  "finding": "fnd_AE_AE-MOD-01_obs_shot_16_001",
+  "rule": "AE-MOD-01",
+  "market": "AE",
+  "span": [
+   38.205,
+   39.773
+  ],
+  "description": "swapped the non-compliant prop for a United Arab Emirates-appropriate one"
+ },
+ {
+  "run": "run_d33f3afea667",
+  "asset": "boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_.mp4",
+  "change": "chg_d0ad62ea219e",
+  "method": "prop_swap",
+  "finding": "fnd_UK_UK-TOB-01_obs_shot_0_001",
+  "rule": "UK-TOB-01",
+  "market": "UK",
+  "span": [
+   0.0,
+   15.172744
+  ],
+  "description": "swapped the non-compliant prop for a United Kingdom-appropriate one"
+ },
+ {
+  "run": "run_d33f3afea667",
+  "asset": "boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_.mp4",
+  "change": "chg_9a94ad42f405",
+  "method": "prop_swap",
+  "finding": "fnd_BE_EU-TOB-01_obs_shot_0_001",
+  "rule": "EU-TOB-01",
+  "market": "BE",
+  "span": [
+   0.0,
+   15.172744
+  ],
+  "description": "swapped the non-compliant prop for a Belgium-appropriate one"
+ },
+ {
+  "run": "run_2dec43667265",
+  "asset": "15296080_1080_1920_24fps.mp4",
+  "change": "chg_baad7d30a9c4",
+  "method": "reframe",
+  "finding": "fnd_SA_SA-MOD-01_obs_shot_0_001",
+  "rule": "SA-MOD-01",
+  "market": "SA",
+  "span": [
+   0.0,
+   17.5175
+  ],
+  "description": "centre crop for the span, excluding the outer edge of the frame without regenerating any pixels"
+ },
+ {
+  "run": "run_1888660b5c27",
+  "asset": "run_1fc6782fb14e_localized_CA-QC.mp4",
+  "change": "chg_7ef08e89e2b5",
+  "method": "reframe",
+  "finding": "fnd_EU_EU-MINOR-01_obs_shot_16_000",
+  "rule": "EU-MINOR-01",
+  "market": "EU",
+  "span": [
+   22.564,
+   25.191
+  ],
+  "description": "centre crop for the span, excluding the outer edge of the frame without regenerating any pixels"
+ },
+ {
+  "run": "run_1888660b5c27",
+  "asset": "run_1fc6782fb14e_localized_CA-QC.mp4",
+  "change": "chg_7e23f09f4615",
+  "method": "reframe",
+  "finding": "fnd_BE_EU-MINOR-01_obs_shot_16_000",
+  "rule": "EU-MINOR-01",
+  "market": "BE",
+  "span": [
+   22.564,
+   25.191
+  ],
+  "description": "centre crop for the span, excluding the outer edge of the frame without regenerating any pixels"
+ },
+ {
+  "run": "run_1888660b5c27",
+  "asset": "run_1fc6782fb14e_localized_CA-QC.mp4",
+  "change": "chg_dcf2c9490376",
+  "method": "reframe",
+  "finding": "fnd_CA-QC_CA-QC-CHILD-01_obs_shot_18_002",
+  "rule": "CA-QC-CHILD-01",
+  "market": "CA-QC",
+  "span": [
+   26.442,
+   28.277188
+  ],
+  "description": "centre crop for the span, excluding the outer edge of the frame without regenerating any pixels"
+ },
+ {
+  "run": "run_bf6b4a1145ee",
+  "asset": "Ed_s_Heinz_Ad.mp4",
+  "change": "chg_fe50458be1dd",
+  "method": "reframe",
+  "finding": "fnd_SA-ROTANA_SA-MOD-01_obs_shot_6_002_v60c7f2",
+  "rule": "SA-MOD-01",
+  "market": "SA-ROTANA",
+  "span": [
+   12.16,
+   16.12
+  ],
+  "description": "centre crop for the span, excluding the outer edge of the frame without regenerating any pixels"
+ },
+ {
+  "run": "run_bf6b4a1145ee",
+  "asset": "Ed_s_Heinz_Ad.mp4",
+  "change": "chg_9f99ceb003dd",
+  "method": "prop_swap",
+  "finding": "fnd_SA-ROTANA_SA-ALC-01_obs_shot_18_001",
+  "rule": "SA-ALC-01",
+  "market": "SA-ROTANA",
+  "span": [
+   47.96,
+   51.4
+  ],
+  "description": "swapped the non-compliant prop for a Rotana Khalijia-appropriate one"
+ },
+ {
+  "run": "run_bf6b4a1145ee",
+  "asset": "Ed_s_Heinz_Ad.mp4",
+  "change": "chg_c5ca164c87cb",
+  "method": "reframe",
+  "finding": "fnd_SA-ROTANA_SA-MOD-01_obs_shot_6_002_v60c7f2",
+  "rule": "SA-MOD-01",
+  "market": "SA-ROTANA",
+  "span": [
+   12.16,
+   16.12
+  ],
+  "description": "centre crop for the span, excluding the outer edge of the frame without regenerating any pixels"
+ },
+ {
+  "run": "run_bf6b4a1145ee",
+  "asset": "Ed_s_Heinz_Ad.mp4",
+  "change": "chg_09b9643db989",
+  "method": "prop_swap",
+  "finding": "fnd_SA-ROTANA_SA-ALC-01_obs_shot_18_001",
+  "rule": "SA-ALC-01",
+  "market": "SA-ROTANA",
+  "span": [
+   47.96,
+   51.4
+  ],
+  "description": "swapped the non-compliant prop for a Rotana Khalijia-appropriate one"
+ }
+]
