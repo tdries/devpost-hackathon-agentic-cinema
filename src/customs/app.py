@@ -124,6 +124,27 @@ async def lifespan(_app: FastAPI):
 
     threading.Thread(target=ask, name="omni-preflight", daemon=True).start()
 
+    # And build the archive's first page before anybody asks for it. Cold,
+    # that page is thirty-one runs of market states, findings and
+    # observations -- about eight seconds -- and the first reader after a
+    # deploy was paying all of it. Warm, it is a fifth of a second. Only
+    # where there is a state dir, which is the tell for "this is the
+    # deployed process" that the rest of this function already uses.
+    def warm() -> None:
+        try:
+            if persist.state_dir() is None:
+                return
+            db = store()
+            runs = db.recent_runs(12)
+            for run in runs:
+                _card_row(run, "light")
+            edited_scenes()
+            log.info("warmed %d card(s) and the edits page", len(runs))
+        except Exception as exc:  # noqa: BLE001 -- a warm-up cannot break boot
+            log.debug("warm-up skipped: %s", exc)
+
+    threading.Thread(target=warm, name="warm-cards", daemon=True).start()
+
     # Per-call token and latency reporting, on for the deployed process and
     # off everywhere else: it fires on every model call, and a test suite
     # with a mocked Gemini would otherwise write a metric per mocked call
@@ -2928,6 +2949,11 @@ def card_lanes(run, states: dict) -> list[dict]:
 # it changes while you watch.
 _CARD_TTL = 30.0
 _CARD_CACHE: dict[str, tuple[float, dict]] = {}
+# One builder per row, not ten. Ten readers arriving together on a cold
+# cache each built all thirty-one cards, which is the same work ten times
+# and the reason the first public link felt broken; the first one through
+# builds it and the rest read what it wrote.
+_CARD_BUILD = threading.Lock()
 _SCENES_TTL = 30.0
 _SCENES_CACHE: dict[str, tuple[float, list]] = {}
 
@@ -2947,15 +2973,25 @@ def _card_row(run, theme: str) -> dict:
         hit = _CARD_CACHE.get(key)
         if hit and now - hit[0] < _CARD_TTL:
             return hit[1]
-    lanes = card_lanes(run, states)
-    row = {"run": run, "states": states, "groups": pill_groups(run, states),
-           "busy": busy, "live_lanes": _card_panel(run, theme, lanes),
-           "dims": lanes, "gauge": clearance_gauge(states)}
-    if not busy:
-        _CARD_CACHE[key] = (now, row)
+    if busy:
+        lanes = card_lanes(run, states)
+        return {"run": run, "states": states,
+                "groups": pill_groups(run, states), "busy": True,
+                "live_lanes": _card_panel(run, theme, lanes),
+                "dims": lanes, "gauge": clearance_gauge(states)}
+    with _CARD_BUILD:
+        hit = _CARD_CACHE.get(key)        # somebody may have built it while
+        if hit:                           # this request waited for the lock
+            return hit[1]
+        lanes = card_lanes(run, states)
+        row = {"run": run, "states": states,
+               "groups": pill_groups(run, states), "busy": False,
+               "live_lanes": _card_panel(run, theme, lanes),
+               "dims": lanes, "gauge": clearance_gauge(states)}
         if len(_CARD_CACHE) > 400:
             _CARD_CACHE.clear()
-    return row
+        _CARD_CACHE[key] = (now, row)
+        return row
 
 
 def _run_rows(runs, by_asset: dict[str, list], offset: int = 0,
