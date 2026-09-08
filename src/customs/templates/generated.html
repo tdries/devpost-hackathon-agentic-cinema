@@ -49,7 +49,12 @@
 
       {% if item.generated %}
       <div class="genclip">
-        <span class="label">What Veo generated between them</span>
+        {# Which model, in the caption: an Omni re-render is not "what Veo
+           generated between them", and the page said that over both. #}
+        <span class="label">{{ 'What Veo generated between the two frames'
+          if item.change.method == 'bridge' else
+          ('What Gemini Omni rendered for this span'
+           if item.change.method == 'omni' else 'What the model produced') }}</span>
         <video src="/runs/{{ run.id }}/changes/{{ item.change.id }}/generated.mp4" controls preload="metadata" playsinline muted></video>
       </div>
       {% endif %}

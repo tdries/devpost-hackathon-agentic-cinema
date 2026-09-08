@@ -136,32 +136,17 @@ settings = Settings.load()
 # Names are file stems, which is what `asset` means everywhere in this
 # system: the label on every metric and log line, the Grafana variable,
 # and what asset_key() reduces a run to.
-WITHHELD_ASSETS = (
-    "15296080_1080_1920_24fps",
-    "1984_Apple_s_Macintosh_Commercial_HD_",
-    "20_second_marketing_ad",
-    "8427734-uhd_2160_3840_25fps",
-    "A_Little_Kindness_in_the_Drive_Thru",
-    "Ai_ki_-_Ready_When_You_Are_FR_",
-    "BOND_JAMES_BOND",
-    "Cigarette_Japanese_1990s_Ad_Commercial_EXTENDED_VERSION_",
-    "Cigars_in_cartoons_-_part_1_of_3",
-    "Cigars_in_cartoons_-_part_2_of_3",
-    "Cigars_in_cartoons_-_part_3_of_3",
-    "Coca-Cola_Spec_Ad___Open_Happiness_20_Second_Commercial",
-    "Ed_s_Heinz_Ad",
-    "Johnny_Bravo_s_Best_Scene",
-    "On_the_trail_of_COCO_MADEMOISELLE",
-    "PS3_Baby_commercial",
-    "Pingu_angry",
-    "SLING_BABY___Doritos_Commercial___superbowl_commercials",
-    "Self_Control_Who_I_McDonald_s",
-    "_-_24___FRANCE_24_Arabic_1080p_h264_youtube_",
-    "boro_Commercial_Vintage_Most_Viewed_Video_on_my_channel_",
-    "catwalk",
-    "run_195aafbd5cc9_localized_ID-INDOSIAR",
-    "run_1fc6782fb14e_localized_CA-QC",
-)
+# Empty, on the owner's instruction: every run in the archive is shown.
+#
+# This held twenty-four stems for a while -- borrowed footage that came into
+# the corpus while the tool was being built, hidden rather than deleted so
+# nothing was lost. The owner wants those clearances back in the app, which
+# is their call to make; the mechanism below is left intact and tested, so
+# putting a stem back in this tuple hides it again everywhere at once: the
+# archive listing, the run's own pages, every cross-run Loki query, the
+# agent's composed queries and the framed dashboards (via
+# scripts/stamp_withheld_dashboards.py).
+WITHHELD_ASSETS: tuple[str, ...] = ()
 
 
 def is_withheld(asset: str) -> bool:

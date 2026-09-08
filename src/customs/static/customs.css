@@ -267,7 +267,10 @@ section:first-of-type { border-top: none; }
 .hero { padding: 38px 0 30px; border-top: none; }
 .headline {
   margin: 0;
-  font-size: clamp(30px, 5.1vw, 60px);
+  /* Half what it was. Sixty pixels of "CLEARED FOR LAUNCH IN 4 OF 11
+     MARKETS" filled a laptop screen with one sentence and pushed the
+     markets it is about below the fold. */
+  font-size: clamp(19px, 2.5vw, 30px);
   line-height: 1.02;
   letter-spacing: -0.025em;
   font-weight: 680;
@@ -1449,6 +1452,17 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
   .agent-canvas { height: 70vh; }
 }
 
+/* the way home, in the topbar on every screen */
+.homebtn { display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 11px; border: 1px solid var(--line-2); border-radius: var(--radius);
+  background: var(--panel); color: var(--ink-2); text-decoration: none;
+  font-family: var(--mono); font-size: 11px; letter-spacing: .08em;
+  text-transform: uppercase; }
+.homebtn:hover { color: var(--ink); border-color: var(--signal); }
+.homebtn.on { color: var(--ink); border-color: var(--signal); }
+.homebtn .ic { width: 15px; height: 15px; }
+@media (max-width: 900px) { .homebtn span { display: none; } }
+
 /* the mode switch, next to the style modes */
 .mode-switch { display: inline-flex; border: 1px solid var(--line-2); border-radius: var(--radius); overflow: hidden; }
 .mode-switch a {
@@ -2157,10 +2171,14 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
    weighted as a choice of route, not as a login. */
 .doors { margin-top: 30px; }
 .doors-label { display: block; margin-bottom: 10px; }
-.doors-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 74ch; }
+/* Three doors, one line. Two columns put the third door on a row of its
+   own, which read as an afterthought -- and the odd one out was the tour,
+   the one a stranger should actually take. */
+.doors-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px; max-width: 118ch; }
 .door {
   display: grid; grid-template-columns: auto 1fr auto; align-items: center;
-  gap: 14px; padding: 16px 18px; border-radius: 12px;
+  gap: 12px; padding: 15px 16px; border-radius: 12px;
   border: 1px solid var(--line-2); background: var(--panel);
   text-decoration: none; transition: border-color .16s, background .16s, transform .16s;
 }
@@ -2234,7 +2252,7 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
   .landhero-mark { margin-bottom: 22px; }
   .landhero-mark img { width: 92px; }
   .landhero-front { max-width: none; }
-  .doors-row { grid-template-columns: 1fr; }
+  .doors-row { grid-template-columns: 1fr; max-width: 74ch; }
   .landwhy-grid { grid-template-columns: 1fr; gap: 16px; }
   .swarm-row .ic { width: 24px; height: 24px; }
 }
@@ -2909,7 +2927,7 @@ video.runthumb { object-fit: cover; background: var(--well); }
 span.cardlanes.drawn { overflow: hidden; }
 span.cardlanes.drawn svg { width: 100%; height: 100%; display: block; }
 .lane-dot { transition: r .12s ease; }
-span.cardlanes.drawn .lane-dot:hover { r: 7; cursor: pointer; }
+span.cardlanes.drawn .lane-dot:hover { r: 7px; cursor: pointer; }
 .cardviz[data-viz="live"] .cardlanes.drawn,
 .cardviz[data-viz="drawn"] .cardlanes.live { display: none; }
 /* The drawing carries its own labels in its own gutter, so the shared icon
@@ -3195,10 +3213,21 @@ tbody.mkscene[hidden] { display: none; }
    that rail is flat on purpose: by then the conversation is the order. */
 .agent-suggest.guided { display: grid; gap: 7px; }
 .sugg-lane {
-  display: flex; flex-wrap: wrap; align-items: center; gap: 5px;
-  padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--radius);
+  display: grid; gap: 6px;
+  padding: 7px 9px; border: 1px solid var(--line); border-radius: var(--radius);
   background: var(--well);
 }
+.sugg-head { display: flex; align-items: center; gap: 6px; }
+/* The pills stay on one line. In a 400px column a wrapping lane broke two
+   pre-filled questions across three rows and the numbered lane it belonged
+   to stopped reading as a step. It scrolls sideways instead, with a fade
+   at the edge where there is more. */
+.sugg-row { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none;
+  -ms-overflow-style: none;
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 18px), transparent);
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 18px), transparent); }
+.sugg-row::-webkit-scrollbar { display: none; }
+.sugg-row .sugg { flex: 0 0 auto; white-space: nowrap; }
 .sugg-step {
   flex: none; width: 15px; height: 15px; border-radius: 50%;
   display: grid; place-items: center; font-size: 9px; letter-spacing: 0;
@@ -3562,4 +3591,5 @@ html[data-theme="studio"] .walk-veil { background: rgba(20, 24, 32, .45); }
 /* the third door: the invitation, and the only one with the ring on it */
 .door-tour { border-color: var(--line-2); }
 .door-tour .ic { color: var(--g-blue); }
-.doors-row:has(.door-tour) { flex-wrap: wrap; }
+/* a grid does not wrap: it drops to two columns and then to one */
+@media (max-width: 1240px) { .doors-row { grid-template-columns: 1fr 1fr; } }

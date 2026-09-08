@@ -106,10 +106,12 @@ def slides(*, packs: int, dimensions: int, rules: int, pairings: int,
          "eyebrow": "Agentic Cinema  ·  Grafana Labs track",
          "title": "The Media Customs",
          "lede": "One asset. Every market. Before it ships.",
-         "body": "An AI crew watches your commercial once, judges it "
-                 "against every market you ship to in parallel, builds its "
-                 "own Grafana instrument panel as it goes, and re-renders "
-                 "the shots that fail.",
+         "body": "An AI crew watches your commercial once, then judges it "
+                 "in parallel against every market you ship to -- the law "
+                 "and the cultural ground it has to land on: gesture, "
+                 "modesty, religious symbols, superstition, humour, "
+                 "politics. It builds its own Grafana instrument panel as "
+                 "it goes, and re-renders the shots that fail.",
          "stat": f"{packs} jurisdictions  ·  {rules} rules  ·  "
                  f"{dimensions} things watched for"},
 

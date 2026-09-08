@@ -8,7 +8,7 @@
    renders a blank card -- no title, no image -- for a submission judged
    partly on its links. Absolute URLs because scrapers resolve nothing. #}
 <meta property="og:title" content="The Media Customs">
-<meta property="og:description" content="Agentic ad clearance: an AI crew watches your commercial once, judges it against every market you ship to, in parallel, builds its own Grafana instrument panel, and re-renders the shots that fail.">
+<meta property="og:description" content="Agentic ad clearance: an AI crew watches your commercial once, then judges it in parallel against every market you ship to -- the law and the cultural ground, gesture to superstition -- builds its own Grafana instrument panel, and re-renders the shots that fail.">
 <meta property="og:type" content="website">
 {# ?v=mtime, like every other static asset here. Without it the URL never
    changes, so LinkedIn, Slack and iMessage keep serving whatever they
@@ -99,6 +99,7 @@ try {
   <symbol id="n-board" viewBox="0 0 24 24"><path fill="#4285F4" d="M2.4 2.6h19.2v5.2H2.4z"/><path fill="#EA4335" d="M2.4 9.4h8.6v5.2H2.4z"/><path fill="#FBBC05" d="M12.6 9.4h9v5.2h-9z"/><path fill="#34A853" d="M2.4 16.2h19.2v5.2H2.4z"/></symbol>
   <!-- the archive: a stack of runs, newest on top. Its own mark now,
        because one icon was doing the board and the archive at once. -->
+  <symbol id="n-home" viewBox="0 0 24 24"><path fill="#EA4335" d="M12 2.2 2.4 10.2l1.7 2 7.9-6.6 7.9 6.6 1.7-2z"/><path fill="#4285F4" d="M5.4 11.6h13.2v10.2H5.4z"/><path fill="#FBBC05" d="M8.2 14.2h3.1v3.1H8.2z"/><path fill="#34A853" d="M13.2 16.4h3.4v5.4h-3.4z"/></symbol>
   <symbol id="n-runs" viewBox="0 0 24 24"><path fill="#FBBC05" d="M5.6 2.6h12.8v3.1H5.6z"/><path fill="#34A853" d="M3.8 7h16.4v3.1H3.8z"/><path fill="#4285F4" d="M2 11.4h20v10H2z"/><path fill="#EA4335" d="M4.6 14h7.2v2.2H4.6z"/><path fill="#fff" fill-opacity=".85" d="M4.6 17.6h11.2v1.8H4.6z"/></symbol>
   <symbol id="n-feed" viewBox="0 0 24 24"><circle cx="4.6" cy="5.6" r="2.4" fill="#4285F4"/><path fill="#4285F4" d="M9 4.2h12.4v2.8H9z"/><circle cx="4.6" cy="12" r="2.4" fill="#FBBC05"/><path fill="#FBBC05" d="M9 10.6h12.4v2.8H9z"/><circle cx="4.6" cy="18.4" r="2.4" fill="#34A853"/><path fill="#34A853" d="M9 17h12.4v2.8H9z"/></symbol>
   <symbol id="n-timeline" viewBox="0 0 24 24"><path fill="#EA4335" d="M2.4 4h11v3.4h-11z"/><path fill="#FBBC05" d="M6.4 10.3h15.2v3.4H6.4z"/><path fill="#34A853" d="M2.4 16.6h13.2V20H2.4z"/><path fill="#4285F4" d="M20.4 16.6h1.2V20h-1.2z"/></symbol>
@@ -130,6 +131,11 @@ try {
          here. customs.js polls /ops/busy and lights it with the sparkle;
          clicking it lands on the busiest run. #}
       <a id="beacon" class="beacon" href="/runs" hidden></a>
+      {# Home, said out loud. The wordmark on the left has always linked
+         here, and nobody reads a wordmark as a button -- so deep inside a
+         run there was no visible way back to the front of the product. #}
+      <a class="homebtn{{ ' on' if screen == 'landing' }}" href="/" title="The front page">
+        <svg class="ic"><use href="#n-home"/></svg><span>Home</span></a>
       <span class="mode-switch" role="group" aria-label="Mode">
         <a class="{{ 'on' if screen == 'agent' }}" href="/agent"><svg class="ic"><use href="#i-adjudicator"/></svg>Agent</a>
         {# Studio lands on Recent runs, not the upload form: entering the

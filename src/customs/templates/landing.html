@@ -25,10 +25,19 @@
            alt="Powered by Grafana" width="114" height="26">
     </span>
     <h1 class="landhero-title">One asset. Every market. Before it ships.</h1>
+    {# No count in the lede: the number is real and it is on the screens,
+       but it dates the sentence and invites the reader to audit arithmetic
+       instead of understanding the product. And the law is only half the
+       job: a gesture, a colour, a number, a religious symbol, an animal on
+       a table can each stop a spot in a market where nothing illegal
+       happened at all. #}
     <p class="landhero-lede">An agentic ad-clearance crew. It watches your commercial
-      <strong>once</strong>, judges it against the law of
-      <strong>{{ packs_total }} jurisdictions</strong> in parallel, builds its own
-      Grafana instrument panel as it goes, and re-renders the shots that fail.</p>
+      <strong>once</strong>, then judges it in parallel against every market you
+      ship to, on both counts: the <strong>law</strong>, and the
+      <strong>cultural ground</strong> it has to land on. Gesture, modesty,
+      religious symbols, superstition, humour, politics. It builds its own
+      Grafana instrument panel as it goes, and re-renders the shots that
+      fail.</p>
 
     <div class="doors">
       <span class="doors-label label">Come in as</span>
@@ -163,8 +172,9 @@
       <span class="ls-n mono">03</span>
       <svg class="ic"><use href="#i-adjudicator"/></svg>
       <b>Adjudicators</b>
-      <span>One per jurisdiction, all at once, each grounding its citation against a
-        live source. A finding is always observation &times; rule &times; citation.</span>
+      <span>One per jurisdiction, all at once, {{ packs_total }} jurisdictions in
+        this build, each grounding its citation against a live source. A finding is
+        always observation &times; rule &times; citation.</span>
     </div>
     <div class="landstep">
       <span class="ls-n mono">04</span>

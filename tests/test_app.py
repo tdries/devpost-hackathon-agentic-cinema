@@ -3615,26 +3615,34 @@ def test_the_days_ledger_is_a_mimir_series_with_a_rule_on_it(monkeypatch):
     assert BUDGET_ALERT_EUR > estimate("bridge", 8.0)
 
 
-def test_footage_this_instance_may_not_publish_is_not_shown_anywhere(console):
-    """Devpost puts the rights to a submission's content on the entrant,
-    and this archive grew out of whatever was to hand: a Chanel spot with a
-    famous actor in it, a Bond clip, three reels of studio cartoons, brand
-    ads, two stock clips. A rights-clearance tool is the last thing that
-    should be borrowing footage.
+def test_a_withheld_stem_disappears_from_every_read_path(console, monkeypatch):
+    """One tuple hides a film everywhere, and it ships empty.
 
-    Hidden rather than deleted, on the operator's instruction: the rows and
-    the files stay exactly where they are and every read path stops
-    answering for them. So the archive does not list it, the run's own page
-    is a 404 like any unknown run, and the cross-run queries exclude it by
-    label -- while the corpus this project generated with Veo is untouched.
+    It held twenty-four stems for a while -- footage that came into the
+    corpus while the tool was being built -- hidden rather than deleted so
+    that nothing was lost and the decision stayed reversible. The owner
+    reversed it: every clearance is in the app again.
+
+    What is under test is therefore the mechanism, not the list. Put a stem
+    back in that tuple and the archive stops listing it, the run's own
+    pages 404 like any unknown run, the store's listing drops it so
+    everything built on it inherits the omission, and every cross-run Loki
+    query excludes it by label -- and with the tuple as it ships, none of
+    that happens to anything.
     """
-    from customs.config import WITHHELD_ASSETS, is_withheld
+    from customs import config
 
     client, store, _launched, _jobs = console
+    # Empty in the shipped config: the owner wants every clearance in the
+    # app. So the mechanism is what is under test, with one stem standing
+    # in for the list -- put a name back in that tuple and this is what
+    # happens to it, everywhere, at once.
+    monkeypatch.setattr(config, "WITHHELD_ASSETS", ("BOND_JAMES_BOND",))
     withheld = _judged_run(store, asset="/tmp/BOND_JAMES_BOND.mp4")
     ours = _judged_run(store, asset="/tmp/ember_lounge.mp4")
 
-    assert is_withheld("BOND_JAMES_BOND") and not is_withheld("ember_lounge")
+    assert config.is_withheld("BOND_JAMES_BOND")
+    assert not config.is_withheld("ember_lounge")
 
     # the archive lists one of the two, and it is ours
     archive = client.get("/runs?all=1").text
@@ -3660,48 +3668,64 @@ def test_footage_this_instance_may_not_publish_is_not_shown_anywhere(console):
     from customs.search import logql
     for query in (logql("cigar"), logql("")):
         assert "asset!~" in query
-    assert all(a in logql("cigar") for a in WITHHELD_ASSETS[:3])
+    assert "BOND_JAMES_BOND" in logql("cigar")
+
+    # with the tuple as it ships, nothing is filtered and nothing is hidden
+    monkeypatch.setattr(config, "WITHHELD_ASSETS", ())
+    assert config.withheld_matcher() == ""
+    assert "asset!~" not in logql("cigar")
+    assert client.get(f"/runs/{withheld.id}").status_code == 200
 
 
-def test_the_page_that_prints_every_query_does_not_print_the_film_titles(console):
-    """The neatest way to leak the list was to publish the filter. The
-    Grafana resources page prints every panel's expression verbatim, and
-    the matcher is a regex made of twenty-four film titles, so for one
-    deploy the only screen still naming a Chanel spot and three reels of
-    studio cartoons was the screen explaining how they are excluded.
+def test_the_page_that_prints_every_query_never_prints_a_withheld_title(console,
+                                                                        monkeypatch):
+    """The neatest way to leak a hidden list was to publish the filter. The
+    Grafana page prints every panel's expression verbatim, and the matcher
+    is a regex made of the film titles, so for one deploy the only screen
+    still naming them was the screen explaining how they are excluded.
+
+    The list ships empty, so there is nothing to leak today; what has to
+    keep holding is that the clause is shown by name and never by content.
     """
+    from customs import config, grafana_map
+
     client, _store, _launched, _jobs = console
-
     page = client.get("/grafana").text
-    for title in ("COCO_MADEMOISELLE", "BOND_JAMES_BOND", "Cigars_in_cartoons",
-                  "Coca-Cola", "Heinz", "catwalk"):
-        assert title not in page, title
-    # the clause is still shown, by name, because the reader does need to
-    # know the panels are scoped
-    assert "asset!~&lt;withheld&gt;" in page or "asset!~<withheld>" in page
+    assert "asset!~`^(" not in page, "the regex itself is never printed"
+
+    # and when something IS withheld, the clause is named, not spelled
+    monkeypatch.setattr(config, "WITHHELD_ASSETS", ("BOND_JAMES_BOND",))
+    stamped = '{app="customs", kind="finding"' + config.withheld_matcher() + '}'
+    shown = grafana_map._query_of({"expr": stamped})
+    assert "BOND_JAMES_BOND" not in shown
+    assert "asset!~<withheld>" in shown
 
 
-def test_the_agents_own_queries_are_scoped_to_the_corpus_too():
+def test_the_agents_own_queries_are_scoped_to_the_corpus_too(monkeypatch):
     """Agent mode hands the model the label schema and lets it compose its
     own LogQL, which is the point of that screen and also a way for a film
     the console will not show to be named in an answer. Every selector it
     writes is scoped before it runs, once, and a PromQL expression is left
     alone because the metrics carry no titles.
     """
-    from customs.config import scope_logql, withheld_matcher
+    from customs import config
 
     composed = 'sum by (asset) (count_over_time({app="customs", kind="finding"}[7d]))'
-    scoped = scope_logql(composed)
+    # nothing is withheld as this ships, so the model's query is its own
+    assert config.scope_logql(composed) == composed
+
+    monkeypatch.setattr(config, "WITHHELD_ASSETS", ("BOND_JAMES_BOND",))
+    scoped = config.scope_logql(composed)
     assert scoped.count("asset!~") == 1
-    assert withheld_matcher() in scoped
+    assert config.withheld_matcher() in scoped
     # idempotent: a schema example that already carries it is not doubled
-    assert scope_logql(scoped).count("asset!~") == 1
+    assert config.scope_logql(scoped).count("asset!~") == 1
     # and nothing is invented around a metric query
-    assert scope_logql("sum(customs_risk)") == "sum(customs_risk)"
-    assert scope_logql("") == ""
+    assert config.scope_logql("sum(customs_risk)") == "sum(customs_risk)"
+    assert config.scope_logql("") == ""
 
 
-def test_every_framed_loki_query_excludes_the_withheld_corpus():
+def test_the_framed_panels_and_the_withheld_list_agree():
     """The console filters its own queries in code; the framed panels are
     Grafana's, and Grafana reads the JSON in grafana/dashboards. A panel
     whose expression is just {app="customs", kind="finding"} charts the
@@ -3717,7 +3741,6 @@ def test_every_framed_loki_query_excludes_the_withheld_corpus():
     from customs.config import withheld_matcher
 
     matcher = withheld_matcher()
-    assert matcher, "the whole test is about this constant being non-empty"
     for path in sorted(_Path("grafana/dashboards").glob("*.json")):
         for panel in json.loads(path.read_text())["panels"]:
             for target in panel.get("targets", []):
@@ -3726,9 +3749,18 @@ def test_every_framed_loki_query_excludes_the_withheld_corpus():
                     continue
                 if 'app="customs"' not in expr:
                     continue
-                assert matcher.lstrip(", ") in expr, (
-                    f"{path.name} panel {panel['id']} charts the whole "
-                    f"tenant. Run scripts/stamp_withheld_dashboards.py")
+                if matcher:
+                    assert matcher.lstrip(", ") in expr, (
+                        f"{path.name} panel {panel['id']} charts the whole "
+                        f"tenant. Run scripts/stamp_withheld_dashboards.py")
+                else:
+                    # and the other way: an emptied list has to take the
+                    # stamp back out, or the panels keep hiding films the
+                    # console is showing again
+                    assert "asset!~" not in expr, (
+                        f"{path.name} panel {panel['id']} still filters a "
+                        f"corpus nothing withholds. Run "
+                        f"scripts/stamp_withheld_dashboards.py")
 
 
 def test_no_framed_panel_goes_blank_on_a_quiet_instance():

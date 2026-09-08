@@ -97,23 +97,35 @@
     <div class="agent-suggest guided" id="agent-suggest">
       <span class="sugg-label label">Start here, or type your own</span>
       <div class="sugg-lane">
-        <span class="sugg-step mono">1</span>
-        <span class="sugg-lead label">Where do I stand</span>
+        <span class="sugg-head">
+          <span class="sugg-step mono">1</span>
+          <span class="sugg-lead label">Where do I stand</span>
+        </span>
+        <span class="sugg-row">
         <button type="button" class="sugg" data-say="What is blocked right now, and where?"><svg class="ic"><use href="#i-blocked"/></svg>What is blocked</button>
         <button type="button" class="sugg" data-say="What is the status of this run?"><svg class="ic"><use href="#i-pending"/></svg>Where are we</button>
+        </span>
       </div>
       <div class="sugg-lane">
-        <span class="sugg-step mono">2</span>
-        <span class="sugg-lead label">Show me why</span>
+        <span class="sugg-head">
+          <span class="sugg-step mono">2</span>
+          <span class="sugg-lead label">Show me why</span>
+        </span>
+        <span class="sugg-row">
         <button type="button" class="sugg" data-say="Show me the frame board for this run."><svg class="ic"><use href="#i-frame"/></svg>Show the frames</button>
         <button type="button" class="sugg" data-say="Which findings need a human decision, and why?"><svg class="ic"><use href="#i-human"/></svg>Needs a human</button>
         <button type="button" class="sugg" data-say="Build a Grafana dashboard of the findings by dimension."><svg class="ic"><use href="#i-publisher"/></svg>Build a dashboard</button>
+        </span>
       </div>
       <div class="sugg-lane">
-        <span class="sugg-step mono">3</span>
-        <span class="sugg-lead label">Do something about it</span>
+        <span class="sugg-head">
+          <span class="sugg-step mono">3</span>
+          <span class="sugg-lead label">Do something about it</span>
+        </span>
+        <span class="sugg-row">
         <button type="button" class="sugg" data-say="What would you fix first, and what would it cost?"><svg class="ic"><use href="#i-remediator"/></svg>What to fix first</button>
         <button type="button" class="sugg" data-say="Clear this asset for more markets too."><svg class="ic"><use href="#n-market"/></svg>Add markets</button>
+        </span>
       </div>
     </div>
 
