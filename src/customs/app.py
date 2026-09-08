@@ -867,8 +867,11 @@ def problem_lanes(run, compact: bool = False) -> str:
         rows = [{"dimension": slot["dimension"],
                  "events": events_of.get(slot["dimension"], [])}
                 for slot in card_lanes(run, market_states(run))]
-        if not any(row["events"] for row in rows):
-            return ""
+        # A run with nothing dotted still gets its chart: six labelled,
+        # faint, empty lanes, which is the honest picture of "watched for,
+        # nothing seen" and means every card in the archive has a drawn
+        # version to switch to. Returning "" here 404'd the image and left
+        # those cards blank in drawn mode.
         # A card chart is drawn at 560 and displayed at about 330, so an
         # icon is on screen at roughly six tenths of the size it is
         # written at. At 20 that put the taxonomy glyphs at ~12px, which
@@ -2779,10 +2782,16 @@ def _card_panel(run, theme: str, lanes: list[dict]) -> str:
     them, in the order the icons are in.
     """
     url = (embeds(run, theme).get("viewer") or {}).get("squares", "")
-    seen = [row["dimension"] for row in lanes if row["seen"]]
-    if not url or not seen:
+    if not url:
         return ""
-    return f"{url}&var-dim={quote('|'.join(seen))}"
+    # Every card offers both charts, so a run with nothing observed pins
+    # the panel to the six rows it draws beside anyway: Grafana then says
+    # it has no data for them, which is the truth about that run, rather
+    # than the card silently having one chart where its neighbours have
+    # two.
+    seen = [row["dimension"] for row in lanes if row["seen"]]
+    dims = seen or [row["dimension"] for row in lanes]
+    return f"{url}&var-dim={quote('|'.join(dims))}"
 
 
 def card_lanes(run, states: dict) -> list[dict]:
@@ -3320,6 +3329,68 @@ def mission_page(request: Request, run_id: str):
                  groups=groups, running=run.status not in ("done", "error"),
                  stage_prose=narrate.STAGE_PROSE, made=made,
                  last_id=events[-1]["id"] if events else 0, screen="mission")
+
+def edited_scenes(limit: int = 120) -> list[dict]:
+    """Every edit this instance has made, newest first, across all runs.
+
+    One row per change record that kept a before and an after still: the
+    film it belongs to, the market and the rule that asked for it, the
+    seconds it covers, the method that did it, and the two frames. The
+    cutting room answers "what happened to THIS film"; this answers "what
+    has this system actually changed", which is a different question and
+    the one a reader asks after the third run.
+
+    Read from the store and the changes directory, both of which are
+    mirrored, so an edit survives the container that made it.
+    """
+    db = store()
+    out: list[dict] = []
+    for run in db.recent_runs(200):
+        changes = db.changes(run.id)
+        if not changes:
+            continue
+        directory = run_dir(run)
+        by_id = {f.id: f for f in db.findings(run.id)}
+        for change in changes:
+            before = _still_name(directory, change.before_frame)
+            after = _still_name(directory, change.after_frame)
+            clip = ((directory / "changes" / f"{change.id}_bridge.mp4").is_file()
+                    or (directory / "changes" / f"{change.id}_omni.mp4").is_file())
+            finding = by_id.get(change.finding_id)
+            out.append({
+                "run": run,
+                "asset": Path(run.asset_path).stem or run.asset_path,
+                "change": change,
+                "finding": finding,
+                "market": finding.market if finding else "",
+                "before": before,
+                "after": after,
+                "clip": clip,
+                "kept": bool(before or after),
+            })
+    out.sort(key=lambda row: (row["run"].t0 or 0, row["change"].id), reverse=True)
+    return out[:limit]
+
+
+@app.get("/edits", response_class=HTMLResponse)
+def my_edits(request: Request):
+    """Every scene this instance has edited, before beside after.
+
+    A cross-run cutting room. Each run has one of its own, which is the
+    right place to check a film; this is the place to see what the system
+    does, which is the question somebody asks once they have watched it do
+    it twice.
+    """
+    rows = edited_scenes()
+    shown = [row for row in rows if row["kept"]]
+    methods: dict[str, int] = {}
+    for row in rows:
+        methods[row["change"].method] = methods.get(row["change"].method, 0) + 1
+    return _page(request, "edits.html", screen="edits", rows=shown,
+                 total=len(rows), unkept=len(rows) - len(shown),
+                 films=len({row["asset"] for row in rows}),
+                 methods=sorted(methods.items(), key=lambda kv: -kv[1]))
+
 
 @app.get("/runs/{run_id}/generated", response_class=HTMLResponse)
 def generated_page(request: Request, run_id: str):

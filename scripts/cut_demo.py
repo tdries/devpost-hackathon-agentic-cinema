@@ -10,7 +10,7 @@ import glob, os, subprocess
 OUT = "docs/video"
 GAP = 0.2
 # seconds to drop off the head of a beat that had to wait for something to paint
-SKIP = {14: 30.0}   # the insight panels need that long to paint
+SKIP = {3: 4.0, 14: 30.0}   # a head the beat needed but the film does not
 
 
 def dur(path):

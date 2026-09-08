@@ -13,6 +13,8 @@ filled, square hovered) and the finished showcase run supplies the results.
 import os, subprocess, sys, time
 from playwright.sync_api import sync_playwright
 
+_T0 = 0.0
+FLOW_HEAD = 4.0   # what cut_demo drops off the front of the flow beat
 ONLY = {int(x) for x in os.environ.get("ONLY_BEATS", "").split(",") if x.strip()}
 LIVE = os.environ.get("CUSTOMS_URL", "https://customs-app-akap4ao72a-ew.a.run.app")
 LOCAL = os.environ.get("CUSTOMS_LOCAL", "http://127.0.0.1:8000")
@@ -41,7 +43,7 @@ def creep(page, px, over):
         page.wait_for_timeout(50)
 
 
-def beat(pw, n, url, actions, base=None):
+def beat(pw, n, url, actions, base=None, head=0.0):
     if ONLY and n not in ONLY:
         return
     d = secs(n)
@@ -54,11 +56,12 @@ def beat(pw, n, url, actions, base=None):
         ctx.add_cookies([{"name": "customs-role", "value": "judge",
                           "url": LOCAL}])
     page = ctx.new_page()
-    t0 = time.time()
+    global _T0
+    t0 = _T0 = time.time()
     page.goto((base or LIVE) + url, wait_until="load", timeout=60000)
     page.wait_for_timeout(900)
     actions(page)
-    left = d + 0.8 - (time.time() - t0)
+    left = d + 0.8 + head - (time.time() - t0)
     if left > 0:
         page.wait_for_timeout(int(left * 1000))
     ctx.close()
@@ -76,12 +79,46 @@ def main(only=None):
             door.scroll_into_view_if_needed(); p.wait_for_timeout(700)
             box = door.bounding_box()
             glide(p, box["x"] + box["width"] / 2, box["y"] + box["height"] / 2)
-            p.wait_for_timeout(1200)
-            door.click(); p.wait_for_load_state("load"); p.wait_for_timeout(2500)
-            creep(p, 700, 2.0)
+            p.wait_for_timeout(1600)
+            creep(p, 900, 3.0)
         beat(pw, 2, "/", b1)
 
-        # 3 the archive: hover the cards so their timelapses play
+        # 3 the flow diagram, driven by the narration's own part offsets
+        def b3flow(p):
+            import json
+            offs = json.load(open("docs/voiceover/marks.json"))["3"]
+            fig = p.locator("#flow")
+            fig.first.evaluate("el => el.scrollIntoView({block: 'center'})")
+            # It plays itself once on approach. Left alone that race puts the
+            # diagram on step 8 while the narration is still on step 2, so the
+            # autoplay is stopped (its button toggles) before anything is driven.
+            p.wait_for_timeout(1500)
+            p.evaluate("""() => {
+              const b = document.getElementById('flow-play');
+              if (b && b.textContent.trim() === 'stop') b.click();
+            }""")
+            # line the first stage up with the first word
+            wait0 = FLOW_HEAD - (time.time() - _T0)
+            if wait0 > 0:
+                p.wait_for_timeout(int(wait0 * 1000))
+            t0 = time.time()
+            for i, off in enumerate(offs, 1):
+                wait = off - (time.time() - t0)
+                if wait > 0:
+                    p.wait_for_timeout(int(wait * 1000))
+                p.evaluate("""(n) => {
+                  const svg = document.querySelector('#flow .flowsvg');
+                  const fig = document.getElementById('flow');
+                  const now = document.getElementById('flow-now');
+                  if (svg) svg.setAttribute('data-step', n);
+                  if (fig) fig.setAttribute('data-step', n);
+                  document.querySelectorAll('#flow .flow-steps li')
+                    .forEach((li, i) => li.classList.toggle('on', i === n - 1));
+                  if (now) now.textContent = 'step ' + n + ' of 8';
+                }""", i)
+        beat(pw, 3, "/", b3flow, head=FLOW_HEAD)
+
+        # 4 the archive: hover the cards so their timelapses play
         def b3(p):
             # Only the films this project generated go on camera. The live archive
             # also holds borrowed development footage (config.WITHHELD_ASSETS is
@@ -112,7 +149,7 @@ def main(only=None):
                 glide(p, bb["x"] + bb["width"] * 0.72, bb["y"] + bb["height"] * 0.68, steps=18)
                 p.wait_for_timeout(1600)      # rest on the lanes chart
             creep(p, 600, 2.0)
-        beat(pw, 3, "/runs", b3)
+        beat(pw, 4, "/runs", b3)
 
         # 4 the launcher, filled in but never submitted (local instance)
         def b2(p):
@@ -137,10 +174,10 @@ def main(only=None):
             if bb and 0 < bb["y"] < H - 60:
                 glide(p, bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2)
             p.wait_for_timeout(1800)
-        beat(pw, 4, "/new", b2, base=LOCAL)
+        beat(pw, 5, "/new", b2, base=LOCAL)
 
         # 4 mission feed
-        beat(pw, 5, f"/runs/{RUN}/mission", lambda p: (p.wait_for_timeout(2000), creep(p, 2600, 9.5)))
+        beat(pw, 6, f"/runs/{RUN}/mission", lambda p: (p.wait_for_timeout(2000), creep(p, 2600, 9.5)))
 
         # 5 launch board: tiles, then the Grafana panels under them
         def b4(p):
@@ -152,10 +189,7 @@ def main(only=None):
                 if bb: glide(p, bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2)
             p.wait_for_timeout(2200)
             creep(p, 3200, 11.0)
-        beat(pw, 6, f"/runs/{RUN}", b4)
-
-        # 6 frame board
-        beat(pw, 7, f"/runs/{RUN}/frames", lambda p: (p.wait_for_timeout(1200), creep(p, 1800, 5.5)))
+        beat(pw, 7, f"/runs/{RUN}", b4)
 
         # 7 timeline grid: hover the squares, never click (a click spends)
         def b6(p):

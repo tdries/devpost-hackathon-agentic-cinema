@@ -1534,6 +1534,55 @@ def test_a_restore_that_fails_the_first_time_still_gets_its_runs(tmp_path, monke
     assert "Stale file handle" in notes[0]  # and it said so
 
 
+def test_my_edits_is_every_change_across_every_run(console):
+    """Each run has a cutting room, which answers "what happened to this
+    film". Nothing answered "what has this system actually changed", which
+    is the question a reader asks after watching two clearances.
+
+    So there is a screen for it, between the archive and the library: one
+    card per change record, the frame before beside the frame after, the
+    market and rule that asked for it, and the method that did it. A change
+    whose stills were never mirrored is counted and named rather than
+    dropped, because a silent omission on a page about evidence is worse
+    than an admitted gap.
+    """
+    from customs.schema import ChangeRecord
+
+    client, store, _launched, _jobs = console
+    empty = client.get("/edits")
+    assert empty.status_code == 200
+    assert "Nothing edited yet" in empty.text
+
+    run = _judged_run(store)
+    finding = store.findings(run.id)[0]
+    changes = Path(app_module.run_dir(run)) / "changes"
+    changes.mkdir(parents=True, exist_ok=True)
+    for name in ("chg_e1_before.png", "chg_e1_after.png"):
+        (changes / name).write_bytes(b"\x89PNG\r\n\x1a\n")
+    store.add_change(ChangeRecord(
+        id="chg_e1", run_id=run.id, finding_id=finding.id, method="omni",
+        description="repainted the label",
+        before_frame=str(changes / "chg_e1_before.png"),
+        after_frame=str(changes / "chg_e1_after.png")))
+    # and one whose frames never reached the mirror
+    store.add_change(ChangeRecord(
+        id="chg_e2", run_id=run.id, finding_id=finding.id, method="patch",
+        description="painted out the pack", before_frame="/gone/a.png",
+        after_frame="/gone/b.png"))
+
+    body = client.get("/edits").text
+    assert f"/runs/{run.id}/stills/chg_e1_before.png" in body
+    assert f"/runs/{run.id}/stills/chg_e1_after.png" in body
+    assert "repainted the label" in body
+    assert finding.rule_id in body and finding.market in body
+    assert "chg_e2" not in body, "no stills, no card"
+    assert "1 more edit" in body, "but it is counted and explained"
+    # and it is one tab away from anywhere, between the archive and the library
+    assert 'href="/edits"' in client.get("/runs").text
+    nav = client.get("/library").text
+    assert nav.index('href="/edits"') < nav.index('href="/library"')
+
+
 def test_what_came_out_of_the_run_is_a_screen_beside_the_cutting_room(console):
     """The feed says what is happening; nothing said what it produced.
 

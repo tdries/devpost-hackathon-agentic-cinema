@@ -2182,6 +2182,55 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
 .landgraf-cell b { font-size: 14.5px; color: var(--ink); }
 .landgraf-cell span:last-child { font-size: 12.8px; line-height: 1.55; color: var(--ink-3); }
 
+/* ---------- my edits: the cross-run cutting room ----------
+   Two frames a card, the same width, so the eye compares them rather than
+   the layout. Wide enough that a hemline or a bottle is legible, which is
+   the whole point: a pair of thumbnails nobody can read is a claim, not
+   evidence. */
+.editkeys { display: flex; flex-wrap: wrap; gap: 7px; margin: 14px 0 0; }
+.editkeys .chip b { margin-left: 6px; color: var(--ink); }
+.editgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(430px, 1fr));
+  gap: 16px; }
+.editcard { border: 1px solid var(--line); border-radius: var(--radius);
+  background: var(--panel); padding: 14px 15px 12px; display: flex;
+  flex-direction: column; gap: 10px; }
+.edithead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.editfilm { font-family: var(--mono); font-size: 12.5px; color: var(--ink);
+  text-decoration: none; border-bottom: 1px solid var(--line-2); }
+.editfilm:hover { border-color: var(--signal); }
+.editmeta { display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
+  margin-left: auto; }
+.editwhen { font-size: 11.5px; color: var(--ink-3); }
+.editpair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.editpair figure { margin: 0; display: grid; gap: 5px; }
+.editpair img { width: 100%; display: block; border-radius: 4px;
+  border: 1px solid var(--line); aspect-ratio: 16 / 9; object-fit: cover;
+  background: var(--well); }
+.editpair figcaption { display: inline-flex; align-items: center; gap: 6px; }
+.editpair figcaption .ic { width: 13px; height: 13px; }
+.editgone { display: grid; place-items: center; aspect-ratio: 16 / 9;
+  border: 1px dashed var(--line-2); border-radius: 4px; color: var(--ink-3); }
+.editwhy { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink-2); }
+.editrule { margin: 0; font-size: 12px; line-height: 1.5; color: var(--ink-3); }
+.editfoot { display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
+  margin-top: auto; }
+.editfoot .runid { margin-left: auto; font-size: 10.5px; color: var(--ink-3); }
+@media (max-width: 640px) {
+  .editgrid { grid-template-columns: 1fr; }
+}
+
+/* The metric table: four scannable columns and one sentence per series,
+   on its own line. As a fifth column that sentence made every row as tall
+   as its prose and left the three columns worth scanning in a ragged
+   ladder beside it. */
+.gseries .gser { border-top: 1px solid var(--line); }
+.gseries .gser:first-of-type { border-top: 0; }
+.gseries .gser > tr > td { border-bottom: 0; }
+.gseries .gsample td { padding-top: 0; padding-bottom: 12px; font-size: 12.5px;
+  line-height: 1.5; color: var(--ink-3); }
+.gseries .gsample .label { display: inline-block; margin-right: 9px;
+  color: var(--ink-3); opacity: .75; }
+
 /* ---------- the flow picture on the front page ----------
    Four lanes and eight moves. The lane names, the box labels and the key
    are all SVG text, so they scale with the drawing; the numbered steps are
@@ -2995,7 +3044,7 @@ span.cardlanes.drawn .lane-dot:hover { r: 7px; cursor: pointer; }
   color: var(--ink-2); font-weight: 400; }
 
 /* which chart this card is showing */
-.vizswap { position: absolute; top: 8px; left: 8px; z-index: 2;
+.vizswap { position: absolute; top: 50px; left: 8px; z-index: 2;
   display: inline-flex; border: 1px solid var(--line); border-radius: 999px;
   background: var(--panel); overflow: hidden; opacity: 0;
   transition: opacity .15s ease; }
@@ -3007,12 +3056,15 @@ span.cardlanes.drawn .lane-dot:hover { r: 7px; cursor: pointer; }
 .vizswap button:hover { color: var(--ink); }
 
 /* the way in: the one control on a card that names the verb.
-   In the flow, at the bottom, full width -- floating it bottom-right put
-   it on top of the channel pills on one card and the "also cleared" dates
-   on another. A control out of the flow still needs the room it takes. */
+   At the top, in the flow, full width. It was at the bottom, under the
+   flags and the "also cleared" dates, which is the last place anyone
+   looks on a card they have already decided to open -- and before that it
+   floated bottom-right, where it covered the channel pills on one card
+   and the dates on another. A control out of the flow still needs the
+   room it takes. */
 .runlist:not(.as-rows) .runcard { display: flex; flex-direction: column; }
 .runlist:not(.as-rows) .runcard > .runrow { flex: 1 1 auto; }
-.cardgo { position: relative; margin-top: 8px; display: flex;
+.cardgo { position: relative; margin: 0 0 10px; display: flex;
   align-items: center; justify-content: center; text-decoration: none;
   border-radius: 999px; padding: 2px; isolation: isolate; }
 .cardgo-ring { position: absolute; inset: 0; border-radius: 999px;
@@ -3038,7 +3090,7 @@ span.cardlanes.drawn .lane-dot:hover { r: 7px; cursor: pointer; }
 
 /* deleting a run: a quiet control that only shows itself on approach */
 .runcard { position: relative; display: block; }
-.runkill { position: absolute; top: 8px; right: 8px; z-index: 2; margin: 0;
+.runkill { position: absolute; top: 50px; right: 8px; z-index: 2; margin: 0;
   opacity: 0; transition: opacity .15s ease; }
 .runcard:hover .runkill, .runkill:focus-within { opacity: 1; }
 .runkill button { border: 1px solid var(--line-2); background: var(--panel);

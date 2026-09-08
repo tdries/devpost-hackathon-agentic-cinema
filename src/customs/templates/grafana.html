@@ -133,18 +133,27 @@
     real clock, because an alert rule's evaluation window has to mean what it
     says. Alerting reads only the current-clock three; the timecode axis reads
     only the mapped one.</p>
-  <table class="grid gtable">
-    <colgroup><col style="width:15%"><col style="width:8%"><col style="width:14%">
-      <col style="width:41%"><col style="width:22%"></colgroup>
-    <tr><th>Series</th><th>Clock</th><th>Labels</th><th>One sample is</th><th>Read by</th></tr>
+  {# Four short columns and one sentence. The sentence used to be the
+     fourth column, forty per cent of the width, and every row was as tall
+     as its prose -- so the three columns that ARE scannable, the series,
+     its clock and its labels, sat in a ragged ladder beside it. The
+     sentence gets its own full-width line under the row it belongs to. #}
+  <table class="grid gtable gseries">
+    <colgroup><col style="width:24%"><col style="width:9%"><col style="width:32%">
+      <col style="width:35%"></colgroup>
+    <tr><th>Series</th><th>Clock</th><th>Labels</th><th>Read by</th></tr>
     {% for series in metrics %}
-    <tr>
-      <td class="tight"><code class="gq">{{ series.name }}</code></td>
-      <td class="tight"><span class="chip {{ 'policy' if series.clock == 'mapped' else 'on' }}">{{ series.clock }}</span></td>
-      <td class="tight mono gsmall">{{ series.labels | join(', ') }}</td>
-      <td>{{ series.sample }}</td>
-      <td class="tight gsmall">{{ series.read_by }}</td>
-    </tr>
+    <tbody class="gser">
+      <tr>
+        <td class="tight"><code class="gq">{{ series.name }}</code></td>
+        <td class="tight"><span class="chip {{ 'policy' if series.clock == 'mapped' else 'on' }}">{{ series.clock }}</span></td>
+        <td class="tight mono gsmall">{{ series.labels | join(', ') }}</td>
+        <td class="tight gsmall">{{ series.read_by }}</td>
+      </tr>
+      <tr class="gsample">
+        <td colspan="4"><span class="label">one sample is</span>{{ series.sample }}</td>
+      </tr>
+    </tbody>
     {% endfor %}
   </table>
 </section>

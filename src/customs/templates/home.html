@@ -3,10 +3,11 @@
 {% block nav %}{% include "_topnav.html" %}{% endblock %}
 {% block main %}
 
-<section class="hero">
+{# No headline and no pitch: this is the form. Anyone here has already
+   read the front page or does not want to, and the screen's whole job is
+   to take a file and a list of markets. #}
+<section class="hero" style="padding-bottom:14px">
   <div class="rule-row"><span class="label">New clearance run</span></div>
-  <h1 class="headline" style="font-size:clamp(22px,2.6vw,30px)">One asset. Every market. Before it ships.</h1>
-  <p class="subline">The Media Customs watches the commercial the way a regulator would, market by market, and comes back with the statute behind every finding. Pick the markets, hand it the master, and the crew starts on the next screen.</p>
   {% if showcase %}
   <p class="subline" style="font-size:13.5px">Rather look before you leap?
     <a class="cite" href="/runs/{{ showcase }}">See a finished clearance</a>:

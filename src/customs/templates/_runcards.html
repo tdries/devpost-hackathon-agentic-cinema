@@ -21,6 +21,20 @@
       <button type="button" data-viz-pick="drawn">drawn</button>
     </span>
     {% endif %}
+    {# The way in, at the top of the card. It sat at the bottom for a
+       while, under the flags and the "also cleared" dates, which is the
+       last place a reader looks on a card they have already decided to
+       open. Still in the flow, not floated: a control out of the flow
+       needs the room it takes, which is how it once covered the channel
+       pills. #}
+    <a class="cardgo" href="/runs/{{ item.run.id }}"
+       aria-label="Open {{ item.run.asset_path.split('/')[-1] }}">
+      <span class="cardgo-ring" aria-hidden="true"></span>
+      <span class="cardgo-face">
+        <span class="cardgo-word">OPEN</span>
+        <svg class="ic" aria-hidden="true"><use href="#n-board"/></svg>
+      </span>
+    </a>
     <a class="runrow" href="/runs/{{ item.run.id }}">
       {# The still is the video's poster, so the card paints exactly as it
          did; preload="none" means the clip itself is not fetched until a
@@ -125,19 +139,5 @@
       {% endif %}
     </span>
     {% endif %}
-    {# The way in, and the last thing in the card so it cannot sit on top
-       of anything. It was a floating button bottom right for one deploy
-       and it covered the channel pills on one card and the "also cleared"
-       dates on another -- the same overlap the status column had, from the
-       same cause: a control taken out of the flow still needs the room it
-       occupies. #}
-    <a class="cardgo" href="/runs/{{ item.run.id }}"
-       aria-label="Open {{ item.run.asset_path.split('/')[-1] }}">
-      <span class="cardgo-ring" aria-hidden="true"></span>
-      <span class="cardgo-face">
-        <span class="cardgo-word">OPEN</span>
-        <svg class="ic" aria-hidden="true"><use href="#n-board"/></svg>
-      </span>
-    </a>
     </span>
 {% endfor %}

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}My edits{% endblock %}
+{% block nav %}{% include "_topnav.html" %}{% endblock %}
+{% block main %}
+
+{# The cross-run cutting room.
+   Each run has a cutting room of its own, which is where you check one
+   film. This is the other question, the one a reader asks after watching
+   two clearances: what does this thing actually change? So it is every
+   edit the instance has made, newest first, with the frame before and the
+   frame after side by side and the rule that asked for it named. #}
+<section class="hero" style="padding-bottom:18px">
+  <div class="rule-row"><span class="label">My edits</span>
+    <span class="right label mono">{{ rows | length }} of {{ total }} edit{{ '' if total == 1 else 's' }}
+      &middot; {{ films }} film{{ '' if films == 1 else 's' }}</span>
+  </div>
+  <h1 class="pagetitle"><svg class="ic"><use href="#n-cut"/></svg>Every scene this system has changed</h1>
+  <p class="subline">Before and after, across every clearance. Each pair is one
+    finding a market objected to and the edit that answered it, with the method
+    that made it and the price it carried. Nothing here is a mock-up: these are
+    the frames the remediator wrote and the verifier re-observed.</p>
+  {% if methods %}
+  <p class="editkeys">
+    {% for method, count in methods %}
+    <span class="chip method"><svg class="ic"><use href="#i-remediator"/></svg>{{ method }}
+      <b class="mono">{{ count }}</b></span>
+    {% endfor %}
+  </p>
+  {% endif %}
+</section>
+
+<section style="border-top:none;padding-top:0">
+  {% if rows %}
+  <div class="editgrid">
+    {% for row in rows %}
+    <article class="editcard">
+      <header class="edithead">
+        <a class="editfilm" href="/runs/{{ row.run.id }}/cutting">{{ row.asset }}</a>
+        <span class="editmeta">
+          {% if row.market %}<span class="pill s-blocked"><svg class="ic"><use href="#i-blocked"/></svg>{{ row.market }}</span>{% endif %}
+          {% if row.finding %}<span class="rule-id">{{ row.finding.rule_id }}</span>{% endif %}
+          {% if row.finding %}<span class="mono editwhen">{{ row.finding.t_start | timecode }} to {{ row.finding.t_end | timecode }}</span>{% endif %}
+          <span class="chip method">{{ row.change.method }}</span>
+        </span>
+      </header>
+
+      {# Two frames, one row, labelled. An edit whose after-frame was never
+         kept still shows its before: half a pair is evidence too, and
+         saying which half is missing is better than dropping the row. #}
+      <div class="editpair">
+        <figure>
+          {% if row.before %}
+          <a href="/runs/{{ row.run.id }}/stills/{{ row.before }}" target="_blank">
+            <img src="/runs/{{ row.run.id }}/stills/{{ row.before }}" alt="the frame before the edit" loading="lazy">
+          </a>
+          {% else %}<span class="editgone label">before not kept</span>{% endif %}
+          <figcaption class="label"><svg class="ic"><use href="#i-blocked"/></svg>before</figcaption>
+        </figure>
+        <figure>
+          {% if row.after %}
+          <a href="/runs/{{ row.run.id }}/stills/{{ row.after }}" target="_blank">
+            <img src="/runs/{{ row.run.id }}/stills/{{ row.after }}" alt="the frame after the edit" loading="lazy">
+          </a>
+          {% else %}<span class="editgone label">after not kept</span>{% endif %}
+          <figcaption class="label"><svg class="ic"><use href="#i-cleared"/></svg>after</figcaption>
+        </figure>
+      </div>
+
+      <p class="editwhy">{{ row.change.description }}</p>
+      {% if row.finding %}
+      <p class="editrule">{{ row.finding.rationale }}</p>
+      {% endif %}
+      <footer class="editfoot">
+        {% if row.clip %}
+        <a class="chip on" href="/runs/{{ row.run.id }}/changes/{{ row.change.id }}/generated.mp4"
+           target="_blank"><svg class="ic"><use href="#n-cut"/></svg>the generated seconds</a>
+        {% endif %}
+        {% if row.market %}
+        <a class="chip" href="/runs/{{ row.run.id }}/markets/{{ row.market }}">market room</a>
+        {% endif %}
+        <a class="chip" href="/runs/{{ row.run.id }}/cutting">cutting room</a>
+        <span class="runid mono">{{ row.change.id }}</span>
+      </footer>
+    </article>
+    {% endfor %}
+  </div>
+  {% if unkept %}
+  <p class="subline" style="margin-top:18px;font-size:13px">{{ unkept }} more edit{{ '' if unkept == 1 else 's' }}
+    kept no stills: the record is in the run's own cutting room, but the frames
+    were written to a workdir that was never mirrored.</p>
+  {% endif %}
+  {% else %}
+  <div class="empty">
+    <span class="big">Nothing edited yet</span>
+    <p>When a market blocks a shot and a fix lands, the frame before and the
+      frame after appear here, across every clearance this instance has run.</p>
+    <p style="margin-top:16px"><a class="btn go" href="/runs">Open the archive</a></p>
+  </div>
+  {% endif %}
+</section>
+
+{% endblock %}

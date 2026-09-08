@@ -147,8 +147,14 @@ def lanes(rows: list[dict], duration: float, *, width: int = 1180,
     # at; only this says what fraction of the film that second is, which is
     # what turns hovering a dot into playing that moment -- the card's clip
     # is the whole film in five seconds, so the mapping needs both.
+    # xMinYMin: inlined into a card this SVG is sized by CSS, and the
+    # default xMidYMid centres it inside a box of a different shape --
+    # which is where the band of white down the left of every drawn chart
+    # came from. The <img> version never had it, because object-position
+    # already said left top.
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" class="lanes" '
            f'data-duration="{duration:.3f}" '
+           f'preserveAspectRatio="xMinYMin meet" '
            f'width="{width}" height="{height}" viewBox="0 0 {width} {height}">']
     if defs:
         out.append(defs)
