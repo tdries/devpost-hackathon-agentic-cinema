@@ -87,9 +87,18 @@
           </span>
           <span class="cardplot">
             {% if item.live_lanes %}
+            {# No loading="lazy" here, and it is not an oversight. This frame
+               is display:none until it has painted (see .cardviz:not(.booted)
+               in the stylesheet), and a lazy iframe with no box never loads,
+               so it never fires load, so the card never marks itself booted
+               and never shows it: a standoff the page cannot leave. Measured
+               both ways in a real browser -- hidden and lazy never fires,
+               hidden alone fires in about eight seconds. The laziness lives
+               in customs.js instead, which is stricter: nothing is fetched
+               until data-src is turned into src for a card near the
+               viewport. #}
             <iframe class="cardlanes live" data-src="{{ item.live_lanes }}"
-                    title="What this run found, live from Grafana"
-                    loading="lazy"></iframe>
+                    title="What this run found, live from Grafana"></iframe>
             {% endif %}
             <img class="cardlanes drawn" src="/runs/{{ item.run.id }}/lanes.svg"
                  alt="" loading="lazy" onerror="this.closest('.cardviz').removeAttribute('data-has-drawn')">

@@ -3129,9 +3129,16 @@ def test_the_archive_carries_one_live_panel_not_thirty_five(console, monkeypatch
     page = client.get("/runs").text
     assert "d-solo/customs-history/customs?panelId=1" in page, "the one at the top"
     # the cards frame their own lanes too, but lazily -- only what is near
-    # the viewport ever boots a Grafana
-    assert page.count('class="cardlanes live"') >= 1
-    assert page.count('loading="lazy"') >= page.count("<iframe") - 1
+    # the viewport ever boots a Grafana. The laziness is data-src, NOT
+    # loading="lazy": these frames are display:none until they have painted,
+    # and a lazy iframe with no box never loads, never fires load, and so is
+    # never shown. Every card frame must arrive inert and unaddressed.
+    frames = page.count('class="cardlanes live"')
+    assert frames >= 1
+    assert page.count('class="cardlanes live" data-src=') == frames
+    assert '<iframe class="cardlanes live" src=' not in page
+    assert 'class="cardlanes live"' not in page.replace(
+        'class="cardlanes live" data-src=', '')
 
     _enter(client, "visitor")
     assert "<iframe" not in client.get("/runs").text, "not on a scoped archive"
