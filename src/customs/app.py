@@ -3468,6 +3468,7 @@ def edited_scenes(limit: int = 120) -> list[dict]:
                 "markets": [], "rules": [], "changes": [],
                 "before": "", "after": "", "fixed_for": "", "change": None,
                 "clip": False, "method": "", "kind": kind,
+                "can_before": False, "can_after": False,
             })
             if finding and finding.market and finding.market not in scene["markets"]:
                 scene["markets"].append(finding.market)
@@ -3475,6 +3476,17 @@ def edited_scenes(limit: int = 120) -> list[dict]:
                 scene["rules"].append(finding.rule_id)
             scene["changes"].append(change)
             scene["before"] = scene["before"] or before
+            # Whether each side can actually be PLAYED, decided here rather
+            # than left to a 404 inside a <video>: an empty grey box says
+            # less than the note it replaced. Before needs the original on
+            # this disk; after needs the model's own clip or that market's
+            # localized master.
+            if Path(run.asset_path).is_file() and finding \
+                    and finding.t_end > finding.t_start:
+                scene["can_before"] = True
+            if clip or (finding and (run_dir(run)
+                                     / f"localized_{finding.market}.mp4").is_file()):
+                scene["can_after"] = True
             # The pair on show is the fix that actually rendered: a change
             # with a clip beats one with only stills, and either beats one
             # that kept nothing at all.
@@ -3498,7 +3510,12 @@ def my_edits(request: Request):
     it twice.
     """
     rows = edited_scenes()
-    shown = [row for row in rows if row["before"] or row["after"]]
+    # A scene is worth showing if it can be played or if a frame of it was
+    # kept. Stills used to be the only test, which dropped every edit whose
+    # remediator wrote no frames even though both its spans are cuttable.
+    shown = [row for row in rows
+             if row["before"] or row["after"]
+             or row["can_before"] or row["can_after"]]
     # "carried over from SA", "carried over from DE" and nine more are one
     # method wearing eleven names, and as eleven chips they were the widest
     # thing on the page. Counted together, and counted per scene.

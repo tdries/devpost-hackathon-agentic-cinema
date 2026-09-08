@@ -1564,7 +1564,7 @@ def test_my_edits_groups_a_scene_rather_than_a_market(console):
     for name in ("chg_e1_before.png", "chg_e1_after.png"):
         (changes / name).write_bytes(b"\x89PNG\r\n\x1a\n")
     store.add_change(ChangeRecord(
-        id="chg_e1", run_id=run.id, finding_id=first.id, method="omni",
+        id="chg_ee0001", run_id=run.id, finding_id=first.id, method="omni",
         description="repainted the label",
         before_frame=str(changes / "chg_e1_before.png"),
         after_frame=str(changes / "chg_e1_after.png")))
@@ -1573,7 +1573,7 @@ def test_my_edits_groups_a_scene_rather_than_a_market(console):
                   if f.t_start == first.t_start and f.market != first.market), None)
     if other is not None:
         store.add_change(ChangeRecord(
-            id="chg_e2", run_id=run.id, finding_id=other.id,
+            id="chg_ee0002", run_id=run.id, finding_id=other.id,
             method="carried over from " + first.market,
             description="the same span, carried over",
             before_frame="/gone/a.png", after_frame="/gone/b.png"))
@@ -1595,24 +1595,30 @@ def test_my_edits_groups_a_scene_rather_than_a_market(console):
         for name in ("chg_e3_before.png", "chg_e3_after.png"):
             (changes / name).write_bytes(b"\x89PNG\r\n\x1a\n")
         store.add_change(ChangeRecord(
-            id="chg_e3", run_id=run.id, finding_id=late.id, method="patch",
+            id="chg_ee0003", run_id=run.id, finding_id=late.id, method="patch",
             description="painted out the pack",
             before_frame=str(changes / "chg_e3_before.png"),
             after_frame=str(changes / "chg_e3_after.png")))
         assert client.get("/edits").text.count('class="editcard"') == 2
 
-    # the pair is the SPAN, played, with the kept still as its poster: two
-    # frames prove an edit happened and do not let anyone judge a hemline
+    # The pair is the SPAN, played, with the kept still as its poster: two
+    # frames prove an edit happened and do not let anyone judge a hemline.
+    # The fixture's master is on disk, so the before side is cuttable; the
+    # after side is not, because this change has neither a generated clip
+    # nor a localized master, and the card says "frame only" rather than
+    # rendering a player that 404s inside itself.
     body = client.get("/edits").text
-    assert f'/runs/{run.id}/changes/chg_e1/span.mp4?side=before' in body
-    assert f'/runs/{run.id}/changes/chg_e1/span.mp4?side=after' in body
+    assert f"/runs/{run.id}/changes/chg_ee0001/span.mp4?side=before" in body
     assert f'poster="/runs/{run.id}/stills/chg_e1_before.png"' in body
+    assert f"/runs/{run.id}/changes/chg_ee0001/span.mp4?side=after" not in body
+    assert f'/runs/{run.id}/stills/chg_e1_after.png' in body
+    assert "frame only" in body
     assert 'data-kind="video"' in body
 
     # a revoice is a sound edit: the picture does not change, so it is on
     # the other side of the toggle, with its soundtrack and its controls
     store.add_change(ChangeRecord(
-        id="chg_e9", run_id=run.id, finding_id=first.id, method="revoice",
+        id="chg_ee0009", run_id=run.id, finding_id=first.id, method="revoice",
         description="re-spoke the claim",
         before_frame=str(changes / "chg_e1_before.png"),
         after_frame=str(changes / "chg_e1_after.png")))
@@ -1622,16 +1628,68 @@ def test_my_edits_groups_a_scene_rather_than_a_market(console):
     assert 'data-edit-kind="audio"' in sound, "and a toggle to reach them"
 
     # the span route refuses rather than guesses
-    assert client.get(f"/runs/{run.id}/changes/chg_e1/span.mp4").status_code == 404, \
-        "the fixture's master is not on this disk"
-    assert client.get(f"/runs/{run.id}/changes/chg_zz/span.mp4").status_code == 404
+    assert client.get(f"/runs/{run.id}/changes/chg_ee0001/span.mp4?side=after"
+                      ).status_code == 404, "no after master for this change"
+    assert client.get(f"/runs/{run.id}/changes/chg_ff0000/span.mp4").status_code == 404
     assert client.get(
-        f"/runs/{run.id}/changes/chg_e1/span.mp4?side=sideways").status_code == 404
+        f"/runs/{run.id}/changes/chg_ee0001/span.mp4?side=sideways").status_code == 404
 
     # one tab away from anywhere, between the archive and the library
     assert 'href="/edits"' in client.get("/runs").text
     nav = client.get("/library").text
     assert nav.index('href="/edits"') < nav.index('href="/library"')
+
+
+def test_an_edit_plays_its_own_seconds_from_both_masters(console, tmp_path):
+    """/edits compares an edit by playing the span it names, twice: as
+    delivered and as it came back. Both clips are cut here, on demand, from
+    two different masters -- the original for before, and either the
+    model's own generated file or that market's localized master for after
+    -- and cached beside the change record, which is mirrored.
+
+    Cut and not stream-copied, because a copy seeks to the nearest keyframe
+    and the whole claim of the clip is that it IS those seconds.
+    """
+    import subprocess
+    from customs.schema import ChangeRecord
+
+    client, store, _launched, _jobs = console
+    master = tmp_path / "spot.mp4"
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-f", "lavfi",
+                    "-i", "testsrc2=s=160x120:d=6:r=12", str(master)], check=True)
+
+    run = _judged_run(store, asset=str(master))
+    finding = store.findings(run.id)[0]
+    localized = Path(app_module.run_dir(run)) / f"localized_{finding.market}.mp4"
+    localized.parent.mkdir(parents=True, exist_ok=True)
+    subprocess.run(["ffmpeg", "-y", "-v", "quiet", "-f", "lavfi",
+                    "-i", "testsrc2=s=160x120:d=6:r=12", str(localized)], check=True)
+    store.add_change(ChangeRecord(
+        id="chg_aa0001", run_id=run.id, finding_id=finding.id, method="prop_swap",
+        description="swapped the prop", before_frame="", after_frame=""))
+
+    page = client.get("/edits").text
+    assert f"/runs/{run.id}/changes/chg_aa0001/span.mp4?side=before" in page
+    assert f"/runs/{run.id}/changes/chg_aa0001/span.mp4?side=after" in page
+
+    for side in ("before", "after"):
+        clip = client.get(f"/runs/{run.id}/changes/chg_aa0001/span.mp4?side={side}")
+        assert clip.status_code == 200, (side, clip.text[:200])
+        assert clip.headers["content-type"] == "video/mp4"
+        assert len(clip.content) > 500, side
+    # cached beside the change record, so the second reader pays nothing
+    cuts = sorted(p.name for p in (Path(app_module.run_dir(run)) / "changes")
+                  .glob("chg_aa0001_*span*.mp4"))
+    assert cuts == ["chg_aa0001_after_span.mp4", "chg_aa0001_before_span.mp4"]
+
+    # and a sound edit keeps its soundtrack, which is the whole edit
+    store.add_change(ChangeRecord(
+        id="chg_aa0002", run_id=run.id, finding_id=finding.id, method="revoice",
+        description="re-spoke the line", before_frame="", after_frame=""))
+    said = client.get(f"/runs/{run.id}/changes/chg_aa0002/span.mp4?side=before&sound=1")
+    assert said.status_code == 200
+    assert (Path(app_module.run_dir(run)) / "changes"
+            / "chg_aa0002_before_span_snd.mp4").is_file()
 
 
 def test_what_came_out_of_the_run_is_a_screen_beside_the_cutting_room(console):

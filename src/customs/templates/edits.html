@@ -81,22 +81,30 @@
          soundtrack, because there the soundtrack IS the edit. #}
       {% set snd = 1 if row.kind == 'audio' else 0 %}
       <div class="editpair{{ ' editpair-snd' if snd }}" data-pairplay>
+        {% for side, mark, can, still in (
+             ('before', 'i-blocked', row.can_before, row.before),
+             ('after', 'i-cleared', row.can_after, row.after)) %}
         <figure>
+          {% if can %}
           <video class="editclip" preload="none" playsinline
                  {% if snd %}controls{% else %}muted loop{% endif %}
-                 {% if row.before %}poster="/runs/{{ row.run.id }}/stills/{{ row.before }}"{% endif %}
-                 src="/runs/{{ row.run.id }}/changes/{{ row.change.id }}/span.mp4?side=before&amp;sound={{ snd }}"
-                 aria-label="the span before the edit"></video>
-          <figcaption class="label"><svg class="ic"><use href="#i-blocked"/></svg>before{{ ' &middot; sound' | safe if snd }}</figcaption>
+                 {% if still %}poster="/runs/{{ row.run.id }}/stills/{{ still }}"{% endif %}
+                 src="/runs/{{ row.run.id }}/changes/{{ row.change.id }}/span.mp4?side={{ side }}&amp;sound={{ snd }}"
+                 aria-label="the span {{ side }} the edit"></video>
+          {% elif still %}
+          {# no master to cut from, but the frame the remediator kept is
+             still evidence, and saying which half is a picture is better
+             than an empty box #}
+          <a href="/runs/{{ row.run.id }}/stills/{{ still }}" target="_blank">
+            <img src="/runs/{{ row.run.id }}/stills/{{ still }}"
+                 alt="the frame {{ side }} the edit" loading="lazy">
+          </a>
+          {% else %}
+          <span class="editgone label">{{ side }} not kept</span>
+          {% endif %}
+          <figcaption class="label"><svg class="ic"><use href="#{{ mark }}"/></svg>{{ side }}{{ ' &middot; sound' | safe if snd and can }}{{ ' &middot; frame only' | safe if still and not can }}</figcaption>
         </figure>
-        <figure>
-          <video class="editclip" preload="none" playsinline
-                 {% if snd %}controls{% else %}muted loop{% endif %}
-                 {% if row.after %}poster="/runs/{{ row.run.id }}/stills/{{ row.after }}"{% endif %}
-                 src="/runs/{{ row.run.id }}/changes/{{ row.change.id }}/span.mp4?side=after&amp;sound={{ snd }}"
-                 aria-label="the span after the edit"></video>
-          <figcaption class="label"><svg class="ic"><use href="#i-cleared"/></svg>after{{ ' &middot; sound' | safe if snd }}</figcaption>
-        </figure>
+        {% endfor %}
         {% if not snd %}
         <span class="editplay label" aria-hidden="true">hover to play both</span>
         {% endif %}
