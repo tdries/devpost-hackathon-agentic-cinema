@@ -1,5 +1,6 @@
 import re
 import subprocess
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -737,6 +738,34 @@ QC_MAX_DRIFT_S = 0.04        # under one frame at 25fps
 QC_MIN_PSNR_DB = 38.0        # outside the edit, against the master it came from
 
 
+def _reencode_control(path: Path, out_path: Path) -> Path | None:
+    """The same film, through the same encoder, with nothing edited.
+
+    Every span method rebuilds the WHOLE file: the patch is laid on with an
+    overlay filter and libx264 re-encodes end to end, so the footage the edit
+    never touched still comes out a generation down. Measured against the
+    original master that reads as damage -- an Omni rewrite of a 4.2s span
+    was thrown away at 36.27 dB against a 38 dB floor with nothing wrong with
+    it but the re-encode.
+
+    So when the cheap comparison fails, the expensive one asks the right
+    question: how far is the edited master from a file that took the same
+    encoding hit and was not edited? What is left is the edit.
+    """
+    args = [
+        "ffmpeg", "-y", "-nostdin", "-i", str(path),
+        "-map", "0:v", "-map", "0:a?",
+        "-c:v", "libx264", "-preset", "veryfast", "-crf", str(EDIT_CRF),
+        "-pix_fmt", "yuv420p", "-c:a", "copy",
+        str(out_path),
+    ]
+    try:
+        _run(args, timeout=_encode_timeout(probe_duration(path)))
+    except Exception:  # noqa: BLE001 -- no control means fall back to the raw number
+        return None
+    return out_path if out_path.exists() and out_path.stat().st_size else None
+
+
 def _psnr(a, b, *, exclude: tuple[float, float] | None = None) -> float | None:
     """PSNR of b against a in dB, optionally ignoring one time range.
 
@@ -879,13 +908,26 @@ def craft_check(before, after, *, span: tuple[float, float] | None = None,
                         f"-> {r_after[0]}x{r_after[1]}")
 
     psnr = None
+    psnr_vs_control = None
     if r_after == r_before and f_after == f_before:
         psnr = _psnr(before, after, exclude=span)
         if psnr is not None and psnr < QC_MIN_PSNR_DB:
-            where = "outside the edited span" if span else "across the film"
-            failures.append(
-                f"footage the edit should not have touched was disturbed: "
-                f"{psnr:.2f} dB {where} (floor {QC_MIN_PSNR_DB:.0f})")
+            # Before calling it damage, subtract the encoder. The number
+            # above includes a full generational re-encode of footage the
+            # edit never touched, which on its own lands in the mid-30s dB.
+            with tempfile.TemporaryDirectory() as tmp:
+                control = _reencode_control(before, Path(tmp) / "control.mp4")
+                if control is not None and probe_frames(control) == f_after:
+                    psnr_vs_control = _psnr(control, after, exclude=span)
+            judged = psnr if psnr_vs_control is None else psnr_vs_control
+            if judged < QC_MIN_PSNR_DB:
+                where = "outside the edited span" if span else "across the film"
+                against = ("" if psnr_vs_control is None else
+                           " against an unedited re-encode of the same film")
+                failures.append(
+                    f"footage the edit should not have touched was disturbed: "
+                    f"{judged:.2f} dB {where}{against} "
+                    f"(floor {QC_MIN_PSNR_DB:.0f})")
 
     # "drift" below is the LENGTH drift in seconds and predates this;
     # collateral drift is a different question in a different unit.
@@ -899,6 +941,7 @@ def craft_check(before, after, *, span: tuple[float, float] | None = None,
         "frames_before": f_before, "frames_after": f_after,
         "resolution_before": r_before, "resolution_after": r_after,
         "psnr": psnr,
+        "psnr_vs_control": psnr_vs_control,
         "collateral_db": collateral,
     }
 
