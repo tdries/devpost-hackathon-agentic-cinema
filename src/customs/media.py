@@ -251,6 +251,41 @@ def preview_clip(src, out_path, width: int = 320, seconds: float = 5.0) -> Path:
     return out
 
 
+def span_clip(src, out_path, start: float, end: float,
+              width: int = 480, keep_audio: bool = False) -> Path:
+    """One finding's own seconds, cut out of a master and kept.
+
+    What /edits plays. The change record keeps two stills, which is enough
+    to prove an edit happened and not enough to judge it: a hemline, a
+    hand-off, a bottle being poured are all motion, and a page comparing
+    before with after in stills is comparing two moments of two shots.
+
+    Re-encoded rather than stream-copied on purpose. A copy seeks to the
+    nearest keyframe, which on a 30-second spot can be two seconds early,
+    and the whole point of this clip is that it is the span the finding
+    names.
+
+    Silent by default, because the pair plays side by side and two
+    soundtracks at once is neither. `keep_audio` is for the edits where
+    the soundtrack IS the edit: a revoiced claim is inaudible as a picture.
+    """
+    out = Path(out_path)
+    if out.is_file() and out.stat().st_size:
+        return out
+    out.parent.mkdir(parents=True, exist_ok=True)
+    span = max(0.4, float(end) - float(start))
+    audio = ["-c:a", "aac", "-b:a", "128k"] if keep_audio else ["-an"]
+    _run(["ffmpeg", "-y", "-v", "error",
+          "-ss", f"{max(0.0, float(start)):.2f}", "-i", str(src),
+          "-t", f"{span:.2f}",
+          "-vf", f"scale={int(width)}:-2",
+          "-c:v", "libx264", "-preset", "veryfast", "-crf", "26",
+          *audio,
+          "-pix_fmt", "yuv420p", "-movflags", "+faststart", str(out)],
+         timeout=_encode_timeout(span + 8))
+    return out
+
+
 def thumbnail(src, width: int, out_path) -> Path:
     """A small JPEG of an evidence frame, made once and kept.
 

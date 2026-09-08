@@ -22,6 +22,18 @@
     the render. Every market that objected is named on the card, and so is the
     one the fix on show was made for. Nothing here is a mock-up: these are the
     frames the remediator wrote and the verifier re-observed.</p>
+  {# Picture edits and sound edits are different things to review: one you
+     watch side by side, the other you listen to. So they are two sides of
+     a toggle rather than one list where a revoice looks like a still that
+     did not change. #}
+  <div class="editswap" role="group" aria-label="What kind of edit">
+    <button type="button" class="on" data-edit-kind="video">
+      <svg class="ic"><use href="#n-cut"/></svg>picture
+      <b class="mono">{{ picture }}</b></button>
+    <button type="button" data-edit-kind="audio">
+      <svg class="ic"><use href="#i-transcription"/></svg>sound
+      <b class="mono">{{ sound }}</b></button>
+  </div>
   {% if methods %}
   <p class="editkeys">
     {% for method, count in methods %}
@@ -36,7 +48,7 @@
   {% if rows %}
   <div class="editgrid">
     {% for row in rows %}
-    <article class="editcard">
+    <article class="editcard" data-kind="{{ row.kind }}">
       <header class="edithead">
         <a class="editfilm" href="/runs/{{ row.run.id }}/cutting">{{ row.asset }}</a>
         <span class="editmeta">
@@ -58,26 +70,36 @@
         {% if row.rules | length > 3 %}<span class="label">+{{ row.rules | length - 3 }}</span>{% endif %}
       </div>
 
-      {# Two frames, one row, labelled. An edit whose after-frame was never
-         kept still shows its before: half a pair is evidence too, and
-         saying which half is missing is better than dropping the row. #}
-      <div class="editpair">
+      {# The two spans, side by side, as the seconds they are.
+         Stills proved an edit happened and did not let anyone judge it: a
+         hemline, a hand-off, a bottle being poured are motion. So each
+         side is the span the finding names, cut from a master on the
+         server and cached; the still it used to show is the poster, so the
+         card paints instantly and a span that cannot be cut still says
+         what it was. Silent and looping on the picture side, hovering
+         plays both together; a sound edit gets controls and its
+         soundtrack, because there the soundtrack IS the edit. #}
+      {% set snd = 1 if row.kind == 'audio' else 0 %}
+      <div class="editpair{{ ' editpair-snd' if snd }}" data-pairplay>
         <figure>
-          {% if row.before %}
-          <a href="/runs/{{ row.run.id }}/stills/{{ row.before }}" target="_blank">
-            <img src="/runs/{{ row.run.id }}/stills/{{ row.before }}" alt="the frame before the edit" loading="lazy">
-          </a>
-          {% else %}<span class="editgone label">before not kept</span>{% endif %}
-          <figcaption class="label"><svg class="ic"><use href="#i-blocked"/></svg>before</figcaption>
+          <video class="editclip" preload="none" playsinline
+                 {% if snd %}controls{% else %}muted loop{% endif %}
+                 {% if row.before %}poster="/runs/{{ row.run.id }}/stills/{{ row.before }}"{% endif %}
+                 src="/runs/{{ row.run.id }}/changes/{{ row.change.id }}/span.mp4?side=before&amp;sound={{ snd }}"
+                 aria-label="the span before the edit"></video>
+          <figcaption class="label"><svg class="ic"><use href="#i-blocked"/></svg>before{{ ' &middot; sound' | safe if snd }}</figcaption>
         </figure>
         <figure>
-          {% if row.after %}
-          <a href="/runs/{{ row.run.id }}/stills/{{ row.after }}" target="_blank">
-            <img src="/runs/{{ row.run.id }}/stills/{{ row.after }}" alt="the frame after the edit" loading="lazy">
-          </a>
-          {% else %}<span class="editgone label">after not kept</span>{% endif %}
-          <figcaption class="label"><svg class="ic"><use href="#i-cleared"/></svg>after</figcaption>
+          <video class="editclip" preload="none" playsinline
+                 {% if snd %}controls{% else %}muted loop{% endif %}
+                 {% if row.after %}poster="/runs/{{ row.run.id }}/stills/{{ row.after }}"{% endif %}
+                 src="/runs/{{ row.run.id }}/changes/{{ row.change.id }}/span.mp4?side=after&amp;sound={{ snd }}"
+                 aria-label="the span after the edit"></video>
+          <figcaption class="label"><svg class="ic"><use href="#i-cleared"/></svg>after{{ ' &middot; sound' | safe if snd }}</figcaption>
         </figure>
+        {% if not snd %}
+        <span class="editplay label" aria-hidden="true">hover to play both</span>
+        {% endif %}
       </div>
 
       <p class="editwhy">

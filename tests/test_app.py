@@ -1601,6 +1601,33 @@ def test_my_edits_groups_a_scene_rather_than_a_market(console):
             after_frame=str(changes / "chg_e3_after.png")))
         assert client.get("/edits").text.count('class="editcard"') == 2
 
+    # the pair is the SPAN, played, with the kept still as its poster: two
+    # frames prove an edit happened and do not let anyone judge a hemline
+    body = client.get("/edits").text
+    assert f'/runs/{run.id}/changes/chg_e1/span.mp4?side=before' in body
+    assert f'/runs/{run.id}/changes/chg_e1/span.mp4?side=after' in body
+    assert f'poster="/runs/{run.id}/stills/chg_e1_before.png"' in body
+    assert 'data-kind="video"' in body
+
+    # a revoice is a sound edit: the picture does not change, so it is on
+    # the other side of the toggle, with its soundtrack and its controls
+    store.add_change(ChangeRecord(
+        id="chg_e9", run_id=run.id, finding_id=first.id, method="revoice",
+        description="re-spoke the claim",
+        before_frame=str(changes / "chg_e1_before.png"),
+        after_frame=str(changes / "chg_e1_after.png")))
+    sound = client.get("/edits").text
+    assert 'data-kind="audio"' in sound
+    assert "sound=1" in sound and "controls" in sound
+    assert 'data-edit-kind="audio"' in sound, "and a toggle to reach them"
+
+    # the span route refuses rather than guesses
+    assert client.get(f"/runs/{run.id}/changes/chg_e1/span.mp4").status_code == 404, \
+        "the fixture's master is not on this disk"
+    assert client.get(f"/runs/{run.id}/changes/chg_zz/span.mp4").status_code == 404
+    assert client.get(
+        f"/runs/{run.id}/changes/chg_e1/span.mp4?side=sideways").status_code == 404
+
     # one tab away from anywhere, between the archive and the library
     assert 'href="/edits"' in client.get("/runs").text
     nav = client.get("/library").text

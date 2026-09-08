@@ -1375,6 +1375,64 @@
     });
   })();
 
+/* ---------- /edits: the pair plays together, and picture or sound ----------
+   The two clips are the same seconds of the same shot, so they are worth
+   nothing apart: hovering a card plays both from the top, leaving it stops
+   and rewinds both. Sound edits are left alone -- they carry their own
+   controls, and a revoice that starts talking because a pointer crossed it
+   is a page nobody can read next to.
+
+   The toggle is remembered, because a reviewer working through the sound
+   edits does not want to re-pick it on every visit. */
+(function () {
+  var grid = document.querySelector(".editgrid");
+  if (!grid) { return; }
+  var KEY = "customs-editkind";
+
+  var pick = function (kind) {
+    grid.dataset.kind = kind;
+    var buttons = document.querySelectorAll("[data-edit-kind]");
+    Array.prototype.forEach.call(buttons, function (b) {
+      var on = b.dataset.editKind === kind;
+      b.classList.toggle("on", on);
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    try { window.localStorage.setItem(KEY, kind); } catch (e) { /* private */ }
+  };
+
+  var want = "video";
+  try { want = window.localStorage.getItem(KEY) || "video"; } catch (e) { want = "video"; }
+  pick(want === "audio" ? "audio" : "video");
+
+  document.addEventListener("click", function (event) {
+    var button = event.target.closest ? event.target.closest("[data-edit-kind]") : null;
+    if (!button) { return; }
+    event.preventDefault();
+    pick(button.dataset.editKind === "audio" ? "audio" : "video");
+  });
+
+  Array.prototype.forEach.call(grid.querySelectorAll("[data-pairplay]"),
+    function (pair) {
+      if (pair.classList.contains("editpair-snd")) { return; }
+      var clips = pair.querySelectorAll("video");
+      var card = pair.closest(".editcard") || pair;
+      card.addEventListener("mouseenter", function () {
+        Array.prototype.forEach.call(clips, function (clip) {
+          if (clip.preload !== "auto") { clip.preload = "auto"; clip.load(); }
+          try { clip.currentTime = 0; } catch (e) {}
+          var playing = clip.play();
+          if (playing && playing.catch) { playing.catch(function () {}); }
+        });
+      });
+      card.addEventListener("mouseleave", function () {
+        Array.prototype.forEach.call(clips, function (clip) {
+          clip.pause();
+          try { clip.currentTime = 0; } catch (e) {}
+        });
+      });
+    });
+})();
+
 /* ---------- one framed panel at a time ----------
    Grafana is a single small instance and a page that asks it for four
    panels at once gets 5xx back for some of them: "the server encountered

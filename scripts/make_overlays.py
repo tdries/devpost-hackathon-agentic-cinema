@@ -106,26 +106,38 @@ TAGS = [("modesty dress body", "MODESTY & DRESS", "how much skin a market allows
         ("alcohol tobacco drugs", "ALCOHOL, AGAIN", "and a different rule in every market", 1)]
 
 
-def tag(kicker, line, colour):
-    """A risk tag for the opening: dark card, a brand rule, two lines."""
+def tag(kicker, line, colour, dim=None):
+    """A risk tag for the opening: dark card, a brand rule, the taxonomy mark.
+
+    The icon is the console's own mark for that dimension, so the category a
+    viewer meets in the first fifteen seconds is the one they meet again on
+    every finding, the frame board and the timeline.
+    """
     im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     fk = ImageFont.truetype(MONO, 34)
     fl = ImageFont.truetype(FONT, 27, index=0)
+    icon = None
+    if dim and os.path.exists(f"docs/video/dims/{dim}.png"):
+        icon = Image.open(f"docs/video/dims/{dim}.png").convert("RGBA")
+        icon = icon.resize((74, 74), Image.LANCZOS)
+    lead = 46 + (icon.width + 26 if icon else 0)
     tw = max(d.textlength(kicker, font=fk), d.textlength(line, font=fl))
-    bw, bh = int(tw) + 96, 132
+    bw, bh = int(tw) + lead + 50, 132
     x, y = 110, H - bh - 110
     d.rounded_rectangle([x, y, x + bw, y + bh], radius=16, fill=INK + (232,))
     d.rectangle([x + 16, y + 20, x + 23, y + bh - 20], fill=BRAND[colour] + (255,))
-    d.text((x + 46, y + 26), kicker, font=fk, fill=(255, 255, 255, 248))
-    d.text((x + 46, y + 78), line, font=fl, fill=(182, 195, 202, 235))
+    if icon:
+        im.alpha_composite(icon, (x + 46, y + (bh - icon.height) // 2))
+    d.text((x + lead, y + 26), kicker, font=fk, fill=(255, 255, 255, 248))
+    d.text((x + lead, y + 78), line, font=fl, fill=(182, 195, 202, 235))
     return im
 
 
 if __name__ == "__main__":
   os.makedirs(OUT, exist_ok=True)
   for i, (_dim, kicker, line, colour) in enumerate(TAGS):
-      tag(kicker, line, colour).save(f"{OUT}/tag-01-{i}.png")
+      tag(kicker, line, colour, _dim.replace(" ", "_")).save(f"{OUT}/tag-01-{i}.png")
   made = []
   for n, (title, path) in CHIPS.items():
       im = chip(title, path)

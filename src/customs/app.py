@@ -1256,6 +1256,68 @@ def _render_panel(run, spec) -> bytes:
     return ops.render_png(spec["uid"], spec["panel"], run, duration=duration,
                           width=spec["width"], height=spec["height"])
 
+@app.get("/runs/{run_id}/changes/{change_id}/span.mp4")
+def change_span(run_id: str, change_id: str, side: str = "before",
+                sound: int = 0):
+    """One edit's own seconds, as a clip, from before it or after it.
+
+    /edits compares an edit with two stills, which proves it happened and
+    does not let anyone judge it: a hemline, a hand-off, a bottle being
+    poured are motion. So each side of the pair is the span the finding
+    names, cut from a master and kept beside the change record.
+
+    before  the original master, always
+    after   the model's own generated clip where there is one -- a bridge
+            or an Omni rewrite -- and otherwise the same span cut out of
+            that market's localized master, which is what a patch, a
+            relight or a relettering actually produced.
+
+    `sound=1` keeps the soundtrack. It is off by default because the video
+    pairs play side by side and two soundtracks at once is neither, and on
+    for a revoice, where the soundtrack IS the edit.
+
+    Cut on demand and cached in the run's changes directory, which is
+    mirrored, so the second reader pays nothing and a deploy does not lose
+    it. The whole route 404s rather than guesses: no finding, no span; no
+    master on this disk, no clip.
+    """
+    run = _run_or_404(run_id)
+    if not re.fullmatch(r"chg_[0-9a-f]{6,32}", change_id):
+        raise HTTPException(status_code=404, detail="no such change")
+    if side not in ("before", "after"):
+        raise HTTPException(status_code=404, detail="before or after")
+    db = store()
+    change = next((c for c in db.changes(run.id) if c.id == change_id), None)
+    if change is None:
+        raise HTTPException(status_code=404, detail="no such change")
+    finding = next((f for f in db.findings(run.id)
+                    if f.id == change.finding_id), None)
+    if finding is None or finding.t_end <= finding.t_start:
+        raise HTTPException(status_code=404, detail="that change has no span")
+    changes = run_dir(run) / "changes"
+    if side == "after":
+        # the model's own output, unmodified, wherever it exists
+        for name in (f"{change_id}_bridge.mp4", f"{change_id}_omni.mp4"):
+            if (changes / name).is_file():
+                return FileResponse(changes / name, media_type="video/mp4")
+        source = run_dir(run) / f"localized_{finding.market}.mp4"
+    else:
+        source = Path(run.asset_path)
+    if not source.is_file():
+        raise HTTPException(status_code=404,
+                            detail=f"no {side} master on this disk")
+    cached = changes / (f"{change_id}_{side}_span"
+                        + ("_snd" if sound else "") + ".mp4")
+    try:
+        made = media.span_clip(source, cached, finding.t_start, finding.t_end,
+                               keep_audio=bool(sound))
+    except Exception as exc:  # noqa: BLE001 -- a still poster is the fallback
+        log.warning("span clip failed for %s %s: %s", change_id, side, exc)
+        raise HTTPException(status_code=404, detail="could not cut that span") from exc
+    return FileResponse(made, media_type="video/mp4",
+                        headers={"Cache-Control": "public, max-age=86400"})
+
+
 @app.get("/runs/{run_id}/changes/{change_id}/generated.mp4")
 def generated_clip(run_id: str, change_id: str):
     """The footage a model invented, exactly as it came back.
@@ -3354,6 +3416,13 @@ def mission_page(request: Request, run_id: str):
                  stage_prose=narrate.STAGE_PROSE, made=made,
                  last_id=events[-1]["id"] if events else 0, screen="mission")
 
+# A revoice replaces a spoken line over the same span: the picture is
+# untouched and the edit is inaudible as a still. Every other method in
+# remediate.METHODS changes what is on screen. /edits splits on this, so
+# the audio side can be listened to instead of looked at.
+AUDIO_METHODS = ("revoice",)
+
+
 def edited_scenes(limit: int = 120) -> list[dict]:
     """Every scene this instance has edited, newest first, across all runs.
 
@@ -3380,9 +3449,13 @@ def edited_scenes(limit: int = 120) -> list[dict]:
         grouped: dict[tuple, dict] = {}
         for change in changes:
             finding = by_id.get(change.finding_id)
-            # the span IS the scene's identity: same two seconds, same shot
-            key = ((round(finding.t_start, 1), round(finding.t_end, 1))
-                   if finding else ("chg", change.id))
+            kind = "audio" if change.method in AUDIO_METHODS else "video"
+            # The span IS the scene's identity: same two seconds, same shot.
+            # Except that a revoice and a repaint over the same seconds are
+            # two different edits to review -- one you watch, one you
+            # listen to -- so the kind is part of the identity too.
+            key = ((round(finding.t_start, 1), round(finding.t_end, 1), kind)
+                   if finding else ("chg", change.id, kind))
             before = _still_name(directory, change.before_frame)
             after = _still_name(directory, change.after_frame)
             clip = ((directory / "changes" / f"{change.id}_bridge.mp4").is_file()
@@ -3394,7 +3467,7 @@ def edited_scenes(limit: int = 120) -> list[dict]:
                 "t_end": finding.t_end if finding else 0.0,
                 "markets": [], "rules": [], "changes": [],
                 "before": "", "after": "", "fixed_for": "", "change": None,
-                "clip": False, "method": "",
+                "clip": False, "method": "", "kind": kind,
             })
             if finding and finding.market and finding.market not in scene["markets"]:
                 scene["markets"].append(finding.market)
@@ -3439,6 +3512,8 @@ def my_edits(request: Request):
                  total=len(rows), unkept=len(rows) - len(shown),
                  edits=sum(len(row["changes"]) for row in rows),
                  films=len({row["asset"] for row in rows}),
+                 picture=sum(1 for row in shown if row["kind"] == "video"),
+                 sound=sum(1 for row in shown if row["kind"] == "audio"),
                  methods=sorted(methods.items(), key=lambda kv: -kv[1]))
 
 
