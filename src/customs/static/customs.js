@@ -158,8 +158,10 @@
     var cards = document.querySelectorAll(".cardviz");
     if (!cards.length) { return; }
 
-    var mode = "live";
-    try { mode = window.localStorage.getItem(KEY) || "live"; } catch (e) { mode = "live"; }
+    /* Drawn by default: the console's own chart is drawn to the same grid
+       as the icon column beside it, and Grafana's panel is not. */
+    var mode = "drawn";
+    try { mode = window.localStorage.getItem(KEY) || "drawn"; } catch (e) { mode = "drawn"; }
 
     var pending = [];
     var booting = false;

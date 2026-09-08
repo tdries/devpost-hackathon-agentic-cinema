@@ -60,6 +60,12 @@
          markets wanting the same two seconds changed is one scene, and only
          one of them paid for the render. #}
       <div class="editwho">
+        {# What was flagged, in the taxonomy's own marks. The rule id says
+           which statute; the mark says what kind of trouble it was, which
+           is what a reader recognises across thirty films at a glance. #}
+        {% for dim in row.dims %}
+        <svg class="ic editdim" title="{{ dim.replace('_', ' ') }}"><use href="#d-{{ dim }}"/></svg>
+        {% endfor %}
         <span class="label">objected</span>
         {% for market in row.markets %}
         <a class="pill s-blocked" href="/runs/{{ row.run.id }}/markets/{{ market }}"

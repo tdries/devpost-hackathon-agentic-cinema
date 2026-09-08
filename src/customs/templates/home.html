@@ -79,13 +79,16 @@
         <span class="picked" id="picked">or drop the master here</span>
       </label>
       {# The app would take 200 MB, but Cloud Run's front end rejects any
-         request body over 32 MiB before a byte reaches us -- so the form
-         promises what actually works and points bigger masters at the
-         YouTube path, which the server fetches itself. #}
-      <p class="limits">MP4 or MOV &middot; up to 120 seconds &middot; up to 30 MB. Bigger master? Paste a YouTube link instead</p>
-      <div class="rule-row" style="margin:20px 0 12px"><span class="label">Or a YouTube link</span></div>
-      <input class="urlin" type="url" name="youtube_url" placeholder="https://youtu.be/&hellip;" autocomplete="off" spellcheck="false">
-      <p class="limits">Public YouTube video &middot; up to 120 seconds &middot; fetched at up to 720p, the way in for masters over 30 MB</p>
+         request body over 32 MiB before a byte reaches us, so the form
+         promises what actually works.
+
+         The YouTube field is gone, on the owner's instruction: it worked
+         from a laptop and does not work from here -- YouTube refuses the
+         fetch from a data-centre address often enough that offering it
+         mostly produced a run that failed at ingest, which is a worse
+         first experience than not offering it. The server-side path is
+         still in fetch.py for anyone running this locally. #}
+      <p class="limits">MP4 or MOV &middot; up to 120 seconds &middot; up to 30 MB</p>
       <p class="subline" style="font-size:13.5px">A run takes about four minutes for a 30-second spot, and longer films take proportionally longer, because the analyst reads every shot: shot detection, a transcription and an observation pass per shot, then every market judged in parallel with a grounded citation for each finding.</p>
     </div>
     <div>

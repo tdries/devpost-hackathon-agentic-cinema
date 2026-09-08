@@ -2259,6 +2259,7 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
   border: 1px dashed var(--line-2); border-radius: 4px; color: var(--ink-3); }
 .editwho { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .editwho .label { margin-right: 2px; }
+.editdim { width: 19px; height: 19px; }
 .editwho .pill { text-decoration: none; }
 .editwhy { margin: 0; font-size: 13px; line-height: 1.5; color: var(--ink-2); }
 .editwhy .chip { margin-right: 8px; }
@@ -3030,8 +3031,12 @@ a.mx2-hot:hover { border-width: 2px; transform: scale(1.08); }
   border-radius: 3px; background: var(--well); display: block; }
 
 /* the card's live lanes: squares, no axes, small enough for a card */
+/* No height here: the rule further down crops this frame by the height of
+   a Grafana panel header (the title bar d-solo insists on drawing), and a
+   plain height on the same selector is what put the title back on the card
+   and pushed every row out of line with its icon. */
 .cardlanes.live { width: 100%; border: 0; display: block;
-  background: transparent; height: var(--panel-h, 252px); }
+  background: transparent; }
 .runlist.as-rows .cardlanes.live { display: none; }
 
 /* the card's still is a video now; it keeps the shape the image had */

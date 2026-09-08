@@ -2115,7 +2115,7 @@ async def create_run(request: Request,
             status_code=400)
     if not url and not has_file and held is None:
         return PlainTextResponse(
-            "Provide a master: upload a file or paste a YouTube link.",
+            "Provide a master: an MP4 or a MOV, up to 30 MB.",
             status_code=400)
 
     # One directory per upload, keeping the file's own name inside it. The
@@ -3515,7 +3515,7 @@ def edited_scenes(limit: int = 120) -> list[dict]:
                 "asset": Path(run.asset_path).stem or run.asset_path,
                 "t_start": finding.t_start if finding else 0.0,
                 "t_end": finding.t_end if finding else 0.0,
-                "markets": [], "rules": [], "changes": [],
+                "markets": [], "rules": [], "dims": [], "changes": [],
                 "before": "", "after": "", "fixed_for": "", "change": None,
                 "clip": False, "method": "", "kind": kind,
                 "can_before": False, "can_after": False,
@@ -3524,6 +3524,14 @@ def edited_scenes(limit: int = 120) -> list[dict]:
                 scene["markets"].append(finding.market)
             if finding and finding.rule_id and finding.rule_id not in scene["rules"]:
                 scene["rules"].append(finding.rule_id)
+            # What was flagged here, as the taxonomy's own marks: a rule id
+            # says which statute, and the mark says what KIND of trouble --
+            # a bottle, a hemline, a gesture -- which is the thing a reader
+            # recognises across films without reading anything.
+            dim = (telemetry._dimension_for(finding.market, finding.rule_id)
+                   if finding else "")
+            if dim and dim != "none" and dim not in scene["dims"]:
+                scene["dims"].append(dim)
             scene["changes"].append(change)
             scene["before"] = scene["before"] or before
             # Whether each side can actually be PLAYED, decided here rather

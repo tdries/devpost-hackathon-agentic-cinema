@@ -1100,14 +1100,14 @@ def test_a_pending_upload_is_a_shape_not_a_path(console):
                                            "markets": ["FR"]},
                             follow_redirects=False)
         assert reply.status_code == 400, forged
-        assert "upload a file or paste a YouTube link" in reply.text, forged
+        assert "Provide a master" in reply.text, forged
 
 
 def test_neither_file_nor_link_is_a_400(console):
     test_client, *_ = console
     reply = test_client.post("/runs", data={"markets": ["FR"]})
     assert reply.status_code == 400
-    assert "upload a file or paste a YouTube link" in reply.text
+    assert "Provide a master" in reply.text
 
 
 def test_both_file_and_link_is_a_400(console):
