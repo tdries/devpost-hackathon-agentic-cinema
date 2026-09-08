@@ -2177,12 +2177,16 @@ def test_both_doors_open_and_remember_which_one_you_chose(console):
     assert 'href="/enter/visitor"' in body
     assert "No password: reading is open" in body
 
-    # and the judge door is still there for a judge who wants to spend,
-    # signposted from the door the spending routes actually send them to
-    stopped = client.get("/enter/visitor?next=/new").text
-    assert 'href="/enter/judge?next=/new"' in stopped
-    for door in ("judge", "visitor"):
-        assert "Reading needs no password" in client.get(f"/enter/{door}").text
+    # The visitor door asks for nothing at all now, on the owner's
+    # instruction: it hands out its cookie and lands you where you were
+    # going. What bounds a stranger is the ceiling behind it, which is what
+    # the word was ever for.
+    opened = client.get("/enter/visitor?next=/new", follow_redirects=False)
+    assert opened.status_code == 303
+    assert opened.headers["location"] == "/new"
+    assert opened.cookies["customs-role"] == "visitor"
+    # the judge door still asks, because passing it lifts that ceiling
+    assert "Reading needs no password" in client.get("/enter/judge").text
 
     judge = _enter(client, "judge")
     assert judge.status_code == 303
@@ -3247,14 +3251,13 @@ def test_a_click_on_a_grafana_panel_meets_the_door_and_then_lands(console):
     door = stopped.headers["location"]
     assert door.startswith("/enter/visitor?next=")
 
-    page = client.get(door)
-    # escaped in the attribute, which is what a browser posts back verbatim
-    assert f'value="{html.escape(click)}"' in page.text
+    # the door grants and hands the click straight back, unchanged
+    opened = client.get(door, follow_redirects=False)
+    assert opened.status_code == 303
+    assert opened.headers["location"] == click
+    assert opened.cookies["customs-role"] == "visitor"
+    assert jobs == [], "the door itself launches nothing"
 
-    said = client.post("/enter/visitor",
-                       data={"password": settings.visitor_password, "next": click},
-                       follow_redirects=False)
-    assert said.headers["location"] == click
     client.get(click, follow_redirects=False)
     assert jobs == [(run.id, fid, "FR")], "and now the click does what it said"
 
@@ -3269,25 +3272,22 @@ def test_the_door_returns_you_to_what_you_were_doing(console):
     client, *_ = console
     client.cookies.clear()
 
-    page = client.get("/enter/visitor?next=/runs/run_x/markets/FR")
-    assert '<input type="hidden" name="next" value="/runs/run_x/markets/FR">' in page.text
+    kept = client.get("/enter/visitor?next=/runs/run_x/markets/FR",
+                      follow_redirects=False)
+    assert kept.status_code == 303
+    assert kept.headers["location"] == "/runs/run_x/markets/FR"
 
-    # a wrong word keeps the destination rather than dropping it
-    wrong = client.post("/enter/visitor",
-                        data={"password": "letmein", "next": "/agent"},
-                        follow_redirects=False)
-    assert wrong.headers["location"] == "/enter/visitor?wrong=1&next=/agent"
-
-    right = client.post("/enter/visitor",
-                        data={"password": settings.visitor_password,
-                              "next": "/agent"}, follow_redirects=False)
+    right = client.get("/enter/visitor?next=/agent", follow_redirects=False)
     assert right.headers["location"] == "/agent"
 
+    # and nowhere else: a door that forwards to any URL it is handed is an
+    # open redirect wearing a convenience's clothes, password or no password
     for away in ("//evil.example/x", "https://evil.example/x", "javascript:1"):
-        off = client.post("/enter/visitor",
-                          data={"password": settings.visitor_password,
-                                "next": away}, follow_redirects=False)
+        off = client.get(f"/enter/visitor?next={away}", follow_redirects=False)
         assert off.headers["location"] == "/new", away
+        off2 = client.post("/enter/visitor", data={"next": away},
+                           follow_redirects=False)
+        assert off2.headers["location"] == "/new", away
 
 
 def test_a_visitor_has_their_own_daily_ceiling(console):

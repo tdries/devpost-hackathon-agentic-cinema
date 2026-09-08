@@ -1891,51 +1891,75 @@ def tour_walk():
 @app.get("/enter/{role}", response_class=HTMLResponse)
 def enter_form(request: Request, role: str, wrong: int = 0,
                next_: str = Query("", alias="next")):
-    """The door, which asks for its word first.
+    """The door.
 
-    Not authentication: one shared password per door, carried in a cookie,
-    and anyone who has the word is that role. What it is for is narrower --
-    the generation budget is real money, and a submission link travels
-    further than the people it was sent to.
+    Not authentication: one shared password, carried in a cookie, and
+    anyone who has the word is a judge. The visitor door asks for nothing
+    at all -- it hands out its cookie and redirects -- because what
+    actually bounds a stranger is the ceiling behind it, and a form asking
+    for a word that everyone is given anyway is a speed bump with no
+    speed behind it.
     """
     if role not in ROLES:
         raise HTTPException(status_code=404, detail=f"unknown door: {role}")
+    # The visitor door has no word any more, on the owner's instruction:
+    # it grants the cookie and gets out of the way. What actually bounds a
+    # stranger is the ceiling behind it -- VISITOR_DAILY_EUR a day of
+    # generation, which is the thing the word was ever really for. The
+    # judge door keeps its word, because passing it lifts that ceiling.
+    if role == "visitor":
+        target = _safe_next(next_) or "/new"
+        response = RedirectResponse(target, status_code=303)
+        response.set_cookie("customs-role", role, max_age=60 * 60 * 24 * 30,
+                            samesite="lax", httponly=False)
+        return response
     # What the word is actually for, on both doors. The judge blurb used to
     # promise "the archive, the findings and every run this instance has
     # performed", which is a fair description of what is behind the door and
     # a misleading one about the door: all of that is open to anyone with
     # the link. The only thing either word governs is spending.
+    if role == "visitor":
+        target = _safe_next(next_) or "/new"
+        response = RedirectResponse(target, status_code=303)
+        response.set_cookie("customs-role", role, max_age=60 * 60 * 24 * 30,
+                            samesite="lax", httponly=False)
+        return response
     return _page(request, "enter.html", role=role, wrong=bool(wrong),
                  screen="landing", next=_safe_next(next_),
-                 blurb=("Reading needs no password, and this door is not how "
-                        "you get to it: the archive, every finding, every "
-                        "statute and every chart are open. The word here "
-                        "lifts the visitor's "
-                        f"{VISITOR_DAILY_EUR:.2f} EUR a day generation cap, "
-                        "so a judge can watch the fix loop run on the card."
-                        if role == "judge" else
-                        "Reading needs no password. Starting a clearance "
-                        "does, because it calls models on a real card: "
-                        f"generation is capped at {VISITOR_DAILY_EUR:.2f} "
-                        "EUR a day per visitor."))
+                 blurb=("Reading needs no password, and this door is not "
+                        "how you get to it: the archive, every finding, "
+                        "every statute and every chart are open, and so is "
+                        "starting a clearance. The word here lifts the "
+                        f"{VISITOR_DAILY_EUR:.2f} EUR a day generation cap "
+                        "everyone else runs on, so a judge can watch the "
+                        "fix loop run on the card."))
 
 
 @app.post("/enter/{role}")
 def enter(role: str, password: str = Form(""),
           next_: str = Form("", alias="next")):
-    """Check the word and remember the door.
+    """Remember the door, and for a judge check the word first.
 
     A judge lands on the archive, because the work is already done and the
-    interesting thing is reading it. A visitor lands on the form, because
-    the interesting thing is watching it happen to their own ad. Unless
-    they were on their way somewhere specific when the door stopped them,
-    in which case they land there instead and finish what they started.
+    interesting thing is reading it. A visitor lands on the upload form,
+    because the interesting thing is watching it happen to their own ad.
+    Unless they were on their way somewhere specific when the door stopped
+    them, in which case they land there instead and finish what they
+    started.
     """
     if role not in ROLES:
         raise HTTPException(status_code=404, detail=f"unknown door: {role}")
-    want = (settings.judge_password if role == "judge"
-            else settings.visitor_password)
     back = _safe_next(next_)
+    # The visitor door takes no word, on the owner's instruction, so a form
+    # that still posts one is answered the same way the GET is: granted,
+    # and sent where it was going. The ceiling behind it -- a visitor's
+    # daily generation cap -- is what bounds a stranger now.
+    if role == "visitor":
+        response = RedirectResponse(back or "/new", status_code=303)
+        response.set_cookie("customs-role", role, max_age=60 * 60 * 24 * 30,
+                            samesite="lax", httponly=False)
+        return response
+    want = settings.judge_password
     if password.strip() != want:
         again = f"/enter/{role}?wrong=1"
         if back:
@@ -2442,8 +2466,8 @@ async def agent_ask(request: Request, message: str = Form(...),
     if _needs_word(request, "/agent") is not None:
         return JSONResponse(status_code=403, content={
             "reply": "", "reply_html": "", "error":
-            "Come in through a door first -- the agent costs money per turn. "
-            "Open /enter/visitor and say the word.",
+            "Come in through a door first: the agent costs money per turn. "
+            "Open /enter/visitor, which asks for nothing, and try again.",
             "view": "", "view_label": "", "view_external": False, "calls": []})
     text = (message or "").strip()
     if not text:

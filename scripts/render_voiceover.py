@@ -23,7 +23,7 @@ beats = [l.split("|")[5].strip() for l in rows]
 say = {"Loi Evin": "Loo-ah Evan", "Legifrance": "Lejee-france", "The Media Customs": "The Media Customs",
        "MCP": "M C P", "Veo": "Vay-oh", "Mimir": "Mee-meer"}
 kk = Kokoro(model, voices)
-gap = np.zeros(int(0.2 * 24000), dtype=np.float32)
+gap = np.zeros(int(0.15 * 24000), dtype=np.float32)
 full, total = [], 0.0
 # A beat whose line is split on " ~~ " is spoken in parts, and the part
 # lengths are written out so the recorder can light the diagram in time
@@ -57,4 +57,4 @@ if marks:
     import json
     json.dump(marks, open("docs/voiceover/marks.json", "w"), indent=1)
     print("part offsets written for beats", ", ".join(sorted(marks)))
-print(f"total speech {total:.1f}s, with gaps {total + 0.2 * (len(beats) - 1):.1f}s")
+print(f"total speech {total:.1f}s, with gaps {total + 0.15 * (len(beats) - 1):.1f}s")

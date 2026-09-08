@@ -10,11 +10,16 @@ import glob, math, os, subprocess, sys
 
 OUT = "docs/video"
 NAME = sys.argv[1] if len(sys.argv) > 1 else "demo"
-GAP = 0.2
+GAP = 0.15
 NBEATS = 15
+# A bed under the narration. Set MUSIC_PATH to change it, MUSIC_PATH="" for none.
+MASTER = float(os.environ.get("MASTER_GAIN", "1.05"))   # a nudge on the whole mix
+MUSIC = os.environ.get(
+    "MUSIC_PATH",
+    os.path.expanduser("~/Downloads/mp3/lofi-girl-lofi-ambient-music-365952.mp3"))
 PULSE = 14         # frames in one breath of a callout, played at PULSE_FPS
 PULSE_FPS = 14
-SKIP = {3: 4.0, 4: 5.0, 7: 5.0, 9: 1.5, 11: 5.0, 14: 30.0}   # heads the beats needed, the film does not
+SKIP = {3: 4.0, 4: 7.0, 7: 8.0, 9: 3.0, 11: 6.0, 14: 30.0}   # heads the beats needed, the film does not
 
 CHIP_IN = 0.5      # the chip comes in, then stays for the scene
 
@@ -87,6 +92,14 @@ def layers(n, length):
     return out
 
 
+# The title card is baked into beat 1, so a redrawn card has to be baked in
+# again. Shipping a stale opening while the closing is current is exactly the
+# mistake this catches.
+ad = f"{OUT}/beats/01/ad.mp4"
+if os.path.exists(ad) and os.path.getmtime(f"{OUT}/title.png") > os.path.getmtime(ad):
+    print("title card is newer than the opening: rebuilding beat 1")
+    subprocess.run([sys.executable, "scripts/make_opening.py"], check=True)
+
 os.makedirs(f"{OUT}/cut", exist_ok=True)
 parts = []
 for n in range(1, NBEATS + 1):
@@ -135,7 +148,31 @@ with open(f"{OUT}/cut/list.txt", "w") as f:
         f.write(f"file '{os.path.basename(p)}'\n")
 subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0",
                 "-i", f"{OUT}/cut/list.txt", "-c", "copy", f"{OUT}/silent.mp4"], check=True)
-subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", f"{OUT}/silent.mp4",
-                "-i", "docs/voiceover/demo-voiceover.wav", "-c:v", "copy",
-                "-c:a", "aac", "-b:a", "192k", "-shortest", f"{OUT}/{NAME}.mp4"], check=True)
+vlen = dur(f"{OUT}/silent.mp4")
+if MUSIC and os.path.exists(MUSIC):
+    # The voice is normalised to -16 LUFS and the bed to -30, then the bed is
+    # ducked by the voice itself, so the music breathes in the gaps and gets
+    # out of the way under every line. Looped, because the track is shorter
+    # than the film.
+    mix = ("[1:a]aformat=fltp:48000:stereo,"
+           "loudnorm=I=-16:TP=-1.5:LRA=11,asplit=2[voice][key];"
+           "[2:a]aformat=fltp:48000:stereo,loudnorm=I=-30:TP=-8:LRA=14,"
+           f"afade=t=in:st=0:d=2.5,afade=t=out:st={max(0, vlen - 5.5):.2f}:d=5.5[bed];"
+           "[bed][key]sidechaincompress=threshold=0.02:ratio=7:attack=20:"
+           "release=420:makeup=1[duck];"
+           "[voice][duck]amix=inputs=2:duration=first:normalize=0,"
+           f"volume={MASTER:.3f},alimiter=limit=0.95[a]")
+    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", f"{OUT}/silent.mp4",
+                    "-i", "docs/voiceover/demo-voiceover.wav",
+                    "-stream_loop", "-1", "-i", MUSIC,
+                    "-filter_complex", mix,
+                    "-map", "0:v", "-map", "[a]", "-c:v", "copy",
+                    "-c:a", "aac", "-b:a", "192k", "-shortest",
+                    f"{OUT}/{NAME}.mp4"], check=True)
+    print("music bed:", os.path.basename(MUSIC))
+else:
+    subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", f"{OUT}/silent.mp4",
+                    "-i", "docs/voiceover/demo-voiceover.wav", "-c:v", "copy",
+                    "-filter:a", f"volume={MASTER:.3f},alimiter=limit=0.95",
+                    "-c:a", "aac", "-b:a", "192k", "-shortest", f"{OUT}/{NAME}.mp4"], check=True)
 print(f"{NAME}.mp4  video {dur(f'{OUT}/silent.mp4'):.1f}s  audio {dur('docs/voiceover/demo-voiceover.wav'):.1f}s")

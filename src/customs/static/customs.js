@@ -1375,6 +1375,19 @@
     });
   })();
 
+/* The tab rows scroll sideways on a phone, so the tab you are ON has to be
+   brought into view: otherwise a run screen opens showing LAUNCH BOARD
+   while you are in the cutting room, and the row looks like it is lying. */
+(function () {
+  var rows = document.querySelectorAll(".runnav .wrap");
+  Array.prototype.forEach.call(rows, function (row) {
+    var on = row.querySelector(".tab.on");
+    if (!on || row.scrollWidth <= row.clientWidth) { return; }
+    var want = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2;
+    row.scrollLeft = Math.max(0, want);
+  });
+})();
+
 /* ==========================================================================
    THE FLOW PICTURE, PLAYED
    The front page's diagram walks itself through its eight moves: this sets

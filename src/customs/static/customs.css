@@ -172,6 +172,26 @@ html[data-theme="studio"] .lc-current { color: #8a6d00; }
   min-height: 46px;
   flex-wrap: wrap;
 }
+/* On a phone the tab rows stop wrapping and scroll.
+   Seven console tabs and six run tabs wrapped into thirteen stacked rows,
+   which is two screens of navigation above the thing being navigated to.
+   One line each, swipeable, with the ends faded so it is obvious there is
+   more -- and no visible scrollbar, because these are chrome. */
+@media (max-width: 760px) {
+  .runnav .wrap {
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+    -ms-overflow-style: none;
+    mask-image: linear-gradient(90deg, transparent 0, #000 14px,
+      #000 calc(100% - 22px), transparent);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px,
+      #000 calc(100% - 22px), transparent);
+  }
+  .runnav .wrap::-webkit-scrollbar { display: none; }
+  .runnav .wrap > * { flex: 0 0 auto; }
+  .runnav .wrap.crumb { flex-wrap: wrap; overflow: visible; mask-image: none;
+    -webkit-mask-image: none; }
+  .runnav .wrap.lifecycle { mask-image: none; -webkit-mask-image: none; }
+}
 .tab {
   font-family: var(--mono);
   font-size: 10.5px;
@@ -1531,6 +1551,16 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
   .fix-cost { margin-left: 0; text-align: left; }
   .btn, .sugg, .market-pick { min-height: 44px; }
 
+  /* The two matrices: on a phone the axis is the icon, not the words.
+     A 150px column of dimension names left 340px for eight scenes of
+     squares, which is a chart you cannot read to save a label you can
+     read from its mark. The names stay in the title attribute. */
+  .mg { grid-template-columns: 30px 1fr; column-gap: 6px; }
+  .mg-dim span, .mx2-dim span { display: none; }
+  .mg-dim, .mx2-dim { justify-content: center; padding-right: 0; }
+  .mx2 { grid-template-columns: 30px repeat(var(--cols), minmax(0, 1fr)); }
+  .mg-corner, .mx2-corner { font-size: 8px; overflow: hidden; }
+
   /* timeline lanes stay readable */
   .tl-row { grid-template-columns: 52px 1fr; gap: 8px; }
   .segcard { width: min(84vw, 320px); }
@@ -1714,31 +1744,22 @@ html[data-theme="studio"] .fp-tag { color: #8a6d00; }
 @media (prefers-reduced-motion: reduce) { .progress-tick.flash { animation: none; } }
 
 /* ---------- the main tabs on a phone ----------
-   Last in the file on purpose: an earlier max-width:720px block re-sets
-   .screens padding and min-height, and at equal specificity the later rule
-   is the one that applies. Sideways-scrolling nav hid the last tabs off the
-   edge of the screen, where nobody found them, so on a phone the screen
-   tabs stack: one per row, full width, nothing to scroll. The market rows
-   keep scrolling -- there can be dozens of codes, and stacking those would
-   be a screen of navigation before any content. */
+   They stacked here for a while: one per row, full width, nothing to
+   scroll, because a sideways-scrolling nav hid the last tabs off the edge
+   of the screen where nobody found them. Seven console tabs and six run
+   tabs made that thirteen rows -- two screens of navigation above the
+   thing being navigated to, which is the worse failure.
+
+   So they scroll again, and the two things that made scrolling bad are
+   fixed instead: the row fades at both ends so it is visibly cut off, and
+   customs.js scrolls the tab you are ON into the middle, so the row can
+   never claim you are somewhere you are not. */
 @media (max-width: 720px) {
   .runnav .wrap.screens {
-    flex-direction: column; align-items: stretch;
-    overflow-x: visible; gap: 0; min-height: 0;
-    padding-top: 4px; padding-bottom: 4px;
+    gap: 0; min-height: 0; padding-top: 2px; padding-bottom: 2px;
   }
-  .runnav .wrap.screens .tab {
-    width: 100%; justify-content: flex-start;
-    padding: 14px 4px; border-bottom: 1px solid var(--line);
-  }
-  .runnav .wrap.screens .tab:last-child { border-bottom: none; }
-  /* marked down the side, not underneath: "underneath" is now the next tab */
-  .runnav .wrap.screens .tab.on {
-    border-bottom-color: var(--line);
-    box-shadow: inset 3px 0 0 var(--signal);
-    padding-left: 12px;
-  }
-  .runnav .wrap.screens .tab.on:last-child { border-bottom: none; }
+  .runnav .wrap.screens .tab { padding: 13px 10px; font-size: 12px; }
+  .runnav .wrap.screens .tab .ic { width: 18px; height: 18px; }
 }
 
 /* The mission feed's two tabs: what is happening, and what came out of it.
@@ -3036,7 +3057,11 @@ video.runthumb { object-fit: cover; background: var(--well); }
 /* the same chart once it is real markup rather than a picture, so its dots
    can be hovered: same box, and the dot under the pointer grows */
 span.cardlanes.drawn { overflow: hidden; }
-span.cardlanes.drawn svg { width: 100%; height: 100%; display: block; }
+/* .lanes carries a 720px floor for the full-page chart. Inlined into a
+   card that floor made the card 720 wide, which on a phone made the whole
+   archive wider than the screen and scrolled the page sideways. */
+span.cardlanes.drawn svg { width: 100%; height: 100%; min-width: 0;
+  display: block; }
 .lane-dot { transition: r .12s ease; }
 span.cardlanes.drawn .lane-dot:hover { r: 7px; cursor: pointer; }
 /* Which chart is in the box, and what stands in while the live one is

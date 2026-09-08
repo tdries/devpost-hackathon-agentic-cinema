@@ -102,7 +102,7 @@ def callout(x, y, w, h, label, glow=1.0):
 TAGS = [("modesty dress body", "MODESTY & DRESS", "how much skin a market allows", 2),
         ("alcohol tobacco drugs", "ALCOHOL", "FR: Loi Evin bans it on television", 1),
         ("gesture body language", "GESTURE", "an insult across the Gulf and West Africa", 0),
-        ("text legibility", "ON-SCREEN TEXT", "FR: the Toubon law wants French", 3),
+        ("comparative claims", "COMPARATIVE CLAIM", "FR: it has to be substantiated", 3),
         ("alcohol tobacco drugs", "ALCOHOL, AGAIN", "and a different rule in every market", 1)]
 
 
