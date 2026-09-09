@@ -53,20 +53,6 @@ GRID_READY = """async () => {
   await Promise.race([new Promise(r => f.addEventListener('load', r, {once: true})),
                       new Promise(r => setTimeout(r, 15000))]);
 }"""
-# The first pair, both players seeked 3.5s into the film. The page opens a
-# pair half a second before its first change, where an edited master and
-# its original are identical by definition -- and a change that starts at
-# 0:00 gets no fragment at all, which on a film that opens on black is two
-# black players. 3.5s is inside the bacon-to-mushroom rewrite this job is
-# pinned to.
-CUTTING_READY = """async () => {
-  for (const v of document.querySelector('.pair').querySelectorAll('video')) {
-    v.preload = 'auto';
-    await new Promise(r => v.readyState >= 1 ? r() : v.addEventListener('loadedmetadata', r, {once: true}));
-    v.currentTime = 3.5;
-    await new Promise(r => v.addEventListener('seeked', r, {once: true}));
-  }
-}"""
 # The generated clips, seeked a second in: an Omni render's first frame is
 # a fade from white, which photographs as a blank card.
 GENERATED_READY = """async () => {
@@ -194,11 +180,9 @@ def main() -> int:
                         OUT / "07b-market-open.png", (SHOT_W, 900), 1900, 8000,
                         {"open_details": True, "open_scenes": True,
                          "crop_to": 820}),
-        # Not the showcase run: the one pair in this instance where the
-        # picture itself is rewritten from the first second -- bacon strips
-        # frying, re-rendered by Omni as mushrooms for the Saudi channels.
-        "cutting": ("/runs/run_09ee2a1e55a3/cutting", OUT / "08-cutting-room.png",
-                    (SHOT_W, 900), 950, 0, {"ready": CUTTING_READY, "crop_to": 0}),
+        # No "cutting" job: 08-cutting-room.png is a hand-taken shot of the
+        # AE pair, champagne flutes becoming mugs, chosen by eye. A reshoot
+        # here would overwrite it with whatever the page opens on.
         "agent": ("/agent", OUT / "09-agent-mode.png", (SHOT_W, 900), 950,
                   6000, {}),
         # The agent asked for Grafana, twice: the canned findings-by-label
