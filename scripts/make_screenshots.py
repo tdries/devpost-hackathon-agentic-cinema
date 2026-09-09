@@ -43,6 +43,62 @@ def resize(src: Path, size, dest: Path) -> Path:
     return dest
 
 
+# JS that runs on the live page before the shutter, per job. A headless
+# Chrome CLI cannot run any: that is how the grid shipped with a white
+# body (the Grafana iframe never booted) and the cutting room with two
+# black players (a <video> at t=0 of a film that opens on black).
+GRID_READY = """async () => {
+  const f = document.querySelector('iframe.mg-live');
+  if (f.dataset.src !== undefined) { f.src = f.dataset.src; delete f.dataset.src; }
+  await Promise.race([new Promise(r => f.addEventListener('load', r, {once: true})),
+                      new Promise(r => setTimeout(r, 15000))]);
+}"""
+# The AE pair, seeked 2.5s INTO its edit: the page opens every pair half a
+# second before its first change, where an edited master and its original
+# are identical by definition, and GLOBAL's fix is a revoice with the
+# picture untouched. AE is a prop swap, which is a difference a still can show.
+CUTTING_READY = """async () => {
+  const pair = document.querySelector('.pair[data-pair="AE"]');
+  pair.closest('section').scrollIntoView({block: 'start'});
+  window.scrollBy(0, -(document.querySelector('header').getBoundingClientRect().height + 8));
+  for (const v of pair.querySelectorAll('video')) {
+    v.preload = 'auto';
+    const want = (parseFloat(v.src.split('#t=')[1] || '0') || 0) + 2.5;
+    await new Promise(r => v.readyState >= 1 ? r() : v.addEventListener('loadedmetadata', r, {once: true}));
+    v.currentTime = want;
+    await new Promise(r => v.addEventListener('seeked', r, {once: true}));
+  }
+}"""
+
+
+def browse(url: str, cookie: str, dest: Path, height: int, ready: str) -> Path:
+    """The live page in a real browser, with `ready` awaited before the shot.
+
+    Playwright rather than the Chrome CLI, because two of these pages need
+    something a screenshot cannot do: wait for an iframe to boot, and
+    seek a <video>.
+    """
+    from playwright.sync_api import sync_playwright
+
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        ctx = browser.new_context(viewport={"width": WIDTH, "height": height})
+        name, _, value = cookie.partition("=")
+        ctx.add_cookies([{"name": name, "value": value, "url": url}])
+        page = ctx.new_page()
+        page.goto(url, wait_until="domcontentloaded", timeout=120_000)
+        page.evaluate(ready)
+        # The viewer is another origin, so page JS cannot see whether a
+        # framed panel has drawn; Playwright can.
+        for frame in page.frames:
+            if "/d-solo/" in frame.url:
+                frame.wait_for_selector("canvas, svg.uplot", timeout=90_000)
+        page.wait_for_timeout(2000)
+        page.screenshot(path=str(dest))
+        browser.close()
+    return dest
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default="https://customs-app-akap4ao72a-ew.a.run.app")
@@ -89,7 +145,7 @@ def main() -> int:
         "archive": ("/runs", OUT / "02-archive.png", (SHOT_W, 900), 1500,
                     120000, {"live": True, "crop_to": 560}),
         "grid": (f"/runs/{run}/timeline", OUT / "04-timeline-grid.png",
-                 (SHOT_W, 900), 1500, 150000, {"live": True, "crop_to": 520}),
+                 (SHOT_W, 900), 1500, 0, {"ready": GRID_READY, "crop_to": 455}),
         # The board's Grafana half: the lanes panel, live, below the fold.
         "board_grafana": (f"/runs/{run}", OUT / "03b-board-grafana.png",
                           (SHOT_W, 760), 2100, 150000,
@@ -107,7 +163,7 @@ def main() -> int:
                         {"open_details": True, "open_scenes": True,
                          "crop_to": 820}),
         "cutting": (f"/runs/{run}/cutting", OUT / "08-cutting-room.png",
-                    (SHOT_W, 900), 950, 6000, {}),
+                    (SHOT_W, 900), 950, 0, {"ready": CUTTING_READY, "crop_to": 0}),
         "agent": ("/agent", OUT / "09-agent-mode.png", (SHOT_W, 900), 950,
                   6000, {}),
         "library": ("/library", OUT / "10-library.png", (SHOT_W, 900), 950,
@@ -139,9 +195,18 @@ def main() -> int:
             continue
         live = kw.pop("live", False)
         top = kw.pop("crop_to", 0)
-        raw = shot("" if live else page(path, **kw), tmp / f"{name}.png",
-                   tmp, height, budget,
-                   url=base.rstrip("/") + path if live else "")
+        ready = kw.pop("ready", "")
+        if ready:
+            raw = browse(base.rstrip("/") + path, args.cookie,
+                         tmp / f"{name}.png", height, ready)
+            # Cut to the README's own aspect instead of squashing to it.
+            raw = window(raw, top, tmp / f"{name}-cropped.png",
+                         height=round(WIDTH * size[1] / size[0]))
+            top = 0
+        else:
+            raw = shot("" if live else page(path, **kw), tmp / f"{name}.png",
+                       tmp, height, budget,
+                       url=base.rstrip("/") + path if live else "")
         if top:
             # A scroll, taken as a crop. Shooting the page short instead
             # would just cut the bottom off the thing being photographed.
