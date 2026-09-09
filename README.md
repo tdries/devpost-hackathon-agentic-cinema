@@ -430,6 +430,12 @@ A second ADK surface: one `LlmAgent` with eleven tools. Ask in sentences; it ans
 
 <img src="docs/media/09-agent-mode.png" alt="Agent mode" width="100%">
 
+Ask it for Grafana and it builds Grafana. `build_dashboard` composes a dashboard from the run's own labels; `chart` takes any of fourteen panel types with the LogQL or PromQL behind each. Either way the result is a real dashboard on the stack, opened beside the answer as Grafana's own render, with the link to the live one under it.
+
+<img src="docs/media/09b-agent-dashboard.png" alt="The agent builds a findings dashboard" width="100%">
+
+<img src="docs/media/09c-agent-chart.png" alt="The agent composes a three-panel chart across every run" width="100%">
+
 ### <img src="docs/media/icons/n-library.svg" width="22"> Rule library
 
 Every rule, filed under the observation that can trigger it.

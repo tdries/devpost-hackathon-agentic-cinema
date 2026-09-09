@@ -53,21 +53,45 @@ GRID_READY = """async () => {
   await Promise.race([new Promise(r => f.addEventListener('load', r, {once: true})),
                       new Promise(r => setTimeout(r, 15000))]);
 }"""
-# The AE pair, seeked 2.5s INTO its edit: the page opens every pair half a
-# second before its first change, where an edited master and its original
-# are identical by definition, and GLOBAL's fix is a revoice with the
-# picture untouched. AE is a prop swap, which is a difference a still can show.
+# The first pair, both players seeked 3.5s into the film. The page opens a
+# pair half a second before its first change, where an edited master and
+# its original are identical by definition -- and a change that starts at
+# 0:00 gets no fragment at all, which on a film that opens on black is two
+# black players. 3.5s is inside the bacon-to-mushroom rewrite this job is
+# pinned to.
 CUTTING_READY = """async () => {
-  const pair = document.querySelector('.pair[data-pair="AE"]');
-  pair.closest('section').scrollIntoView({block: 'start'});
-  window.scrollBy(0, -(document.querySelector('header').getBoundingClientRect().height + 8));
-  for (const v of pair.querySelectorAll('video')) {
+  for (const v of document.querySelector('.pair').querySelectorAll('video')) {
     v.preload = 'auto';
-    const want = (parseFloat(v.src.split('#t=')[1] || '0') || 0) + 2.5;
     await new Promise(r => v.readyState >= 1 ? r() : v.addEventListener('loadedmetadata', r, {once: true}));
-    v.currentTime = want;
+    v.currentTime = 3.5;
     await new Promise(r => v.addEventListener('seeked', r, {once: true}));
   }
+}"""
+# The generated clips, seeked a second in: an Omni render's first frame is
+# a fade from white, which photographs as a blank card.
+GENERATED_READY = """async () => {
+  for (const v of [...document.querySelectorAll('.genclip video')].slice(0, 2)) {
+    v.preload = 'auto';
+    await new Promise(r => v.readyState >= 1 ? r() : v.addEventListener('loadedmetadata', r, {once: true}));
+    v.currentTime = 1.5;
+    await new Promise(r => v.addEventListener('seeked', r, {once: true}));
+  }
+}"""
+# Every lazy Grafana frame at once; browse() then waits for each to draw.
+FRAMES_READY = """() => {
+  for (const f of document.querySelectorAll('iframe[data-src]')) { f.src = f.dataset.src; delete f.dataset.src; }
+}"""
+# One real turn with the agent, typed into the page: the sentence, the
+# reply, and the dashboard it built rendered on the right. %s is the ask.
+AGENT_ASK = """async () => {
+  document.getElementById('agent-input').value = %s;
+  document.getElementById('agent-ask').requestSubmit();
+  for (let i = 0; i < 420; i++) {
+    const img = document.querySelector('#agent-canvas img.agent-shot');
+    if (img && img.complete && img.naturalWidth > 0) return i;
+    await new Promise(r => setTimeout(r, 1000));
+  }
+  throw new Error('no dashboard came back');
 }"""
 
 
@@ -89,11 +113,19 @@ def browse(url: str, cookie: str, dest: Path, height: int, ready: str) -> Path:
         page.goto(url, wait_until="domcontentloaded", timeout=120_000)
         page.evaluate(ready)
         # The viewer is another origin, so page JS cannot see whether a
-        # framed panel has drawn; Playwright can.
+        # framed panel has drawn; Playwright can. "Loaded" is not "drawn":
+        # the intelligence page shipped showing Grafana's loading mark.
         for frame in page.frames:
-            if "/d-solo/" in frame.url:
-                frame.wait_for_selector("canvas, svg.uplot", timeout=90_000)
-        page.wait_for_timeout(2000)
+            if "/d-solo/" in frame.url or "/d/" in frame.url:
+                # The panel's content box exists before its marks do, so
+                # wait for a mark: a plot canvas, or a bar gauge's value.
+                try:
+                    frame.wait_for_selector(
+                        'canvas, [data-testid="data-testid Bar gauge value"]',
+                        timeout=90_000)
+                except Exception:  # noqa: BLE001 -- a panel below the fold
+                    print(f"  (a panel never drew: {frame.url[:80]})")
+        page.wait_for_timeout(4000)
         page.screenshot(path=str(dest))
         browser.close()
     return dest
@@ -162,10 +194,25 @@ def main() -> int:
                         OUT / "07b-market-open.png", (SHOT_W, 900), 1900, 8000,
                         {"open_details": True, "open_scenes": True,
                          "crop_to": 820}),
-        "cutting": (f"/runs/{run}/cutting", OUT / "08-cutting-room.png",
+        # Not the showcase run: the one pair in this instance where the
+        # picture itself is rewritten from the first second -- bacon strips
+        # frying, re-rendered by Omni as mushrooms for the Saudi channels.
+        "cutting": ("/runs/run_09ee2a1e55a3/cutting", OUT / "08-cutting-room.png",
                     (SHOT_W, 900), 950, 0, {"ready": CUTTING_READY, "crop_to": 0}),
         "agent": ("/agent", OUT / "09-agent-mode.png", (SHOT_W, 900), 950,
                   6000, {}),
+        # The agent asked for Grafana, twice: the canned findings-by-label
+        # dashboard, and a chart it composes itself. Both cost a real turn.
+        # No pie in the second: every pie but the by-dimension one renders
+        # as a single series, which is a flaw in the spec, not the shot.
+        "agent_dash": (f"/agent?run={run}", OUT / "09b-agent-dashboard.png",
+                       (SHOT_W, 900), 950, 0,
+                       {"ready": AGENT_ASK % '"Build a Grafana dashboard of the findings by dimension."',
+                        "crop_to": 0}),
+        "agent_chart": (f"/agent?run={run}", OUT / "09c-agent-chart.png",
+                        (SHOT_W, 900), 950, 0,
+                        {"ready": AGENT_ASK % '"Across every run, chart in Grafana: a bar chart with one bar per market, a bar chart with one bar per dimension, and a state timeline of blocking findings by market over the last 30 days. No pie charts."',
+                         "crop_to": 0}),
         "library": ("/library", OUT / "10-library.png", (SHOT_W, 900), 950,
                     6000, {}),
         # My edits: the cross-run cutting room. Shot live, because each
@@ -175,7 +222,8 @@ def main() -> int:
                   90000, {"live": True, "crop_to": 240}),
         # What the models made, next door to the cutting room
         "generated": (f"/runs/{run}/generated", OUT / "11b-generated.png",
-                      (SHOT_W, 900), 1100, 8000, {"crop_to": 200}),
+                      (SHOT_W, 900), 1100, 0,
+                      {"ready": GENERATED_READY, "crop_to": 200}),
         # The tour's front, which is what a stranger meets if they take the
         # third door. Slide one, because the deck is server-rendered and a
         # still of slide one is the deck's own cover.
@@ -187,7 +235,7 @@ def main() -> int:
         # page which only has to lay itself out. Both defaults gave an
         # empty hero, which is the panel the README points at.
         "insight": ("/insight", OUT / "09-intelligence.png", (SHOT_W, 900),
-                    950, 200000, {"live": True}),
+                    950, 0, {"ready": FRAMES_READY, "crop_to": 0}),
     }
 
     for name, (path, dest, size, height, budget, kw) in jobs.items():
