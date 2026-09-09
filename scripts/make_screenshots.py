@@ -53,16 +53,6 @@ GRID_READY = """async () => {
   await Promise.race([new Promise(r => f.addEventListener('load', r, {once: true})),
                       new Promise(r => setTimeout(r, 15000))]);
 }"""
-# The generated clips, seeked a second in: an Omni render's first frame is
-# a fade from white, which photographs as a blank card.
-GENERATED_READY = """async () => {
-  for (const v of [...document.querySelectorAll('.genclip video')].slice(0, 2)) {
-    v.preload = 'auto';
-    await new Promise(r => v.readyState >= 1 ? r() : v.addEventListener('loadedmetadata', r, {once: true}));
-    v.currentTime = 1.5;
-    await new Promise(r => v.addEventListener('seeked', r, {once: true}));
-  }
-}"""
 # Every lazy Grafana frame at once; browse() then waits for each to draw.
 FRAMES_READY = """() => {
   for (const f of document.querySelectorAll('iframe[data-src]')) { f.src = f.dataset.src; delete f.dataset.src; }
@@ -204,10 +194,8 @@ def main() -> int:
         # span is cut on demand -- a file:// copy shows two grey boxes.
         "edits": ("/edits", OUT / "11-my-edits.png", (SHOT_W, 900), 1250,
                   90000, {"live": True, "crop_to": 240}),
-        # What the models made, next door to the cutting room
-        "generated": (f"/runs/{run}/generated", OUT / "11b-generated.png",
-                      (SHOT_W, 900), 1100, 0,
-                      {"ready": GENERATED_READY, "crop_to": 200}),
+        # No "generated" job either: 11b-generated.png is a hand-taken shot,
+        # chosen by eye like the cutting room's.
         # The tour's front, which is what a stranger meets if they take the
         # third door. Slide one, because the deck is server-rendered and a
         # still of slide one is the deck's own cover.
