@@ -27,5 +27,10 @@ bin/
 # stray uv lockfile: project pins deps in requirements.txt, pyproject declares none
 uv.lock
 
+# Local design working files: exports of the interface's own styling and icon
+# sheets, kept on this machine and never shipped. Ignored as a directory, so a
+# new export cannot arrive in the repository by being named something else.
+docs/design/
+
 # pytest coverage artefact
 .coverage
