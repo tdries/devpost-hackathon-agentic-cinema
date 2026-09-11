@@ -10,8 +10,7 @@ from customs.packs import taxonomy
 from customs.schema import Observation
 
 # Shots shorter than this are fragments of a single visual event (e.g. a
-# strobe transition), not a distinct scene worth its own model call. See the
-# controller ruling in .superpowers/sdd/2026-08-23-customs/task-7-brief.md.
+# strobe transition), not a distinct scene worth its own model call.
 MIN_SHOT_LEN = 0.5
 
 # Audio transcription is not part of this task; it arrives with the

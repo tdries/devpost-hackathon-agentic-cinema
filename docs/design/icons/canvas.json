@@ -1,6 +1,0 @@
-{
-  "artboards": [{ "file": "Main.dc.html", "title": "Icon system", "x": 0, "y": 0, "w": 1180, "h": 1400 }],
-  "annotations": [{ "id": "note", "x": 0, "y": -150, "w": 560,
-    "text": "The Media Customs icon system: 45 filled marks in the four Google brand codes.\nStates, finding classes, evidence, the crew, navigation, and the 18 things an analyst can observe in a frame.\nEach one lives as an SVG symbol in the app (base.html), so the set extends by adding a symbol." }],
-  "launch": { "view": "focused", "file": "Main.dc.html" }
-}

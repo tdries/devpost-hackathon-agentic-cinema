@@ -17,8 +17,8 @@
                       noted: "cleared, notes" };
   var word = function (state) { return STATE_WORDS[state] || state; };
 
-  /* The icon system (see docs/design/icons): every state and agent has one
-     mark, drawn once as <symbol>s in base.html and referenced by id here. */
+  /* The icon system: every state and agent has one mark, drawn once as
+     <symbol>s in base.html and referenced by id here. */
   var STATE_ICONS = { cleared: 1, at_risk: 1, blocked: 1, pending: 1, error: 1, noted: 1 };
   var icon = function (state) {
     var id = STATE_ICONS[state] ? state.replace("_", "-") : "pending";
